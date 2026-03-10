@@ -3,6 +3,9 @@ import AuthPanel from "./components/AuthPanel"
 import SkiCheckInForm from "./components/SkiCheckInForm"
 import TodaysCrew from "./components/TodaysCrew"
 import PowderMap from "./components/PowderMap"
+import { getResortSkierCounts, getResortSkierDetails } from "./lib/socialApi"
+import ProfileSetup from "./components/ProfileSetup"
+
 
 const RESORTS = [
   // Epic
@@ -234,8 +237,6 @@ function normalizePowderScores(rows) {
   })
 }
 
-
-
 async function fetchJson(url, errorMessage) {
   const r = await fetch(url)
   if (!r.ok) throw new Error(errorMessage)
@@ -407,14 +408,28 @@ function LeaderCard({ title, icon, resort }) {
         boxShadow: "0 18px 50px rgba(0,0,0,0.28)",
       }}
     >
-      <div style={{ fontSize: 12, letterSpacing: 0.5, textTransform: "uppercase", color: "rgba(255,255,255,0.58)" }}>
+      <div
+        style={{
+          fontSize: 12,
+          letterSpacing: 0.5,
+          textTransform: "uppercase",
+          color: "rgba(255,255,255,0.58)",
+        }}
+      >
         {title}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ fontSize: 26 }}>{icon}</div>
         <div>
           <div style={{ fontSize: 19, fontWeight: 900 }}>{resort.name}</div>
-          <div style={{ marginTop: 2, color: tierColor(resort.powderTier), fontWeight: 800, fontSize: 13 }}>
+          <div
+            style={{
+              marginTop: 2,
+              color: tierColor(resort.powderTier),
+              fontWeight: 800,
+              fontSize: 13,
+            }}
+          >
             Score {resort.powderScore} · {resort.powderTier}
           </div>
         </div>
@@ -430,14 +445,37 @@ function LeaderCard({ title, icon, resort }) {
   )
 }
 
+function TabButton({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: active
+          ? "linear-gradient(135deg, #2563eb, #0891b2)"
+          : "rgba(255,255,255,0.06)",
+        color: "white",
+        border: "1px solid rgba(255,255,255,0.12)",
+        padding: "10px 14px",
+        borderRadius: 14,
+        fontWeight: 800,
+        cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
 export default function App() {
+  const [activeTab, setActiveTab] = useState("dashboard")
   const [passFilter, setPassFilter] = useState("All")
   const [query, setQuery] = useState("")
   const [sortBy, setSortBy] = useState("Powder Score")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [live, setLive] = useState({})
-
+  const [skierCounts, setSkierCounts] = useState({})
+  const [skierDetails, setSkierDetails] = useState({})
 
   async function refresh() {
     setLoading(true)
@@ -456,9 +494,10 @@ export default function App() {
           const wx = wxRes.status === "fulfilled" ? wxRes.value : {}
           const nwsSnow = nwsSnowRes.status === "fulfilled" ? nwsSnowRes.value : {}
           const resortSnow = resortSnowRes.status === "fulfilled" ? resortSnowRes.value : {}
-          const driveRisk = driveRes.status === "fulfilled"
-            ? driveRes.value
-            : { risk: "Unknown", penalty: 0, alertCount: 0, alerts: [] }
+          const driveRisk =
+            driveRes.status === "fulfilled"
+              ? driveRes.value
+              : { risk: "Unknown", penalty: 0, alertCount: 0, alerts: [] }
 
           const rawPowderScore = computeRawPowderScore({
             tempF: wx.tempF,
@@ -519,11 +558,45 @@ export default function App() {
     }
   }
 
+  async function loadSkierIntel() {
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+
+      const [counts, details] = await Promise.all([
+        getResortSkierCounts(today),
+        getResortSkierDetails(today),
+      ])
+
+      setSkierCounts(counts || {})
+      setSkierDetails(details || {})
+    } catch (err) {
+      console.warn("Skier intel refresh failed:", err)
+    }
+  }
+
   useEffect(() => {
     refresh()
     const t = setInterval(refresh, 10 * 60 * 1000)
     return () => clearInterval(t)
   }, [])
+
+  useEffect(() => {
+    loadSkierIntel()
+
+    const t = setInterval(loadSkierIntel, 15 * 1000)
+
+    function handleFocus() {
+      loadSkierIntel()
+    }
+
+    window.addEventListener("focus", handleFocus)
+
+    return () => {
+      clearInterval(t)
+      window.removeEventListener("focus", handleFocus)
+    }
+  }, [])
+
 
   const visibleResorts = useMemo(() => {
     return RESORTS.filter((r) => {
@@ -677,167 +750,32 @@ export default function App() {
             </button>
           </div>
 
-          {topResort && (
-            <div style={{ display: "grid", gap: 14 }}>
-              <div
-                className="leader-crown"
-                style={{
-                  background: scoreGradient(topResort.powderScore),
-                  border: "1px solid rgba(255,255,255,0.14)",
-                  borderRadius: 24,
-                  padding: 22,
-                  display: "grid",
-                  gap: 10,
-                  boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                  <div style={{ fontSize: 28 }}>👑</div>
-                  <div style={{ fontSize: 24, fontWeight: 900 }}>
-                    Best Powder Right Now: {topResort.name} — {topResort.powderScore}
-                  </div>
-                  <div
-                    style={{
-                      borderRadius: 999,
-                      padding: "6px 10px",
-                      background: "rgba(255,255,255,0.14)",
-                      border: "1px solid rgba(255,255,255,0.16)",
-                      color: tierColor(topResort.powderTier),
-                      fontSize: 12,
-                      fontWeight: 900,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {topResort.powderTier}
-                  </div>
-                </div>
-
-                <div style={{ color: "rgba(255,255,255,0.88)", fontSize: 14 }}>
-                  {topResort.snowPrev24in != null
-                    ? `${topResort.snowPrev24in}" in the last 24h`
-                    : "—"}{" "}
-                  ·{" "}
-                  {topResort.snow24in != null
-                    ? `${topResort.snow24in}" forecast next 24h`
-                    : "—"}{" "}
-                  · {topResort.tempF != null ? `${topResort.tempF}°F` : "—"} ·{" "}
-                  {topResort.wind || "—"} ·{" "}
-                  <span style={{ color: riskColor(topResort.driveRisk), fontWeight: 900 }}>
-                    Drive {topResort.driveRisk}
-                  </span>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    flexWrap: "wrap",
-                    fontSize: 13,
-                    color: "rgba(255,255,255,0.8)",
-                  }}
-                >
-                  {secondResort && <div>🥈 {secondResort.name} ({secondResort.powderScore})</div>}
-                  {thirdResort && <div>🥉 {thirdResort.name} ({thirdResort.powderScore})</div>}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                  gap: 14,
-                }}
-              >
-                <LeaderCard title="Best Epic Resort" icon="🎿" resort={topEpic} />
-                <LeaderCard title="Best Ikon Resort" icon="🏔️" resort={topIkon} />
-              </div>
-            </div>
-          )}
-
-          <section
+          <div
             style={{
               display: "flex",
               gap: 10,
               flexWrap: "wrap",
               alignItems: "center",
-              marginTop: 4,
             }}
-
-
           >
-            <div style={{ display: "flex", gap: 8 }}>
-              {["All", "Epic", "Ikon"].map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPassFilter(p)}
-                  style={{
-                    background:
-                      passFilter === p
-                        ? "linear-gradient(135deg, #22c55e, #14b8a6)"
-                        : "rgba(255,255,255,0.06)",
-                    color: passFilter === p ? "#062018" : "white",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    padding: "10px 14px",
-                    borderRadius: 999,
-                    fontWeight: 800,
-                    cursor: "pointer",
-                  }}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search resort…"
-              style={{
-                flex: 1,
-                minWidth: 220,
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: "white",
-                padding: "12px 14px",
-                borderRadius: 14,
-                outline: "none",
-              }}
-            />
-
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: "white",
-                padding: "12px 14px",
-                borderRadius: 14,
-                outline: "none",
-              }}
+            <TabButton
+              active={activeTab === "dashboard"}
+              onClick={() => setActiveTab("dashboard")}
             >
-              <option>Powder Score</option>
-              <option>Name</option>
-              <option>Temp</option>
-              <option>Snow 24h</option>
-              <option>Travel Risk</option>
-            </select>
-
-
-
-          </section>
-
-          <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                gap: 14,
-                marginTop: 4,
-              }}
+              Dashboard
+            </TabButton>
+            <TabButton
+              active={activeTab === "map"}
+              onClick={() => setActiveTab("map")}
             >
-              <AuthPanel />
-              <SkiCheckInForm resorts={RESORTS} />
-              <TodaysCrew />
+              Map
+            </TabButton>
+            <TabButton
+              active={activeTab === "crew"}
+              onClick={() => setActiveTab("crew")}
+            >
+              Crew
+            </TabButton>
           </div>
 
           {error && (
@@ -855,272 +793,444 @@ export default function App() {
           )}
         </header>
 
-
-
-<PowderMap resorts={rows} />
-
-        <main
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(305px, 1fr))",
-            gap: 18,
-          }}
-        >
-          {rows.map((r) => (
-            <div
-              key={r.name}
-              className="resort-card"
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 24,
-                overflow: "hidden",
-                transition: "transform .2s ease, box-shadow .2s ease",
-                boxShadow: "0 12px 40px rgba(0,0,0,0.28)",
-                backdropFilter: "blur(12px)",
-              }}
-            >
-              <div
-                style={{
-                  position: "relative",
-                  padding: 16,
-                  minHeight: 128,
-                  background: r.photoPath
-                    ? `linear-gradient(to top, rgba(2,6,23,0.82), rgba(2,6,23,0.2)), url(${r.photoPath}) center/cover`
-                    : scoreGradient(r.powderScore),
-                }}
-              >
+        {activeTab === "dashboard" && (
+          <>
+            {topResort && (
+              <div style={{ display: "grid", gap: 14, marginBottom: 20 }}>
                 <div
+                  className="leader-crown"
                   style={{
-                    position: "absolute",
-                    top: 14,
-                    right: 14,
-                    display: "flex",
-                    gap: 8,
-                    flexWrap: "wrap",
-                    justifyContent: "flex-end",
+                    background: scoreGradient(topResort.powderScore),
+                    border: "1px solid rgba(255,255,255,0.14)",
+                    borderRadius: 24,
+                    padding: 22,
+                    display: "grid",
+                    gap: 10,
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
                   }}
                 >
-                  <div
-                    style={{
-                      background: "rgba(2,6,23,0.55)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      borderRadius: 999,
-                      padding: "6px 10px",
-                      fontSize: 12,
-                      fontWeight: 900,
-                    }}
-                  >
-                    {r.pass}
-                  </div>
-                  <div
-                    style={{
-                      background: "rgba(2,6,23,0.55)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      borderRadius: 999,
-                      padding: "6px 10px",
-                      fontSize: 12,
-                      fontWeight: 900,
-                      color: riskColor(r.driveRisk),
-                    }}
-                  >
-                    {r.driveRisk || "Unknown"}
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", alignItems: "flex-end", gap: 12, paddingTop: 44 }}>
-                  <ResortLogo resort={r} />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 21, fontWeight: 900, lineHeight: 1.05 }}>
-                      {r.name}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                    <div style={{ fontSize: 28 }}>👑</div>
+                    <div style={{ fontSize: 24, fontWeight: 900 }}>
+                      Best Powder Right Now: {topResort.name} — {topResort.powderScore}
                     </div>
                     <div
                       style={{
-                        marginTop: 6,
-                        display: "inline-flex",
-                        gap: 8,
-                        alignItems: "center",
-                        background: "rgba(2,6,23,0.55)",
-                        border: "1px solid rgba(255,255,255,0.12)",
                         borderRadius: 999,
                         padding: "6px 10px",
+                        background: "rgba(255,255,255,0.14)",
+                        border: "1px solid rgba(255,255,255,0.16)",
+                        color: tierColor(topResort.powderTier),
                         fontSize: 12,
                         fontWeight: 900,
-                        color: tierColor(r.powderTier),
+                        textTransform: "uppercase",
                       }}
                     >
-                      Score {r.powderScore ?? "—"} · {r.powderTier || "Unknown"}
+                      {topResort.powderTier}
                     </div>
                   </div>
-                </div>
-              </div>
 
-              <div style={{ padding: 18, display: "grid", gap: 14 }}>
+                  <div style={{ color: "rgba(255,255,255,0.88)", fontSize: 14 }}>
+                    {topResort.snowPrev24in != null
+                      ? `${topResort.snowPrev24in}" in the last 24h`
+                      : "—"}{" "}
+                    ·{" "}
+                    {topResort.snow24in != null
+                      ? `${topResort.snow24in}" forecast next 24h`
+                      : "—"}{" "}
+                    · {topResort.tempF != null ? `${topResort.tempF}°F` : "—"} ·{" "}
+                    {topResort.wind || "—"} ·{" "}
+                    <span style={{ color: riskColor(topResort.driveRisk), fontWeight: 900 }}>
+                      Drive {topResort.driveRisk}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      flexWrap: "wrap",
+                      fontSize: 13,
+                      color: "rgba(255,255,255,0.8)",
+                    }}
+                  >
+                    {secondResort && <div>🥈 {secondResort.name} ({secondResort.powderScore})</div>}
+                    {thirdResort && <div>🥉 {thirdResort.name} ({thirdResort.powderScore})</div>}
+                  </div>
+                </div>
+
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr",
-                    gap: 10,
+                    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                    gap: 14,
                   }}
                 >
-                  <div
-                    style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      borderRadius: 16,
-                      padding: 12,
-                    }}
-                  >
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.58)", textTransform: "uppercase", letterSpacing: 0.4 }}>
-                      24h Snow
-                    </div>
-                    <div style={{ marginTop: 4, fontSize: 22, fontWeight: 900 }}>
-                      {r.snowPrev24in != null ? `${r.snowPrev24in}"` : "—"}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      borderRadius: 16,
-                      padding: 12,
-                    }}
-                  >
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.58)", textTransform: "uppercase", letterSpacing: 0.4 }}>
-                      Base
-                    </div>
-                    <div style={{ marginTop: 4, fontSize: 22, fontWeight: 900 }}>
-                      {r.baseDepth != null ? `${r.baseDepth}"` : "—"}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      borderRadius: 16,
-                      padding: 12,
-                    }}
-                  >
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.58)", textTransform: "uppercase", letterSpacing: 0.4 }}>
-                      Alerts
-                    </div>
-                    <div style={{ marginTop: 4, fontSize: 22, fontWeight: 900 }}>
-                      {r.driveAlertCount != null ? r.driveAlertCount : "—"}
-                    </div>
-                  </div>
+                  <LeaderCard title="Best Epic Resort" icon="🎿" resort={topEpic} />
+                  <LeaderCard title="Best Ikon Resort" icon="🏔️" resort={topIkon} />
                 </div>
+              </div>
+            )}
 
-                <div style={{ display: "grid", gap: 8 }}>
-                  <Row label="Snow (prev 48h)" value={r.snowPrev48in != null ? `${r.snowPrev48in}"` : "—"} />
-                  <Row label="Snow (next 24h)" value={r.snow24in != null ? `${r.snow24in}"` : "—"} />
-                  <Row label="Snow (next 48h)" value={r.snow48in != null ? `${r.snow48in}"` : "—"} />
-                  <Row label="Temp" value={r.tempF != null ? `${r.tempF}°F` : "—"} />
-                  <Row label="Wind" value={r.wind || "—"} />
-                  <Row label="Lifts" value={r.liftsOpen != null && r.liftsTotal != null ? `${r.liftsOpen}/${r.liftsTotal}` : "—"} />
-                  <Row label="Lift Open %" value={formatPercent(r.liftsOpen, r.liftsTotal)} />
-                  <Row label="Runs" value={r.runsOpen != null && r.runsTotal != null ? `${r.runsOpen}/${r.runsTotal}` : "—"} />
-                  <Row label="Terrain Open %" value={formatPercent(r.runsOpen, r.runsTotal)} />
-                  <Row label="Raw Score" value={r.rawPowderScore != null ? r.rawPowderScore : "—"} />
-                  <Row
-                    label="Drive Risk"
-                    value={
-                      <span style={{ color: riskColor(r.driveRisk), fontWeight: 900 }}>
-                        {r.driveRisk || "Unknown"}
-                      </span>
-                    }
-                  />
-                </div>
+            <section
+              style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+                alignItems: "center",
+                marginTop: 4,
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ display: "flex", gap: 8 }}>
+                {["All", "Epic", "Ikon"].map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPassFilter(p)}
+                    style={{
+                      background:
+                        passFilter === p
+                          ? "linear-gradient(135deg, #22c55e, #14b8a6)"
+                          : "rgba(255,255,255,0.06)",
+                      color: passFilter === p ? "#062018" : "white",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      padding: "10px 14px",
+                      borderRadius: 999,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
 
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search resort…"
+                style={{
+                  flex: 1,
+                  minWidth: 220,
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "white",
+                  padding: "12px 14px",
+                  borderRadius: 14,
+                  outline: "none",
+                }}
+              />
+
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "white",
+                  padding: "12px 14px",
+                  borderRadius: 14,
+                  outline: "none",
+                }}
+              >
+                <option>Powder Score</option>
+                <option>Name</option>
+                <option>Temp</option>
+                <option>Snow 24h</option>
+                <option>Travel Risk</option>
+              </select>
+            </section>
+
+            <main
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(305px, 1fr))",
+                gap: 18,
+              }}
+            >
+              {rows.map((r) => (
                 <div
+                  key={r.name}
+                  className="resort-card"
                   style={{
-                    background: "rgba(255,255,255,0.04)",
+                    background: "rgba(255,255,255,0.05)",
                     border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: 16,
-                    padding: 12,
-                    fontSize: 13,
-                    color: "rgba(255,255,255,0.78)",
-                    minHeight: 58,
+                    borderRadius: 24,
+                    overflow: "hidden",
+                    transition: "transform .2s ease, box-shadow .2s ease",
+                    boxShadow: "0 12px 40px rgba(0,0,0,0.28)",
+                    backdropFilter: "blur(12px)",
                   }}
                 >
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.58)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>
-                    Forecast
-                  </div>
-                  {r.shortForecast || "—"}
-                </div>
-
-                {r.driveAlerts && r.driveAlerts.length > 0 && (
                   <div
                     style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      borderRadius: 16,
-                      padding: 12,
-                      fontSize: 12,
-                      color: "rgba(255,255,255,0.68)",
-                      display: "grid",
-                      gap: 6,
+                      position: "relative",
+                      padding: 16,
+                      minHeight: 128,
+                      background: r.photoPath
+                        ? `linear-gradient(to top, rgba(2,6,23,0.82), rgba(2,6,23,0.2)), url(${r.photoPath}) center/cover`
+                        : scoreGradient(r.powderScore),
                     }}
                   >
-                    <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.78)" }}>
-                      Travel Alerts
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 14,
+                        right: 14,
+                        display: "flex",
+                        gap: 8,
+                        flexWrap: "wrap",
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: "rgba(2,6,23,0.55)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          borderRadius: 999,
+                          padding: "6px 10px",
+                          fontSize: 12,
+                          fontWeight: 900,
+                        }}
+                      >
+                        {r.pass}
+                      </div>
+                      <div
+                        style={{
+                          background: "rgba(2,6,23,0.55)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          borderRadius: 999,
+                          padding: "6px 10px",
+                          fontSize: 12,
+                          fontWeight: 900,
+                          color: riskColor(r.driveRisk),
+                        }}
+                      >
+                        {r.driveRisk || "Unknown"}
+                      </div>
                     </div>
-                    {r.driveAlerts.slice(0, 3).map((alert, idx) => (
-                      <div key={idx}>• {alert}</div>
-                    ))}
+
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: 12, paddingTop: 44 }}>
+                      <ResortLogo resort={r} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 21, fontWeight: 900, lineHeight: 1.05 }}>
+                          {r.name}
+                        </div>
+                        <div
+                          style={{
+                            marginTop: 6,
+                            display: "inline-flex",
+                            gap: 8,
+                            alignItems: "center",
+                            background: "rgba(2,6,23,0.55)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            borderRadius: 999,
+                            padding: "6px 10px",
+                            fontSize: 12,
+                            fontWeight: 900,
+                            color: tierColor(r.powderTier),
+                          }}
+                        >
+                          Score {r.powderScore ?? "—"} · {r.powderTier || "Unknown"}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                )}
 
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 10,
-                  }}
-                >
-                  <a
-                    href={mapsUrl(r.directionsQuery)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "grid",
-                      placeItems: "center",
-                      textDecoration: "none",
-                      color: "#052e2b",
-                      fontWeight: 900,
-                      padding: "12px 14px",
-                      borderRadius: 14,
-                      background: "linear-gradient(135deg, #34d399, #22c55e)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                    }}
-                  >
-                    Open Directions
-                  </a>
+                  <div style={{ padding: 18, display: "grid", gap: 14 }}>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr 1fr",
+                        gap: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: 16,
+                          padding: 12,
+                        }}
+                      >
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.58)", textTransform: "uppercase", letterSpacing: 0.4 }}>
+                          24h Snow
+                        </div>
+                        <div style={{ marginTop: 4, fontSize: 22, fontWeight: 900 }}>
+                          {r.snowPrev24in != null ? `${r.snowPrev24in}"` : "—"}
+                        </div>
+                      </div>
 
-                 
+                      <div
+                        style={{
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: 16,
+                          padding: 12,
+                        }}
+                      >
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.58)", textTransform: "uppercase", letterSpacing: 0.4 }}>
+                          Base
+                        </div>
+                        <div style={{ marginTop: 4, fontSize: 22, fontWeight: 900 }}>
+                          {r.baseDepth != null ? `${r.baseDepth}"` : "—"}
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: 16,
+                          padding: 12,
+                        }}
+                      >
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.58)", textTransform: "uppercase", letterSpacing: 0.4 }}>
+                          Skiers
+                        </div>
+                        <div style={{ marginTop: 4, fontSize: 22, fontWeight: 900 }}>
+                          {skierCounts?.[r.resortKey] ?? 0}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gap: 8 }}>
+                      <Row label="Snow (prev 48h)" value={r.snowPrev48in != null ? `${r.snowPrev48in}"` : "—"} />
+                      <Row label="Snow (next 24h)" value={r.snow24in != null ? `${r.snow24in}"` : "—"} />
+                      <Row label="Snow (next 48h)" value={r.snow48in != null ? `${r.snow48in}"` : "—"} />
+                      <Row label="Temp" value={r.tempF != null ? `${r.tempF}°F` : "—"} />
+                      <Row label="Wind" value={r.wind || "—"} />
+                      <Row label="Lifts" value={r.liftsOpen != null && r.liftsTotal != null ? `${r.liftsOpen}/${r.liftsTotal}` : "—"} />
+                      <Row label="Lift Open %" value={formatPercent(r.liftsOpen, r.liftsTotal)} />
+                      <Row label="Runs" value={r.runsOpen != null && r.runsTotal != null ? `${r.runsOpen}/${r.runsTotal}` : "—"} />
+                      <Row label="Terrain Open %" value={formatPercent(r.runsOpen, r.runsTotal)} />
+                      <Row label="Raw Score" value={r.rawPowderScore != null ? r.rawPowderScore : "—"} />
+                      <Row
+                        label="Drive Risk"
+                        value={
+                          <span style={{ color: riskColor(r.driveRisk), fontWeight: 900 }}>
+                            {r.driveRisk || "Unknown"}
+                          </span>
+                        }
+                      />
+                    </div>
+
+                    <div
+                      style={{
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        borderRadius: 16,
+                        padding: 12,
+                        fontSize: 13,
+                        color: "rgba(255,255,255,0.78)",
+                        minHeight: 58,
+                      }}
+                    >
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.58)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>
+                        Forecast
+                      </div>
+                      {r.shortForecast || "—"}
+                    </div>
+
+                    {r.driveAlerts && r.driveAlerts.length > 0 && (
+                      <div
+                        style={{
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: 16,
+                          padding: 12,
+                          fontSize: 12,
+                          color: "rgba(255,255,255,0.68)",
+                          display: "grid",
+                          gap: 6,
+                        }}
+                      >
+                        <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.78)" }}>
+                          Travel Alerts
+                        </div>
+                        {r.driveAlerts.slice(0, 3).map((alert, idx) => (
+                          <div key={idx}>• {alert}</div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr",
+                        gap: 10,
+                      }}
+                    >
+                      <a
+                        href={mapsUrl(r.directionsQuery)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "grid",
+                          placeItems: "center",
+                          textDecoration: "none",
+                          color: "#052e2b",
+                          fontWeight: 900,
+                          padding: "12px 14px",
+                          borderRadius: 14,
+                          background: "linear-gradient(135deg, #34d399, #22c55e)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                        }}
+                      >
+                        Open Directions
+                      </a>
+                    </div>
+
+                    {(r.observedUpdated || r.forecastUpdated) && (
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "rgba(255,255,255,0.5)",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        Resort report: {r.observedUpdated || "—"}
+                        <br />
+                        Forecast update:{" "}
+                        {r.forecastUpdated
+                          ? new Date(r.forecastUpdated).toLocaleString()
+                          : "—"}
+                      </div>
+                    )}
+                  </div>
                 </div>
+              ))}
+            </main>
+          </>
+        )}
 
-                {(r.observedUpdated || r.forecastUpdated) && (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "rgba(255,255,255,0.5)",
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    Resort report: {r.observedUpdated || "—"}
-                    <br />
-                    Forecast update:{" "}
-                    {r.forecastUpdated
-                      ? new Date(r.forecastUpdated).toLocaleString()
-                      : "—"}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </main>
+        {activeTab === "map" && (
+          <div style={{ marginTop: 8 }}>
+            <PowderMap
+              resorts={rows}
+              skierCounts={skierCounts}
+              skierDetails={skierDetails}
+            />
+          </div>
+        )}
+
+
+                {activeTab === "crew" && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+              gap: 14,
+              marginTop: 8,
+            }}
+          >
+            <AuthPanel />
+            <ProfileSetup />
+            <SkiCheckInForm resorts={RESORTS} />
+            <TodaysCrew />
+          </div>
+        )}
+                
       </div>
     </div>
   )

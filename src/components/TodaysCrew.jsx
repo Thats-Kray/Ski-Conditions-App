@@ -14,21 +14,24 @@ function formatPlanTime(isoString) {
 
 function statusColor(status) {
   if (status === "arrived") return "#8ef6d1"
-  if (status === "driving") return "#fde047"
-  if (status === "planning") return "#9bc6ff"
+  if (status === "driving") return "#fde68a"
+  if (status === "planning") return "#93c5fd"
   if (status === "done") return "#c4b5fd"
   return "#ff9d9d"
 }
 
 function statusLabel(status) {
-  if (status === "arrived") return "On Mountain"
-  if (status === "driving") return "Driving"
+  if (status === "arrived") return "On mountain"
+  if (status === "driving") return "On the way"
   if (status === "planning") return "Planning"
   if (status === "done") return "Done"
+  if (status === "cancelled") return "Cancelled"
   return status || "Unknown"
 }
 
 function prettifyResortKey(key) {
+  if (!key) return "Unknown resort"
+
   const map = {
     vail: "Vail",
     beavercreek: "Beaver Creek",
@@ -47,13 +50,57 @@ function prettifyResortKey(key) {
   return map[key] || key
 }
 
-function displayNameForPlan(plan, user) {
-  if (user && plan.user_id === user.id) return "You"
+function displayNameForPlan(plan, currentUser) {
+  if (currentUser && plan?.user_id === currentUser.id) {
+    return "You"
+  }
 
   return (
     plan?.profiles?.full_name ||
     plan?.profiles?.username ||
     "Skier"
+  )
+}
+
+function initialsFromName(name) {
+  return (name || "S")
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
+}
+
+function Avatar({ plan, currentUser }) {
+  const displayName = displayNameForPlan(plan, currentUser)
+  const avatarUrl = plan?.profiles?.avatar_url
+
+  return (
+    <div
+      style={{
+        width: 36,
+        height: 36,
+        borderRadius: 999,
+        overflow: "hidden",
+        background: "#dbeafe",
+        display: "grid",
+        placeItems: "center",
+        fontSize: 11,
+        fontWeight: 900,
+        color: "#0f172a",
+        flexShrink: 0,
+      }}
+    >
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt={displayName}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+      ) : (
+        initialsFromName(displayName)
+      )}
+    </div>
   )
 }
 
@@ -141,8 +188,6 @@ export default function TodaysCrew() {
         gap: 12,
       }}
     >
-      {/* Header */}
-
       <div
         style={{
           display: "flex",
@@ -217,8 +262,6 @@ export default function TodaysCrew() {
         </div>
       </div>
 
-      {/* Content */}
-
       {!user ? (
         <div style={{ color: "rgba(255,255,255,0.7)" }}>
           Sign in to see who’s skiing today.
@@ -242,18 +285,26 @@ export default function TodaysCrew() {
                 borderRadius: 14,
                 padding: 12,
                 display: "grid",
-                gap: 6,
+                gap: 8,
               }}
             >
               <div
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
+                  display: "grid",
+                  gridTemplateColumns: "36px 1fr auto",
+                  gap: 10,
                   alignItems: "center",
                 }}
               >
-                <div style={{ fontWeight: 800 }}>
-                  {displayNameForPlan(plan, user)}
+                <Avatar plan={plan} currentUser={user} />
+
+                <div>
+                  <div style={{ fontWeight: 800 }}>
+                    {displayNameForPlan(plan, user)}
+                  </div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.72)" }}>
+                    {prettifyResortKey(plan.resort_key)}
+                  </div>
                 </div>
 
                 <div
@@ -262,17 +313,14 @@ export default function TodaysCrew() {
                     fontWeight: 900,
                     color: statusColor(plan.status),
                     textTransform: "uppercase",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {statusLabel(plan.status)}
                 </div>
               </div>
 
-              <div style={{ fontSize: 14 }}>
-                {prettifyResortKey(plan.resort_key)}
-              </div>
-
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.62)" }}>
                 ETA: {formatPlanTime(plan.eta)}
                 {plan.arrived_at
                   ? ` · Arrived ${formatPlanTime(plan.arrived_at)}`
