@@ -6,7 +6,14 @@ import {
   uploadProfilePhoto,
 } from "../lib/socialApi"
 
-const PASS_OPTIONS = ["Epic", "Ikon", "Mountain Collective", "Indy", "Loveland", "A-Basin"]
+const PASS_OPTIONS = [
+  "Epic",
+  "Ikon",
+  "Mountain Collective",
+  "Indy",
+  "Loveland",
+  "A-Basin",
+]
 
 const FAVORITE_MOUNTAIN_OPTIONS = [
   "Vail",
@@ -23,6 +30,15 @@ const FAVORITE_MOUNTAIN_OPTIONS = [
   "Aspen Snowmass",
 ]
 
+function initialsFromName(name) {
+  return (name || "S")
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
+}
+
 export default function ProfileSetup() {
   const [user, setUser] = useState(null)
   const [firstName, setFirstName] = useState("")
@@ -35,6 +51,8 @@ export default function ProfileSetup() {
   const [uploading, setUploading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
   const [message, setMessage] = useState("")
+  const [hasProfile, setHasProfile] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
 
   async function loadProfile() {
     setInitialLoading(true)
@@ -44,7 +62,11 @@ export default function ProfileSetup() {
       const currentUser = await getCurrentUser()
       setUser(currentUser)
 
-      if (!currentUser) return
+      if (!currentUser) {
+        setHasProfile(false)
+        setIsEditing(false)
+        return
+      }
 
       const profile = await getMyProfile()
 
@@ -55,6 +77,11 @@ export default function ProfileSetup() {
         setAvatarUrl(profile.avatar_url || "")
         setFavoriteMountain(profile.favorite_mountain || "")
         setSkiPasses(profile.ski_passes || [])
+        setHasProfile(true)
+        setIsEditing(false)
+      } else {
+        setHasProfile(false)
+        setIsEditing(true)
       }
     } catch (err) {
       setMessage(err.message || "Could not load profile.")
@@ -108,6 +135,8 @@ export default function ProfileSetup() {
         favorite_mountain: favoriteMountain,
       })
 
+      setHasProfile(true)
+      setIsEditing(false)
       setMessage("Profile saved successfully.")
     } catch (err) {
       setMessage(err.message || "Could not save profile.")
@@ -115,6 +144,9 @@ export default function ProfileSetup() {
       setLoading(false)
     }
   }
+
+  const fullName =
+    [firstName, lastName].filter(Boolean).join(" ").trim() || "Unnamed Skier"
 
   return (
     <div
@@ -137,6 +169,117 @@ export default function ProfileSetup() {
         <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>
           Loading profile...
         </div>
+      ) : hasProfile && !isEditing ? (
+        <div style={{ display: "grid", gap: 14 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "84px 1fr",
+              gap: 14,
+              alignItems: "center",
+            }}
+          >
+            <div
+              style={{
+                width: 84,
+                height: 84,
+                borderRadius: 999,
+                overflow: "hidden",
+                background: "rgba(255,255,255,0.08)",
+                border: "2px solid rgba(255,255,255,0.14)",
+                display: "grid",
+                placeItems: "center",
+                fontWeight: 900,
+                fontSize: 24,
+                color: "white",
+              }}
+            >
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={fullName}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                initialsFromName(fullName)
+              )}
+            </div>
+
+            <div style={{ display: "grid", gap: 6 }}>
+              <div style={{ fontSize: 22, fontWeight: 900 }}>{fullName}</div>
+
+              <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>
+                {username ? `@${username}` : "No username yet"}
+              </div>
+
+              <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>
+                Favorite mountain: {favoriteMountain || "Not set"}
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gap: 8,
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 14,
+              padding: 12,
+            }}
+          >
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.62)" }}>
+              Ski passes
+            </div>
+
+            {skiPasses.length === 0 ? (
+              <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>
+                No passes selected yet.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {skiPasses.map((passName) => (
+                  <div
+                    key={passName}
+                    style={{
+                      background: "linear-gradient(135deg, #22c55e, #14b8a6)",
+                      color: "#052e2b",
+                      borderRadius: 999,
+                      padding: "8px 12px",
+                      fontWeight: 800,
+                      fontSize: 13,
+                    }}
+                  >
+                    {passName}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setIsEditing(true)
+              setMessage("")
+            }}
+            style={{
+              background: "linear-gradient(135deg, #2563eb, #0891b2)",
+              color: "white",
+              border: "none",
+              padding: "10px 12px",
+              borderRadius: 12,
+              cursor: "pointer",
+              fontWeight: 800,
+            }}
+          >
+            Edit Profile
+          </button>
+        </div>
       ) : (
         <form onSubmit={handleSave} style={{ display: "grid", gap: 12 }}>
           {avatarUrl && (
@@ -155,7 +298,13 @@ export default function ProfileSetup() {
             </div>
           )}
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 10,
+            }}
+          >
             <input
               type="text"
               placeholder="First name"
@@ -209,6 +358,7 @@ export default function ProfileSetup() {
             <label style={{ fontSize: 13, color: "rgba(255,255,255,0.76)" }}>
               Favorite mountain
             </label>
+
             <select
               value={favoriteMountain}
               onChange={(e) => setFavoriteMountain(e.target.value)}
@@ -289,23 +439,46 @@ export default function ProfileSetup() {
             )}
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              background: loading
-                ? "rgba(255,255,255,0.12)"
-                : "linear-gradient(135deg, #2563eb, #0891b2)",
-              color: "white",
-              border: "none",
-              padding: "10px 12px",
-              borderRadius: 12,
-              cursor: loading ? "not-allowed" : "pointer",
-              fontWeight: 800,
-            }}
-          >
-            {loading ? "Saving..." : "Save Profile"}
-          </button>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                background: loading
+                  ? "rgba(255,255,255,0.12)"
+                  : "linear-gradient(135deg, #2563eb, #0891b2)",
+                color: "white",
+                border: "none",
+                padding: "10px 12px",
+                borderRadius: 12,
+                cursor: loading ? "not-allowed" : "pointer",
+                fontWeight: 800,
+              }}
+            >
+              {loading ? "Saving..." : hasProfile ? "Save Changes" : "Create Profile"}
+            </button>
+
+            {hasProfile && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditing(false)
+                  setMessage("")
+                }}
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  color: "white",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  cursor: "pointer",
+                  fontWeight: 800,
+                }}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
       )}
 

@@ -1,11 +1,19 @@
-import { useEffect, useMemo, useState } from "react"
-import AuthPanel from "./components/AuthPanel"
+import { useEffect, useMemo, useRef, useState } from "react"
+import AuthForm from "./components/AuthForm"
 import SkiCheckInForm from "./components/SkiCheckInForm"
 import TodaysCrew from "./components/TodaysCrew"
 import PowderMap from "./components/PowderMap"
-import { getResortSkierCounts, getResortSkierDetails } from "./lib/socialApi"
-import ProfileSetup from "./components/ProfileSetup"
+import FriendsPage from "./components/FriendsPage"
+import ProfilePage from "./components/ProfilePage"
+import {
+  getCurrentUser,
+  getMyProfile,
+  getResortSkierCounts,
+  getResortSkierDetails,
+  logOut,
+} from "./lib/socialApi"
 
+import { supabase } from "./lib/supabase"
 
 const RESORTS = [
   // Epic
@@ -151,6 +159,19 @@ function mapsUrl(destination) {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
     destination
   )}`
+}
+
+function initialsFromText(text) {
+  const clean = (text || "SK").replace(/@.*/, "").trim()
+
+  if (!clean) return "SK"
+
+  return clean
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
 }
 
 function computeRawPowderScore({
@@ -466,6 +487,19 @@ function TabButton({ active, onClick, children }) {
   )
 }
 
+function menuButtonStyle() {
+  return {
+    background: "rgba(255,255,255,0.06)",
+    color: "white",
+    border: "1px solid rgba(255,255,255,0.1)",
+    padding: "10px 12px",
+    borderRadius: 12,
+    cursor: "pointer",
+    fontWeight: 700,
+    textAlign: "left",
+  }
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [passFilter, setPassFilter] = useState("All")
@@ -476,6 +510,15 @@ export default function App() {
   const [live, setLive] = useState({})
   const [skierCounts, setSkierCounts] = useState({})
   const [skierDetails, setSkierDetails] = useState({})
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [currentUser, setCurrentUser] = useState(null)
+  const [currentProfile, setCurrentProfile] = useState(null)
+  const [authModalMode, setAuthModalMode] = useState(null)
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false)
+
+  const userMenuRef = useRef(null)
+  const planSectionRef = useRef(null)
+  const crewSectionRef = useRef(null)
 
   async function refresh() {
     setLoading(true)
@@ -574,6 +617,62 @@ export default function App() {
     }
   }
 
+  async function loadHeaderUser() {
+    try {
+      const user = await getCurrentUser()
+      setCurrentUser(user)
+
+      if (!user) {
+        setCurrentProfile(null)
+        return
+      }
+
+      const profile = await getMyProfile().catch(() => null)
+      setCurrentProfile(profile || null)
+    } catch (err) {
+      console.warn("Header profile load failed:", err)
+      setCurrentUser(null)
+      setCurrentProfile(null)
+    }
+  }
+
+  function openAuthModal(mode) {
+    setAuthModalMode(mode)
+    setUserMenuOpen(false)
+  }
+
+  function closeAuthModal() {
+    setAuthModalMode(null)
+  }
+
+  async function handleAuthSuccess() {
+    await loadHeaderUser()
+    setAuthModalMode(null)
+  }
+
+  async function handlePasswordResetSuccess() {
+    await loadHeaderUser()
+    setIsRecoveryMode(false)
+    setAuthModalMode(null)
+  }
+
+  async function handleLogOut() {
+    try {
+      await logOut()
+      setUserMenuOpen(false)
+      setCurrentUser(null)
+      setCurrentProfile(null)
+      setActiveTab("dashboard")
+    } catch (err) {
+      console.error("Logout failed:", err)
+      alert(err.message || "Failed to log out.")
+    }
+  }
+
+  function requireLogin(mode = "login") {
+    openAuthModal(mode)
+  }
+
   useEffect(() => {
     refresh()
     const t = setInterval(refresh, 10 * 60 * 1000)
@@ -597,6 +696,45 @@ export default function App() {
     }
   }, [])
 
+  useEffect(() => {
+  loadHeaderUser()
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((event) => {
+    loadHeaderUser()
+
+    if (event === "PASSWORD_RECOVERY") {
+      setIsRecoveryMode(true)
+      setAuthModalMode("reset")
+      setUserMenuOpen(false)
+    }
+  })
+
+  return () => subscription.unsubscribe()
+}, [])
+
+  useEffect(() => {
+    function handleOutsideClick(event) {
+      if (!userMenuOpen) return
+
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setUserMenuOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick)
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick)
+    }
+  }, [userMenuOpen])
+
+  const headerDisplayName =
+    currentProfile?.full_name ||
+    currentProfile?.username ||
+    currentUser?.email ||
+    "Skier"
 
   const visibleResorts = useMemo(() => {
     return RESORTS.filter((r) => {
@@ -629,7 +767,10 @@ export default function App() {
   }, [visibleResorts, sortBy])
 
   const rankedResorts = useMemo(
-    () => [...rows].filter((r) => r.powderScore != null).sort((a, b) => b.powderScore - a.powderScore),
+    () =>
+      [...rows]
+        .filter((r) => r.powderScore != null)
+        .sort((a, b) => b.powderScore - a.powderScore),
     [rows]
   )
 
@@ -648,6 +789,40 @@ export default function App() {
   const thirdResort = rankedResorts[2]
   const topEpic = rankedEpic[0]
   const topIkon = rankedIkon[0]
+
+  function openProfilePage() {
+    setActiveTab("profile")
+    setUserMenuOpen(false)
+  }
+
+  function openFriendsPage() {
+    setActiveTab("friends")
+    setUserMenuOpen(false)
+  }
+
+  function openCrewPlan() {
+    setActiveTab("crew")
+    setUserMenuOpen(false)
+
+    setTimeout(() => {
+      planSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      })
+    }, 50)
+  }
+
+  function openTodaysCrew() {
+    setActiveTab("crew")
+    setUserMenuOpen(false)
+
+    setTimeout(() => {
+      crewSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      })
+    }, 50)
+  }
 
   return (
     <div
@@ -673,6 +848,77 @@ export default function App() {
           box-shadow: 0 24px 60px rgba(0,0,0,0.38);
         }
       `}</style>
+
+{isRecoveryMode ? (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(2,6,23,0.88)",
+      display: "grid",
+      placeItems: "center",
+      padding: 20,
+      zIndex: 210,
+    }}
+  >
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 620,
+        display: "grid",
+        gap: 16,
+        justifyItems: "center",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 560,
+          background: "rgba(255,255,255,0.05)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: 20,
+          padding: 18,
+          color: "white",
+          boxShadow: "0 18px 50px rgba(0,0,0,0.35)",
+        }}
+      >
+        <div style={{ fontWeight: 900, fontSize: "1.05rem", marginBottom: 8 }}>
+          Finish resetting your password
+        </div>
+        <div style={{ color: "rgba(255,255,255,0.74)", lineHeight: 1.5, fontSize: 14 }}>
+          You’re temporarily signed in through a recovery link. Set your new password below to unlock the app.
+        </div>
+      </div>
+
+      <AuthForm
+        mode="reset"
+        onPasswordResetSuccess={handlePasswordResetSuccess}
+      />
+    </div>
+  </div>
+) : authModalMode ? (
+  <div
+    onClick={closeAuthModal}
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(2,6,23,0.72)",
+      display: "grid",
+      placeItems: "center",
+      padding: 20,
+      zIndex: 200,
+    }}
+  >
+    <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 560 }}>
+      <AuthForm
+        mode={authModalMode}
+        onSuccess={handleAuthSuccess}
+        onPasswordResetSuccess={handlePasswordResetSuccess}
+        onCancel={closeAuthModal}
+      />
+    </div>
+  </div>
+) : null}
 
       <div style={{ maxWidth: 1320, margin: "0 auto", padding: "30px 20px 48px" }}>
         <header
@@ -730,24 +976,150 @@ export default function App() {
               </p>
             </div>
 
-            <button
-              onClick={refresh}
-              disabled={loading}
+            <div
+              ref={userMenuRef}
               style={{
-                background: loading
-                  ? "rgba(255,255,255,0.12)"
-                  : "linear-gradient(135deg, #2563eb, #0891b2)",
-                color: "white",
-                border: "1px solid rgba(255,255,255,0.12)",
-                padding: "12px 16px",
-                borderRadius: 14,
-                fontWeight: 800,
-                cursor: loading ? "not-allowed" : "pointer",
-                boxShadow: "0 12px 30px rgba(37,99,235,0.28)",
+                display: "flex",
+                gap: 10,
+                alignItems: "center",
+                position: "relative",
               }}
             >
-              {loading ? "Refreshing…" : "Refresh Live Data"}
-            </button>
+              <button
+                onClick={refresh}
+                disabled={loading}
+                style={{
+                  background: loading
+                    ? "rgba(255,255,255,0.12)"
+                    : "linear-gradient(135deg, #2563eb, #0891b2)",
+                  color: "white",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  padding: "12px 16px",
+                  borderRadius: 14,
+                  fontWeight: 800,
+                  cursor: loading ? "not-allowed" : "pointer",
+                  boxShadow: "0 12px 30px rgba(37,99,235,0.28)",
+                }}
+              >
+                {loading ? "Refreshing…" : "Refresh Live Data"}
+              </button>
+
+              <button
+                onClick={() => setUserMenuOpen((prev) => !prev)}
+                style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: 999,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.06)",
+                  color: "white",
+                  cursor: "pointer",
+                  display: "grid",
+                  placeItems: "center",
+                  padding: 0,
+                  overflow: "hidden",
+                  lineHeight: 1,
+                  flexShrink: 0,
+                }}
+                title="Open user menu"
+              >
+                {currentProfile?.avatar_url ? (
+                  <img
+                    src={currentProfile.avatar_url}
+                    alt={headerDisplayName}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 12, fontWeight: 900 }}>
+                    {initialsFromText(headerDisplayName)}
+                  </span>
+                )}
+              </button>
+
+              {userMenuOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 58,
+                    right: 0,
+                    width: 260,
+                    background: "rgba(15, 23, 42, 0.98)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: 18,
+                    padding: 10,
+                    display: "grid",
+                    gap: 8,
+                    boxShadow: "0 18px 50px rgba(0,0,0,0.35)",
+                    zIndex: 50,
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "8px 10px 12px",
+                      borderBottom: "1px solid rgba(255,255,255,0.08)",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <div style={{ fontWeight: 900 }}>{headerDisplayName}</div>
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.62)" }}>
+                      {currentUser?.email || "Not signed in"}
+                    </div>
+                  </div>
+
+                  {currentUser ? (
+                    <>
+                      <button onClick={openProfilePage} style={menuButtonStyle()}>
+                        View / Edit Profile
+                      </button>
+
+                      <button onClick={openCrewPlan} style={menuButtonStyle()}>
+                        Update Today’s Plan
+                      </button>
+
+                      <button onClick={openTodaysCrew} style={menuButtonStyle()}>
+                        Open Today’s Crew
+                      </button>
+
+                      <button onClick={openFriendsPage} style={menuButtonStyle()}>
+                        Open Friends
+                      </button>
+
+                      <button
+                        onClick={handleLogOut}
+                        style={{
+                          ...menuButtonStyle(),
+                          background: "rgba(239,68,68,0.14)",
+                          border: "1px solid rgba(239,68,68,0.25)",
+                          color: "#fecaca",
+                        }}
+                      >
+                        Log Out
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => openAuthModal("login")}
+                        style={menuButtonStyle()}
+                      >
+                        Log In
+                      </button>
+
+                      <button
+                        onClick={() => openAuthModal("signup")}
+                        style={menuButtonStyle()}
+                      >
+                        Sign Up
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div
@@ -760,21 +1132,39 @@ export default function App() {
           >
             <TabButton
               active={activeTab === "dashboard"}
-              onClick={() => setActiveTab("dashboard")}
+              onClick={() => {
+                setActiveTab("dashboard")
+                setUserMenuOpen(false)
+              }}
             >
               Dashboard
             </TabButton>
             <TabButton
               active={activeTab === "map"}
-              onClick={() => setActiveTab("map")}
+              onClick={() => {
+                setActiveTab("map")
+                setUserMenuOpen(false)
+              }}
             >
               Map
             </TabButton>
             <TabButton
               active={activeTab === "crew"}
-              onClick={() => setActiveTab("crew")}
+              onClick={() => {
+                setActiveTab("crew")
+                setUserMenuOpen(false)
+              }}
             >
               Crew
+            </TabButton>
+            <TabButton
+              active={activeTab === "friends"}
+              onClick={() => {
+                setActiveTab("friends")
+                setUserMenuOpen(false)
+              }}
+            >
+              Friends
             </TabButton>
           </div>
 
@@ -1214,23 +1604,115 @@ export default function App() {
           </div>
         )}
 
+        {activeTab === "friends" && (
+          <div style={{ marginTop: 8 }}>
+            <FriendsPage />
+          </div>
+        )}
 
-                {activeTab === "crew" && (
+        {activeTab === "profile" && (
+          <div style={{ marginTop: 8 }}>
+            {currentUser ? (
+              <ProfilePage />
+            ) : (
+              <div
+                style={{
+                  display: "grid",
+                  placeItems: "center",
+                  minHeight: 320,
+                }}
+              >
+                <AuthForm
+                  mode="login"
+                  onSuccess={handleAuthSuccess}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "crew" && (
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+              gridTemplateColumns: "minmax(320px, 420px) minmax(0, 1fr)",
               gap: 14,
               marginTop: 8,
+              alignItems: "start",
             }}
           >
-            <AuthPanel />
-            <ProfileSetup />
-            <SkiCheckInForm resorts={RESORTS} />
-            <TodaysCrew />
+            <div
+              style={{
+                display: "grid",
+                gap: 14,
+              }}
+            >
+              {currentUser ? (
+                <div ref={planSectionRef}>
+                  <SkiCheckInForm resorts={RESORTS} />
+                </div>
+              ) : (
+                <div
+                  ref={planSectionRef}
+                  style={{
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: 22,
+                    padding: 20,
+                    display: "grid",
+                    gap: 14,
+                    boxShadow: "0 18px 50px rgba(0,0,0,0.28)",
+                  }}
+                >
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: "1.2rem" }}>
+                      Log in to post your plan
+                    </h2>
+                    <p style={{ margin: "8px 0 0", color: "rgba(255,255,255,0.7)" }}>
+                      You can still browse Today’s Crew, but posting your ski plan now requires an account.
+                    </p>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button
+                      onClick={() => requireLogin("login")}
+                      style={{
+                        background: "linear-gradient(135deg, #2563eb, #0891b2)",
+                        color: "white",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        padding: "12px 14px",
+                        borderRadius: 12,
+                        fontWeight: 800,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Log In
+                    </button>
+
+                    <button
+                      onClick={() => requireLogin("signup")}
+                      style={{
+                        background: "rgba(255,255,255,0.06)",
+                        color: "white",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        padding: "12px 14px",
+                        borderRadius: 12,
+                        fontWeight: 800,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Sign Up
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div ref={crewSectionRef}>
+              <TodaysCrew />
+            </div>
           </div>
         )}
-                
       </div>
     </div>
   )
