@@ -974,6 +974,236 @@ export async function getAcceptedFriends() {
    Friends Leaderboard
 ----------------------------- */
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   SKI TRIPS  (Partiful-style social planning)
+
+   Required Supabase tables:
+
+   ski_trips:
+     id          uuid primary key default gen_random_uuid()
+     created_at  timestamptz default now()
+     host_id     uuid references auth.users(id) on delete cascade
+     resort_key  text not null
+     ski_date    date not null
+     title       text
+     description text
+     meeting_spot text
+     departure_time text
+     status      text default 'upcoming'   -- upcoming | cancelled
+
+   trip_rsvps:
+     id       uuid primary key default gen_random_uuid()
+     trip_id  uuid references ski_trips(id) on delete cascade
+     user_id  uuid references auth.users(id) on delete cascade
+     status   text not null               -- going | maybe | cantgo
+     created_at timestamptz default now()
+     unique(trip_id, user_id)
+
+   trip_comments:
+     id         uuid primary key default gen_random_uuid()
+     trip_id    uuid references ski_trips(id) on delete cascade
+     user_id    uuid references auth.users(id) on delete cascade
+     content    text not null
+     created_at timestamptz default now()
+
+   Enable RLS on all three tables.  Suggested policies:
+     - ski_trips: SELECT for authenticated users; INSERT/UPDATE/DELETE for host_id = auth.uid()
+     - trip_rsvps: SELECT for authenticated users; INSERT/UPDATE for user_id = auth.uid(); DELETE for user_id = auth.uid()
+     - trip_comments: SELECT for authenticated users; INSERT for user_id = auth.uid(); DELETE for user_id = auth.uid()
+───────────────────────────────────────────────────────────────────────────── */
+
+async function enrichTrips(trips, userId) {
+  if (!trips.length) return []
+
+  const tripIds = trips.map((t) => t.id)
+
+  const [rsvpRes, commentRes] = await Promise.all([
+    supabase
+      .from("trip_rsvps")
+      .select("id, trip_id, user_id, status, created_at")
+      .in("trip_id", tripIds),
+    supabase
+      .from("trip_comments")
+      .select("id, trip_id, user_id, content, created_at")
+      .in("trip_id", tripIds)
+      .order("created_at", { ascending: true }),
+  ])
+
+  const rsvps = rsvpRes.data || []
+  const comments = commentRes.data || []
+
+  const userIds = new Set()
+  trips.forEach((t) => userIds.add(t.host_id))
+  rsvps.forEach((r) => userIds.add(r.user_id))
+  comments.forEach((c) => userIds.add(c.user_id))
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .in("id", [...userIds])
+
+  const pm = new Map((profiles || []).map((p) => [p.id, p]))
+
+  return trips.map((trip) => {
+    const tripRsvps = rsvps
+      .filter((r) => r.trip_id === trip.id)
+      .map((r) => ({ ...r, profile: pm.get(r.user_id) || null }))
+
+    const tripComments = comments
+      .filter((c) => c.trip_id === trip.id)
+      .map((c) => ({ ...c, profile: pm.get(c.user_id) || null }))
+
+    return {
+      ...trip,
+      host_profile: pm.get(trip.host_id) || null,
+      rsvps: tripRsvps,
+      comments: tripComments,
+      my_rsvp_status: userId
+        ? (tripRsvps.find((r) => r.user_id === userId)?.status || null)
+        : null,
+    }
+  })
+}
+
+export async function createTrip({ resort_key, ski_date, title, description, meeting_spot, departure_time }) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("You must be logged in to create a trip.")
+
+  const { data, error } = await supabase
+    .from("ski_trips")
+    .insert({
+      host_id: user.id,
+      resort_key,
+      ski_date,
+      title: title || null,
+      description: description || null,
+      meeting_spot: meeting_spot || null,
+      departure_time: departure_time || null,
+      status: "upcoming",
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function getAllVisibleTrips() {
+  const user = await getCurrentUser()
+  if (!user) return { mine: [], friends: [], rsvpd: [] }
+
+  const today = new Date().toISOString().slice(0, 10)
+  const friendIds = await getAcceptedFriendIds(user.id)
+  const friendIdArray = [...friendIds]
+
+  const [myRaw, myRsvpRaw, friendsRaw] = await Promise.all([
+    supabase
+      .from("ski_trips")
+      .select("*")
+      .eq("host_id", user.id)
+      .eq("status", "upcoming")
+      .gte("ski_date", today)
+      .order("ski_date", { ascending: true }),
+    supabase
+      .from("trip_rsvps")
+      .select("trip_id, status")
+      .eq("user_id", user.id)
+      .in("status", ["going", "maybe"]),
+    friendIdArray.length > 0
+      ? supabase
+          .from("ski_trips")
+          .select("*")
+          .in("host_id", friendIdArray)
+          .eq("status", "upcoming")
+          .gte("ski_date", today)
+          .order("ski_date", { ascending: true })
+      : Promise.resolve({ data: [] }),
+  ])
+
+  const myTripsRaw = myRaw.data || []
+  const rsvpdIds = new Set((myRsvpRaw.data || []).map((r) => r.trip_id))
+  const myTripIds = new Set(myTripsRaw.map((t) => t.id))
+  const allFriendsTrips = friendsRaw.data || []
+
+  const rsvpdRaw = allFriendsTrips.filter((t) => rsvpdIds.has(t.id) && !myTripIds.has(t.id))
+  const discoverRaw = allFriendsTrips.filter((t) => !rsvpdIds.has(t.id) && !myTripIds.has(t.id))
+
+  const [mine, rsvpd, friends] = await Promise.all([
+    enrichTrips(myTripsRaw, user.id),
+    enrichTrips(rsvpdRaw, user.id),
+    enrichTrips(discoverRaw, user.id),
+  ])
+
+  return { mine, friends, rsvpd }
+}
+
+export async function rsvpToTrip(tripId, status) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("You must be logged in to RSVP.")
+  if (!["going", "maybe", "cantgo"].includes(status)) throw new Error("Invalid RSVP status.")
+
+  const { data, error } = await supabase
+    .from("trip_rsvps")
+    .upsert(
+      { trip_id: tripId, user_id: user.id, status },
+      { onConflict: "trip_id,user_id" }
+    )
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function cancelTripRsvp(tripId) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("You must be logged in.")
+
+  const { error } = await supabase
+    .from("trip_rsvps")
+    .delete()
+    .eq("trip_id", tripId)
+    .eq("user_id", user.id)
+
+  if (error) throw error
+}
+
+export async function addTripComment(tripId, content) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("You must be logged in to comment.")
+
+  const { data, error } = await supabase
+    .from("trip_comments")
+    .insert({ trip_id: tripId, user_id: user.id, content: content.trim() })
+    .select("id, trip_id, user_id, content, created_at")
+    .single()
+
+  if (error) throw error
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .eq("id", user.id)
+    .single()
+
+  return { ...data, profile: profile || null }
+}
+
+export async function deleteTrip(tripId) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("You must be logged in.")
+
+  const { error } = await supabase
+    .from("ski_trips")
+    .delete()
+    .eq("id", tripId)
+    .eq("host_id", user.id)
+
+  if (error) throw error
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+
 export async function getFriendsLeaderboard() {
   const user = await getCurrentUser();
   const friendIds = await getAcceptedFriendIds(user.id);
