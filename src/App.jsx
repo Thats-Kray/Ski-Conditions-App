@@ -5,6 +5,7 @@ import TodaysCrew from "./components/TodaysCrew"
 import PowderMap from "./components/PowderMap"
 import FriendsPage from "./components/FriendsPage"
 import ProfilePage from "./components/ProfilePage"
+import TripsPage from "./components/TripsPage"
 import {
   getCurrentUser,
   getMyProfile,
@@ -1076,6 +1077,13 @@ export default function App() {
                         View / Edit Profile
                       </button>
 
+                      <button
+                        onClick={() => { setActiveTab("trips"); setUserMenuOpen(false) }}
+                        style={menuButtonStyle()}
+                      >
+                        Ski Trips
+                      </button>
+
                       <button onClick={openCrewPlan} style={menuButtonStyle()}>
                         Update Today’s Plan
                       </button>
@@ -1156,6 +1164,15 @@ export default function App() {
               }}
             >
               Crew
+            </TabButton>
+            <TabButton
+              active={activeTab === "trips"}
+              onClick={() => {
+                setActiveTab("trips")
+                setUserMenuOpen(false)
+              }}
+            >
+              Trips
             </TabButton>
             <TabButton
               active={activeTab === "friends"}
@@ -1628,6 +1645,12 @@ export default function App() {
                 />
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === "trips" && (
+          <div style={{ marginTop: 8 }}>
+            <TripsPage onRequireLogin={requireLogin} />
           </div>
         )}
 
