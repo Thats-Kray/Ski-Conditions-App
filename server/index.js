@@ -4,7 +4,9 @@ import fetch from "node-fetch"
 import * as cheerio from "cheerio"
 
 const app = express()
-app.use(cors())
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN ? process.env.ALLOWED_ORIGIN.split(",") : "*",
+}))
 
 const PORT = process.env.PORT || 8787
 const cache = new Map()
