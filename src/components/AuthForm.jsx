@@ -15,6 +15,7 @@ const fieldStyle = {
   color: "#fff",
   outline: "none",
   boxSizing: "border-box",
+  fontSize: 16,
 }
 
 const labelStyle = {
@@ -229,7 +230,7 @@ export default function AuthForm({
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: 14 }}>
         {formMode === "signup" ? (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
               <div>
                 <label style={labelStyle}>First Name</label>
                 <input

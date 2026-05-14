@@ -17,10 +17,10 @@ const SKILL_OPTIONS = [
   { key: "experts_only", label: "Experts Only", color: "#c084fc", desc: "No boundaries" },
 ]
 
-const overlay = { position: "fixed", inset: 0, background: "rgba(2,6,23,0.94)", backdropFilter: "blur(16px)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }
+const overlay = { position: "fixed", inset: 0, background: "rgba(2,6,23,0.94)", backdropFilter: "blur(16px)", zIndex: 500, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", overflowY: "auto", padding: "20px 16px max(20px, env(safe-area-inset-bottom)) 16px" }
 const card = { width: "100%", maxWidth: 480, background: "#0b1424", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 28, overflow: "hidden", boxShadow: "0 40px 100px rgba(0,0,0,0.75)" }
 
-const inputStyle = { background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "white", padding: "11px 14px", borderRadius: 12, outline: "none", fontSize: 14, fontFamily: "inherit", width: "100%", boxSizing: "border-box" }
+const inputStyle = { background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "white", padding: "11px 14px", borderRadius: 12, outline: "none", fontSize: 16, fontFamily: "inherit", width: "100%", boxSizing: "border-box" }
 
 // ── Step 1: Welcome ──────────────────────────────────────────────────────────
 function WelcomeStep({ onNext }) {
@@ -80,14 +80,14 @@ function ProfileStep({ onNext, onSkip }) {
   }
 
   return (
-    <div style={{ padding: "28px 28px 28px", display: "grid", gap: 18, maxHeight: "85vh", overflowY: "auto" }}>
+    <div style={{ padding: "28px 24px 28px", display: "grid", gap: 18 }}>
       <div>
         <div style={{ fontSize: 22, fontWeight: 900, color: "white" }}>Your Skier Profile</div>
         <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginTop: 4 }}>This helps your crew know who you are</div>
       </div>
 
       {/* Name */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
         <input type="text" placeholder="First name *" value={firstName} onChange={(e) => setFirstName(e.target.value)} style={inputStyle} />
         <input type="text" placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} style={inputStyle} />
       </div>

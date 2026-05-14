@@ -1092,9 +1092,12 @@ export default function App() {
       position: "fixed",
       inset: 0,
       background: "rgba(2,6,23,0.88)",
-      display: "grid",
-      placeItems: "center",
-      padding: 20,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      overflowY: "auto",
+      padding: "20px 16px max(20px, env(safe-area-inset-bottom)) 16px",
       zIndex: 210,
     }}
   >
@@ -1140,9 +1143,12 @@ export default function App() {
       position: "fixed",
       inset: 0,
       background: "rgba(2,6,23,0.72)",
-      display: "grid",
-      placeItems: "center",
-      padding: 20,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      overflowY: "auto",
+      padding: "20px 16px max(20px, env(safe-area-inset-bottom)) 16px",
       zIndex: 200,
     }}
   >

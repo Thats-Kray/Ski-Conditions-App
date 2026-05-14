@@ -767,7 +767,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
   const meetingSpot = trip?.meeting_spot ?? initialTrip.meeting_spot
   const description = trip?.description ?? initialTrip.description
 
-  const fieldStyle = { background: "rgba(255,255,255,0.07)", border: "1.5px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "9px 13px", color: "white", fontSize: 13, outline: "none", fontFamily: "inherit" }
+  const fieldStyle = { background: "rgba(255,255,255,0.07)", border: "1.5px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "9px 13px", color: "white", fontSize: 16, outline: "none", fontFamily: "inherit" }
   const chipBtn = (active) => ({ background: active ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.06)", border: `1px solid ${active ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.1)"}`, borderRadius: 8, padding: "5px 11px", fontSize: 12, fontWeight: 700, color: active ? "white" : "rgba(255,255,255,0.55)", cursor: "pointer" })
 
   return (
@@ -1158,7 +1158,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
           {currentUser && (
             <form onSubmit={handleComment} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
               <Avatar profile={currentUser?.user_metadata} size={28} />
-              <input value={commentInput} onChange={(e) => setCommentInput(e.target.value)} placeholder="Add a message… 🎿" maxLength={280} style={{ flex: 1, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "8px 14px", fontSize: 13, color: "white", outline: "none" }} />
+              <input value={commentInput} onChange={(e) => setCommentInput(e.target.value)} placeholder="Add a message… 🎿" maxLength={280} style={{ flex: 1, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "8px 14px", fontSize: 16, color: "white", outline: "none" }} />
               <button type="submit" disabled={!commentInput.trim() || commentLoading} style={{ background: commentInput.trim() ? accent : "rgba(255,255,255,0.07)", color: commentInput.trim() ? "#020617" : "rgba(255,255,255,0.35)", border: "none", borderRadius: 999, padding: "8px 16px", fontSize: 12, fontWeight: 900, cursor: commentInput.trim() ? "pointer" : "default", transition: "all 0.15s ease", flexShrink: 0 }}>Send</button>
             </form>
           )}

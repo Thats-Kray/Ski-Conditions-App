@@ -159,7 +159,7 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
               style={{
                 width: "100%", padding: "9px 10px", borderRadius: 10,
                 border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-                color: "#fff", fontSize: 13, outline: "none",
+                color: "#fff", fontSize: 16, outline: "none",
               }}
             >
               <option value="">Any mountain</option>
@@ -177,7 +177,7 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
               style={{
                 width: "100%", padding: "9px 10px", borderRadius: 10,
                 border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-                color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box",
+                color: "#fff", fontSize: 16, outline: "none", boxSizing: "border-box",
               }}
             />
           </div>
@@ -195,7 +195,7 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 12,
               border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-              color: "#fff", fontSize: 14, outline: "none", resize: "none", boxSizing: "border-box",
+              color: "#fff", fontSize: 16, outline: "none", resize: "none", boxSizing: "border-box",
             }}
           />
         </div>

@@ -132,7 +132,7 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 11,
               border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-              color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box",
+              color: "#fff", fontSize: 16, outline: "none", boxSizing: "border-box",
             }}
           />
         </div>
@@ -146,7 +146,7 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 11,
               border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-              color: "#fff", fontSize: 14, outline: "none",
+              color: "#fff", fontSize: 16, outline: "none",
             }}
           >
             <option value="">TBD — vote first, pick resort later</option>
@@ -166,7 +166,7 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
               style={{
                 flex: 1, padding: "9px 12px", borderRadius: 11,
                 border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-                color: "#fff", fontSize: 14, outline: "none",
+                color: "#fff", fontSize: 16, outline: "none",
               }}
             />
             <button onClick={addDate} style={{
@@ -233,7 +233,7 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 12,
               border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-              color: "#fff", fontSize: 14, outline: "none", resize: "none", boxSizing: "border-box",
+              color: "#fff", fontSize: 16, outline: "none", resize: "none", boxSizing: "border-box",
             }}
           />
         </div>
