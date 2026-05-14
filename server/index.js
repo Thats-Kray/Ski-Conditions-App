@@ -6,7 +6,7 @@ import * as cheerio from "cheerio"
 const app = express()
 app.use(cors())
 
-const PORT = 8787
+const PORT = process.env.PORT || 8787
 const cache = new Map()
 const TTL = 5 * 60 * 1000
 

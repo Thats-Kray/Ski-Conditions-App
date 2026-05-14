@@ -262,6 +262,8 @@ function normalizePowderScores(rows) {
   })
 }
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8787"
+
 async function fetchJson(url, errorMessage) {
   const r = await fetch(url)
   if (!r.ok) throw new Error(errorMessage)
@@ -272,7 +274,7 @@ async function fetchJson(url, errorMessage) {
 
 async function fetchNwsNowish(lat, lon) {
   const point = await fetchJson(
-    `http://localhost:8787/api/nws/point?lat=${lat}&lon=${lon}`,
+    `${API_BASE}/api/nws/point?lat=${lat}&lon=${lon}`,
     `Point lookup failed for ${lat}, ${lon}`
   )
 
@@ -285,11 +287,11 @@ async function fetchNwsNowish(lat, lon) {
 
   const [hourly, daily] = await Promise.all([
     fetchJson(
-      `http://localhost:8787/api/nws/forecast?url=${encodeURIComponent(hourlyUrl)}`,
+      `${API_BASE}/api/nws/forecast?url=${encodeURIComponent(hourlyUrl)}`,
       "Hourly forecast fetch failed."
     ),
     fetchJson(
-      `http://localhost:8787/api/nws/forecast?url=${encodeURIComponent(forecastUrl)}`,
+      `${API_BASE}/api/nws/forecast?url=${encodeURIComponent(forecastUrl)}`,
       "Daily forecast fetch failed."
     ),
   ])
@@ -309,21 +311,21 @@ async function fetchNwsNowish(lat, lon) {
 
 async function fetchNwsSnow(lat, lon) {
   return fetchJson(
-    `http://localhost:8787/api/nws/snow?lat=${lat}&lon=${lon}`,
+    `${API_BASE}/api/nws/snow?lat=${lat}&lon=${lon}`,
     `Snow forecast fetch failed for ${lat}, ${lon}`
   )
 }
 
 async function fetchResortSnow(resortKey) {
   return fetchJson(
-    `http://localhost:8787/api/resort-snow?resort=${encodeURIComponent(resortKey)}`,
+    `${API_BASE}/api/resort-snow?resort=${encodeURIComponent(resortKey)}`,
     `Resort snow fetch failed for ${resortKey}`
   )
 }
 
 async function fetchDriveRisk(resortKey) {
   return fetchJson(
-    `http://localhost:8787/api/drive-risk?resort=${encodeURIComponent(resortKey)}`,
+    `${API_BASE}/api/drive-risk?resort=${encodeURIComponent(resortKey)}`,
     `Drive risk fetch failed for ${resortKey}`
   )
 }

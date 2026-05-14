@@ -79,7 +79,7 @@ const THEMES = {
   windy:    { label: "Storm Warning", overlay: "linear-gradient(to bottom,rgba(71,85,105,0.38) 0%,rgba(30,41,59,0.28) 50%,rgba(2,6,23,0.95) 100%)",        snow: false, wind: true,  accent: "#94a3b8" },
 }
 
-const API_BASE = "http://localhost:8787"
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8787"
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
