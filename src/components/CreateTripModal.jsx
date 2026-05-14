@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { createTrip } from "../lib/socialApi"
+import { createTrip, addCarpool } from "../lib/socialApi"
 
 const RESORTS = [
   { key: "vail",          name: "Vail",           pass: "Epic", photo: "/resorts/vail.jpg",           accent: "#60a5fa" },
@@ -14,6 +14,16 @@ const RESORTS = [
   { key: "steamboat",     name: "Steamboat",       pass: "Ikon", photo: "/resorts/steamboat.jpg",      accent: "#d97706" },
   { key: "eldora",        name: "Eldora",          pass: "Ikon", photo: "/resorts/eldora.jpg",         accent: "#2dd4bf" },
   { key: "aspensnowmass", name: "Aspen Snowmass",  pass: "Ikon", photo: "/resorts/aspen-snowmass.jpg", accent: "#e2e8f0" },
+]
+
+const THEMES = [
+  { key: "default",  label: "Mountain Blue",  emoji: "🏔️", bg: "linear-gradient(135deg,#1e3a5f,#0b1424)",  accent: "#60a5fa" },
+  { key: "blizzard", label: "Blizzard",        emoji: "❄️", bg: "linear-gradient(135deg,#dbeafe,#93c5fd)",  accent: "#bfdbfe" },
+  { key: "powder",   label: "Deep Powder",     emoji: "🌨️", bg: "linear-gradient(135deg,#1d4ed8,#1e3a5f)",  accent: "#3b82f6" },
+  { key: "aurora",   label: "Aurora",          emoji: "🌌", bg: "linear-gradient(135deg,#4c1d95,#065f46)",  accent: "#8b5cf6" },
+  { key: "sunset",   label: "Alpine Sunset",   emoji: "🌅", bg: "linear-gradient(135deg,#92400e,#7f1d1d)",  accent: "#fb923c" },
+  { key: "sunny",    label: "Bluebird Day",    emoji: "☀️", bg: "linear-gradient(135deg,#92400e,#0369a1)",  accent: "#fbbf24" },
+  { key: "windy",    label: "Storm Warning",   emoji: "💨", bg: "linear-gradient(135deg,#334155,#1e293b)",  accent: "#94a3b8" },
 ]
 
 const inputStyle = {
@@ -47,8 +57,17 @@ export default function CreateTripModal({ onClose, onCreated }) {
   const [description, setDescription] = useState("")
   const [meetingSpot, setMeetingSpot] = useState("")
   const [departureTime, setDepartureTime] = useState("")
+  const [spotifyUrl, setSpotifyUrl] = useState("")
+  const [theme, setTheme] = useState("default")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+
+  // Step 3 — rides
+  const [createdTrip, setCreatedTrip] = useState(null)
+  const [cars, setCars] = useState([])           // [{ label, seats }]
+  const [carLabel, setCarLabel] = useState("")
+  const [carSeats, setCarSeats] = useState(3)
+  const [carSaving, setCarSaving] = useState(false)
 
   const selectedResort = RESORTS.find((r) => r.key === resortKey)
   const accent = selectedResort?.accent || "#60a5fa"
@@ -74,14 +93,33 @@ export default function CreateTripModal({ onClose, onCreated }) {
         description: description.trim() || null,
         meeting_spot: meetingSpot.trim() || null,
         departure_time: departureTime.trim() || null,
+        spotify_playlist_url: spotifyUrl.trim() || null,
+        theme,
       })
-      onCreated?.(trip)
-      onClose()
+      setCreatedTrip(trip)
+      setStep(3)
     } catch (err) {
       setError(err.message || "Failed to create trip.")
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleAddCar() {
+    if (!createdTrip || carSeats < 1) return
+    setCarSaving(true)
+    try {
+      await addCarpool(createdTrip.id, { driverName: "Me", seatsTotal: carSeats, carLabel: carLabel.trim() || null })
+      setCars((prev) => [...prev, { label: carLabel.trim() || null, seats: carSeats }])
+      setCarLabel("")
+      setCarSeats(3)
+    } catch (e) { console.warn(e) }
+    finally { setCarSaving(false) }
+  }
+
+  function handleFinish() {
+    onCreated?.(createdTrip)
+    onClose()
   }
 
   return (
@@ -126,21 +164,21 @@ export default function CreateTripModal({ onClose, onCreated }) {
         >
           <div>
             <div style={{ fontSize: 20, fontWeight: 900, color: "white", letterSpacing: -0.3 }}>
-              {step === 1 ? "Pick a mountain" : "Trip details"}
+              {step === 1 ? "Pick a mountain" : step === 2 ? "Trip details" : "Rides 🚗"}
             </div>
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginTop: 3 }}>
               {step === 1
                 ? "Where are you skiing?"
-                : selectedResort
-                ? `📍 ${selectedResort.name} · ${selectedResort.pass} Pass`
-                : ""}
+                : step === 2
+                ? selectedResort ? `📍 ${selectedResort.name} · ${selectedResort.pass} Pass` : ""
+                : "Add cars & open seats for your crew"}
             </div>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             {/* Step dots */}
             <div style={{ display: "flex", gap: 6 }}>
-              {[1, 2].map((s) => (
+              {[1, 2, 3].map((s) => (
                 <div
                   key={s}
                   style={{
@@ -363,6 +401,67 @@ export default function CreateTripModal({ onClose, onCreated }) {
               />
             </div>
 
+            {/* Spotify Playlist */}
+            <div>
+              <label style={labelStyle}>
+                Spotify Playlist{" "}
+                <span style={{ color: "rgba(255,255,255,0.28)", fontWeight: 600 }}>optional</span>
+              </label>
+              <input
+                type="url"
+                value={spotifyUrl}
+                onChange={(e) => setSpotifyUrl(e.target.value)}
+                placeholder="https://open.spotify.com/playlist/..."
+                style={inputStyle}
+              />
+            </div>
+
+            {/* Theme picker */}
+            <div>
+              <label style={labelStyle}>
+                Invite Theme{" "}
+                <span style={{ color: "rgba(255,255,255,0.28)", fontWeight: 600 }}>optional</span>
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6 }}>
+                {THEMES.map((t) => (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() => setTheme(t.key)}
+                    style={{
+                      background: t.bg,
+                      border: `2px solid ${theme === t.key ? t.accent : "rgba(255,255,255,0.1)"}`,
+                      borderRadius: 14,
+                      padding: "12px 6px 10px",
+                      cursor: "pointer",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 6,
+                      transition: "border-color 0.15s ease, transform 0.12s ease",
+                      boxShadow: theme === t.key ? `0 0 14px ${t.accent}66` : "none",
+                      transform: theme === t.key ? "scale(1.06)" : "scale(1)",
+                    }}
+                  >
+                    <span style={{ fontSize: 20, lineHeight: 1 }}>{t.emoji}</span>
+                    <span
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 800,
+                        color: theme === t.key ? t.accent : "rgba(255,255,255,0.55)",
+                        textTransform: "uppercase",
+                        letterSpacing: 0.4,
+                        lineHeight: 1.2,
+                        textAlign: "center",
+                      }}
+                    >
+                      {t.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Error */}
             {error && (
               <div
@@ -417,6 +516,81 @@ export default function CreateTripModal({ onClose, onCreated }) {
                 }}
               >
                 {loading ? "Dropping the trip…" : "Drop the Trip 🎿"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Rides ── */}
+        {step === 3 && (
+          <div style={{ padding: "22px 26px 28px", display: "grid", gap: 18 }}>
+
+            {/* Trip created confirmation */}
+            <div style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 14, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 20 }}>✅</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: "#22c55e" }}>Trip created!</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>Now set up your ride situation (optional)</div>
+              </div>
+            </div>
+
+            {/* Cars added so far */}
+            {cars.length > 0 && (
+              <div style={{ display: "grid", gap: 8 }}>
+                {cars.map((car, i) => (
+                  <div key={i} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 18 }}>🚗</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{car.label || "My Car"}</div>
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>{car.seats} open seat{car.seats !== 1 ? "s" : ""}</div>
+                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: accent, background: `${accent}18`, borderRadius: 999, padding: "3px 10px" }}>Added</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add a car form */}
+            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 16, padding: "16px" }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.7)", marginBottom: 12 }}>
+                {cars.length === 0 ? "Are you driving? Add your car:" : "Add another car:"}
+              </div>
+              <div style={{ display: "grid", gap: 10 }}>
+                <input
+                  type="text"
+                  value={carLabel}
+                  onChange={(e) => setCarLabel(e.target.value)}
+                  placeholder="Car nickname (e.g. Blue Subaru)"
+                  maxLength={60}
+                  style={inputStyle}
+                />
+                <div>
+                  <label style={{ ...labelStyle, marginBottom: 10 }}>Open seats in your car</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <button type="button" onClick={() => setCarSeats((s) => Math.max(1, s - 1))} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: "white", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                    <span style={{ fontSize: 22, fontWeight: 900, color: "white", minWidth: 30, textAlign: "center" }}>{carSeats}</span>
+                    <button type="button" onClick={() => setCarSeats((s) => Math.min(8, s + 1))} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: "white", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>seats available</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddCar}
+                  disabled={carSaving}
+                  style={{ background: carSaving ? "rgba(255,255,255,0.07)" : `linear-gradient(135deg,${accent}ee,${accent}99)`, border: "none", borderRadius: 12, padding: "11px", color: carSaving ? "rgba(255,255,255,0.35)" : "#020617", fontWeight: 900, cursor: carSaving ? "wait" : "pointer", fontSize: 13, boxShadow: carSaving ? "none" : `0 6px 20px ${accent}44` }}
+                >
+                  {carSaving ? "Adding…" : "Add Car 🚗"}
+                </button>
+              </div>
+            </div>
+
+            {/* Done */}
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                onClick={handleFinish}
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "12px 20px", color: "rgba(255,255,255,0.65)", fontWeight: 800, cursor: "pointer", fontSize: 14 }}
+              >
+                {cars.length === 0 ? "Skip Rides" : "Done"}
               </button>
             </div>
           </div>

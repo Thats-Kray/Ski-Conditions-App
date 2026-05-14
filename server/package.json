@@ -2,6 +2,7 @@
   "name": "ski-dashboard-backend",
   "type": "module",
   "scripts": {
+    "start": "node index.js",
     "dev": "node index.js"
   },
   "dependencies": {

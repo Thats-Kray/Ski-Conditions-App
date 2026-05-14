@@ -4,9 +4,11 @@ import fetch from "node-fetch"
 import * as cheerio from "cheerio"
 
 const app = express()
-app.use(cors())
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN ? process.env.ALLOWED_ORIGIN.split(",") : "*",
+}))
 
-const PORT = 8787
+const PORT = process.env.PORT || 8787
 const cache = new Map()
 const TTL = 5 * 60 * 1000
 
@@ -102,109 +104,53 @@ function normalizeResortKey(value = "") {
   return value.toLowerCase().replace(/[^a-z0-9]/g, "")
 }
 
-function between(text, startLabel, endLabel) {
-  const start = text.indexOf(startLabel)
-  if (start === -1) return ""
-  const end = text.indexOf(endLabel, start)
-  if (end === -1) return text.slice(start)
-  return text.slice(start, end)
-}
+async function fetchOpenMeteoSnow(lat, lon) {
+  const url =
+    `https://api.open-meteo.com/v1/forecast` +
+    `?latitude=${lat}&longitude=${lon}` +
+    `&hourly=snowfall,snow_depth` +
+    `&timezone=America%2FDenver` +
+    `&past_days=2&forecast_days=0`
 
-function parseQuotedSnowValues(sectionText) {
-  const matches = [...sectionText.matchAll(/(\d+(?:\.\d+)?)"/g)]
-  return matches.map((m) => Number(m[1]))
-}
+  const data = await cached(url, async () => {
+    const r = await fetch(url)
+    if (!r.ok) throw new Error(`Open-Meteo error ${r.status}`)
+    return r.json()
+  })
 
-function firstMatch(text, patterns) {
-  for (const pattern of patterns) {
-    const match = text.match(pattern)
-    if (match) return match
+  const times = data.hourly?.time ?? []
+  const snowfall = data.hourly?.snowfall ?? []   // mm per hour
+  const snowDepth = data.hourly?.snow_depth ?? [] // meters
+
+  const now = new Date()
+  const cutoff24 = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+  const cutoff48 = new Date(now.getTime() - 48 * 60 * 60 * 1000)
+
+  let sum24mm = 0
+  let sum48mm = 0
+  let latestDepthM = null
+
+  for (let i = 0; i < times.length; i++) {
+    const t = new Date(times[i])
+    if (t <= now) {
+      if (snowDepth[i] != null) latestDepthM = snowDepth[i]
+      if (t >= cutoff48) sum48mm += snowfall[i] ?? 0
+      if (t >= cutoff24) sum24mm += snowfall[i] ?? 0
+    }
   }
-  return null
-}
 
-function parseOnTheSnowSnowReport(html, resortName, url) {
-  const $ = cheerio.load(html)
-
-  const text = $("body")
-    .text()
-    .replace(/\u00a0/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-
-  const recentSection = between(text, "Recent Snowfall", "Forecasted Snow")
-  const recentValues = parseQuotedSnowValues(recentSection)
-
-  const snowPrev24in =
-    recentValues.length > 0 ? recentValues[recentValues.length - 1] : null
-
-  const snowPrev48in =
-    recentValues.length > 1
-      ? Number(
-          (
-            recentValues[recentValues.length - 1] +
-            recentValues[recentValues.length - 2]
-          ).toFixed(1)
-        )
-      : snowPrev24in
-
-  const depthMatch = firstMatch(text, [
-    /is a\s+(\d+(?:\.\d+)?)"\s+base depth/i,
-    /Base\s*(\d+(?:\.\d+)?)"/i,
-    /###\s*Base\s*(\d+(?:\.\d+)?)"/i,
-    /base depth\s*(\d+(?:\.\d+)?)"/i,
-    /Mid\s*Mountain\s*(\d+(?:\.\d+)?)"/i,
-    /###\s*Mid\s*Mountain\s*(\d+(?:\.\d+)?)"/i,
-  ])
-
-  const summitMatch = firstMatch(text, [
-    /Summit\s+(\d+(?:\.\d+)?)"/i,
-    /###\s*Summit\s+(\d+(?:\.\d+)?)"/i,
-  ])
-
-  const liftsSection =
-    between(text, "Lifts Open", "Acres Open") ||
-    between(text, "Lifts Open", "Runs Open")
-
-  const liftsMatch =
-    firstMatch(liftsSection, [/(\d+)\s*\/\s*(\d+)\s+open/i]) ||
-    firstMatch(text, [
-      /with\s+(\d+)\s+of\s+(\d+)\s+lifts open/i,
-      /Lifts Open\s+(\d+)\s*\/\s*(\d+)/i,
-    ])
-
-  const runsSection =
-    between(text, "Runs Open", "Provide Feedback") ||
-    between(text, "Runs Open", "Firsthand Report")
-
-  const runsMatch =
-    firstMatch(runsSection, [/(\d+)\s*\/\s*(\d+)\s+open/i]) ||
-    firstMatch(text, [/Runs Open\s+(\d+)\s*\/\s*(\d+)/i])
-
-  const baseDepth = depthMatch ? Number(depthMatch[1]) : null
-  const summitDepth = summitMatch ? Number(summitMatch[1]) : null
-  const liftsOpen = liftsMatch ? Number(liftsMatch[1]) : null
-  const liftsTotal = liftsMatch ? Number(liftsMatch[2]) : null
-  const runsOpen = runsMatch ? Number(runsMatch[1]) : null
-  const runsTotal = runsMatch ? Number(runsMatch[2]) : null
-
-  const updatedLabelMatch = text.match(/Last Updated:\s*([A-Za-z]{3}\s+\d{2})/i)
-  const updatedLabel = updatedLabelMatch ? updatedLabelMatch[1] : null
+  const mmToIn = (mm) => Math.round((mm / 25.4) * 10) / 10
+  const mToIn = (m) => Math.round(m * 39.3701 * 10) / 10
 
   return {
-    resort: resortName,
-    source: "OnTheSnow (resort-sourced snow report page)",
-    sourceUrl: url,
-    snowPrev24in,
-    snowPrev48in,
-    baseDepth,
-    summitDepth,
-    liftsOpen,
-    liftsTotal,
-    runsOpen,
-    runsTotal,
-    updatedLabel,
-    fetchedAt: new Date().toISOString(),
+    snowPrev24in: mmToIn(sum24mm),
+    snowPrev48in: mmToIn(sum48mm),
+    baseDepth: latestDepthM != null ? mToIn(latestDepthM) : null,
+    summitDepth: null,
+    liftsOpen: null,
+    liftsTotal: null,
+    runsOpen: null,
+    runsTotal: null,
   }
 }
 
@@ -265,19 +211,19 @@ const NWS_HEADERS = {
   Accept: "application/geo+json",
 }
 
-const RESORT_REPORT_URLS = {
-  vail: { name: "Vail", url: "https://www.onthesnow.com/colorado/vail/skireport" },
-  beavercreek: { name: "Beaver Creek", url: "https://www.onthesnow.com/colorado/beaver-creek/skireport" },
-  breckenridge: { name: "Breckenridge", url: "https://www.onthesnow.com/colorado/breckenridge/skireport" },
-  keystone: { name: "Keystone", url: "https://www.onthesnow.com/colorado/keystone/skireport" },
-  crestedbutte: { name: "Crested Butte", url: "https://www.onthesnow.com/colorado/crested-butte-mountain-resort/skireport" },
-  telluride: { name: "Telluride", url: "https://www.onthesnow.com/colorado/telluride/skireport" },
-  winterpark: { name: "Winter Park", url: "https://www.onthesnow.com/colorado/winter-park-resort/skireport" },
-  coppermountain: { name: "Copper Mountain", url: "https://www.onthesnow.com/colorado/copper-mountain-resort/skireport" },
-  arapahoebasin: { name: "Arapahoe Basin", url: "https://www.onthesnow.com/colorado/arapahoe-basin-ski-area/skireport" },
-  steamboat: { name: "Steamboat", url: "https://www.onthesnow.com/colorado/steamboat/skireport" },
-  eldora: { name: "Eldora", url: "https://www.onthesnow.com/colorado/eldora-mountain-resort/skireport" },
-  aspensnowmass: { name: "Aspen Snowmass", url: "https://www.onthesnow.com/colorado/aspen-snowmass/skireport" },
+const RESORT_COORDS = {
+  vail:           { name: "Vail",           lat: 39.6403, lon: -106.3742 },
+  beavercreek:    { name: "Beaver Creek",   lat: 39.6042, lon: -106.5165 },
+  breckenridge:   { name: "Breckenridge",   lat: 39.4817, lon: -106.0384 },
+  keystone:       { name: "Keystone",       lat: 39.6084, lon: -105.9437 },
+  crestedbutte:   { name: "Crested Butte",  lat: 38.8996, lon: -106.9653 },
+  telluride:      { name: "Telluride",      lat: 37.9363, lon: -107.8466 },
+  winterpark:     { name: "Winter Park",    lat: 39.8863, lon: -105.7626 },
+  coppermountain: { name: "Copper Mountain",lat: 39.5022, lon: -106.1512 },
+  arapahoebasin:  { name: "Arapahoe Basin", lat: 39.6423, lon: -105.8717 },
+  steamboat:      { name: "Steamboat",      lat: 40.4572, lon: -106.8047 },
+  eldora:         { name: "Eldora",         lat: 39.9372, lon: -105.5842 },
+  aspensnowmass:  { name: "Aspen Snowmass", lat: 39.2097, lon: -106.9499 },
 }
 
 const COTRIP_ROUTE_CONFIG = {
@@ -405,25 +351,19 @@ app.get("/api/resort-snow", async (req, res) => {
     return res.status(400).json({ error: "resort parameter is required" })
   }
 
-  const config = RESORT_REPORT_URLS[resortKey]
+  const config = RESORT_COORDS[resortKey]
   if (!config) {
     return res.status(404).json({ error: `Unknown resort "${resortParam}"` })
   }
 
   try {
-    const html = await cached(config.url, async () => {
-      const r = await fetch(config.url, {
-        headers: {
-          "User-Agent": "ski-dashboard (contact@example.com)",
-          Accept: "text/html,application/xhtml+xml",
-        },
-      })
-      if (!r.ok) throw new Error(`Snow report page error ${r.status}`)
-      return r.text()
+    const snow = await fetchOpenMeteoSnow(config.lat, config.lon)
+    res.json({
+      resort: config.name,
+      source: "Open-Meteo (hourly snowfall + snow depth)",
+      ...snow,
+      fetchedAt: new Date().toISOString(),
     })
-
-    const parsed = parseOnTheSnowSnowReport(html, config.name, config.url)
-    res.json(parsed)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

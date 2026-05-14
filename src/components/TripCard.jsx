@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { rsvpToTrip, cancelTripRsvp, addTripComment, deleteTrip } from "../lib/socialApi"
+import { rsvpToTrip, cancelTripRsvp, deleteTrip } from "../lib/socialApi"
+import TripDetailModal from "./TripDetailModal"
 
 const RESORT_NAMES = {
   vail: "Vail",
@@ -46,7 +47,6 @@ const RESORT_ACCENTS = {
   aspensnowmass: "#e2e8f0",
 }
 
-const QUICK_HYPES = ["🎿", "🔥", "❄️", "🏔️", "🤙", "💪", "🙌"]
 
 function daysUntil(dateStr) {
   const today = new Date()
@@ -152,16 +152,14 @@ function AvatarStack({ profiles, max = 6 }) {
   )
 }
 
-export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, onDeleted }) {
+export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, onDeleted, isInvited = false }) {
   const [myRsvp, setMyRsvp] = useState(trip.my_rsvp_status || null)
   const [prevServerRsvp] = useState(trip.my_rsvp_status || null)
   const [rsvpLoading, setRsvpLoading] = useState(false)
   const [rsvpPop, setRsvpPop] = useState(null)
-  const [comments, setComments] = useState(trip.comments || [])
-  const [showComments, setShowComments] = useState(false)
-  const [commentInput, setCommentInput] = useState("")
-  const [commentLoading, setCommentLoading] = useState(false)
+  const [comments] = useState(trip.comments || [])
   const [deleting, setDeleting] = useState(false)
+  const [showDetail, setShowDetail] = useState(false)
 
   const { resort_key: resortKey, ski_date: skiDate } = trip
   const accent = RESORT_ACCENTS[resortKey] || "#60a5fa"
@@ -223,53 +221,6 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
     }
   }
 
-  async function handleQuickHype(emoji) {
-    if (!currentUser) { onRequireLogin?.(); return }
-    const optimistic = {
-      id: `opt-${Date.now()}`,
-      content: emoji,
-      user_id: currentUser.id,
-      profile: null,
-      created_at: new Date().toISOString(),
-    }
-    setComments((prev) => [...prev, optimistic])
-    setShowComments(true)
-    try {
-      const saved = await addTripComment(trip.id, emoji)
-      setComments((prev) => prev.map((c) => (c.id === optimistic.id ? saved : c)))
-    } catch {
-      setComments((prev) => prev.filter((c) => c.id !== optimistic.id))
-    }
-  }
-
-  async function handleComment(e) {
-    e.preventDefault()
-    if (!commentInput.trim() || commentLoading) return
-    if (!currentUser) { onRequireLogin?.(); return }
-
-    const text = commentInput
-    setCommentLoading(true)
-    const optimistic = {
-      id: `opt-${Date.now()}`,
-      content: text,
-      user_id: currentUser.id,
-      profile: null,
-      created_at: new Date().toISOString(),
-    }
-    setComments((prev) => [...prev, optimistic])
-    setCommentInput("")
-
-    try {
-      const saved = await addTripComment(trip.id, text)
-      setComments((prev) => prev.map((c) => (c.id === optimistic.id ? saved : c)))
-    } catch {
-      setComments((prev) => prev.filter((c) => c.id !== optimistic.id))
-      setCommentInput(text)
-    } finally {
-      setCommentLoading(false)
-    }
-  }
-
   async function handleDelete() {
     if (!window.confirm("Cancel this trip?")) return
     setDeleting(true)
@@ -282,15 +233,18 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
   }
 
   return (
+    <>
     <div
       className="trip-card"
+      onClick={() => setShowDetail(true)}
       style={{
         borderRadius: 28,
         overflow: "hidden",
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.09)",
-        boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+        background: isInvited ? "rgba(96,165,250,0.05)" : "rgba(255,255,255,0.04)",
+        border: isInvited ? "1.5px solid rgba(96,165,250,0.3)" : "1px solid rgba(255,255,255,0.09)",
+        boxShadow: isInvited ? "0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(96,165,250,0.1)" : "0 24px 64px rgba(0,0,0,0.5)",
         transition: "transform 0.22s ease, box-shadow 0.22s ease",
+        cursor: "pointer",
       }}
     >
       {/* ── Hero photo section ── */}
@@ -325,8 +279,31 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
           </div>
         )}
 
-        {/* Host / Past badge */}
-        {isHost && !isPast && (
+        {/* Host / Invited / Past badge */}
+        {isInvited && !isPast && (
+          <div
+            style={{
+              position: "absolute",
+              top: 16,
+              left: 16,
+              background: "linear-gradient(135deg,rgba(96,165,250,0.85),rgba(59,130,246,0.85))",
+              backdropFilter: "blur(10px)",
+              border: "1px solid rgba(96,165,250,0.4)",
+              borderRadius: 999,
+              padding: "5px 12px",
+              fontSize: 11,
+              fontWeight: 900,
+              color: "white",
+              letterSpacing: 0.3,
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+            }}
+          >
+            ✉️ You're Invited
+          </div>
+        )}
+        {!isInvited && isHost && !isPast && (
           <div
             style={{
               position: "absolute",
@@ -497,7 +474,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
 
         {/* ── RSVP buttons ── */}
         {!isHost && !isPast && currentUser && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
             {[
               {
                 status: "going",
@@ -579,173 +556,46 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
           </button>
         )}
 
-        {/* ── Hype / Comments section ── */}
-        <div>
-          {/* Quick emoji row + comments toggle */}
-          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-            {QUICK_HYPES.map((emoji) => (
-              <button
-                key={emoji}
-                onClick={() => handleQuickHype(emoji)}
-                className="hype-btn"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: 999,
-                  padding: "5px 8px",
-                  fontSize: 16,
-                  cursor: "pointer",
-                  transition: "transform 0.12s ease, background 0.12s ease",
-                  lineHeight: 1,
-                }}
-              >
-                {emoji}
-              </button>
-            ))}
+        {/* ── Card footer: chat + view event ── */}
+        <div
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => setShowDetail(true)}
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 999, padding: "5px 12px",
+              fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.55)",
+              cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
+            }}
+          >
+            💬 {comments.length > 0 ? comments.length : "Chat"}
+          </button>
 
-            <button
-              onClick={() => setShowComments((v) => !v)}
-              style={{
-                marginLeft: "auto",
-                background: showComments
-                  ? "rgba(255,255,255,0.1)"
-                  : "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: 999,
-                padding: "5px 12px",
-                fontSize: 12,
-                fontWeight: 700,
-                color: "rgba(255,255,255,0.6)",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                whiteSpace: "nowrap",
-              }}
-            >
-              💬 {comments.length > 0 ? comments.length : "Hype it"}
-            </button>
-          </div>
-
-          {/* Comments list + input */}
-          {showComments && (
-            <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
-              {comments.length === 0 && (
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "rgba(255,255,255,0.38)",
-                    textAlign: "center",
-                    padding: "10px 0",
-                  }}
-                >
-                  Be the first to hype this trip ☝️
-                </div>
-              )}
-
-              {comments.slice(-10).map((c, i) => (
-                <div
-                  key={c.id || i}
-                  style={{ display: "flex", alignItems: "flex-start", gap: 8 }}
-                >
-                  <CardAvatar profile={c.profile} size={24} />
-                  <div
-                    style={{
-                      flex: 1,
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.07)",
-                      borderRadius: "0 14px 14px 14px",
-                      padding: "7px 11px",
-                      fontSize: 13,
-                      color: "rgba(255,255,255,0.85)",
-                      wordBreak: "break-word",
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {c.profile && (
-                      <span
-                        style={{
-                          fontWeight: 800,
-                          color: "rgba(255,255,255,0.5)",
-                          fontSize: 11,
-                          marginRight: 6,
-                        }}
-                      >
-                        {c.profile.full_name?.split(" ")[0] || c.profile.username}
-                      </span>
-                    )}
-                    {c.content}
-                  </div>
-                </div>
-              ))}
-
-              {currentUser && (
-                <form
-                  onSubmit={handleComment}
-                  style={{ display: "flex", gap: 8, alignItems: "center" }}
-                >
-                  <CardAvatar profile={currentUser?.user_metadata} size={24} />
-                  <input
-                    value={commentInput}
-                    onChange={(e) => setCommentInput(e.target.value)}
-                    placeholder="Add hype… 🎿"
-                    maxLength={280}
-                    style={{
-                      flex: 1,
-                      background: "rgba(255,255,255,0.07)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      borderRadius: 999,
-                      padding: "7px 14px",
-                      fontSize: 13,
-                      color: "white",
-                      outline: "none",
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!commentInput.trim() || commentLoading}
-                    style={{
-                      background: commentInput.trim() ? accent : "rgba(255,255,255,0.07)",
-                      color: commentInput.trim() ? "#020617" : "rgba(255,255,255,0.35)",
-                      border: "none",
-                      borderRadius: 999,
-                      padding: "7px 16px",
-                      fontSize: 12,
-                      fontWeight: 900,
-                      cursor: commentInput.trim() ? "pointer" : "default",
-                      transition: "all 0.15s ease",
-                      flexShrink: 0,
-                    }}
-                  >
-                    Send
-                  </button>
-                </form>
-              )}
-            </div>
-          )}
+          <button
+            onClick={() => setShowDetail(true)}
+            style={{
+              background: "none", border: "none",
+              fontSize: 12, fontWeight: 700, color: `${accent}bb`,
+              cursor: "pointer", padding: "5px 2px",
+            }}
+          >
+            View event →
+          </button>
         </div>
-
-        {/* Host-only: cancel trip */}
-        {isHost && !isPast && (
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 12 }}>
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              style={{
-                background: "none",
-                border: "none",
-                color: "rgba(255,100,100,0.55)",
-                fontSize: 12,
-                cursor: "pointer",
-                fontWeight: 700,
-                padding: 0,
-              }}
-            >
-              {deleting ? "Cancelling…" : "Cancel trip"}
-            </button>
-          </div>
-        )}
       </div>
     </div>
+
+    {showDetail && (
+      <TripDetailModal
+        trip={trip}
+        currentUser={currentUser}
+        onClose={() => setShowDetail(false)}
+        onUpdate={() => { setShowDetail(false); onUpdate?.() }}
+      />
+    )}
+    </>
   )
 }

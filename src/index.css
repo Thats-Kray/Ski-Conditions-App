@@ -1,40 +1,61 @@
+/* ── Reset & base ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+    system-ui, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
+  color-scheme: dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  background-color: #020617;
+
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+html {
+  scroll-behavior: smooth;
+  height: 100%;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
+  padding: 0;
+  min-height: 100%;
   min-width: 320px;
+  background: #020617;
+  overscroll-behavior-y: none;
+}
+
+#root {
   min-height: 100vh;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
+/* ── Typography ────────────────────────────────────────────────── */
+h1, h2, h3 { line-height: 1.1; }
 
+h1 { font-size: clamp(22px, 5vw, 40px); }
+h2 { font-size: clamp(18px, 4vw, 28px); }
+
+/* ── Links ─────────────────────────────────────────────────────── */
+a {
+  font-weight: 500;
+  color: #60a5fa;
+  text-decoration: none;
+}
+a:hover { color: #93c5fd; }
+
+/* ── Buttons (global reset — app uses inline styles) ─────────── */
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -44,25 +65,271 @@ button {
   font-family: inherit;
   background-color: #1a1a1a;
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color 0.25s, opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+button:active { opacity: 0.82; }
+
+/* ── Inputs ─────────────────────────────────────────────────────── */
+input, textarea, select {
+  font-family: inherit;
+  font-size: 16px; /* prevents iOS zoom on focus */
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+/* ── Scrollbar (desktop) ────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); }
+
+/* ── Bottom nav safe area ───────────────────────────────────────── */
+.bottom-nav-safe {
+  padding-bottom: max(8px, var(--safe-bottom));
+}
+
+/* ── Top nav (desktop only) ─────────────────────────────────────── */
+.top-nav {
+  display: none;
+}
+@media (min-width: 768px) {
+  .top-nav {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(8, 17, 30, 0.92);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
   }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
+  .top-nav-inner {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 0 20px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
   }
 }
+
+/* ── Mobile bottom padding (content above bottom nav) ───────────── */
+.mobile-scroll-pad {
+  padding-top: 52px; /* offset for fixed top nav on desktop */
+}
+@media (max-width: 767px) {
+  .mobile-scroll-pad {
+    padding-top: 0;
+    padding-bottom: calc(72px + var(--safe-bottom));
+  }
+}
+
+/* ── Resort card grid ───────────────────────────────────────────── */
+.resort-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(305px, 1fr));
+  gap: 18px;
+}
+@media (max-width: 639px) {
+  .resort-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* ── Leader cards grid ──────────────────────────────────────────── */
+.leader-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+@media (max-width: 639px) {
+  .leader-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+}
+
+/* ── Metrics row (3 stat boxes inside resort card) ──────────────── */
+.metric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 639px) {
+  .metric-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+  }
+}
+
+/* ── Filter bar ─────────────────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+@media (max-width: 639px) {
+  .filter-bar {
+    gap: 8px;
+  }
+  .filter-bar input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* ── Crew layout ────────────────────────────────────────────────── */
+.crew-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 767px) {
+  .crew-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* ── Top tabs (hide on mobile) ──────────────────────────────────── */
+.top-tab-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+@media (max-width: 767px) {
+  .top-tab-bar { display: none; }
+}
+
+/* ── Bottom nav (mobile only) ────────────────────────────────────── */
+.bottom-nav {
+  display: none;
+}
+@media (max-width: 767px) {
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(8, 17, 30, 0.97);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+    padding: 6px 0 max(8px, var(--safe-bottom));
+    z-index: 100;
+  }
+}
+
+/* ── Header description (hide on mobile) ────────────────────────── */
+.header-description {
+  display: block;
+}
+@media (max-width: 767px) {
+  .header-description { display: none; }
+  .header-badge { display: none; }
+}
+
+/* ── Condensed header on mobile ─────────────────────────────────── */
+.header-title {
+  margin: 0;
+  font-size: clamp(20px, 5vw, 40px);
+  line-height: 1.05;
+  letter-spacing: -1.1px;
+}
+@media (max-width: 767px) {
+  .header-title {
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+}
+
+/* ── Refresh button (compact on mobile) ─────────────────────────── */
+.refresh-btn-label-long { display: inline; }
+.refresh-btn-label-short { display: none; }
+@media (max-width: 767px) {
+  .refresh-btn-label-long { display: none; }
+  .refresh-btn-label-short { display: inline; }
+}
+
+/* ── Resort card image header (taller on desktop) ───────────────── */
+.resort-card-hero { min-height: 128px; }
+@media (max-width: 639px) {
+  .resort-card-hero { min-height: 100px; }
+}
+
+/* ── Modal bottom sheet on mobile ───────────────────────────────── */
+@media (max-width: 767px) {
+  .modal-sheet {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 94vh;
+    border-radius: 24px 24px 0 0 !important;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin: 0 !important;
+    padding-bottom: max(16px, var(--safe-bottom));
+  }
+  .modal-sheet-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+}
+
+/* ── Touch scroll for overflow containers ───────────────────────── */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+}
+
+/* ── Card hover (disable on mobile) ────────────────────────────── */
+@media (hover: hover) {
+  .resort-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  }
+}
+
+/* ── Bottom sheet drag handle ───────────────────────────────────── */
+.sheet-handle {
+  display: none;
+}
+@media (max-width: 767px) {
+  .sheet-handle {
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 2px;
+    margin: 10px auto 0;
+    flex-shrink: 0;
+  }
+}
+
+/* ── Notifications ──────────────────────────────────────────────── */
+.notif-item:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+.notif-delete {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.notif-item:hover .notif-delete {
+  opacity: 1;
+}
+
+/* Weekend planner horizontal scroll – hide scrollbar */
+.weekend-scroll::-webkit-scrollbar { display: none; }

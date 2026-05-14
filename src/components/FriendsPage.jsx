@@ -13,7 +13,13 @@ import {
   getSentCrewInvites,
   respondToCrewInvite,
   getMySkiPlans,
+  getFriendsUpcomingTrips,
+  getMyPings,
+  respondToPing,
 } from "../lib/socialApi";
+import { SkiPingComposer, PingCard } from "./SkiPingModal";
+import { DateMatchmakerComposer, DatePollCard } from "./DateMatchmaker";
+import { getMyDatePolls, voteOnDateOption } from "../lib/socialApi";
 
 function getDisplayName(person) {
   return (
@@ -264,6 +270,158 @@ const labelStyle = {
   color: "rgba(255,255,255,0.78)",
 };
 
+const RESORT_EMOJI = {
+  vail: "🏔️", beavercreek: "⛰️", breckenridge: "❄️", keystone: "🎯",
+  crestedbutte: "🌨️", telluride: "🌅", winterpark: "🌲", coppermountain: "🔴",
+  arapahoebasin: "💎", steamboat: "♨️", eldora: "🌿", aspensnowmass: "✨",
+}
+
+function FriendAvatar({ profile, size = 28 }) {
+  const name = profile?.full_name || profile?.username || "?"
+  const initial = name.charAt(0).toUpperCase()
+  if (profile?.avatar_url) {
+    return (
+      <img
+        src={profile.avatar_url}
+        alt={name}
+        title={name}
+        style={{ width: size, height: size, borderRadius: 999, objectFit: "cover", border: "2px solid rgba(10,14,30,0.8)", flexShrink: 0 }}
+      />
+    )
+  }
+  return (
+    <div
+      title={name}
+      style={{
+        width: size, height: size, borderRadius: 999,
+        background: "rgba(96,165,250,0.25)", border: "2px solid rgba(96,165,250,0.4)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: size * 0.42, fontWeight: 800, color: "#93c5fd", flexShrink: 0,
+      }}
+    >
+      {initial}
+    </div>
+  )
+}
+
+function WeekendPlanner({ days }) {
+  if (!days?.length) return null
+
+  return (
+    <div style={{
+      background: "rgba(255,255,255,0.03)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderRadius: 20,
+      padding: "20px 20px 16px",
+      marginBottom: 20,
+    }}>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <div style={{ fontSize: 17, fontWeight: 900, color: "white" }}>Friends' Ski Plans</div>
+          <div style={{
+            background: "rgba(96,165,250,0.15)", border: "1px solid rgba(96,165,250,0.3)",
+            borderRadius: 999, padding: "2px 9px", fontSize: 11, fontWeight: 800, color: "#60a5fa",
+          }}>
+            Next 2 weeks
+          </div>
+        </div>
+        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.42)" }}>
+          See where your crew is planning to ski — use conditions + company to choose your mountain
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 6, scrollbarWidth: "none" }}>
+        {days.map((day) => (
+          <div
+            key={day.date}
+            style={{
+              flexShrink: 0,
+              width: day.isWeekend ? 190 : 160,
+              background: day.isWeekend
+                ? "linear-gradient(145deg, rgba(37,99,235,0.18), rgba(8,145,178,0.12))"
+                : "rgba(255,255,255,0.04)",
+              border: day.isWeekend
+                ? "1px solid rgba(96,165,250,0.25)"
+                : "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 16,
+              padding: "12px 14px",
+              display: "grid",
+              gap: 10,
+            }}
+          >
+            {/* Day header */}
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+              <div style={{
+                fontSize: 13, fontWeight: 900,
+                color: day.isWeekend ? "#60a5fa" : "rgba(255,255,255,0.6)",
+                textTransform: "uppercase", letterSpacing: 0.8,
+              }}>
+                {day.dayName}
+              </div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>{day.dateLabel}</div>
+              {day.isWeekend && (
+                <div style={{
+                  marginLeft: "auto", background: "rgba(96,165,250,0.2)", borderRadius: 6,
+                  padding: "1px 6px", fontSize: 10, fontWeight: 800, color: "#93c5fd",
+                }}>
+                  SKI DAY
+                </div>
+              )}
+            </div>
+
+            {/* Resort cards */}
+            <div style={{ display: "grid", gap: 8 }}>
+              {day.trips.map((trip) => (
+                <div
+                  key={trip.id}
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: 12,
+                    padding: "9px 11px",
+                    display: "grid",
+                    gap: 6,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 14 }}>{RESORT_EMOJI[trip.resort_key] || "⛷️"}</span>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: "white", lineHeight: 1.2 }}>
+                      {trip.resort_name}
+                    </div>
+                  </div>
+
+                  {/* Friend avatars */}
+                  {trip.friends.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center" }}>
+                      <div style={{ display: "flex" }}>
+                        {trip.friends.slice(0, 5).map((f, i) => (
+                          <div key={f.id} style={{ marginLeft: i === 0 ? 0 : -8, zIndex: 10 - i }}>
+                            <FriendAvatar profile={f} size={26} />
+                          </div>
+                        ))}
+                      </div>
+                      {trip.friends.length > 5 && (
+                        <div style={{ marginLeft: 4, fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>
+                          +{trip.friends.length - 5}
+                        </div>
+                      )}
+                      <div style={{ marginLeft: 6, fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+                        {trip.friends.length === 1
+                          ? trip.friends[0]?.full_name || trip.friends[0]?.username || "1 friend"
+                          : `${trip.friends.length} friends`}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function FriendsPage() {
   const [searchText, setSearchText] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -275,6 +433,7 @@ export default function FriendsPage() {
   const [sentInvites, setSentInvites] = useState([]);
   const [skiPlans, setSkiPlans] = useState([]);
   const [showPastPlans, setShowPastPlans] = useState(false);
+  const [friendsWeekend, setFriendsWeekend] = useState([]);
 
   const [loadingPage, setLoadingPage] = useState(true);
   const [searching, setSearching] = useState(false);
@@ -291,6 +450,14 @@ export default function FriendsPage() {
     message: "",
   });
 
+  const [showPingComposer, setShowPingComposer] = useState(false);
+  const [pings, setPings] = useState({ sent: [], received: [] });
+  const [respondingPingId, setRespondingPingId] = useState(null);
+
+  const [showDateComposer, setShowDateComposer] = useState(false);
+  const [datePolls, setDatePolls] = useState({ created: [], received: [] });
+  const [votingOptionId, setVotingOptionId] = useState(null);
+
   async function loadPageData() {
     setLoadingPage(true);
     setErrorMessage("");
@@ -304,6 +471,9 @@ export default function FriendsPage() {
         receivedCrewInvites,
         sentCrewInvites,
         mySkiPlans,
+        friendsTrips,
+        pingData,
+        pollData,
       ] = await Promise.all([
         getIncomingFriendRequests(),
         getOutgoingFriendRequests(),
@@ -312,6 +482,9 @@ export default function FriendsPage() {
         getReceivedCrewInvites(),
         getSentCrewInvites(),
         getMySkiPlans(),
+        getFriendsUpcomingTrips(),
+        getMyPings().catch(() => ({ sent: [], received: [] })),
+        getMyDatePolls().catch(() => ({ created: [], received: [] })),
       ]);
 
       setIncomingRequests(incoming || []);
@@ -321,6 +494,9 @@ export default function FriendsPage() {
       setReceivedInvites(receivedCrewInvites || []);
       setSentInvites(sentCrewInvites || []);
       setSkiPlans(mySkiPlans || []);
+      setFriendsWeekend(friendsTrips || []);
+      setPings(pingData || { sent: [], received: [] });
+      setDatePolls(pollData || { created: [], received: [] });
     } catch (error) {
       console.error("Failed to load friends page:", error);
       setErrorMessage(error.message || "Failed to load friends page.");
@@ -426,6 +602,32 @@ export default function FriendsPage() {
       setErrorMessage(error.message || "Could not cancel friend request.");
     } finally {
       setWorkingId(null);
+    }
+  }
+
+  async function handleRespondToPing(pingId, response) {
+    setRespondingPingId(pingId)
+    try {
+      await respondToPing(pingId, response)
+      const pingData = await getMyPings()
+      setPings(pingData || { sent: [], received: [] })
+    } catch (e) {
+      console.error("Failed to respond to ping:", e)
+    } finally {
+      setRespondingPingId(null)
+    }
+  }
+
+  async function handleVoteOnDate(optionId, available) {
+    setVotingOptionId(optionId)
+    try {
+      await voteOnDateOption(optionId, available)
+      const pollData = await getMyDatePolls()
+      setDatePolls(pollData || { created: [], received: [] })
+    } catch (e) {
+      console.error("Failed to vote on date:", e)
+    } finally {
+      setVotingOptionId(null)
     }
   }
 
@@ -602,6 +804,126 @@ export default function FriendsPage() {
           {successMessage}
         </div>
       ) : null}
+
+      <WeekendPlanner days={friendsWeekend} />
+
+      {/* ── Down to ski? ping bar ── */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        background: "linear-gradient(135deg, rgba(59,130,246,0.12), rgba(16,185,129,0.08))",
+        border: "1px solid rgba(59,130,246,0.22)",
+        borderRadius: 16, padding: "14px 18px", marginBottom: 18,
+      }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>👋 Down to ski?</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>
+            Send a quick ping to your crew and see who's in
+          </div>
+        </div>
+        <button
+          onClick={() => setShowPingComposer(true)}
+          style={{
+            padding: "9px 18px", borderRadius: 12, border: "none",
+            background: "#3b82f6", color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Send Ping
+        </button>
+      </div>
+
+      {/* ── Active pings (received) ── */}
+      {pings.received.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
+            Pings from friends ({pings.received.length})
+          </div>
+          <div style={{ display: "grid", gap: 10 }}>
+            {pings.received.map((ping) => (
+              <PingCard
+                key={ping.id}
+                ping={ping}
+                onRespond={handleRespondToPing}
+                responding={respondingPingId}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Sent pings (my outgoing) ── */}
+      {pings.sent.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
+            My pings ({pings.sent.length})
+          </div>
+          <div style={{ display: "grid", gap: 10 }}>
+            {pings.sent.map((ping) => (
+              <PingCard key={ping.id} ping={ping} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Date Matchmaker bar ── */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        background: "linear-gradient(135deg, rgba(139,92,246,0.12), rgba(59,130,246,0.08))",
+        border: "1px solid rgba(139,92,246,0.22)",
+        borderRadius: 16, padding: "14px 18px", marginBottom: 18,
+      }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>📅 Date Matchmaker</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>
+            Share dates with your crew and find a day everyone can make
+          </div>
+        </div>
+        <button
+          onClick={() => setShowDateComposer(true)}
+          style={{
+            padding: "9px 18px", borderRadius: 12, border: "none",
+            background: "#8b5cf6", color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          New Poll
+        </button>
+      </div>
+
+      {/* ── Active date polls ── */}
+      {(datePolls.received.length > 0 || datePolls.created.length > 0) && (
+        <div style={{ marginBottom: 18 }}>
+          {datePolls.received.length > 0 && (
+            <>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
+                Date polls from friends ({datePolls.received.length})
+              </div>
+              <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
+                {datePolls.received.map((poll) => (
+                  <DatePollCard
+                    key={poll.id}
+                    poll={poll}
+                    onVote={handleVoteOnDate}
+                    voting={votingOptionId}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+          {datePolls.created.length > 0 && (
+            <>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
+                My date polls ({datePolls.created.length})
+              </div>
+              <div style={{ display: "grid", gap: 10 }}>
+                {datePolls.created.map((poll) => (
+                  <DatePollCard key={poll.id} poll={poll} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       <div
         style={{
@@ -1283,6 +1605,28 @@ export default function FriendsPage() {
           </SectionCard>
         </div>
       </div>
+
+      {showPingComposer && (
+        <SkiPingComposer
+          friends={acceptedFriends}
+          onClose={() => setShowPingComposer(false)}
+          onSent={async () => {
+            const pingData = await getMyPings().catch(() => ({ sent: [], received: [] }))
+            setPings(pingData)
+          }}
+        />
+      )}
+
+      {showDateComposer && (
+        <DateMatchmakerComposer
+          friends={acceptedFriends}
+          onClose={() => setShowDateComposer(false)}
+          onCreated={async () => {
+            const pollData = await getMyDatePolls().catch(() => ({ created: [], received: [] }))
+            setDatePolls(pollData)
+          }}
+        />
+      )}
     </div>
   );
 }
