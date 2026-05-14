@@ -146,7 +146,7 @@ function NotLoggedIn({ onLogin }) {
   )
 }
 
-function TripSection({ title, subtitle, badge, trips, currentUser, onUpdate, onRequireLogin }) {
+function TripSection({ title, subtitle, badge, trips, currentUser, onUpdate, onRequireLogin, isInvited = false, accentColor }) {
   const [deletedIds, setDeletedIds] = useState(new Set())
   const visible = trips.filter((t) => !deletedIds.has(t.id))
   if (!visible.length) return null
@@ -159,13 +159,13 @@ function TripSection({ title, subtitle, badge, trips, currentUser, onUpdate, onR
           {badge != null && (
             <div
               style={{
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.1)",
+                background: accentColor ? `${accentColor}22` : "rgba(255,255,255,0.08)",
+                border: `1px solid ${accentColor ? `${accentColor}44` : "rgba(255,255,255,0.1)"}`,
                 borderRadius: 999,
                 padding: "3px 10px",
                 fontSize: 12,
                 fontWeight: 800,
-                color: "rgba(255,255,255,0.6)",
+                color: accentColor || "rgba(255,255,255,0.6)",
               }}
             >
               {badge}
@@ -193,6 +193,7 @@ function TripSection({ title, subtitle, badge, trips, currentUser, onUpdate, onR
             currentUser={currentUser}
             onUpdate={onUpdate}
             onRequireLogin={onRequireLogin}
+            isInvited={isInvited}
             onDeleted={() => {
               setDeletedIds((prev) => new Set([...prev, trip.id]))
               onUpdate()
@@ -209,16 +210,18 @@ export default function TripsPage({ onRequireLogin }) {
   const [myTrips, setMyTrips] = useState([])
   const [rsvpdTrips, setRsvpdTrips] = useState([])
   const [friendsTrips, setFriendsTrips] = useState([])
+  const [invitedTrips, setInvitedTrips] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [error, setError] = useState("")
 
   const loadTrips = useCallback(async (user) => {
     try {
-      const { mine, friends, rsvpd } = await getAllVisibleTrips()
+      const { mine, friends, rsvpd, invited } = await getAllVisibleTrips()
       setMyTrips(mine)
       setRsvpdTrips(rsvpd)
       setFriendsTrips(friends)
+      setInvitedTrips(invited || [])
     } catch (err) {
       console.warn("Trips load failed:", err)
     }
@@ -247,7 +250,7 @@ export default function TripsPage({ onRequireLogin }) {
     }
   }
 
-  const hasAnyTrips = myTrips.length + rsvpdTrips.length + friendsTrips.length > 0
+  const hasAnyTrips = myTrips.length + rsvpdTrips.length + friendsTrips.length + invitedTrips.length > 0
 
   return (
     <div style={{ paddingBottom: 48 }}>
@@ -375,6 +378,20 @@ export default function TripsPage({ onRequireLogin }) {
         <EmptyState onCreateTrip={handleCreateClick} />
       ) : (
         <div style={{ display: "grid", gap: 38 }}>
+          {invitedTrips.length > 0 && (
+            <TripSection
+              title="✉️ Pending Invites"
+              subtitle="You've been invited — tap to RSVP"
+              badge={invitedTrips.length}
+              trips={invitedTrips}
+              currentUser={currentUser}
+              onUpdate={() => loadTrips(currentUser)}
+              onRequireLogin={onRequireLogin}
+              isInvited={true}
+              accentColor="#60a5fa"
+            />
+          )}
+
           <TripSection
             title="Your Trips"
             subtitle="Trips you're hosting"

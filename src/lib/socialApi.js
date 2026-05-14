@@ -130,20 +130,23 @@ export async function upsertMyProfile(profile) {
   const user = await getCurrentUser();
 
   const payload = {
-  id: user.id,
-  first_name: profile.first_name || null,
-  last_name: profile.last_name || null,
-  full_name:
-    profile.full_name ||
-    [profile.first_name, profile.last_name].filter(Boolean).join(" ") ||
-    null,
-  username: profile.username || null,
-  avatar_url: profile.avatar_url || null,
-  ski_passes: profile.ski_passes || [],
-  favorite_mountain: profile.favorite_mountain || null,
-  ride_type: profile.ride_type || null,
-  updated_at: new Date().toISOString(),
-};
+    id: user.id,
+    first_name: profile.first_name || null,
+    last_name: profile.last_name || null,
+    full_name:
+      profile.full_name ||
+      [profile.first_name, profile.last_name].filter(Boolean).join(" ") ||
+      null,
+    username: profile.username || null,
+    avatar_url: profile.avatar_url || null,
+    ski_passes: profile.ski_passes || [],
+    favorite_mountain: profile.favorite_mountain || null,
+    sport_type: profile.sport_type || null,
+    skill_level: profile.skill_level || null,
+    vehicle_label: profile.vehicle_label || null,
+    vehicle_seats: profile.vehicle_seats || null,
+    updated_at: new Date().toISOString(),
+  };
 
   const { data, error } = await supabase
     .from("profiles")
@@ -1020,7 +1023,7 @@ async function enrichTrips(trips, userId) {
   const [rsvpRes, commentRes] = await Promise.all([
     supabase
       .from("trip_rsvps")
-      .select("id, trip_id, user_id, status, created_at")
+      .select("id, trip_id, user_id, status, plus_ones, rsvp_message, rsvp_gif_url, created_at")
       .in("trip_id", tripIds),
     supabase
       .from("trip_comments")
@@ -1065,7 +1068,7 @@ async function enrichTrips(trips, userId) {
   })
 }
 
-export async function createTrip({ resort_key, ski_date, title, description, meeting_spot, departure_time }) {
+export async function createTrip({ resort_key, ski_date, title, description, meeting_spot, departure_time, spotify_playlist_url, theme }) {
   const user = await getCurrentUser()
   if (!user) throw new Error("You must be logged in to create a trip.")
 
@@ -1079,6 +1082,8 @@ export async function createTrip({ resort_key, ski_date, title, description, mee
       description: description || null,
       meeting_spot: meeting_spot || null,
       departure_time: departure_time || null,
+      spotify_playlist_url: spotify_playlist_url || null,
+      theme: theme || "default",
       status: "upcoming",
     })
     .select()
@@ -1090,13 +1095,13 @@ export async function createTrip({ resort_key, ski_date, title, description, mee
 
 export async function getAllVisibleTrips() {
   const user = await getCurrentUser()
-  if (!user) return { mine: [], friends: [], rsvpd: [] }
+  if (!user) return { mine: [], friends: [], rsvpd: [], invited: [] }
 
   const today = new Date().toISOString().slice(0, 10)
   const friendIds = await getAcceptedFriendIds(user.id)
   const friendIdArray = [...friendIds]
 
-  const [myRaw, myRsvpRaw, friendsRaw] = await Promise.all([
+  const [myRaw, myRsvpRaw, friendsRaw, pendingInvitesRaw] = await Promise.all([
     supabase
       .from("ski_trips")
       .select("*")
@@ -1118,23 +1123,48 @@ export async function getAllVisibleTrips() {
           .gte("ski_date", today)
           .order("ski_date", { ascending: true })
       : Promise.resolve({ data: [] }),
+    supabase
+      .from("trip_invites")
+      .select("trip_id")
+      .eq("invitee_id", user.id)
+      .eq("status", "pending"),
   ])
 
   const myTripsRaw = myRaw.data || []
   const rsvpdIds = new Set((myRsvpRaw.data || []).map((r) => r.trip_id))
   const myTripIds = new Set(myTripsRaw.map((t) => t.id))
   const allFriendsTrips = friendsRaw.data || []
+  const allFriendsTripIds = new Set(allFriendsTrips.map((t) => t.id))
+  const pendingInviteTripIds = (pendingInvitesRaw.data || []).map((i) => i.trip_id)
 
   const rsvpdRaw = allFriendsTrips.filter((t) => rsvpdIds.has(t.id) && !myTripIds.has(t.id))
   const discoverRaw = allFriendsTrips.filter((t) => !rsvpdIds.has(t.id) && !myTripIds.has(t.id))
 
-  const [mine, rsvpd, friends] = await Promise.all([
+  // Invited trips = pending invites that aren't already mine, rsvpd, or visible via friends
+  const newInviteIds = pendingInviteTripIds.filter(
+    (id) => !myTripIds.has(id) && !allFriendsTripIds.has(id) && !rsvpdIds.has(id)
+  )
+
+  let invitedTripsRaw = []
+  if (newInviteIds.length > 0) {
+    const { data } = await supabase
+      .from("ski_trips")
+      .select("*")
+      .in("id", newInviteIds)
+      .eq("status", "upcoming")
+      .gte("ski_date", today)
+      .order("ski_date", { ascending: true })
+    invitedTripsRaw = data || []
+  }
+
+  const [mine, rsvpd, friends, invited] = await Promise.all([
     enrichTrips(myTripsRaw, user.id),
     enrichTrips(rsvpdRaw, user.id),
     enrichTrips(discoverRaw, user.id),
+    enrichTrips(invitedTripsRaw, user.id),
   ])
 
-  return { mine, friends, rsvpd }
+  return { mine, friends, rsvpd, invited }
 }
 
 export async function rsvpToTrip(tripId, status) {
@@ -1152,6 +1182,16 @@ export async function rsvpToTrip(tripId, status) {
     .single()
 
   if (error) throw error
+
+  // Dismiss any pending invite when user RSVPs
+  const inviteStatus = status === "cantgo" ? "declined" : "accepted"
+  await supabase
+    .from("trip_invites")
+    .update({ status: inviteStatus })
+    .eq("trip_id", tripId)
+    .eq("invitee_id", user.id)
+    .eq("status", "pending")
+
   return data
 }
 
@@ -1186,6 +1226,11 @@ export async function addTripComment(tripId, content) {
     .eq("id", user.id)
     .single()
 
+  const actorName = profile?.full_name || profile?.username || "Someone"
+  const { data: trip } = await supabase.from("ski_trips").select("title, resort_key").eq("id", tripId).single()
+  const tripTitle = trip?.title || RESORT_DISPLAY[trip?.resort_key] || "the trip"
+  notifyTripChat(tripId, tripTitle, user.id, actorName)  // fire-and-forget
+
   return { ...data, profile: profile || null }
 }
 
@@ -1200,6 +1245,457 @@ export async function deleteTrip(tripId) {
     .eq("host_id", user.id)
 
   if (error) throw error
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+export async function rsvpWithMessage(tripId, status, { message, gifUrl, plusOnes } = {}) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("You must be logged in to RSVP.")
+  if (!["going", "maybe", "cantgo"].includes(status)) throw new Error("Invalid RSVP status.")
+
+  const { data, error } = await supabase
+    .from("trip_rsvps")
+    .upsert({
+      trip_id: tripId,
+      user_id: user.id,
+      status,
+      plus_ones: plusOnes || 0,
+      rsvp_message: message?.trim() || null,
+      rsvp_gif_url: gifUrl?.trim() || null,
+    }, { onConflict: "trip_id,user_id" })
+    .select()
+    .single()
+
+  if (error) throw error
+
+  // Dismiss any pending invite when user RSVPs with message
+  const inviteStatus = status === "cantgo" ? "declined" : "accepted"
+  await supabase
+    .from("trip_invites")
+    .update({ status: inviteStatus })
+    .eq("trip_id", tripId)
+    .eq("invitee_id", user.id)
+    .eq("status", "pending")
+
+  // Notify host of RSVP
+  const { data: trip } = await supabase.from("ski_trips").select("title, resort_key").eq("id", tripId).single()
+  const { data: actorProfile } = await supabase.from("profiles").select("full_name, username").eq("id", user.id).single()
+  const actorName = actorProfile?.full_name || actorProfile?.username || "Someone"
+  const tripTitle = trip?.title || RESORT_DISPLAY[trip?.resort_key] || "the trip"
+  notifyRsvp(tripId, tripTitle, actorName, status, user.id)  // fire-and-forget
+
+  return data
+}
+
+export async function addTripUpdate(tripId, content) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+
+  const { data, error } = await supabase
+    .from("trip_updates")
+    .insert({ trip_id: tripId, host_id: user.id, content: content.trim() })
+    .select()
+    .single()
+
+  if (error) throw error
+
+  const { data: trip } = await supabase.from("ski_trips").select("title, resort_key").eq("id", tripId).single()
+  const tripTitle = trip?.title || RESORT_DISPLAY[trip?.resort_key] || "the trip"
+  notifyTripUpdate(tripId, tripTitle, content.trim(), user.id)  // fire-and-forget
+
+  return data
+}
+
+export async function deleteTripUpdate(updateId) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+
+  const { error } = await supabase
+    .from("trip_updates")
+    .delete()
+    .eq("id", updateId)
+    .eq("host_id", user.id)
+
+  if (error) throw error
+}
+
+export async function addCarpool(tripId, { driverName, seatsTotal, carLabel, note }) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+
+  const { data, error } = await supabase
+    .from("trip_carpools")
+    .insert({ trip_id: tripId, driver_user_id: user.id, driver_name: driverName, seats_total: seatsTotal, car_label: carLabel || null, note: note || null })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function removeCarpool(carpoolId) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+
+  const { error } = await supabase
+    .from("trip_carpools")
+    .delete()
+    .eq("id", carpoolId)
+
+  if (error) throw error
+}
+
+export async function claimSeat(tripId, carpoolId) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+
+  // Release any existing seat in this trip first
+  const { data: existingCars } = await supabase
+    .from("trip_carpools")
+    .select("id")
+    .eq("trip_id", tripId)
+
+  if (existingCars?.length) {
+    await supabase
+      .from("trip_carpool_riders")
+      .delete()
+      .in("carpool_id", existingCars.map((c) => c.id))
+      .eq("user_id", user.id)
+  }
+
+  const { data, error } = await supabase
+    .from("trip_carpool_riders")
+    .insert({ carpool_id: carpoolId, user_id: user.id })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function releaseSeat(carpoolId) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+
+  const { error } = await supabase
+    .from("trip_carpool_riders")
+    .delete()
+    .eq("carpool_id", carpoolId)
+    .eq("user_id", user.id)
+
+  if (error) throw error
+}
+
+export async function updateRideStatus(tripId, status) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+
+  const { data, error } = await supabase
+    .from("trip_rsvps")
+    .update({ ride_status: status })
+    .eq("trip_id", tripId)
+    .eq("user_id", user.id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function getTripDetail(tripId) {
+  const user = await getCurrentUser()
+
+  const [tripRes, rsvpRes, commentRes] = await Promise.all([
+    supabase.from("ski_trips").select("*").eq("id", tripId).single(),
+    supabase
+      .from("trip_rsvps")
+      .select("id, trip_id, user_id, status, ride_status, plus_ones, rsvp_message, rsvp_gif_url, created_at")
+      .eq("trip_id", tripId),
+    supabase
+      .from("trip_comments")
+      .select("id, trip_id, user_id, content, created_at")
+      .eq("trip_id", tripId)
+      .order("created_at", { ascending: true }),
+  ])
+
+  if (tripRes.error) throw tripRes.error
+
+  let updates = []
+  try {
+    const updateRes = await supabase
+      .from("trip_updates")
+      .select("*")
+      .eq("trip_id", tripId)
+      .order("created_at", { ascending: false })
+    if (!updateRes.error) updates = updateRes.data || []
+  } catch {}
+
+  let polls = []
+  try {
+    const pollsRes = await supabase
+      .from("trip_polls")
+      .select("*")
+      .eq("trip_id", tripId)
+      .order("created_at", { ascending: true })
+    if (!pollsRes.error && pollsRes.data?.length) {
+      const pollIds = pollsRes.data.map((p) => p.id)
+      const [optRes, voteRes] = await Promise.all([
+        supabase.from("trip_poll_options").select("*").in("poll_id", pollIds).order("position"),
+        supabase.from("trip_poll_votes").select("*").in("poll_id", pollIds),
+      ])
+      const opts = optRes.data || []
+      const votes = voteRes.data || []
+      polls = pollsRes.data.map((poll) => {
+        const options = opts
+          .filter((o) => o.poll_id === poll.id)
+          .map((opt) => ({ ...opt, vote_count: votes.filter((v) => v.option_id === opt.id).length }))
+        const myVote = user ? votes.find((v) => v.poll_id === poll.id && v.user_id === user.id) : null
+        return {
+          ...poll,
+          options,
+          total_votes: votes.filter((v) => v.poll_id === poll.id).length,
+          my_vote_option_id: myVote?.option_id || null,
+        }
+      })
+    }
+  } catch {}
+
+  let carpools = []
+  try {
+    const carRes = await supabase
+      .from("trip_carpools")
+      .select("*")
+      .eq("trip_id", tripId)
+      .order("created_at", { ascending: true })
+
+    if (!carRes.error && carRes.data?.length) {
+      const carpoolIds = carRes.data.map((c) => c.id)
+      const { data: riderRows } = await supabase
+        .from("trip_carpool_riders")
+        .select("*")
+        .in("carpool_id", carpoolIds)
+
+      const cpUserIds = [
+        ...carRes.data.filter((c) => c.driver_user_id).map((c) => c.driver_user_id),
+        ...(riderRows || []).map((r) => r.user_id),
+      ]
+      let cpProfiles = []
+      if (cpUserIds.length) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("id, full_name, username, avatar_url")
+          .in("id", [...new Set(cpUserIds)])
+        cpProfiles = data || []
+      }
+      const cpMap = new Map(cpProfiles.map((p) => [p.id, p]))
+
+      carpools = carRes.data.map((car) => {
+        const riders = (riderRows || [])
+          .filter((r) => r.carpool_id === car.id)
+          .map((r) => ({ ...r, profile: cpMap.get(r.user_id) || null }))
+        return {
+          ...car,
+          driver_profile: car.driver_user_id ? cpMap.get(car.driver_user_id) || null : null,
+          riders,
+          seats_taken: riders.length,
+          seats_available: car.seats_total - riders.length,
+        }
+      })
+    }
+  } catch {}
+
+  let invites = []
+  try {
+    const invRes = await supabase
+      .from("trip_invites")
+      .select("*")
+      .eq("trip_id", tripId)
+      .eq("status", "pending")
+    if (!invRes.error && invRes.data?.length) {
+      const inviteeIds = invRes.data.filter((i) => i.invitee_id).map((i) => i.invitee_id)
+      let invProfiles = []
+      if (inviteeIds.length) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("id, full_name, username, avatar_url")
+          .in("id", inviteeIds)
+        invProfiles = data || []
+      }
+      const invPm = new Map(invProfiles.map((p) => [p.id, p]))
+      invites = invRes.data.map((inv) => ({
+        ...inv,
+        profile: inv.invitee_id ? invPm.get(inv.invitee_id) || null : null,
+      }))
+    }
+  } catch {}
+
+  const trip = tripRes.data
+  const rsvps = rsvpRes.data || []
+  const comments = commentRes.data || []
+
+  const userIds = new Set([
+    trip.host_id,
+    ...rsvps.map((r) => r.user_id),
+    ...comments.map((c) => c.user_id),
+    ...updates.map((u) => u.host_id),
+  ])
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .in("id", [...userIds])
+
+  const pm = new Map((profiles || []).map((p) => [p.id, p]))
+
+  return {
+    ...trip,
+    host_profile: pm.get(trip.host_id) || null,
+    rsvps: rsvps.map((r) => ({ ...r, profile: pm.get(r.user_id) || null })),
+    comments: comments.map((c) => ({ ...c, profile: pm.get(c.user_id) || null })),
+    updates: updates.map((u) => ({ ...u, host_profile: pm.get(u.host_id) || null })),
+    polls,
+    invites,
+    carpools,
+    my_rsvp: user ? (rsvps.find((r) => r.user_id === user.id) || null) : null,
+    current_user_id: user?.id || null,
+  }
+}
+
+export async function inviteFriendsToTrip(tripId, userIds) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+  if (!userIds?.length) return []
+
+  const rows = userIds.map((id) => ({
+    trip_id: tripId,
+    inviter_id: user.id,
+    invitee_id: id,
+    status: "pending",
+  }))
+
+  const { data, error } = await supabase
+    .from("trip_invites")
+    .upsert(rows, { onConflict: "trip_id,invitee_id", ignoreDuplicates: true })
+    .select()
+
+  if (error) throw error
+
+  // Notify each invitee
+  const { data: trip } = await supabase.from("ski_trips").select("title, resort_key").eq("id", tripId).single()
+  const { data: inviterProfile } = await supabase.from("profiles").select("full_name, username").eq("id", user.id).single()
+  const inviterName = inviterProfile?.full_name || inviterProfile?.username || "Someone"
+  const tripTitle = trip?.title || RESORT_DISPLAY[trip?.resort_key] || "a ski trip"
+  await Promise.allSettled(
+    userIds.map((uid) =>
+      insertNotification({ userId: uid, type: "invite", title: `${inviterName} invited you to ${tripTitle}`, tripId, actorId: user.id })
+    )
+  )
+
+  return data || []
+}
+
+export async function inviteByEmailToTrip(tripId, { email, name }) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+  if (!email?.trim()) throw new Error("Email is required.")
+
+  const { data, error } = await supabase
+    .from("trip_invites")
+    .insert({ trip_id: tripId, inviter_id: user.id, email: email.trim(), invitee_name: name?.trim() || null, status: "pending" })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function removeTripInvite(inviteId) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+
+  const { error } = await supabase
+    .from("trip_invites")
+    .delete()
+    .eq("id", inviteId)
+    .eq("inviter_id", user.id)
+
+  if (error) throw error
+}
+
+export async function createTripPoll(tripId, { question, options }) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+  if (!question?.trim()) throw new Error("Question is required.")
+  if (!options?.length || options.length < 2) throw new Error("At least 2 options required.")
+
+  const { data: poll, error: pollError } = await supabase
+    .from("trip_polls")
+    .insert({ trip_id: tripId, creator_id: user.id, question: question.trim() })
+    .select()
+    .single()
+
+  if (pollError) throw pollError
+
+  const optionRows = options
+    .filter((o) => o?.trim())
+    .map((o, i) => ({ poll_id: poll.id, text: o.trim(), position: i }))
+
+  const { error: optError } = await supabase.from("trip_poll_options").insert(optionRows)
+  if (optError) throw optError
+
+  return poll
+}
+
+export async function voteOnPoll(pollId, optionId) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+
+  const { data, error } = await supabase
+    .from("trip_poll_votes")
+    .upsert({ poll_id: pollId, option_id: optionId, user_id: user.id }, { onConflict: "poll_id,user_id" })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function deleteTripPoll(pollId) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+
+  const { error } = await supabase
+    .from("trip_polls")
+    .delete()
+    .eq("id", pollId)
+    .eq("creator_id", user.id)
+
+  if (error) throw error
+}
+
+export async function updateTripMeta(tripId, { spotify_playlist_url, title, description, meeting_spot, departure_time, theme } = {}) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+
+  const payload = {}
+  if (spotify_playlist_url !== undefined) payload.spotify_playlist_url = spotify_playlist_url || null
+  if (title !== undefined) payload.title = title || null
+  if (description !== undefined) payload.description = description || null
+  if (meeting_spot !== undefined) payload.meeting_spot = meeting_spot || null
+  if (departure_time !== undefined) payload.departure_time = departure_time || null
+  if (theme !== undefined) payload.theme = theme || "default"
+
+  const { data, error } = await supabase
+    .from("ski_trips")
+    .update(payload)
+    .eq("id", tripId)
+    .eq("host_id", user.id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
 }
 
 /* ─────────────────────────────────────────────────────────────────────────── */
@@ -1284,4 +1780,529 @@ export async function getFriendsLeaderboard() {
   });
 
   return leaderboard;
+}
+
+/* ── Notifications ──────────────────────────────────────────────────────────── */
+
+async function insertNotification({ userId, type, title, body = null, tripId = null, actorId = null }) {
+  if (!userId) return
+  try {
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      type,
+      title,
+      body,
+      trip_id: tripId,
+      actor_id: actorId,
+    })
+  } catch (e) {
+    console.warn("Notification insert failed:", e)
+  }
+}
+
+export async function getNotifications() {
+  const user = await getCurrentUser()
+  if (!user) return []
+
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(50)
+
+  if (error) throw error
+  return data || []
+}
+
+export async function markNotificationRead(id) {
+  const user = await getCurrentUser()
+  if (!user) return
+  await supabase.from("notifications").update({ read: true }).eq("id", id).eq("user_id", user.id)
+}
+
+export async function markAllNotificationsRead() {
+  const user = await getCurrentUser()
+  if (!user) return
+  await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false)
+}
+
+export async function deleteNotification(id) {
+  const user = await getCurrentUser()
+  if (!user) return
+  await supabase.from("notifications").delete().eq("id", id).eq("user_id", user.id)
+}
+
+// Fire-and-forget: notify trip participants of a new chat message
+export async function notifyTripChat(tripId, tripTitle, actorId, actorName) {
+  try {
+    // Get host + all going/maybe RSVPs
+    const { data: trip } = await supabase.from("ski_trips").select("host_id").eq("id", tripId).single()
+    const { data: rsvps } = await supabase.from("trip_rsvps").select("user_id").eq("trip_id", tripId).in("status", ["going", "maybe"])
+
+    const recipients = new Set([...(rsvps || []).map((r) => r.user_id)])
+    if (trip?.host_id) recipients.add(trip.host_id)
+    recipients.delete(actorId) // don't notify sender
+
+    const inserts = [...recipients].map((uid) =>
+      insertNotification({ userId: uid, type: "chat", title: `${actorName} in ${tripTitle}`, body: null, tripId, actorId })
+    )
+    await Promise.allSettled(inserts)
+  } catch (e) {
+    console.warn("notifyTripChat failed:", e)
+  }
+}
+
+// Fire-and-forget: notify trip participants of a host update
+export async function notifyTripUpdate(tripId, tripTitle, content, actorId) {
+  try {
+    const { data: rsvps } = await supabase.from("trip_rsvps").select("user_id").eq("trip_id", tripId).in("status", ["going", "maybe"])
+
+    const recipients = new Set((rsvps || []).map((r) => r.user_id))
+    recipients.delete(actorId)
+
+    const inserts = [...recipients].map((uid) =>
+      insertNotification({ userId: uid, type: "host_update", title: `📢 Update: ${tripTitle}`, body: content, tripId, actorId })
+    )
+    await Promise.allSettled(inserts)
+  } catch (e) {
+    console.warn("notifyTripUpdate failed:", e)
+  }
+}
+
+// Fire-and-forget: notify host of new RSVP
+export async function notifyRsvp(tripId, tripTitle, actorName, status, actorId) {
+  try {
+    const { data: trip } = await supabase.from("ski_trips").select("host_id").eq("id", tripId).single()
+    if (!trip?.host_id || trip.host_id === actorId) return
+
+    const statusLabel = status === "going" ? "is going" : status === "maybe" ? "might be going" : "can't make it"
+    await insertNotification({
+      userId: trip.host_id,
+      type: "rsvp",
+      title: `${actorName} ${statusLabel} to ${tripTitle}`,
+      tripId,
+      actorId,
+    })
+  } catch (e) {
+    console.warn("notifyRsvp failed:", e)
+  }
+}
+
+/* ── Friends' Weekend Planner ───────────────────────────────────────────────── */
+
+const RESORT_DISPLAY = {
+  vail: "Vail", beavercreek: "Beaver Creek", breckenridge: "Breckenridge",
+  keystone: "Keystone", crestedbutte: "Crested Butte", telluride: "Telluride",
+  winterpark: "Winter Park", coppermountain: "Copper Mountain",
+  arapahoebasin: "Arapahoe Basin", steamboat: "Steamboat", eldora: "Eldora",
+  aspensnowmass: "Aspen Snowmass",
+}
+
+export async function getFriendsUpcomingTrips() {
+  const user = await getCurrentUser()
+  if (!user) return []
+
+  const friendIds = await getAcceptedFriendIds(user.id)
+  if (friendIds.size === 0) return []
+
+  const friendIdArray = [...friendIds]
+  const today = new Date()
+  const todayKey = today.toISOString().slice(0, 10)
+  const twoWeeksOut = new Date(today)
+  twoWeeksOut.setDate(twoWeeksOut.getDate() + 14)
+  const maxDateKey = twoWeeksOut.toISOString().slice(0, 10)
+
+  const [friendsTripsRes, friendProfilesRes, rsvpRes] = await Promise.all([
+    // Trips hosted by friends
+    supabase
+      .from("ski_trips")
+      .select("id, title, resort_key, ski_date, host_id, status")
+      .in("host_id", friendIdArray)
+      .eq("status", "upcoming")
+      .gte("ski_date", todayKey)
+      .lte("ski_date", maxDateKey),
+    // Friend profiles
+    supabase
+      .from("profiles")
+      .select("id, full_name, username, avatar_url")
+      .in("id", friendIdArray),
+    // RSVPs from friends on any upcoming trips
+    supabase
+      .from("trip_rsvps")
+      .select("trip_id, user_id, status")
+      .in("user_id", friendIdArray)
+      .eq("status", "going"),
+  ])
+
+  const friendProfiles = new Map((friendProfilesRes.data || []).map((p) => [p.id, p]))
+  const hostedTrips = friendsTripsRes.data || []
+
+  // Collect trip IDs from RSVPs that aren't already in hosted trips
+  const hostedIds = new Set(hostedTrips.map((t) => t.id))
+  const rsvpdTripIds = [...new Set((rsvpRes.data || []).map((r) => r.trip_id).filter((id) => !hostedIds.has(id)))]
+
+  let rsvpdTrips = []
+  if (rsvpdTripIds.length > 0) {
+    const { data } = await supabase
+      .from("ski_trips")
+      .select("id, title, resort_key, ski_date, host_id, status")
+      .in("id", rsvpdTripIds)
+      .eq("status", "upcoming")
+      .gte("ski_date", todayKey)
+      .lte("ski_date", maxDateKey)
+    rsvpdTrips = data || []
+  }
+
+  const allTrips = [...hostedTrips, ...rsvpdTrips]
+  const rsvpsByTrip = new Map()
+  for (const r of (rsvpRes.data || [])) {
+    if (!rsvpsByTrip.has(r.trip_id)) rsvpsByTrip.set(r.trip_id, [])
+    rsvpsByTrip.get(r.trip_id).push(r.user_id)
+  }
+
+  // Build enriched trips with which friends are going
+  const enriched = allTrips.map((trip) => {
+    const goingFriendIds = new Set(rsvpsByTrip.get(trip.id) || [])
+    // Include host if host is a friend
+    if (friendIds.has(trip.host_id)) goingFriendIds.add(trip.host_id)
+
+    const friends = [...goingFriendIds]
+      .map((id) => friendProfiles.get(id))
+      .filter(Boolean)
+
+    return {
+      id: trip.id,
+      title: trip.title || `Trip to ${RESORT_DISPLAY[trip.resort_key] || trip.resort_key}`,
+      resort_key: trip.resort_key,
+      resort_name: RESORT_DISPLAY[trip.resort_key] || trip.resort_key,
+      ski_date: trip.ski_date,
+      friends,
+    }
+  })
+
+  // Group by date
+  const byDate = new Map()
+  for (const trip of enriched) {
+    if (!byDate.has(trip.ski_date)) byDate.set(trip.ski_date, [])
+    byDate.get(trip.ski_date).push(trip)
+  }
+
+  // Build sorted array of date groups
+  const result = [...byDate.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, trips]) => {
+      const d = new Date(`${date}T12:00:00`)
+      const isWeekend = d.getDay() === 0 || d.getDay() === 6
+      return {
+        date,
+        dayName: d.toLocaleDateString(undefined, { weekday: "short" }),
+        dateLabel: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+        isWeekend,
+        trips,
+      }
+    })
+
+  return result
+}
+
+// ─── Ski Pings ────────────────────────────────────────────────────────────────
+
+export async function createSkiPing({ recipientIds, message, resort_key, ski_date }) {
+  const user = await getCurrentUser()
+  const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data: ping, error } = await supabase
+    .from("ski_pings")
+    .insert({ sender_id: user.id, message: message || null, resort_key: resort_key || null, ski_date: ski_date || null, expires_at: expiresAt })
+    .select()
+    .single()
+  if (error) throw error
+
+  if (recipientIds?.length > 0) {
+    const rows = recipientIds.map((uid) => ({ ping_id: ping.id, user_id: uid }))
+    const { error: recErr } = await supabase.from("ski_ping_recipients").insert(rows)
+    if (recErr) throw recErr
+  }
+
+  return ping
+}
+
+export async function respondToPing(pingId, response) {
+  const user = await getCurrentUser()
+  const { error } = await supabase
+    .from("ski_ping_responses")
+    .upsert({ ping_id: pingId, user_id: user.id, response }, { onConflict: "ping_id,user_id" })
+  if (error) throw error
+}
+
+export async function getMyPings() {
+  const user = await getCurrentUser()
+
+  const [sentRes, receivedIdsRes] = await Promise.all([
+    supabase
+      .from("ski_pings")
+      .select("*, ski_ping_recipients(user_id), ski_ping_responses(user_id, response)")
+      .eq("sender_id", user.id)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("ski_ping_recipients")
+      .select("ping_id")
+      .eq("user_id", user.id),
+  ])
+
+  const sentPings = sentRes.data || []
+
+  const receivedPingIds = (receivedIdsRes.data || []).map((r) => r.ping_id)
+  let receivedPings = []
+  if (receivedPingIds.length > 0) {
+    const { data } = await supabase
+      .from("ski_pings")
+      .select("*, ski_ping_recipients(user_id), ski_ping_responses(user_id, response)")
+      .in("id", receivedPingIds)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false })
+    receivedPings = data || []
+  }
+
+  // Collect all sender/recipient user ids to fetch profiles
+  const allPings = [...sentPings, ...receivedPings]
+  const userIds = new Set()
+  for (const p of allPings) {
+    userIds.add(p.sender_id)
+    for (const r of p.ski_ping_recipients || []) userIds.add(r.user_id)
+    for (const r of p.ski_ping_responses || []) userIds.add(r.user_id)
+  }
+
+  let profileMap = new Map()
+  if (userIds.size > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, username, avatar_url")
+      .in("id", [...userIds])
+    for (const p of profiles || []) profileMap.set(p.id, p)
+  }
+
+  const enrich = (ping) => ({
+    ...ping,
+    senderProfile: profileMap.get(ping.sender_id) || null,
+    recipientProfiles: (ping.ski_ping_recipients || [])
+      .map((r) => profileMap.get(r.user_id))
+      .filter(Boolean),
+    responses: (ping.ski_ping_responses || []).map((r) => ({
+      ...r,
+      profile: profileMap.get(r.user_id) || null,
+    })),
+    myResponse: (ping.ski_ping_responses || []).find((r) => r.user_id === user.id)?.response || null,
+    isMine: ping.sender_id === user.id,
+  })
+
+  return {
+    sent: sentPings.map(enrich),
+    received: receivedPings.filter((p) => p.sender_id !== user.id).map(enrich),
+    myUserId: user.id,
+  }
+}
+
+// ─── Date Matchmaker ──────────────────────────────────────────────────────────
+
+export async function createDatePoll({ title, resort_key, message, dates, recipientIds }) {
+  const user = await getCurrentUser()
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data: poll, error } = await supabase
+    .from("date_polls")
+    .insert({ creator_id: user.id, title, resort_key: resort_key || null, message: message || null, expires_at: expiresAt })
+    .select()
+    .single()
+  if (error) throw error
+
+  if (dates?.length > 0) {
+    const { error: optErr } = await supabase
+      .from("date_poll_options")
+      .insert(dates.map((d) => ({ poll_id: poll.id, ski_date: d })))
+    if (optErr) throw optErr
+  }
+
+  if (recipientIds?.length > 0) {
+    const { error: recErr } = await supabase
+      .from("date_poll_recipients")
+      .insert(recipientIds.map((uid) => ({ poll_id: poll.id, user_id: uid })))
+    if (recErr) throw recErr
+  }
+
+  return poll
+}
+
+export async function voteOnDateOption(optionId, available) {
+  const user = await getCurrentUser()
+  const { error } = await supabase
+    .from("date_poll_votes")
+    .upsert({ option_id: optionId, user_id: user.id, available }, { onConflict: "option_id,user_id" })
+  if (error) throw error
+}
+
+export async function getMyDatePolls() {
+  const user = await getCurrentUser()
+
+  const [createdRes, recipientRes] = await Promise.all([
+    supabase
+      .from("date_polls")
+      .select("*, date_poll_options(id, ski_date, date_poll_votes(user_id, available)), date_poll_recipients(user_id)")
+      .eq("creator_id", user.id)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("date_poll_recipients")
+      .select("poll_id")
+      .eq("user_id", user.id),
+  ])
+
+  const myPollIds = new Set((createdRes.data || []).map((p) => p.id))
+  const receivedPollIds = (recipientRes.data || []).map((r) => r.poll_id).filter((id) => !myPollIds.has(id))
+
+  let receivedPolls = []
+  if (receivedPollIds.length > 0) {
+    const { data } = await supabase
+      .from("date_polls")
+      .select("*, date_poll_options(id, ski_date, date_poll_votes(user_id, available)), date_poll_recipients(user_id)")
+      .in("id", receivedPollIds)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false })
+    receivedPolls = data || []
+  }
+
+  const allPolls = [...(createdRes.data || []), ...receivedPolls]
+  const userIds = new Set()
+  for (const poll of allPolls) {
+    userIds.add(poll.creator_id)
+    for (const r of poll.date_poll_recipients || []) userIds.add(r.user_id)
+    for (const opt of poll.date_poll_options || []) {
+      for (const v of opt.date_poll_votes || []) userIds.add(v.user_id)
+    }
+  }
+
+  let profileMap = new Map()
+  if (userIds.size > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, username, avatar_url")
+      .in("id", [...userIds])
+    for (const p of profiles || []) profileMap.set(p.id, p)
+  }
+
+  const enrich = (poll) => ({
+    ...poll,
+    creatorProfile: profileMap.get(poll.creator_id) || null,
+    recipientProfiles: (poll.date_poll_recipients || [])
+      .map((r) => profileMap.get(r.user_id))
+      .filter(Boolean),
+    options: (poll.date_poll_options || [])
+      .sort((a, b) => a.ski_date.localeCompare(b.ski_date))
+      .map((opt) => ({
+        ...opt,
+        votes: opt.date_poll_votes || [],
+        yesCount: (opt.date_poll_votes || []).filter((v) => v.available).length,
+        noCount: (opt.date_poll_votes || []).filter((v) => !v.available).length,
+        myVote: (opt.date_poll_votes || []).find((v) => v.user_id === user.id) ?? null,
+      })),
+    isMine: poll.creator_id === user.id,
+    participantCount: (poll.date_poll_recipients || []).length + 1,
+  })
+
+  return {
+    created: (createdRes.data || []).map(enrich),
+    received: receivedPolls.map(enrich),
+    myUserId: user.id,
+  }
+}
+
+// ─── Trip Recap & Media ───────────────────────────────────────────────────────
+
+export async function submitTripRecap(tripId, { rating, conditions, highlight, notes }) {
+  const user = await getCurrentUser()
+  const { error } = await supabase
+    .from("trip_recaps")
+    .upsert({ trip_id: tripId, user_id: user.id, rating, conditions: conditions || null, highlight: highlight || null, notes: notes || null }, { onConflict: "trip_id,user_id" })
+  if (error) throw error
+}
+
+export async function getTripRecaps(tripId) {
+  const user = await getCurrentUser()
+  const { data, error } = await supabase
+    .from("trip_recaps")
+    .select("*")
+    .eq("trip_id", tripId)
+    .order("created_at", { ascending: false })
+  if (error) throw error
+
+  const userIds = [...new Set((data || []).map((r) => r.user_id))]
+  let profileMap = new Map()
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, username, avatar_url")
+      .in("id", userIds)
+    for (const p of profiles || []) profileMap.set(p.id, p)
+  }
+
+  return {
+    recaps: (data || []).map((r) => ({ ...r, profile: profileMap.get(r.user_id) || null })),
+    myRecap: (data || []).find((r) => r.user_id === user.id) || null,
+  }
+}
+
+export async function uploadTripMedia(tripId, file, caption) {
+  const user = await getCurrentUser()
+  const ext = file.name.split(".").pop().toLowerCase()
+  const mediaType = ["mp4", "mov", "avi", "webm"].includes(ext) ? "video" : "photo"
+  const path = `${tripId}/${user.id}/${Date.now()}.${ext}`
+
+  const { error: uploadError } = await supabase.storage
+    .from("trip-media")
+    .upload(path, file, { upsert: false })
+  if (uploadError) throw uploadError
+
+  const { error: dbError } = await supabase
+    .from("trip_media")
+    .insert({ trip_id: tripId, user_id: user.id, storage_path: path, media_type: mediaType, caption: caption || null })
+  if (dbError) throw dbError
+
+  return path
+}
+
+export async function getTripMedia(tripId) {
+  const { data, error } = await supabase
+    .from("trip_media")
+    .select("*")
+    .eq("trip_id", tripId)
+    .order("created_at", { ascending: false })
+  if (error) throw error
+
+  const userIds = [...new Set((data || []).map((m) => m.user_id))]
+  let profileMap = new Map()
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, username, avatar_url")
+      .in("id", userIds)
+    for (const p of profiles || []) profileMap.set(p.id, p)
+  }
+
+  return (data || []).map((m) => {
+    const { data: urlData } = supabase.storage.from("trip-media").getPublicUrl(m.storage_path)
+    return {
+      ...m,
+      url: urlData?.publicUrl || null,
+      profile: profileMap.get(m.user_id) || null,
+    }
+  })
+}
+
+export async function deleteTripMedia(mediaId, storagePath) {
+  const { error: storErr } = await supabase.storage.from("trip-media").remove([storagePath])
+  if (storErr) throw storErr
+  const { error } = await supabase.from("trip_media").delete().eq("id", mediaId)
+  if (error) throw error
 }

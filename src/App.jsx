@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { useMobile } from "./lib/useMobile"
 import AuthForm from "./components/AuthForm"
-import SkiCheckInForm from "./components/SkiCheckInForm"
-import TodaysCrew from "./components/TodaysCrew"
+import OnboardingFlow from "./components/OnboardingFlow"
 import PowderMap from "./components/PowderMap"
 import FriendsPage from "./components/FriendsPage"
 import ProfilePage from "./components/ProfilePage"
-import TripsPage from "./components/TripsPage"
+import SkiPlansPage from "./components/SkiPlansPage"
+import TripDetailModal from "./components/TripDetailModal"
+import NotificationBell from "./components/NotificationBell"
 import {
   getCurrentUser,
   getMyProfile,
   getResortSkierCounts,
   getResortSkierDetails,
+  getTripDetail,
   logOut,
 } from "./lib/socialApi"
 
@@ -365,6 +368,120 @@ function scoreGradient(score) {
   return "linear-gradient(135deg, #7f1d1d, #451a03)"
 }
 
+function ResortCard({ r, skierCounts, skierDetails }) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div
+      className="resort-card"
+      style={{
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        borderRadius: 24,
+        overflow: "hidden",
+        transition: "transform .2s ease, box-shadow .2s ease",
+        boxShadow: "0 12px 40px rgba(0,0,0,0.28)",
+        backdropFilter: "blur(12px)",
+      }}
+    >
+      {/* Hero */}
+      <div
+        className="resort-card-hero"
+        style={{
+          position: "relative",
+          padding: 16,
+          background: r.photoPath
+            ? `linear-gradient(to top, rgba(2,6,23,0.82), rgba(2,6,23,0.2)), url(${r.photoPath}) center/cover`
+            : scoreGradient(r.powderScore),
+        }}
+      >
+        <div style={{ position: "absolute", top: 14, right: 14, display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <div style={{ background: "rgba(2,6,23,0.55)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "5px 9px", fontSize: 11, fontWeight: 900 }}>{r.pass}</div>
+          <div style={{ background: "rgba(2,6,23,0.55)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "5px 9px", fontSize: 11, fontWeight: 900, color: riskColor(r.driveRisk) }}>{r.driveRisk || "Unknown"}</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 12, paddingTop: 44 }}>
+          <ResortLogo resort={r} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.05 }}>{r.name}</div>
+            <div style={{ marginTop: 5, display: "inline-flex", gap: 8, alignItems: "center", background: "rgba(2,6,23,0.55)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "5px 9px", fontSize: 11, fontWeight: 900, color: tierColor(r.powderTier) }}>
+              Score {r.powderScore ?? "—"} · {r.powderTier || "Unknown"}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: "14px 16px 16px", display: "grid", gap: 12 }}>
+        {/* Key 3 metrics */}
+        <div className="metric-grid">
+          {[
+            { label: "24h Snow", value: r.snowPrev24in != null ? `${r.snowPrev24in}"` : "—" },
+            { label: "Base",     value: r.baseDepth  != null ? `${r.baseDepth}"` : "—" },
+            { label: "Skiers",   value: skierCounts?.[r.resortKey] ?? 0 },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "10px 12px" }}>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</div>
+              <div style={{ marginTop: 3, fontSize: 20, fontWeight: 900 }}>{value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Forecast */}
+        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "10px 12px", fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.5 }}>
+          {r.shortForecast || "—"}
+        </div>
+
+        {/* Travel alerts */}
+        {r.driveAlerts && r.driveAlerts.length > 0 && (
+          <div style={{ background: "rgba(255,195,0,0.04)", border: "1px solid rgba(255,195,0,0.14)", borderRadius: 12, padding: "10px 12px", fontSize: 12, color: "rgba(255,255,255,0.65)", display: "grid", gap: 4 }}>
+            <div style={{ fontWeight: 800, color: "rgba(255,195,0,0.75)", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 }}>Travel Alerts</div>
+            {r.driveAlerts.slice(0, 2).map((alert, idx) => <div key={idx}>• {alert}</div>)}
+          </div>
+        )}
+
+        {/* Details toggle */}
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          style={{ background: "none", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "7px 12px", color: "rgba(255,255,255,0.45)", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "color 0.15s" }}
+        >
+          {expanded ? "▲ Hide Details" : "▼ Show Details"}
+        </button>
+
+        {/* Collapsible detail rows */}
+        {expanded && (
+          <div style={{ display: "grid", gap: 7, padding: "4px 0" }}>
+            <Row label="Snow (prev 48h)"  value={r.snowPrev48in != null ? `${r.snowPrev48in}"` : "—"} />
+            <Row label="Snow (next 24h)"  value={r.snow24in     != null ? `${r.snow24in}"` : "—"} />
+            <Row label="Snow (next 48h)"  value={r.snow48in     != null ? `${r.snow48in}"` : "—"} />
+            <Row label="Summit Depth"     value={r.summitDepth  != null ? `${r.summitDepth}"` : "—"} />
+            <Row label="Temp"             value={r.tempF        != null ? `${r.tempF}°F` : "—"} />
+            <Row label="Wind"             value={r.wind || "—"} />
+            <Row label="Lifts"            value={r.liftsOpen != null && r.liftsTotal != null ? `${r.liftsOpen}/${r.liftsTotal} (${formatPercent(r.liftsOpen, r.liftsTotal)})` : "—"} />
+            <Row label="Runs"             value={r.runsOpen  != null && r.runsTotal  != null ? `${r.runsOpen}/${r.runsTotal} (${formatPercent(r.runsOpen, r.runsTotal)})` : "—"} />
+            <Row label="Drive Risk"       value={<span style={{ color: riskColor(r.driveRisk), fontWeight: 900 }}>{r.driveRisk || "Unknown"}</span>} />
+            {(r.observedUpdated || r.forecastUpdated) && (
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4, lineHeight: 1.5 }}>
+                Resort report: {r.observedUpdated || "—"}<br />
+                Forecast: {r.forecastUpdated ? new Date(r.forecastUpdated).toLocaleString() : "—"}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Directions */}
+        <a
+          href={mapsUrl(r.directionsQuery)}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display: "grid", placeItems: "center", textDecoration: "none", color: "#052e2b", fontWeight: 900, padding: "11px 14px", borderRadius: 14, background: "linear-gradient(135deg, #34d399, #22c55e)", fontSize: 13 }}
+        >
+          📍 Directions
+        </a>
+      </div>
+    </div>
+  )
+}
+
 function ResortLogo({ resort }) {
   const initials = resort.name
     .split(" ")
@@ -467,6 +584,123 @@ function LeaderCard({ title, icon, resort }) {
   )
 }
 
+const BOTTOM_TABS = [
+  { key: "dashboard", icon: "🏔️", label: "Conditions" },
+  { key: "map",       icon: "🗺️",  label: "Map" },
+  { key: "plans",     icon: "🎿",  label: "Plans" },
+  { key: "friends",   icon: "❤️",  label: "Friends" },
+  { key: "profile",   icon: "👤",  label: "Profile" },
+]
+
+function BottomNav({ activeTab, onTabChange }) {
+  return (
+    <nav className="bottom-nav">
+      {BOTTOM_TABS.map(({ key, icon, label }) => {
+        const isActive = activeTab === key
+        return (
+          <button
+            key={key}
+            onClick={() => onTabChange(key)}
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 3,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "4px 2px",
+              color: isActive ? "#60a5fa" : "rgba(255,255,255,0.42)",
+              transition: "color 0.15s ease",
+              minWidth: 0,
+            }}
+          >
+            <span style={{
+              fontSize: 22,
+              lineHeight: 1,
+              filter: isActive ? "drop-shadow(0 0 6px rgba(96,165,250,0.6))" : "none",
+              transition: "filter 0.15s ease",
+            }}>
+              {icon}
+            </span>
+            <span style={{
+              fontSize: 10,
+              fontWeight: isActive ? 800 : 500,
+              letterSpacing: 0.2,
+              lineHeight: 1,
+            }}>
+              {label}
+            </span>
+            {isActive && (
+              <div style={{
+                position: "absolute",
+                bottom: "max(10px, var(--safe-bottom, 0px))",
+                width: 4,
+                height: 4,
+                borderRadius: "50%",
+                background: "#60a5fa",
+                boxShadow: "0 0 6px #60a5fa",
+                marginTop: 1,
+              }} />
+            )}
+          </button>
+        )
+      })}
+    </nav>
+  )
+}
+
+function TopNav({ activeTab, onTabChange }) {
+  return (
+    <nav className="top-nav">
+      <div className="top-nav-inner">
+        {/* Branding */}
+        <div style={{ fontSize: 17, fontWeight: 900, color: "white", letterSpacing: -0.3, flexShrink: 0 }}>
+          ⛷️ SkiCrew
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 4 }}>
+          {BOTTOM_TABS.map(({ key, icon, label }) => {
+            const isActive = activeTab === key
+            return (
+              <button
+                key={key}
+                onClick={() => onTabChange(key)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "8px 14px", borderRadius: 10, border: "none",
+                  background: isActive ? "rgba(96,165,250,0.18)" : "transparent",
+                  color: isActive ? "#60a5fa" : "rgba(255,255,255,0.55)",
+                  fontWeight: isActive ? 800 : 500,
+                  fontSize: 13, cursor: "pointer",
+                  transition: "all 0.15s",
+                  position: "relative",
+                }}
+              >
+                <span style={{ fontSize: 16 }}>{icon}</span>
+                {label}
+                {isActive && (
+                  <div style={{
+                    position: "absolute", bottom: 2, left: "50%", transform: "translateX(-50%)",
+                    width: 4, height: 4, borderRadius: "50%",
+                    background: "#60a5fa", boxShadow: "0 0 6px #60a5fa",
+                  }} />
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Spacer to balance branding on left */}
+        <div style={{ width: 100, flexShrink: 0 }} />
+      </div>
+    </nav>
+  )
+}
+
 function TabButton({ active, onClick, children }) {
   return (
     <button
@@ -502,6 +736,7 @@ function menuButtonStyle() {
 }
 
 export default function App() {
+  const isMobile = useMobile()
   const [activeTab, setActiveTab] = useState("dashboard")
   const [passFilter, setPassFilter] = useState("All")
   const [query, setQuery] = useState("")
@@ -516,6 +751,8 @@ export default function App() {
   const [currentProfile, setCurrentProfile] = useState(null)
   const [authModalMode, setAuthModalMode] = useState(null)
   const [isRecoveryMode, setIsRecoveryMode] = useState(false)
+  const [deepLinkTrip, setDeepLinkTrip] = useState(null)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   const userMenuRef = useRef(null)
   const planSectionRef = useRef(null)
@@ -630,6 +867,11 @@ export default function App() {
 
       const profile = await getMyProfile().catch(() => null)
       setCurrentProfile(profile || null)
+
+      // Show onboarding for new users who haven't completed it and have no profile
+      if (!profile && !localStorage.getItem("skicrew_onboarded")) {
+        setShowOnboarding(true)
+      }
     } catch (err) {
       console.warn("Header profile load failed:", err)
       setCurrentUser(null)
@@ -649,6 +891,12 @@ export default function App() {
   async function handleAuthSuccess() {
     await loadHeaderUser()
     setAuthModalMode(null)
+  }
+
+  function handleOnboardingComplete() {
+    setShowOnboarding(false)
+    loadHeaderUser()
+    setActiveTab("plans")
   }
 
   async function handlePasswordResetSuccess() {
@@ -718,18 +966,24 @@ export default function App() {
   useEffect(() => {
     function handleOutsideClick(event) {
       if (!userMenuOpen) return
-
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setUserMenuOpen(false)
       }
     }
-
     document.addEventListener("mousedown", handleOutsideClick)
-
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick)
-    }
+    return () => { document.removeEventListener("mousedown", handleOutsideClick) }
   }, [userMenuOpen])
+
+  // Deep-link: ?trip=<id> → fetch trip and open detail modal
+  useEffect(() => {
+    const tripId = new URLSearchParams(window.location.search).get("trip")
+    if (!tripId) return
+    // Remove param from URL without reloading
+    window.history.replaceState({}, "", window.location.pathname)
+    getTripDetail(tripId)
+      .then((trip) => { setDeepLinkTrip(trip); setActiveTab("plans") })
+      .catch(() => {})
+  }, [])
 
   const headerDisplayName =
     currentProfile?.full_name ||
@@ -802,7 +1056,7 @@ export default function App() {
   }
 
   function openCrewPlan() {
-    setActiveTab("crew")
+    setActiveTab("plans")
     setUserMenuOpen(false)
 
     setTimeout(() => {
@@ -814,7 +1068,7 @@ export default function App() {
   }
 
   function openTodaysCrew() {
-    setActiveTab("crew")
+    setActiveTab("plans")
     setUserMenuOpen(false)
 
     setTimeout(() => {
@@ -835,19 +1089,13 @@ export default function App() {
       }}
     >
       <style>{`
-        * { box-sizing: border-box; }
-        body { margin: 0; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-        .leader-crown {
-          animation: floaty 2.8s ease-in-out infinite;
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif; }
+        .leader-crown { animation: floaty 2.8s ease-in-out infinite; }
         @keyframes floaty {
           0%, 100% { transform: translateY(0px) scale(1); }
           50% { transform: translateY(-4px) scale(1.03); }
         }
-        .resort-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 24px 60px rgba(0,0,0,0.38);
-        }
+        .bottom-nav button { position: relative; }
       `}</style>
 
 {isRecoveryMode ? (
@@ -921,284 +1169,115 @@ export default function App() {
   </div>
 ) : null}
 
-      <div style={{ maxWidth: 1320, margin: "0 auto", padding: "30px 20px 48px" }}>
-        <header
-          style={{
-            display: "grid",
-            gap: 16,
-            marginBottom: 24,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 18,
-              alignItems: "flex-end",
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  background: "rgba(255,255,255,0.04)",
-                  padding: "6px 10px",
-                  borderRadius: 999,
-                  fontSize: 12,
-                  color: "rgba(255,255,255,0.74)",
-                  marginBottom: 12,
-                }}
-              >
-                ❄️ Morning Decision Engine
-              </div>
-              <h1
-                style={{
-                  margin: 0,
-                  fontSize: 40,
-                  lineHeight: 1.05,
-                  letterSpacing: -1.1,
-                }}
-              >
-                Colorado Powder Dashboard
-              </h1>
-              <p
-                style={{
-                  margin: "10px 0 0",
-                  color: "rgba(255,255,255,0.7)",
-                  fontSize: 15,
-                  maxWidth: 760,
-                }}
-              >
-                Resort-reported snow, NWS forecast, terrain-open metrics, and live COtrip travel friction — blended into one actually-useful morning ski dashboard.
-              </p>
-            </div>
+      {/* Onboarding flow for new users */}
+      {showOnboarding && (
+        <OnboardingFlow onComplete={handleOnboardingComplete} />
+      )}
 
-            <div
-              ref={userMenuRef}
-              style={{
-                display: "flex",
-                gap: 10,
-                alignItems: "center",
-                position: "relative",
+      {/* Deep-link trip modal (opened via ?trip= URL param or notification click) */}
+      {deepLinkTrip && (
+        <TripDetailModal
+          trip={deepLinkTrip}
+          currentUser={currentUser}
+          onClose={() => setDeepLinkTrip(null)}
+          onUpdate={() => {}}
+        />
+      )}
+
+      <TopNav activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setUserMenuOpen(false) }} />
+      <BottomNav activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setUserMenuOpen(false) }} />
+
+      <div className="mobile-scroll-pad" style={{ maxWidth: 1320, margin: "0 auto", padding: isMobile ? "16px 14px 20px" : "30px 20px 48px" }}>
+        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: activeTab === "dashboard" ? 20 : 16 }}>
+          {/* Left: branding — full title on dashboard, compact elsewhere */}
+          <div>
+            {activeTab === "dashboard" ? (
+              <div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", padding: "5px 10px", borderRadius: 999, fontSize: 11, color: "rgba(255,255,255,0.65)", marginBottom: 8 }}>
+                  ❄️ Morning Decision Engine
+                </div>
+                <h1 style={{ margin: 0, fontSize: isMobile ? 24 : 30, fontWeight: 900, letterSpacing: -0.5 }}>
+                  {isMobile ? "Pow Dashboard" : "Colorado Powder Dashboard"}
+                </h1>
+              </div>
+            ) : (
+              <div style={{ fontSize: 18, fontWeight: 900, color: "white", letterSpacing: -0.3 }}>⛷️ SkiCrew</div>
+            )}
+          </div>
+
+          {/* Right: actions */}
+          <div ref={userMenuRef} style={{ display: "flex", gap: 8, alignItems: "center", position: "relative" }}>
+            <NotificationBell
+              currentUser={currentUser}
+              onOpenTrip={async (tripId) => {
+                try {
+                  const trip = await getTripDetail(tripId)
+                  setDeepLinkTrip(trip)
+                } catch (e) { console.warn("Could not open trip from notification:", e) }
               }}
-            >
+            />
+
+            {activeTab === "dashboard" && (
               <button
                 onClick={refresh}
                 disabled={loading}
                 style={{
-                  background: loading
-                    ? "rgba(255,255,255,0.12)"
-                    : "linear-gradient(135deg, #2563eb, #0891b2)",
-                  color: "white",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  padding: "12px 16px",
-                  borderRadius: 14,
-                  fontWeight: 800,
-                  cursor: loading ? "not-allowed" : "pointer",
-                  boxShadow: "0 12px 30px rgba(37,99,235,0.28)",
+                  background: loading ? "rgba(255,255,255,0.12)" : "linear-gradient(135deg, #2563eb, #0891b2)",
+                  color: "white", border: "none", padding: isMobile ? "10px 12px" : "10px 16px",
+                  borderRadius: 12, fontWeight: 800, cursor: loading ? "not-allowed" : "pointer",
+                  fontSize: 13, boxShadow: "0 6px 20px rgba(37,99,235,0.28)",
                 }}
               >
-                {loading ? "Refreshing…" : "Refresh Live Data"}
+                {loading ? "…" : isMobile ? "⟳" : "Refresh"}
               </button>
+            )}
 
-              <button
-                onClick={() => setUserMenuOpen((prev) => !prev)}
-                style={{
-                  width: 46,
-                  height: 46,
-                  borderRadius: 999,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(255,255,255,0.06)",
-                  color: "white",
-                  cursor: "pointer",
-                  display: "grid",
-                  placeItems: "center",
-                  padding: 0,
-                  overflow: "hidden",
-                  lineHeight: 1,
-                  flexShrink: 0,
-                }}
-                title="Open user menu"
-              >
-                {currentProfile?.avatar_url ? (
-                  <img
-                    src={currentProfile.avatar_url}
-                    alt={headerDisplayName}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
-                ) : (
-                  <span style={{ fontSize: 12, fontWeight: 900 }}>
-                    {initialsFromText(headerDisplayName)}
-                  </span>
-                )}
-              </button>
-
-              {userMenuOpen && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 58,
-                    right: 0,
-                    width: 260,
-                    background: "rgba(15, 23, 42, 0.98)",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    borderRadius: 18,
-                    padding: 10,
-                    display: "grid",
-                    gap: 8,
-                    boxShadow: "0 18px 50px rgba(0,0,0,0.35)",
-                    zIndex: 50,
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: "8px 10px 12px",
-                      borderBottom: "1px solid rgba(255,255,255,0.08)",
-                      marginBottom: 4,
-                    }}
-                  >
-                    <div style={{ fontWeight: 900 }}>{headerDisplayName}</div>
-                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.62)" }}>
-                      {currentUser?.email || "Not signed in"}
-                    </div>
-                  </div>
-
-                  {currentUser ? (
-                    <>
-                      <button onClick={openProfilePage} style={menuButtonStyle()}>
-                        View / Edit Profile
-                      </button>
-
-                      <button
-                        onClick={() => { setActiveTab("trips"); setUserMenuOpen(false) }}
-                        style={menuButtonStyle()}
-                      >
-                        Ski Trips
-                      </button>
-
-                      <button onClick={openCrewPlan} style={menuButtonStyle()}>
-                        Update Today’s Plan
-                      </button>
-
-                      <button onClick={openTodaysCrew} style={menuButtonStyle()}>
-                        Open Today’s Crew
-                      </button>
-
-                      <button onClick={openFriendsPage} style={menuButtonStyle()}>
-                        Open Friends
-                      </button>
-
-                      <button
-                        onClick={handleLogOut}
-                        style={{
-                          ...menuButtonStyle(),
-                          background: "rgba(239,68,68,0.14)",
-                          border: "1px solid rgba(239,68,68,0.25)",
-                          color: "#fecaca",
-                        }}
-                      >
-                        Log Out
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => openAuthModal("login")}
-                        style={menuButtonStyle()}
-                      >
-                        Log In
-                      </button>
-
-                      <button
-                        onClick={() => openAuthModal("signup")}
-                        style={menuButtonStyle()}
-                      >
-                        Sign Up
-                      </button>
-                    </>
-                  )}
-                </div>
+            <button
+              onClick={() => setUserMenuOpen((prev) => !prev)}
+              style={{ width: 40, height: 40, borderRadius: 999, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.07)", color: "white", cursor: "pointer", display: "grid", placeItems: "center", padding: 0, overflow: "hidden", flexShrink: 0 }}
+            >
+              {currentProfile?.avatar_url ? (
+                <img src={currentProfile.avatar_url} alt={headerDisplayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <span style={{ fontSize: 11, fontWeight: 900 }}>{initialsFromText(headerDisplayName)}</span>
               )}
-            </div>
-          </div>
+            </button>
 
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
-            <TabButton
-              active={activeTab === "dashboard"}
-              onClick={() => {
-                setActiveTab("dashboard")
-                setUserMenuOpen(false)
-              }}
-            >
-              Dashboard
-            </TabButton>
-            <TabButton
-              active={activeTab === "map"}
-              onClick={() => {
-                setActiveTab("map")
-                setUserMenuOpen(false)
-              }}
-            >
-              Map
-            </TabButton>
-            <TabButton
-              active={activeTab === "crew"}
-              onClick={() => {
-                setActiveTab("crew")
-                setUserMenuOpen(false)
-              }}
-            >
-              Crew
-            </TabButton>
-            <TabButton
-              active={activeTab === "trips"}
-              onClick={() => {
-                setActiveTab("trips")
-                setUserMenuOpen(false)
-              }}
-            >
-              Trips
-            </TabButton>
-            <TabButton
-              active={activeTab === "friends"}
-              onClick={() => {
-                setActiveTab("friends")
-                setUserMenuOpen(false)
-              }}
-            >
-              Friends
-            </TabButton>
+            {userMenuOpen && (
+              <div style={{ position: "absolute", top: 50, right: 0, width: 240, background: "rgba(15,23,42,0.98)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 18, padding: 10, display: "grid", gap: 6, boxShadow: "0 18px 50px rgba(0,0,0,0.45)", zIndex: 50 }}>
+                <div style={{ padding: "8px 10px 10px", borderBottom: "1px solid rgba(255,255,255,0.07)", marginBottom: 2 }}>
+                  <div style={{ fontWeight: 900, fontSize: 14 }}>{headerDisplayName}</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{currentUser?.email || "Not signed in"}</div>
+                </div>
+                {currentUser ? (
+                  <>
+                    <button onClick={openCrewPlan} style={menuButtonStyle()}>Update Today’s Plan</button>
+                    <button onClick={openFriendsPage} style={menuButtonStyle()}>Friends</button>
+                    <button onClick={handleLogOut} style={{ ...menuButtonStyle(), background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.22)", color: "#fecaca" }}>Log Out</button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => openAuthModal("login")} style={menuButtonStyle()}>Log In</button>
+                    <button onClick={() => openAuthModal("signup")} style={menuButtonStyle()}>Sign Up</button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
-
-          {error && (
-            <div
-              style={{
-                background: "rgba(255,0,0,0.12)",
-                border: "1px solid rgba(255,0,0,0.25)",
-                padding: 12,
-                borderRadius: 14,
-                color: "#ffd1d1",
-              }}
-            >
-              <strong>Error:</strong> {error}
-            </div>
-          )}
         </header>
+
+        {/* Dashboard description — only shown on dashboard tab */}
+        {activeTab === "dashboard" && (
+          <p style={{ margin: "0 0 20px", color: "rgba(255,255,255,0.55)", fontSize: 14, maxWidth: 680, lineHeight: 1.6 }}>
+            Resort snow, NWS forecasts, terrain metrics, and live COtrip travel conditions — blended into one morning ski decision engine.
+          </p>
+        )}
+
+        {error && (
+          <div style={{ background: "rgba(255,0,0,0.12)", border: "1px solid rgba(255,0,0,0.25)", padding: 12, borderRadius: 14, color: "#ffd1d1", marginBottom: 16 }}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
 
         {activeTab === "dashboard" && (
           <>
@@ -1266,13 +1345,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                    gap: 14,
-                  }}
-                >
+                <div className="leader-grid">
                   <LeaderCard title="Best Epic Resort" icon="🎿" resort={topEpic} />
                   <LeaderCard title="Best Ikon Resort" icon="🏔️" resort={topIkon} />
                 </div>
@@ -1280,11 +1353,8 @@ export default function App() {
             )}
 
             <section
+              className="filter-bar"
               style={{
-                display: "flex",
-                gap: 10,
-                flexWrap: "wrap",
-                alignItems: "center",
                 marginTop: 4,
                 marginBottom: 20,
               }}
@@ -1348,264 +1418,9 @@ export default function App() {
               </select>
             </section>
 
-            <main
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(305px, 1fr))",
-                gap: 18,
-              }}
-            >
+            <main className="resort-grid">
               {rows.map((r) => (
-                <div
-                  key={r.name}
-                  className="resort-card"
-                  style={{
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: 24,
-                    overflow: "hidden",
-                    transition: "transform .2s ease, box-shadow .2s ease",
-                    boxShadow: "0 12px 40px rgba(0,0,0,0.28)",
-                    backdropFilter: "blur(12px)",
-                  }}
-                >
-                  <div
-                    style={{
-                      position: "relative",
-                      padding: 16,
-                      minHeight: 128,
-                      background: r.photoPath
-                        ? `linear-gradient(to top, rgba(2,6,23,0.82), rgba(2,6,23,0.2)), url(${r.photoPath}) center/cover`
-                        : scoreGradient(r.powderScore),
-                    }}
-                  >
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: 14,
-                        right: 14,
-                        display: "flex",
-                        gap: 8,
-                        flexWrap: "wrap",
-                        justifyContent: "flex-end",
-                      }}
-                    >
-                      <div
-                        style={{
-                          background: "rgba(2,6,23,0.55)",
-                          border: "1px solid rgba(255,255,255,0.12)",
-                          borderRadius: 999,
-                          padding: "6px 10px",
-                          fontSize: 12,
-                          fontWeight: 900,
-                        }}
-                      >
-                        {r.pass}
-                      </div>
-                      <div
-                        style={{
-                          background: "rgba(2,6,23,0.55)",
-                          border: "1px solid rgba(255,255,255,0.12)",
-                          borderRadius: 999,
-                          padding: "6px 10px",
-                          fontSize: 12,
-                          fontWeight: 900,
-                          color: riskColor(r.driveRisk),
-                        }}
-                      >
-                        {r.driveRisk || "Unknown"}
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", alignItems: "flex-end", gap: 12, paddingTop: 44 }}>
-                      <ResortLogo resort={r} />
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 21, fontWeight: 900, lineHeight: 1.05 }}>
-                          {r.name}
-                        </div>
-                        <div
-                          style={{
-                            marginTop: 6,
-                            display: "inline-flex",
-                            gap: 8,
-                            alignItems: "center",
-                            background: "rgba(2,6,23,0.55)",
-                            border: "1px solid rgba(255,255,255,0.12)",
-                            borderRadius: 999,
-                            padding: "6px 10px",
-                            fontSize: 12,
-                            fontWeight: 900,
-                            color: tierColor(r.powderTier),
-                          }}
-                        >
-                          Score {r.powderScore ?? "—"} · {r.powderTier || "Unknown"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ padding: 18, display: "grid", gap: 14 }}>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr 1fr",
-                        gap: 10,
-                      }}
-                    >
-                      <div
-                        style={{
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          borderRadius: 16,
-                          padding: 12,
-                        }}
-                      >
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.58)", textTransform: "uppercase", letterSpacing: 0.4 }}>
-                          24h Snow
-                        </div>
-                        <div style={{ marginTop: 4, fontSize: 22, fontWeight: 900 }}>
-                          {r.snowPrev24in != null ? `${r.snowPrev24in}"` : "—"}
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          borderRadius: 16,
-                          padding: 12,
-                        }}
-                      >
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.58)", textTransform: "uppercase", letterSpacing: 0.4 }}>
-                          Base
-                        </div>
-                        <div style={{ marginTop: 4, fontSize: 22, fontWeight: 900 }}>
-                          {r.baseDepth != null ? `${r.baseDepth}"` : "—"}
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          borderRadius: 16,
-                          padding: 12,
-                        }}
-                      >
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.58)", textTransform: "uppercase", letterSpacing: 0.4 }}>
-                          Skiers
-                        </div>
-                        <div style={{ marginTop: 4, fontSize: 22, fontWeight: 900 }}>
-                          {skierCounts?.[r.resortKey] ?? 0}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: "grid", gap: 8 }}>
-                      <Row label="Snow (prev 48h)" value={r.snowPrev48in != null ? `${r.snowPrev48in}"` : "—"} />
-                      <Row label="Snow (next 24h)" value={r.snow24in != null ? `${r.snow24in}"` : "—"} />
-                      <Row label="Snow (next 48h)" value={r.snow48in != null ? `${r.snow48in}"` : "—"} />
-                      <Row label="Temp" value={r.tempF != null ? `${r.tempF}°F` : "—"} />
-                      <Row label="Wind" value={r.wind || "—"} />
-                      <Row label="Lifts" value={r.liftsOpen != null && r.liftsTotal != null ? `${r.liftsOpen}/${r.liftsTotal}` : "—"} />
-                      <Row label="Lift Open %" value={formatPercent(r.liftsOpen, r.liftsTotal)} />
-                      <Row label="Runs" value={r.runsOpen != null && r.runsTotal != null ? `${r.runsOpen}/${r.runsTotal}` : "—"} />
-                      <Row label="Terrain Open %" value={formatPercent(r.runsOpen, r.runsTotal)} />
-                      <Row label="Raw Score" value={r.rawPowderScore != null ? r.rawPowderScore : "—"} />
-                      <Row
-                        label="Drive Risk"
-                        value={
-                          <span style={{ color: riskColor(r.driveRisk), fontWeight: 900 }}>
-                            {r.driveRisk || "Unknown"}
-                          </span>
-                        }
-                      />
-                    </div>
-
-                    <div
-                      style={{
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                        borderRadius: 16,
-                        padding: 12,
-                        fontSize: 13,
-                        color: "rgba(255,255,255,0.78)",
-                        minHeight: 58,
-                      }}
-                    >
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.58)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>
-                        Forecast
-                      </div>
-                      {r.shortForecast || "—"}
-                    </div>
-
-                    {r.driveAlerts && r.driveAlerts.length > 0 && (
-                      <div
-                        style={{
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          borderRadius: 16,
-                          padding: 12,
-                          fontSize: 12,
-                          color: "rgba(255,255,255,0.68)",
-                          display: "grid",
-                          gap: 6,
-                        }}
-                      >
-                        <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.78)" }}>
-                          Travel Alerts
-                        </div>
-                        {r.driveAlerts.slice(0, 3).map((alert, idx) => (
-                          <div key={idx}>• {alert}</div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr",
-                        gap: 10,
-                      }}
-                    >
-                      <a
-                        href={mapsUrl(r.directionsQuery)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: "grid",
-                          placeItems: "center",
-                          textDecoration: "none",
-                          color: "#052e2b",
-                          fontWeight: 900,
-                          padding: "12px 14px",
-                          borderRadius: 14,
-                          background: "linear-gradient(135deg, #34d399, #22c55e)",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                        }}
-                      >
-                        Open Directions
-                      </a>
-                    </div>
-
-                    {(r.observedUpdated || r.forecastUpdated) && (
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: "rgba(255,255,255,0.5)",
-                          lineHeight: 1.5,
-                        }}
-                      >
-                        Resort report: {r.observedUpdated || "—"}
-                        <br />
-                        Forecast update:{" "}
-                        {r.forecastUpdated
-                          ? new Date(r.forecastUpdated).toLocaleString()
-                          : "—"}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <ResortCard key={r.name} r={r} skierCounts={skierCounts} skierDetails={skierDetails} />
               ))}
             </main>
           </>
@@ -1648,93 +1463,8 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === "trips" && (
-          <div style={{ marginTop: 8 }}>
-            <TripsPage onRequireLogin={requireLogin} />
-          </div>
-        )}
-
-        {activeTab === "crew" && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "minmax(320px, 420px) minmax(0, 1fr)",
-              gap: 14,
-              marginTop: 8,
-              alignItems: "start",
-            }}
-          >
-            <div
-              style={{
-                display: "grid",
-                gap: 14,
-              }}
-            >
-              {currentUser ? (
-                <div ref={planSectionRef}>
-                  <SkiCheckInForm resorts={RESORTS} />
-                </div>
-              ) : (
-                <div
-                  ref={planSectionRef}
-                  style={{
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: 22,
-                    padding: 20,
-                    display: "grid",
-                    gap: 14,
-                    boxShadow: "0 18px 50px rgba(0,0,0,0.28)",
-                  }}
-                >
-                  <div>
-                    <h2 style={{ margin: 0, fontSize: "1.2rem" }}>
-                      Log in to post your plan
-                    </h2>
-                    <p style={{ margin: "8px 0 0", color: "rgba(255,255,255,0.7)" }}>
-                      You can still browse Today’s Crew, but posting your ski plan now requires an account.
-                    </p>
-                  </div>
-
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <button
-                      onClick={() => requireLogin("login")}
-                      style={{
-                        background: "linear-gradient(135deg, #2563eb, #0891b2)",
-                        color: "white",
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        padding: "12px 14px",
-                        borderRadius: 12,
-                        fontWeight: 800,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Log In
-                    </button>
-
-                    <button
-                      onClick={() => requireLogin("signup")}
-                      style={{
-                        background: "rgba(255,255,255,0.06)",
-                        color: "white",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        padding: "12px 14px",
-                        borderRadius: 12,
-                        fontWeight: 800,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Sign Up
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div ref={crewSectionRef}>
-              <TodaysCrew />
-            </div>
-          </div>
+        {activeTab === "plans" && (
+          <SkiPlansPage onRequireLogin={requireLogin} resorts={RESORTS} />
         )}
       </div>
     </div>
