@@ -27,9 +27,9 @@ const RESORTS = [
     lat: 39.6403,
     lon: -106.3742,
     resortKey: "vail",
-    logoPath: "/logos/vail.png",
     photoPath: "/resorts/vail.jpg",
     directionsQuery: "Vail Parking Structure, Vail CO",
+    isOpen: false,
   },
   {
     name: "Beaver Creek",
@@ -37,9 +37,9 @@ const RESORTS = [
     lat: 39.6042,
     lon: -106.5165,
     resortKey: "beavercreek",
-    logoPath: "/logos/beaver-creek.png",
     photoPath: "/resorts/beaver-creek.jpg",
     directionsQuery: "Beaver Creek Elk Lot, Avon CO",
+    isOpen: false,
   },
   {
     name: "Breckenridge",
@@ -47,9 +47,9 @@ const RESORTS = [
     lat: 39.4817,
     lon: -106.0384,
     resortKey: "breckenridge",
-    logoPath: "/logos/breckenridge.png",
     photoPath: "/resorts/breckenridge.jpg",
     directionsQuery: "Breckenridge Gondola Lot, Breckenridge CO",
+    isOpen: false,
   },
   {
     name: "Keystone",
@@ -57,9 +57,9 @@ const RESORTS = [
     lat: 39.6084,
     lon: -105.9437,
     resortKey: "keystone",
-    logoPath: "/logos/keystone.png",
     photoPath: "/resorts/keystone.jpg",
     directionsQuery: "River Run Parking Lot, Keystone CO",
+    isOpen: false,
   },
   {
     name: "Crested Butte",
@@ -67,9 +67,9 @@ const RESORTS = [
     lat: 38.8996,
     lon: -106.9653,
     resortKey: "crestedbutte",
-    logoPath: "/logos/crested-butte.png",
     photoPath: "/resorts/crested-butte.jpg",
     directionsQuery: "Crested Butte Mountain Resort Parking, Mt Crested Butte CO",
+    isOpen: false,
   },
   {
     name: "Telluride",
@@ -77,9 +77,9 @@ const RESORTS = [
     lat: 37.9363,
     lon: -107.8466,
     resortKey: "telluride",
-    logoPath: "/logos/telluride.png",
     photoPath: "/resorts/telluride.jpg",
     directionsQuery: "Telluride Mountain Village Parking Garage, Mountain Village CO",
+    isOpen: false,
   },
 
   // Ikon
@@ -89,9 +89,9 @@ const RESORTS = [
     lat: 39.8863,
     lon: -105.7626,
     resortKey: "winterpark",
-    logoPath: "/logos/winter-park.png",
     photoPath: "/resorts/winter-park.jpg",
     directionsQuery: "Winter Park Resort Parking Garage, Winter Park CO",
+    isOpen: false,
   },
   {
     name: "Copper Mountain",
@@ -99,9 +99,9 @@ const RESORTS = [
     lat: 39.5022,
     lon: -106.1512,
     resortKey: "coppermountain",
-    logoPath: "/logos/copper-mountain.png",
     photoPath: "/resorts/copper-mountain.jpg",
     directionsQuery: "Copper Mountain Alpine Lot, Frisco CO",
+    isOpen: false,
   },
   {
     name: "Arapahoe Basin",
@@ -109,9 +109,9 @@ const RESORTS = [
     lat: 39.6423,
     lon: -105.8717,
     resortKey: "arapahoebasin",
-    logoPath: "/logos/arapahoe-basin.png",
     photoPath: "/resorts/arapahoe-basin.jpg",
     directionsQuery: "Arapahoe Basin Ski Area Parking Lot, Dillon CO",
+    isOpen: true,
   },
   {
     name: "Steamboat",
@@ -119,9 +119,9 @@ const RESORTS = [
     lat: 40.4572,
     lon: -106.8047,
     resortKey: "steamboat",
-    logoPath: "/logos/steamboat.png",
     photoPath: "/resorts/steamboat.jpg",
     directionsQuery: "Steamboat Gondola Square Parking, Steamboat Springs CO",
+    isOpen: false,
   },
   {
     name: "Eldora",
@@ -129,9 +129,9 @@ const RESORTS = [
     lat: 39.9372,
     lon: -105.5842,
     resortKey: "eldora",
-    logoPath: "/logos/eldora.png",
     photoPath: "/resorts/eldora.jpg",
     directionsQuery: "Eldora Mountain Resort Parking, Nederland CO",
+    isOpen: false,
   },
   {
     name: "Aspen Snowmass",
@@ -139,9 +139,9 @@ const RESORTS = [
     lat: 39.2097,
     lon: -106.9499,
     resortKey: "aspensnowmass",
-    logoPath: "/logos/aspen-snowmass.png",
     photoPath: "/resorts/aspen-snowmass.jpg",
     directionsQuery: "Snowmass Base Village Parking, Snowmass Village CO",
+    isOpen: false,
   },
 ]
 
@@ -378,12 +378,13 @@ function ResortCard({ r, skierCounts, skierDetails }) {
       className="resort-card"
       style={{
         background: "rgba(255,255,255,0.05)",
-        border: "1px solid rgba(255,255,255,0.08)",
+        border: r.isOpen ? "1px solid rgba(34,197,94,0.25)" : "1px solid rgba(255,255,255,0.08)",
         borderRadius: 24,
         overflow: "hidden",
         transition: "transform .2s ease, box-shadow .2s ease",
         boxShadow: "0 12px 40px rgba(0,0,0,0.28)",
         backdropFilter: "blur(12px)",
+        opacity: r.isOpen === false ? 0.72 : 1,
       }}
     >
       {/* Hero */}
@@ -398,6 +399,12 @@ function ResortCard({ r, skierCounts, skierDetails }) {
         }}
       >
         <div style={{ position: "absolute", top: 14, right: 14, display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          {r.isOpen === false && (
+            <div style={{ background: "rgba(30,10,10,0.75)", border: "1px solid rgba(239,68,68,0.5)", borderRadius: 999, padding: "5px 9px", fontSize: 11, fontWeight: 900, color: "#f87171" }}>Closed for Season</div>
+          )}
+          {r.isOpen === true && (
+            <div style={{ background: "rgba(10,30,10,0.75)", border: "1px solid rgba(34,197,94,0.5)", borderRadius: 999, padding: "5px 9px", fontSize: 11, fontWeight: 900, color: "#4ade80" }}>Open</div>
+          )}
           <div style={{ background: "rgba(2,6,23,0.55)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "5px 9px", fontSize: 11, fontWeight: 900 }}>{r.pass}</div>
           <div style={{ background: "rgba(2,6,23,0.55)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "5px 9px", fontSize: 11, fontWeight: 900, color: riskColor(r.driveRisk) }}>{r.driveRisk || "Unknown"}</div>
         </div>
@@ -498,38 +505,17 @@ function ResortLogo({ resort }) {
         width: 46,
         height: 46,
         borderRadius: 14,
-        overflow: "hidden",
-        background: "rgba(255,255,255,0.08)",
+        background: "linear-gradient(135deg, #1e293b, #334155)",
         border: "1px solid rgba(255,255,255,0.14)",
         display: "grid",
         placeItems: "center",
         flexShrink: 0,
+        fontSize: 12,
+        fontWeight: 900,
+        color: "white",
       }}
     >
-      <img
-        src={resort.logoPath}
-        alt={`${resort.name} logo`}
-        style={{ width: "100%", height: "100%", objectFit: "contain" }}
-        onError={(e) => {
-          e.currentTarget.style.display = "none"
-          const fallback = e.currentTarget.nextSibling
-          if (fallback) fallback.style.display = "grid"
-        }}
-      />
-      <div
-        style={{
-          display: "none",
-          width: "100%",
-          height: "100%",
-          placeItems: "center",
-          fontSize: 12,
-          fontWeight: 900,
-          color: "white",
-          background: "linear-gradient(135deg, #1e293b, #334155)",
-        }}
-      >
-        {initials}
-      </div>
+      {initials}
     </div>
   )
 }

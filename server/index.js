@@ -110,7 +110,7 @@ async function fetchOpenMeteoSnow(lat, lon) {
     `?latitude=${lat}&longitude=${lon}` +
     `&hourly=snowfall,snow_depth` +
     `&timezone=America%2FDenver` +
-    `&past_days=2&forecast_days=0`
+    `&past_days=2&forecast_days=3`
 
   const data = await cached(url, async () => {
     const r = await fetch(url)
