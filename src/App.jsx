@@ -229,7 +229,7 @@ function computeRawPowderScore({
 }
 
 function normalizePowderScores(rows) {
-  const valid = rows.filter((r) => typeof r.rawPowderScore === "number")
+  const valid = rows.filter((r) => typeof r.rawPowderScore === "number" && r.isOpen !== false)
   if (valid.length === 0) return rows
 
   const rawScores = valid.map((r) => r.rawPowderScore)
@@ -1012,7 +1012,7 @@ export default function App() {
   const rankedResorts = useMemo(
     () =>
       [...rows]
-        .filter((r) => r.powderScore != null)
+        .filter((r) => r.powderScore != null && r.isOpen !== false)
         .sort((a, b) => b.powderScore - a.powderScore),
     [rows]
   )
