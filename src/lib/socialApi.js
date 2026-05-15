@@ -2432,17 +2432,29 @@ export async function inviteToCrewGroup(crewId, userId) {
     .insert({ crew_id: crewId, user_id: userId, role: "member", status: "pending" })
   if (error) throw error
 
-  // Fire notification to the invited user
-  const [{ data: inviterProfile }, { data: crew }] = await Promise.all([
+  // Fetch all names + crew in parallel
+  const [{ data: inviterProfile }, { data: inviteeProfile }, { data: crew }] = await Promise.all([
     supabase.from("profiles").select("full_name, username").eq("id", inviter.id).single(),
+    supabase.from("profiles").select("full_name, username").eq("id", userId).single(),
     supabase.from("crews").select("name, emoji").eq("id", crewId).single(),
   ])
   const inviterName = inviterProfile?.full_name || inviterProfile?.username || "Someone"
-  const crewName   = crew ? `${crew.emoji} ${crew.name}` : "a crew"
+  const inviteeName = inviteeProfile?.full_name || inviteeProfile?.username || "Someone"
+  const crewName    = crew ? `${crew.emoji} ${crew.name}` : "a crew"
+
+  // System message visible to all current crew members
+  supabase.from("crew_messages").insert({
+    crew_id: crewId,
+    user_id: inviter.id,
+    content: `${inviterName} added ${inviteeName} to the group`,
+    is_system: true,
+  }).then(() => {}).catch(() => {})
+
+  // Notification to the invited user
   insertNotification({
     userId,
     type: "crew_invite",
-    title: `${inviterName} invited you to ${crewName}`,
+    title: `${inviterName} added you to ${crewName}`,
     body: "Tap Accept to join the group chat.",
     crewId,
     actorId: inviter.id,

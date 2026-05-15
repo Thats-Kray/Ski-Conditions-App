@@ -487,7 +487,7 @@ function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack, onLef
               Members
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              {(isAdmin || !crew.invite_only) && invitableFriends.length > 0 && (
+              {invitableFriends.length > 0 && (
                 <button onClick={() => setShowInvite((v) => !v)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "#2563eb", color: "white", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                   + Add
                 </button>
