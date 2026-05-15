@@ -166,18 +166,6 @@ function mapsUrl(destination) {
   )}`
 }
 
-function initialsFromText(text) {
-  const clean = (text || "SK").replace(/@.*/, "").trim()
-
-  if (!clean) return "SK"
-
-  return clean
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase()
-}
 
 function computeRawPowderScore({
   tempF,
@@ -773,18 +761,6 @@ function TabButton({ active, onClick, children }) {
   )
 }
 
-function menuButtonStyle() {
-  return {
-    background: "rgba(255,255,255,0.06)",
-    color: "white",
-    border: "1px solid rgba(255,255,255,0.1)",
-    padding: "10px 12px",
-    borderRadius: 12,
-    cursor: "pointer",
-    fontWeight: 700,
-    textAlign: "left",
-  }
-}
 
 export default function App() {
   const isMobile = useMobile()
@@ -798,7 +774,6 @@ export default function App() {
   const [live, setLive] = useState({})
   const [skierCounts, setSkierCounts] = useState({})
   const [skierDetails, setSkierDetails] = useState({})
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
   const [currentProfile, setCurrentProfile] = useState(null)
   const [authModalMode, setAuthModalMode] = useState(null)
@@ -809,7 +784,6 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false)
   const [browseModeOverride, setBrowseModeOverride] = useState(false)
 
-  const userMenuRef = useRef(null)
   const planSectionRef = useRef(null)
   const crewSectionRef = useRef(null)
 
@@ -938,7 +912,7 @@ export default function App() {
 
   function openAuthModal(mode) {
     setAuthModalMode(mode)
-    setUserMenuOpen(false)
+
   }
 
   function closeAuthModal() {
@@ -980,7 +954,7 @@ export default function App() {
   async function handleLogOut() {
     try {
       await logOut()
-      setUserMenuOpen(false)
+  
       setCurrentUser(null)
       setCurrentProfile(null)
       setActiveTab("dashboard")
@@ -1028,23 +1002,12 @@ export default function App() {
     if (event === "PASSWORD_RECOVERY") {
       setIsRecoveryMode(true)
       setAuthModalMode("reset")
-      setUserMenuOpen(false)
+  
     }
   })
 
   return () => subscription.unsubscribe()
 }, [])
-
-  useEffect(() => {
-    function handleOutsideClick(event) {
-      if (!userMenuOpen) return
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
-        setUserMenuOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleOutsideClick)
-    return () => { document.removeEventListener("mousedown", handleOutsideClick) }
-  }, [userMenuOpen])
 
   // Deep-link: ?trip=<id> → capture invite ID; resolve after auth check completes
   useEffect(() => {
@@ -1074,12 +1037,6 @@ export default function App() {
         sessionStorage.removeItem("pending_invite_trip")
       })
   }, [authReady, currentUser, pendingInviteId])
-
-  const headerDisplayName =
-    currentProfile?.full_name ||
-    currentProfile?.username ||
-    currentUser?.email ||
-    "Skier"
 
   const visibleResorts = useMemo(() => {
     return RESORTS.filter((r) => {
@@ -1135,19 +1092,14 @@ export default function App() {
   const topEpic = rankedEpic[0]
   const topIkon = rankedIkon[0]
 
-  function openProfilePage() {
-    setActiveTab("profile")
-    setUserMenuOpen(false)
-  }
-
   function openFriendsPage() {
     setActiveTab("friends")
-    setUserMenuOpen(false)
+
   }
 
   function openCrewPlan() {
     setActiveTab("plans")
-    setUserMenuOpen(false)
+
 
     setTimeout(() => {
       planSectionRef.current?.scrollIntoView({
@@ -1159,7 +1111,7 @@ export default function App() {
 
   function openTodaysCrew() {
     setActiveTab("plans")
-    setUserMenuOpen(false)
+
 
     setTimeout(() => {
       crewSectionRef.current?.scrollIntoView({
@@ -1370,7 +1322,7 @@ export default function App() {
 
       <TopNav
         activeTab={activeTab}
-        onTabChange={(tab) => { setActiveTab(tab); setUserMenuOpen(false) }}
+        onTabChange={setActiveTab}
         currentProfile={currentProfile}
         currentUser={currentUser}
         onNotifTabChange={setActiveTab}
@@ -1378,7 +1330,7 @@ export default function App() {
       />
       <BottomNav
         activeTab={activeTab}
-        onTabChange={(tab) => { setActiveTab(tab); setUserMenuOpen(false) }}
+        onTabChange={setActiveTab}
         currentProfile={currentProfile}
         currentUser={currentUser}
         onNotifTabChange={setActiveTab}
@@ -1404,7 +1356,7 @@ export default function App() {
           </div>
 
           {/* Right: actions */}
-          <div ref={userMenuRef} style={{ display: "flex", gap: 8, alignItems: "center", position: "relative" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {activeTab === "dashboard" && conditionsSubTab === "conditions" && (
               <button
                 onClick={refresh}
@@ -1418,38 +1370,6 @@ export default function App() {
               >
                 {loading ? "…" : isMobile ? "⟳" : "Refresh"}
               </button>
-            )}
-
-            <button
-              onClick={() => setUserMenuOpen((prev) => !prev)}
-              style={{ width: 40, height: 40, borderRadius: 999, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.07)", color: "white", cursor: "pointer", display: "grid", placeItems: "center", padding: 0, overflow: "hidden", flexShrink: 0 }}
-            >
-              {currentProfile?.avatar_url ? (
-                <img src={currentProfile.avatar_url} alt={headerDisplayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : (
-                <span style={{ fontSize: 11, fontWeight: 900 }}>{initialsFromText(headerDisplayName)}</span>
-              )}
-            </button>
-
-            {userMenuOpen && (
-              <div style={{ position: "absolute", top: 50, right: 0, width: 240, background: "rgba(15,23,42,0.98)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 18, padding: 10, display: "grid", gap: 6, boxShadow: "0 18px 50px rgba(0,0,0,0.45)", zIndex: 50 }}>
-                <div style={{ padding: "8px 10px 10px", borderBottom: "1px solid rgba(255,255,255,0.07)", marginBottom: 2 }}>
-                  <div style={{ fontWeight: 900, fontSize: 14 }}>{headerDisplayName}</div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{currentUser?.email || "Not signed in"}</div>
-                </div>
-                {currentUser ? (
-                  <>
-                    <button onClick={openCrewPlan} style={menuButtonStyle()}>Update Today’s Plan</button>
-                    <button onClick={openFriendsPage} style={menuButtonStyle()}>Friends</button>
-                    <button onClick={handleLogOut} style={{ ...menuButtonStyle(), background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.22)", color: "#fecaca" }}>Log Out</button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={() => openAuthModal("login")} style={menuButtonStyle()}>Log In</button>
-                    <button onClick={() => openAuthModal("signup")} style={menuButtonStyle()}>Sign Up</button>
-                  </>
-                )}
-              </div>
             )}
           </div>
         </header>
