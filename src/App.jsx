@@ -604,11 +604,26 @@ const BOTTOM_TABS = [
   { key: "profile",   icon: "👤",  label: "Profile" },
 ]
 
-function BottomNav({ activeTab, onTabChange }) {
+function ProfileAvatar({ profile, size, isActive }) {
+  const name = profile?.full_name || profile?.username || "U"
+  const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+  const border = `2px solid ${isActive ? "#60a5fa" : "rgba(255,255,255,0.22)"}`
+  const shadow = isActive ? "0 0 8px rgba(96,165,250,0.55)" : "none"
+  return profile?.avatar_url ? (
+    <img src={profile.avatar_url} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", border, boxShadow: shadow, flexShrink: 0 }} />
+  ) : (
+    <div style={{ width: size, height: size, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,rgba(37,99,235,0.7),rgba(8,145,178,0.7))", border, boxShadow: shadow, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: size * 0.38, color: "white" }}>
+      {initials}
+    </div>
+  )
+}
+
+function BottomNav({ activeTab, onTabChange, currentProfile, currentUser, onNotifTabChange, onNotifOpenTrip }) {
   return (
     <nav className="bottom-nav">
       {BOTTOM_TABS.map(({ key, icon, label }) => {
         const isActive = activeTab === key
+        const isProfile = key === "profile"
         return (
           <button
             key={key}
@@ -627,16 +642,21 @@ function BottomNav({ activeTab, onTabChange }) {
               color: isActive ? "#60a5fa" : "rgba(255,255,255,0.42)",
               transition: "color 0.15s ease",
               minWidth: 0,
+              position: "relative",
             }}
           >
-            <span style={{
-              fontSize: 22,
-              lineHeight: 1,
-              filter: isActive ? "drop-shadow(0 0 6px rgba(96,165,250,0.6))" : "none",
-              transition: "filter 0.15s ease",
-            }}>
-              {icon}
-            </span>
+            {isProfile && currentProfile ? (
+              <ProfileAvatar profile={currentProfile} size={26} isActive={isActive} />
+            ) : (
+              <span style={{
+                fontSize: 22,
+                lineHeight: 1,
+                filter: isActive ? "drop-shadow(0 0 6px rgba(96,165,250,0.6))" : "none",
+                transition: "filter 0.15s ease",
+              }}>
+                {icon}
+              </span>
+            )}
             <span style={{
               fontSize: 10,
               fontWeight: isActive ? 800 : 500,
@@ -660,11 +680,19 @@ function BottomNav({ activeTab, onTabChange }) {
           </button>
         )
       })}
+      {/* Notification bell as a nav tab */}
+      <NotificationBell
+        currentUser={currentUser}
+        onTabChange={onNotifTabChange}
+        onOpenTrip={onNotifOpenTrip}
+        variant="tab"
+        dropUp
+      />
     </nav>
   )
 }
 
-function TopNav({ activeTab, onTabChange }) {
+function TopNav({ activeTab, onTabChange, currentProfile, currentUser, onNotifTabChange, onNotifOpenTrip }) {
   return (
     <nav className="top-nav">
       <div className="top-nav-inner">
@@ -677,6 +705,7 @@ function TopNav({ activeTab, onTabChange }) {
         <div style={{ display: "flex", gap: 4 }}>
           {BOTTOM_TABS.map(({ key, icon, label }) => {
             const isActive = activeTab === key
+            const isProfile = key === "profile"
             return (
               <button
                 key={key}
@@ -692,7 +721,11 @@ function TopNav({ activeTab, onTabChange }) {
                   position: "relative",
                 }}
               >
-                <span style={{ fontSize: 16 }}>{icon}</span>
+                {isProfile && currentProfile ? (
+                  <ProfileAvatar profile={currentProfile} size={20} isActive={isActive} />
+                ) : (
+                  <span style={{ fontSize: 16 }}>{icon}</span>
+                )}
                 {label}
                 {isActive && (
                   <div style={{
@@ -706,8 +739,14 @@ function TopNav({ activeTab, onTabChange }) {
           })}
         </div>
 
-        {/* Spacer to balance branding on left */}
-        <div style={{ width: 100, flexShrink: 0 }} />
+        {/* Right side: notification bell */}
+        <div style={{ flexShrink: 0 }}>
+          <NotificationBell
+            currentUser={currentUser}
+            onTabChange={onNotifTabChange}
+            onOpenTrip={onNotifOpenTrip}
+          />
+        </div>
       </div>
     </nav>
   )
@@ -1329,8 +1368,22 @@ export default function App() {
         </div>
       )}
 
-      <TopNav activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setUserMenuOpen(false) }} />
-      <BottomNav activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setUserMenuOpen(false) }} />
+      <TopNav
+        activeTab={activeTab}
+        onTabChange={(tab) => { setActiveTab(tab); setUserMenuOpen(false) }}
+        currentProfile={currentProfile}
+        currentUser={currentUser}
+        onNotifTabChange={setActiveTab}
+        onNotifOpenTrip={async (tripId) => { try { setDeepLinkTrip(await getTripDetail(tripId)) } catch (e) { console.warn(e) } }}
+      />
+      <BottomNav
+        activeTab={activeTab}
+        onTabChange={(tab) => { setActiveTab(tab); setUserMenuOpen(false) }}
+        currentProfile={currentProfile}
+        currentUser={currentUser}
+        onNotifTabChange={setActiveTab}
+        onNotifOpenTrip={async (tripId) => { try { setDeepLinkTrip(await getTripDetail(tripId)) } catch (e) { console.warn(e) } }}
+      />
 
       <div className="mobile-scroll-pad" style={{ maxWidth: 1320, margin: "0 auto", padding: isMobile ? "16px 14px 20px" : "30px 20px 48px" }}>
         <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: activeTab === "dashboard" ? 20 : 16 }}>
@@ -1352,17 +1405,6 @@ export default function App() {
 
           {/* Right: actions */}
           <div ref={userMenuRef} style={{ display: "flex", gap: 8, alignItems: "center", position: "relative" }}>
-            <NotificationBell
-              currentUser={currentUser}
-              onTabChange={setActiveTab}
-              onOpenTrip={async (tripId) => {
-                try {
-                  const trip = await getTripDetail(tripId)
-                  setDeepLinkTrip(trip)
-                } catch (e) { console.warn("Could not open trip from notification:", e) }
-              }}
-            />
-
             {activeTab === "dashboard" && conditionsSubTab === "conditions" && (
               <button
                 onClick={refresh}

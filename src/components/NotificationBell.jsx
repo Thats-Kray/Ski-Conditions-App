@@ -32,7 +32,7 @@ function timeAgo(ts) {
   return `${Math.floor(seconds / 86400)}d ago`
 }
 
-export default function NotificationBell({ currentUser, onOpenTrip, onTabChange }) {
+export default function NotificationBell({ currentUser, onOpenTrip, onTabChange, dropUp = false, variant = "icon" }) {
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const panelRef = useRef(null)
@@ -135,12 +135,30 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange 
 
   if (!currentUser) return null
 
+  const isTab = variant === "tab"
+
   return (
-    <div ref={panelRef} style={{ position: "relative" }}>
-      {/* Bell button */}
+    <div ref={panelRef} style={{ position: "relative", ...(isTab ? { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" } : {}) }}>
+      {/* Bell button — icon variant (round) or tab variant (column) */}
       <button
         onClick={handleOpen}
-        style={{
+        style={isTab ? {
+          flex: 1,
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 3,
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "4px 2px",
+          color: unread > 0 ? "#60a5fa" : "rgba(255,255,255,0.42)",
+          transition: "color 0.15s ease",
+          minWidth: 0,
+          position: "relative",
+        } : {
           width: 46,
           height: 46,
           borderRadius: 999,
@@ -157,35 +175,66 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange 
         }}
         title="Notifications"
       >
-        <span style={{ fontSize: 18, lineHeight: 1 }}>🔔</span>
-        {unread > 0 && (
-          <span style={{
-            position: "absolute",
-            top: -2,
-            right: -2,
-            minWidth: 18,
-            height: 18,
-            borderRadius: 999,
-            background: "linear-gradient(135deg, #ef4444, #dc2626)",
-            color: "white",
-            fontSize: 11,
-            fontWeight: 900,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "0 4px",
-            border: "2px solid rgba(2,6,23,1)",
-            lineHeight: 1,
-          }}>
-            {unread > 9 ? "9+" : unread}
-          </span>
+        {isTab ? (
+          <>
+            <span style={{ fontSize: 22, lineHeight: 1, position: "relative", filter: unread > 0 ? "drop-shadow(0 0 6px rgba(96,165,250,0.6))" : "none", transition: "filter 0.15s ease" }}>
+              🔔
+              {unread > 0 && (
+                <span style={{
+                  position: "absolute", top: -4, right: -6,
+                  minWidth: 16, height: 16, borderRadius: 999,
+                  background: "linear-gradient(135deg,#ef4444,#dc2626)",
+                  color: "white", fontSize: 9, fontWeight: 900,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  padding: "0 3px", border: "1.5px solid rgba(8,17,30,1)", lineHeight: 1,
+                }}>
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              )}
+            </span>
+            <span style={{ fontSize: 10, fontWeight: unread > 0 ? 800 : 500, letterSpacing: 0.2, lineHeight: 1 }}>
+              Alerts
+            </span>
+          </>
+        ) : (
+          <>
+            <span style={{ fontSize: 18, lineHeight: 1 }}>🔔</span>
+            {unread > 0 && (
+              <span style={{
+                position: "absolute", top: -2, right: -2,
+                minWidth: 18, height: 18, borderRadius: 999,
+                background: "linear-gradient(135deg, #ef4444, #dc2626)",
+                color: "white", fontSize: 11, fontWeight: 900,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                padding: "0 4px", border: "2px solid rgba(2,6,23,1)", lineHeight: 1,
+              }}>
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
+          </>
         )}
       </button>
 
-      {/* Dropdown panel */}
+      {/* Dropdown / dropup panel */}
       {open && (
         <div
-          style={{
+          style={dropUp ? {
+            position: "fixed",
+            bottom: "calc(68px + env(safe-area-inset-bottom, 0px))",
+            left: 16,
+            right: 16,
+            maxWidth: 480,
+            margin: "0 auto",
+            maxHeight: "60vh",
+            background: "rgba(10,14,30,0.98)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 20,
+            boxShadow: "0 -12px 48px rgba(0,0,0,0.5)",
+            zIndex: 200,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          } : {
             position: "absolute",
             top: 54,
             right: 0,
