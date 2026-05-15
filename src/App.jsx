@@ -599,7 +599,6 @@ function AuthGate({ icon, title, desc, onSignIn, onSignUp }) {
 
 const BOTTOM_TABS = [
   { key: "dashboard", icon: "🏔️", label: "Conditions" },
-  { key: "map",       icon: "🗺️",  label: "Map" },
   { key: "plans",     icon: "🎿",  label: "Plans" },
   { key: "friends",   icon: "💬",  label: "Messages" },
   { key: "profile",   icon: "👤",  label: "Profile" },
@@ -751,6 +750,7 @@ function menuButtonStyle() {
 export default function App() {
   const isMobile = useMobile()
   const [activeTab, setActiveTab] = useState("dashboard")
+  const [conditionsSubTab, setConditionsSubTab] = useState("conditions")
   const [passFilter, setPassFilter] = useState("All")
   const [query, setQuery] = useState("")
   const [sortBy, setSortBy] = useState("Powder Score")
@@ -1363,7 +1363,7 @@ export default function App() {
               }}
             />
 
-            {activeTab === "dashboard" && (
+            {activeTab === "dashboard" && conditionsSubTab === "conditions" && (
               <button
                 onClick={refresh}
                 disabled={loading}
@@ -1412,8 +1412,8 @@ export default function App() {
           </div>
         </header>
 
-        {/* Dashboard description — only shown on dashboard tab */}
-        {activeTab === "dashboard" && (
+        {/* Dashboard description — only shown on conditions sub-tab */}
+        {activeTab === "dashboard" && conditionsSubTab === "conditions" && (
           <p style={{ margin: "0 0 20px", color: "rgba(255,255,255,0.55)", fontSize: 14, maxWidth: 680, lineHeight: 1.6 }}>
             Resort snow, NWS forecasts, terrain metrics, and live COtrip travel conditions — blended into one morning ski decision engine.
           </p>
@@ -1427,7 +1427,44 @@ export default function App() {
 
         {activeTab === "dashboard" && (
           <>
-            {topResort && (
+            {/* Sub-tab switcher */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
+              {[
+                { key: "conditions", label: "🏔️ Conditions" },
+                { key: "map",        label: "🗺️ Map" },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setConditionsSubTab(key)}
+                  style={{
+                    background: conditionsSubTab === key
+                      ? "linear-gradient(135deg, #2563eb, #0891b2)"
+                      : "rgba(255,255,255,0.06)",
+                    color: "white",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    padding: "9px 16px",
+                    borderRadius: 12,
+                    fontWeight: 800,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    boxShadow: conditionsSubTab === key ? "0 4px 14px rgba(37,99,235,0.3)" : "none",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {conditionsSubTab === "map" && (
+              <PowderMap
+                resorts={rows}
+                skierCounts={skierCounts}
+                skierDetails={skierDetails}
+              />
+            )}
+
+            {conditionsSubTab === "conditions" && topResort && (
               <div style={{ display: "grid", gap: 14, marginBottom: 20 }}>
                 <div
                   className="leader-crown"
@@ -1498,88 +1535,82 @@ export default function App() {
               </div>
             )}
 
-            <section
-              className="filter-bar"
-              style={{
-                marginTop: 4,
-                marginBottom: 20,
-              }}
-            >
-              <div style={{ display: "flex", gap: 8 }}>
-                {["All", "Epic", "Ikon"].map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPassFilter(p)}
+            {conditionsSubTab === "conditions" && (
+              <>
+                <section
+                  className="filter-bar"
+                  style={{
+                    marginTop: 4,
+                    marginBottom: 20,
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {["All", "Epic", "Ikon"].map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setPassFilter(p)}
+                        style={{
+                          background:
+                            passFilter === p
+                              ? "linear-gradient(135deg, #22c55e, #14b8a6)"
+                              : "rgba(255,255,255,0.06)",
+                          color: passFilter === p ? "#062018" : "white",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          padding: "10px 14px",
+                          borderRadius: 999,
+                          fontWeight: 800,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+
+                  <input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search resort…"
                     style={{
-                      background:
-                        passFilter === p
-                          ? "linear-gradient(135deg, #22c55e, #14b8a6)"
-                          : "rgba(255,255,255,0.06)",
-                      color: passFilter === p ? "#062018" : "white",
+                      flex: 1,
+                      minWidth: 220,
+                      background: "rgba(255,255,255,0.06)",
                       border: "1px solid rgba(255,255,255,0.1)",
-                      padding: "10px 14px",
-                      borderRadius: 999,
-                      fontWeight: 800,
-                      cursor: "pointer",
+                      color: "white",
+                      padding: "12px 14px",
+                      borderRadius: 14,
+                      outline: "none",
+                    }}
+                  />
+
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    style={{
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      color: "white",
+                      padding: "12px 14px",
+                      borderRadius: 14,
+                      outline: "none",
                     }}
                   >
-                    {p}
-                  </button>
-                ))}
-              </div>
+                    <option>Powder Score</option>
+                    <option>Name</option>
+                    <option>Temp</option>
+                    <option>Snow 24h</option>
+                    <option>Travel Risk</option>
+                  </select>
+                </section>
 
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search resort…"
-                style={{
-                  flex: 1,
-                  minWidth: 220,
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  color: "white",
-                  padding: "12px 14px",
-                  borderRadius: 14,
-                  outline: "none",
-                }}
-              />
-
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  color: "white",
-                  padding: "12px 14px",
-                  borderRadius: 14,
-                  outline: "none",
-                }}
-              >
-                <option>Powder Score</option>
-                <option>Name</option>
-                <option>Temp</option>
-                <option>Snow 24h</option>
-                <option>Travel Risk</option>
-              </select>
-            </section>
-
-            <main className="resort-grid">
-              {rows.map((r) => (
-                <ResortCard key={r.name} r={r} skierCounts={skierCounts} skierDetails={skierDetails} />
-              ))}
-            </main>
+                <main className="resort-grid">
+                  {rows.map((r) => (
+                    <ResortCard key={r.name} r={r} skierCounts={skierCounts} skierDetails={skierDetails} />
+                  ))}
+                </main>
+              </>
+            )}
           </>
-        )}
-
-        {activeTab === "map" && (
-          <div style={{ marginTop: 8 }}>
-            <PowderMap
-              resorts={rows}
-              skierCounts={skierCounts}
-              skierDetails={skierDetails}
-            />
-          </div>
         )}
 
         {activeTab === "friends" && (
