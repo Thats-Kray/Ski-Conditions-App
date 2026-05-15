@@ -39,7 +39,7 @@ const inputStyle = {
   padding: "11px 14px",
   borderRadius: 12,
   outline: "none",
-  fontSize: 14,
+  fontSize: 16,
   fontFamily: "inherit",
   width: "100%",
   boxSizing: "border-box",
@@ -78,7 +78,7 @@ function StatChip({ emoji, label, value, color }) {
   )
 }
 
-export default function ProfileSetup() {
+export default function ProfileSetup({ onSaved }) {
   const [user, setUser]                       = useState(null)
   const [firstName, setFirstName]             = useState("")
   const [lastName, setLastName]               = useState("")
@@ -172,6 +172,7 @@ export default function ProfileSetup() {
       setHasProfile(true)
       setIsEditing(false)
       setMessage("Profile saved.")
+      if (onSaved) onSaved()
     } catch (err) {
       setMessage(err.message || "Could not save profile.")
     } finally {
@@ -274,7 +275,7 @@ export default function ProfileSetup() {
       {/* Name + username */}
       <div style={sectionStyle}>
         <div style={labelStyle}>Identity</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
           <input type="text" placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} style={inputStyle} required />
           <input type="text" placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} style={inputStyle} required />
         </div>

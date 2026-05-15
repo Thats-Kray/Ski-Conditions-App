@@ -1439,7 +1439,7 @@ export default function App() {
         {activeTab === "profile" && (
           <div style={{ marginTop: 8 }}>
             {currentUser ? (
-              <ProfilePage />
+              <ProfilePage onLogOut={handleLogOut} onTabChange={setActiveTab} />
             ) : (
               <div
                 style={{
