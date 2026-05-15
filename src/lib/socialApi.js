@@ -1809,7 +1809,7 @@ export async function getFriendsLeaderboard() {
 
 /* ── Notifications ──────────────────────────────────────────────────────────── */
 
-async function insertNotification({ userId, type, title, body = null, tripId = null, actorId = null }) {
+async function insertNotification({ userId, type, title, body = null, tripId = null, actorId = null, crewId = null }) {
   if (!userId) return
   try {
     await supabase.from("notifications").insert({
@@ -1819,6 +1819,7 @@ async function insertNotification({ userId, type, title, body = null, tripId = n
       body,
       trip_id: tripId,
       actor_id: actorId,
+      crew_id: crewId,
     })
   } catch (e) {
     console.warn("Notification insert failed:", e)
@@ -2345,13 +2346,15 @@ export async function createCrew({ name, emoji = "⛷️", description = "", inv
     .single()
   if (crewErr) throw crewErr
 
-  await supabase.from("crew_members").insert({ crew_id: crew.id, user_id: user.id, role: "admin" })
+  const { error: adminErr } = await supabase
+    .from("crew_members")
+    .insert({ crew_id: crew.id, user_id: user.id, role: "admin" })
+  if (adminErr) throw adminErr
 
-  for (const memberId of memberIds) {
-    try {
-      await supabase.from("crew_members")
-        .insert({ crew_id: crew.id, user_id: memberId, role: "member" })
-    } catch (_) {}
+  if (memberIds.length > 0) {
+    await supabase
+      .from("crew_members")
+      .insert(memberIds.map((uid) => ({ crew_id: crew.id, user_id: uid, role: "member" })))
   }
 
   return crew
@@ -2369,6 +2372,7 @@ export async function getMyCrews() {
       crew:crew_id ( id, name, emoji, description, invite_only, created_by, created_at )
     `)
     .eq("user_id", user.id)
+    .eq("status", "active")
 
   if (error) throw error
   return (data || [])
@@ -2420,9 +2424,63 @@ export async function sendCrewMessage(crewId, content) {
 }
 
 export async function inviteToCrewGroup(crewId, userId) {
+  const inviter = await getCurrentUser()
+  if (!inviter) throw new Error("Must be logged in.")
+
   const { error } = await supabase
     .from("crew_members")
-    .insert({ crew_id: crewId, user_id: userId, role: "member" })
+    .insert({ crew_id: crewId, user_id: userId, role: "member", status: "pending" })
+  if (error) throw error
+
+  // Fire notification to the invited user
+  const [{ data: inviterProfile }, { data: crew }] = await Promise.all([
+    supabase.from("profiles").select("full_name, username").eq("id", inviter.id).single(),
+    supabase.from("crews").select("name, emoji").eq("id", crewId).single(),
+  ])
+  const inviterName = inviterProfile?.full_name || inviterProfile?.username || "Someone"
+  const crewName   = crew ? `${crew.emoji} ${crew.name}` : "a crew"
+  insertNotification({
+    userId,
+    type: "crew_invite",
+    title: `${inviterName} invited you to ${crewName}`,
+    body: "Tap Accept to join the group chat.",
+    crewId,
+    actorId: inviter.id,
+  })
+}
+
+export async function acceptCrewInvite(crewId) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+
+  const { error } = await supabase
+    .from("crew_members")
+    .update({ status: "active" })
+    .eq("crew_id", crewId)
+    .eq("user_id", user.id)
+  if (error) throw error
+
+  // Post system message to the crew chat
+  const { data: profile } = await supabase
+    .from("profiles").select("full_name, username").eq("id", user.id).single()
+  const name = profile?.full_name || profile?.username || "Someone"
+  await supabase.from("crew_messages").insert({
+    crew_id: crewId,
+    user_id: user.id,
+    content: `${name} has entered the chat 🤙`,
+    is_system: true,
+  })
+}
+
+export async function declineCrewInvite(crewId) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+  const { error } = await supabase
+    .from("crew_members")
+    .delete()
+    .eq("crew_id", crewId)
+    .eq("user_id", user.id)
+    .eq("status", "pending")
   if (error) throw error
 }
 
