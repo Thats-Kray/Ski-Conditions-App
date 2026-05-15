@@ -332,22 +332,34 @@ export default function MessagingCenter() {
     loadInbox()
   }, [loadInbox])
 
-  // Realtime: refresh inbox when any crew message changes
+  // Realtime: watch crew_members (membership changes) + crew_messages (new messages)
   useEffect(() => {
-    if (!currentUser || conversations.length === 0) return
+    if (!currentUser) return
 
-    const crewIds = conversations.map(c => c.id)
-    // Re-subscribe when crew list changes
     if (channelRef.current) supabase.removeChannel(channelRef.current)
 
     channelRef.current = supabase
       .channel("msg-center-inbox")
+      // Membership changes for this user (invite accepted, new invite, left crew)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "crew_members",
+        filter: `user_id=eq.${currentUser.id}`,
+      }, () => {
+        loadInbox()
+      })
+      // New messages in any crew — update last-message preview + unread dot
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "crew_messages",
       }, (payload) => {
         const crewId = payload.new?.crew_id
-        if (!crewId || !crewIds.includes(crewId)) return
+        if (!crewId) return
         setConversations(prev => {
+          const inList = prev.some(c => c.id === crewId)
+          if (!inList) {
+            // New crew appeared (e.g. just accepted invite) — full reload
+            loadInbox()
+            return prev
+          }
           const updated = prev.map(c => {
             if (c.id !== crewId) return c
             const newMsg = { ...payload.new, profile: null }
@@ -364,7 +376,7 @@ export default function MessagingCenter() {
     return () => {
       if (channelRef.current) supabase.removeChannel(channelRef.current)
     }
-  }, [currentUser, conversations.length])
+  }, [currentUser, loadInbox])
 
   async function handleAcceptInvite(crew) {
     setAcceptingId(crew.id)
