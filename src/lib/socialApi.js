@@ -1811,21 +1811,26 @@ export async function getFriendsLeaderboard() {
 
 async function insertNotification({ userId, type, title, body = null, tripId = null, actorId = null, crewId = null }) {
   if (!userId) return
-  try {
-    // Use the SECURITY DEFINER RPC so cross-user inserts bypass RLS.
-    // Direct table inserts fail when auth.uid() != the recipient's user_id.
-    const { error } = await supabase.rpc("send_notification", {
-      p_user_id:  userId,
-      p_type:     type,
-      p_title:    title,
-      p_body:     body ?? null,
-      p_trip_id:  tripId ?? null,
-      p_actor_id: actorId ?? null,
-      p_crew_id:  crewId ?? null,
-    })
-    if (error) console.error("send_notification RPC error:", error)
-  } catch (e) {
-    console.error("send_notification failed:", e)
+  // Build payload without crew_id to avoid schema-cache failures on older deployments.
+  // crewId is already encoded in body JSON by callers that need it.
+  const payload = {
+    user_id:  userId,
+    type,
+    title,
+    body:     body ?? null,
+    actor_id: actorId ?? null,
+  }
+  if (tripId)  payload.trip_id  = tripId
+  if (crewId)  payload.crew_id  = crewId
+
+  const { error } = await supabase.from("notifications").insert(payload)
+  if (error) {
+    // Log the full error so it's visible in the browser console.
+    // If you see this, check: Supabase → Authentication → Policies → notifications table.
+    console.error(
+      `[PowderDays] Notification insert FAILED (type=${type} for user=${userId}):`,
+      error.code, error.message, error.details
+    )
   }
 }
 
