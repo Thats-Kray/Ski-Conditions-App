@@ -193,72 +193,75 @@ function computeRawPowderScore({
   runsTotal,
   drivePenalty,
 }) {
-  const snowHint = /snow|flurr|sleet|wintry/i.test(forecastText || "") ? 2 : 0
+  // ── Fresh snow (0–40 pts) ────────────────────────────────────────
+  const freshSnow =
+    clamp((snowPrev24in ?? 0) * 5, 0, 32) +   // last 24 h is king
+    clamp((snowPrev48in ?? 0) * 1.5, 0, 8)     // 2-day accumulation bonus
 
-  const observedSnowScore =
-    clamp((snowPrev24in ?? 0) * 4.5, 0, 40) +
-    clamp((snowPrev48in ?? 0) * 1.5, 0, 12)
+  // ── Incoming snow (0–20 pts) ─────────────────────────────────────
+  const incomingSnow =
+    clamp((snow24in ?? 0) * 3.5, 0, 15) +      // next 24 h forecast
+    clamp((snow48in ?? 0) * 1.0, 0, 5)          // 48 h forecast
 
-  const forecastSnowScore =
-    clamp((snow24in ?? 0) * 3.5, 0, 24) +
-    clamp((snow48in ?? 0) * 1.2, 0, 10)
+  // ── Temperature (0–20 pts) — absolute bands ──────────────────────
+  // 20-30°F = sweet spot | 30-40°F = warm bluebird | 40°F+ = slushy
+  // 10-20°F = chilly | 0-10°F = frigid | sub-zero = freezing
+  const t = tempF ?? 25
+  const tempScore =
+    t >= 20 && t <= 30 ? 20 :   // sweet spot: perfect powder temp
+    t > 30 && t <= 35  ? 17 :   // warm, still great
+    t > 35 && t <= 40  ? 11 :   // warm bluebird, snow softening
+    t > 40 && t <= 48  ?  4 :   // slushy spring conditions
+    t > 48             ?  0 :   // full spring slush
+    t >= 12 && t < 20  ? 15 :   // chilly, dry powder
+    t >=  0 && t < 12  ?  8 :   // frigid, icy
+                          2     // sub-zero, brutal cold
 
-  const tempScore = clamp(18 - Math.abs((tempF ?? 30) - 21), 0, 18)
-  const windPenalty = clamp((windMph ?? 0) * 0.9, 0, 22)
-
-  const runsPct = safePercent(runsOpen, runsTotal)
+  // ── Terrain (0–15 pts) ───────────────────────────────────────────
+  const runsPct  = safePercent(runsOpen,  runsTotal)
   const liftsPct = safePercent(liftsOpen, liftsTotal)
+  const terrainScore = clamp(
+    (runsPct  != null ? runsPct  * 10 : 5) +   // runs open %
+    (liftsPct != null ? liftsPct *  5 : 2.5),  // lifts open %
+    0, 15
+  )
 
-  const terrainScore =
-    (runsPct != null ? runsPct * 14 : 0) +
-    (liftsPct != null ? liftsPct * 8 : 0)
+  // ── Base depth (0–5 pts) ─────────────────────────────────────────
+  const baseScore = clamp((baseDepth ?? 0) / 14, 0, 5)  // 70" base = 5 pts
 
-  const baseDepthScore = clamp((baseDepth ?? 0) / 8, 0, 10)
+  // ── Snow-in-forecast text hint (+2 pts) ─────────────────────────
+  const snowHint = /snow|powder|flurr|wintry/i.test(forecastText || "") ? 2 : 0
+
+  // ── Wind penalty (up to –15 pts) ────────────────────────────────
+  const windPenalty = clamp((windMph ?? 0) * 0.75, 0, 15)
+
+  // ── Drive penalty (up to –10 pts) ───────────────────────────────
+  const driveAdj = clamp(drivePenalty ?? 0, 0, 10)
 
   const raw =
-    observedSnowScore +
-    forecastSnowScore +
-    tempScore +
-    terrainScore +
-    baseDepthScore +
-    snowHint -
-    windPenalty -
-    (drivePenalty ?? 0)
+    freshSnow + incomingSnow + tempScore + terrainScore +
+    baseScore + snowHint - windPenalty - driveAdj
 
-  return Math.round(raw * 10) / 10
+  return Math.round(clamp(raw, 0, 100) * 10) / 10
 }
 
+// Assigns absolute tier labels — no relative normalization.
+// Closed resorts show no score so they can't mislead users.
 function normalizePowderScores(rows) {
-  const valid = rows.filter((r) => typeof r.rawPowderScore === "number" && r.isOpen !== false)
-  if (valid.length === 0) return rows
-
-  const rawScores = valid.map((r) => r.rawPowderScore)
-  const min = Math.min(...rawScores)
-  const max = Math.max(...rawScores)
-  const spread = max - min
-
   return rows.map((r) => {
+    if (r.isOpen === false) {
+      return { ...r, powderScore: null, powderTier: "Closed" }
+    }
     if (typeof r.rawPowderScore !== "number") {
       return { ...r, powderScore: null, powderTier: "Unknown" }
     }
-
-    const normalized =
-      spread < 0.01 ? 70 : 35 + ((r.rawPowderScore - min) / spread) * 60
-
-    const powderScore = Math.round(normalized)
-
-    let powderTier = "Decent"
-    if (powderScore >= 88) powderTier = "Elite"
-    else if (powderScore >= 76) powderTier = "Very Good"
-    else if (powderScore >= 63) powderTier = "Good"
-    else if (powderScore >= 50) powderTier = "Okay"
-    else powderTier = "Low"
-
-    return {
-      ...r,
-      powderScore,
-      powderTier,
-    }
+    const powderScore = Math.round(r.rawPowderScore)
+    let powderTier = "Poor"
+    if      (powderScore >= 80) powderTier = "Elite"
+    else if (powderScore >= 65) powderTier = "Very Good"
+    else if (powderScore >= 50) powderTier = "Good"
+    else if (powderScore >= 35) powderTier = "Okay"
+    return { ...r, powderScore, powderTier }
   })
 }
 
@@ -347,11 +350,12 @@ function Row({ label, value }) {
 }
 
 function tierColor(tier) {
-  if (tier === "Elite") return "#8ef6d1"
+  if (tier === "Elite")     return "#8ef6d1"
   if (tier === "Very Good") return "#9bc6ff"
-  if (tier === "Good") return "#ffe39a"
-  if (tier === "Okay") return "#ffc996"
-  return "#ff9d9d"
+  if (tier === "Good")      return "#ffe39a"
+  if (tier === "Okay")      return "#ffc996"
+  if (tier === "Closed")    return "#64748b"
+  return "#ff9d9d" // Poor
 }
 
 function riskColor(risk) {
@@ -363,11 +367,11 @@ function riskColor(risk) {
 
 function scoreGradient(score) {
   if (score == null) return "linear-gradient(135deg, #334155, #1e293b)"
-  if (score >= 88) return "linear-gradient(135deg, #0f766e, #2563eb)"
-  if (score >= 76) return "linear-gradient(135deg, #1d4ed8, #4338ca)"
-  if (score >= 63) return "linear-gradient(135deg, #475569, #334155)"
-  if (score >= 50) return "linear-gradient(135deg, #7c2d12, #92400e)"
-  return "linear-gradient(135deg, #7f1d1d, #451a03)"
+  if (score >= 80) return "linear-gradient(135deg, #0f766e, #2563eb)"   // Elite
+  if (score >= 65) return "linear-gradient(135deg, #1d4ed8, #4338ca)"   // Very Good
+  if (score >= 50) return "linear-gradient(135deg, #475569, #334155)"   // Good
+  if (score >= 35) return "linear-gradient(135deg, #7c2d12, #92400e)"   // Okay
+  return "linear-gradient(135deg, #7f1d1d, #451a03)"                    // Poor
 }
 
 function ResortCard({ r, skierCounts, skierDetails }) {

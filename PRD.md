@@ -162,28 +162,65 @@ The morning ritual app for Colorado skiers. Open it, see where the powder is, se
 ### 7.1 Dashboard & Conditions
 
 #### Powder Score Algorithm
-**Current formula (raw score components):**
-```
-observedSnow  = (snowPrev24in × 4.5, max 40) + (snowPrev48in × 1.5, max 12)
-forecastSnow  = (snow24in × 3.5, max 24) + (snow48in × 1.2, max 10)
-tempScore     = max(0, 18 - |tempF - 21|)  [peaks at 21°F, max 18]
-windPenalty   = windMph × 0.9, max 22
-terrainScore  = (runsOpen/runsTotal × 14) + (liftsOpen/liftsTotal × 8)
-baseScore     = baseDepth / 8, max 10
-snowHint      = +2 if "snow" in forecast text
-drivePenalty  = 0 (Low) | 5 (Moderate) | 10 (High) | 16 (Severe)
 
-rawScore = observedSnow + forecastSnow + tempScore + terrainScore +
-           baseScore + snowHint - windPenalty - drivePenalty
+**Philosophy:** Scores are **absolute** (0–100), not relative. A resort earns its score based on actual conditions — not how it compares to other resorts on a given day. This means a bad conditions day returns low scores across the board, and an elite powder day returns high scores. Scores never inflate just because every other resort is equally bad.
+
+**Closed resorts receive no score** (`null`) and display a "Closed" badge. They are excluded from all rankings.
+
+**Formula (v2 — absolute 0–100 scale):**
+```
+freshSnow     = (snowPrev24in × 5.0, max 32) + (snowPrev48in × 1.5, max 8)   → max 40 pts
+incomingSnow  = (snow24in × 3.5, max 15) + (snow48in × 1.0, max 5)           → max 20 pts
+tempScore     = absolute band (see below)                                      → max 20 pts
+terrainScore  = (runsOpen/runsTotal × 10) + (liftsOpen/liftsTotal × 5)        → max 15 pts
+baseScore     = baseDepth / 14, max 5                                          → max  5 pts
+snowHint      = +2 if "snow/powder/flurry/wintry" in forecast text            → max  2 pts
+windPenalty   = windMph × 0.75, max 15                                         → up to –15 pts
+drivePenalty  = 0 (Low) | 5 (Moderate) | 10 (High) | 10 (Severe, capped)     → up to –10 pts
+
+rawScore = freshSnow + incomingSnow + tempScore + terrainScore +
+           baseScore + snowHint − windPenalty − drivePenalty
+
+powderScore = clamp(rawScore, 0, 100)  ← no normalization
 ```
 
-**Normalization:** Raw scores are normalized across visible resorts to a 35–95 range. If all resorts have the same raw score, default to 70.
+**Temperature bands (calibrated to real skiing feel):**
+
+| Temperature | Score | Label |
+|---|---|---|
+| 20–30°F | 20 | Sweet spot — cold dry powder |
+| 30–35°F | 17 | Warm, still great |
+| 35–40°F | 11 | Warm bluebird, snow softening |
+| 40–48°F |  4 | Slushy spring conditions |
+| 48°F+   |  0 | Full spring slush |
+| 12–20°F | 15 | Chilly, very dry powder |
+| 0–12°F  |  8 | Frigid — cold hands, icy |
+| < 0°F   |  2 | Freezing — near bottom |
+
+**Tier thresholds (absolute):**
+
+| Score | Tier | Color |
+|---|---|---|
+| 80–100 | Elite | Teal |
+| 65–79 | Very Good | Blue |
+| 50–64 | Good | Yellow |
+| 35–49 | Okay | Orange |
+| 0–34 | Poor | Red |
+| — | Closed | Gray |
+
+**Calibration examples:**
+- Epic powder day (12" fresh, incoming, 26°F, 100% terrain): ~90+ → Elite
+- Solid mid-winter day (3" fresh, 28°F, 80% terrain): ~60–70 → Good/Very Good
+- Warm bluebird, no snow (38°F, 100% terrain): ~25–35 → Poor
+- Late-season end-of-day slush (45°F, partial terrain): ~15–20 → Poor
+- Closed resort: no score displayed
 
 **Requirements:**
 - F-REQ-001: Powder Score must be recalculated every time live data is refreshed
 - F-REQ-002: Missing data for any individual component must default to 0 contribution (not break the score)
-- F-REQ-003: Tier labels (Elite/Very Good/Good/Okay/Low) must be stable thresholds (88/76/63/50) not percentiles
+- F-REQ-003: Tier labels must use the absolute thresholds above — no percentile-based normalization
 - F-REQ-004: The score must be displayed alongside a color-coded tier badge on every resort card
+- F-REQ-004a: Closed resorts must display no powder score — a "Closed" badge replaces the score tier
 
 #### Resort Cards
 - F-REQ-005: Each resort card must display: Powder Score, tier, snow 24h/48h observed, snow next 24h/48h forecast, temperature, wind, lifts open/total, runs open/total, base depth, drive risk, last forecast update timestamp, Google Maps directions link
@@ -806,12 +843,55 @@ CREATE POLICY "Users manage own comments" ON trip_comments FOR ALL USING (auth.u
 - **Vibe Score:** A second per-resort score blending social signal (how many users checked in last week, RSVP volume for upcoming trips) with crowd estimate and "morning energy" sentiment from comments. This complements the objective Powder Score with a social/experiential dimension
 - **7-day forecast panel:** Show a 7-day snowfall forecast per resort (expandable from the card) for trip planning
 
-### Phase 5 — Social Depth
+### Phase 5 — Social Depth & Powder Alerts
 - **In-app notifications:** Push notifications (PWA) or email notifications for: friend RSVPs to your trip, friend creates a trip, trip updated by host, friend accepted your friend request
 - **Trip invitations:** Explicit invite-to-trip feature (send a trip invite to specific friends by name, separate from the RSVP discovery flow)
 - **Resort-level social proof on dashboard:** "3 friends going this weekend" badge on resort cards — creates pull toward popular mountains
 - **Activity feed:** A chronological feed of friend activity (created trip, RSVP'd, checked in) with quick actions inline
 - **Photo sharing on trips:** Attach a trip photo or post-trip recap photo to a trip card
+
+#### Powder Alert Subscription Service *(new — high priority)*
+
+**Concept:** Every Wednesday, enrolled users receive a powder forecast briefing for the upcoming weekend across all open Colorado resorts. This creates a weekly habit loop that drives retention even when users aren't actively planning a trip.
+
+**Delivery channels (in rollout order):**
+1. **App notification** (PWA push) — zero marginal cost, no phone number required
+2. **SMS** (Twilio) — highest open rate, opt-in at signup, requires Twilio setup
+3. **Email newsletter** — broadest reach, easiest to build, drives re-engagement
+
+**Content of each Wednesday briefing:**
+- Weekend weather outlook (Friday–Sunday forecast)
+- Top 3 powder scores with tier labels and projected snowfall
+- Single recommended "best bet" resort with a one-line reason
+- Quick link to view full dashboard
+- "Who's going" social proof if friends have created weekend trips
+
+**Subscription model:**
+- Opt-in during signup flow (checkbox: "Send me a weekly powder forecast every Wednesday")
+- Manageable from Profile page (toggle on/off)
+- Stored as `powder_alerts_enabled` boolean on the `profiles` table
+
+**Rollout plan:**
+1. Start with email (Resend) — no external cost beyond Resend's free tier
+2. Add SMS (Twilio) once phone auth is enabled
+3. Evolve into a curated weekly newsletter with editorial voice ("This week the storm track is setting up for Steamboat…")
+4. Brand partnership opportunity: sponsored "featured resort" or "powder sponsor" slot in the newsletter
+
+**Brand evolution path:**
+- Newsletter → SkiCrew Weekly Powder Report
+- Partner with ski brands (apparel, gear, wax), resort advertisers, and après spots
+- Build audience → sellable media property aligned with ski lifestyle brand identity
+
+**Technical requirements:**
+- `powder_alerts_enabled` column on `profiles` (boolean, default `false`)
+- Wednesday cron job (Railway cron or external scheduler) that:
+  1. Queries all profiles with `powder_alerts_enabled = true`
+  2. Fetches current powder scores for all open resorts
+  3. Composes a briefing (top 3, best bet, weekend outlook)
+  4. Sends via Resend (email) and/or Twilio (SMS)
+- F-REQ-ALERT-001: Briefings must be sent by 7 AM MT on Wednesdays
+- F-REQ-ALERT-002: Users must be able to unsubscribe in one tap (standard unsubscribe link in email, STOP reply for SMS)
+- F-REQ-ALERT-003: No briefing should be sent if zero resorts are open (off-season cutoff)
 
 ### Phase 6 — Platform Expansion
 - **Mobile app (React Native):** Native iOS/Android with push notifications
