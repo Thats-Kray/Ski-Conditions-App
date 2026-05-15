@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import CrewGroupChat from "./CrewGroupChat";
 import {
   searchProfiles,
   sendFriendRequest,
@@ -450,6 +451,8 @@ export default function FriendsPage() {
     message: "",
   });
 
+  const [activeSection, setActiveSection] = useState("crews");
+
   const [showPingComposer, setShowPingComposer] = useState(false);
   const [pings, setPings] = useState({ sent: [], received: [] });
   const [respondingPingId, setRespondingPingId] = useState(null);
@@ -768,12 +771,35 @@ export default function FriendsPage() {
 
   return (
     <div style={{ padding: 20, color: "#fff", maxWidth: 1150, margin: "0 auto" }}>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ margin: 0, fontSize: "1.7rem" }}>Friends</h1>
-        <p style={{ margin: "8px 0 0", color: "rgba(255,255,255,0.72)" }}>
-          Build your ski network, manage requests, and send Partiful-style ski crew invites.
-        </p>
+
+      {/* ── Internal tab bar ── */}
+      <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: "1px solid rgba(255,255,255,0.07)", paddingBottom: 14 }}>
+        {[
+          { key: "crews",   label: "🤙 Crews" },
+          { key: "friends", label: "👥 Friends" },
+        ].map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setActiveSection(key)}
+            style={{
+              padding: "8px 18px", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 14,
+              background: activeSection === key ? "rgba(96,165,250,0.18)" : "transparent",
+              color: activeSection === key ? "#60a5fa" : "rgba(255,255,255,0.45)",
+              borderBottom: activeSection === key ? "2px solid #60a5fa" : "2px solid transparent",
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
+
+      {/* ── Crews tab ── */}
+      {activeSection === "crews" && (
+        <CrewGroupChat friends={acceptedFriends} />
+      )}
+
+      {/* ── Friends tab ── */}
+      {activeSection === "friends" && (<>
 
       {errorMessage ? (
         <div
@@ -1605,6 +1631,8 @@ export default function FriendsPage() {
           </SectionCard>
         </div>
       </div>
+
+      </>)}
 
       {showPingComposer && (
         <SkiPingComposer

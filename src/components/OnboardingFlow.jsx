@@ -28,7 +28,7 @@ function WelcomeStep({ onNext }) {
     <div style={{ padding: "40px 32px 36px", textAlign: "center", display: "grid", gap: 20 }}>
       <div style={{ fontSize: 52 }}>⛷️</div>
       <div>
-        <div style={{ fontSize: 28, fontWeight: 900, color: "white", letterSpacing: -0.5, lineHeight: 1.1 }}>Welcome to SkiCrew</div>
+        <div style={{ fontSize: 28, fontWeight: 900, color: "white", letterSpacing: -0.5, lineHeight: 1.1 }}>Welcome to PowderDays</div>
         <div style={{ fontSize: 15, color: "rgba(255,255,255,0.55)", marginTop: 10, lineHeight: 1.7 }}>
           Plan powder days with your crew.<br />
           Let's get you set up in 3 quick steps.
@@ -239,7 +239,7 @@ function FriendsStep({ onNext }) {
       <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "12px 14px", display: "flex", gap: 10, alignItems: "center" }}>
         <span style={{ fontSize: 20 }}>💬</span>
         <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.5 }}>
-          You can also share your invite link from your Profile page to bring friends onto SkiCrew.
+          You can also share your invite link from your Profile page to bring friends onto PowderDays.
         </div>
       </div>
 
@@ -305,7 +305,7 @@ export default function OnboardingFlow({ onComplete }) {
   }
 
   function finish() {
-    localStorage.setItem("skicrew_onboarded", "1")
+    localStorage.setItem("powderdays_onboarded", "1")
     onComplete?.()
   }
 

@@ -24,7 +24,7 @@ function timeAgo(ts) {
   return `${Math.floor(seconds / 86400)}d ago`
 }
 
-export default function NotificationBell({ currentUser, onOpenTrip }) {
+export default function NotificationBell({ currentUser, onOpenTrip, onTabChange }) {
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const panelRef = useRef(null)
@@ -81,7 +81,10 @@ export default function NotificationBell({ currentUser, onOpenTrip }) {
       await markNotificationRead(notif.id)
       setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, read: true } : n))
     }
-    if (notif.trip_id && onOpenTrip) {
+    if (notif.type === "friend_request" && onTabChange) {
+      onTabChange("friends")
+      setOpen(false)
+    } else if (notif.trip_id && onOpenTrip) {
       onOpenTrip(notif.trip_id)
       setOpen(false)
     }
@@ -213,7 +216,7 @@ export default function NotificationBell({ currentUser, onOpenTrip }) {
                     alignItems: "flex-start",
                     gap: 12,
                     padding: "12px 16px",
-                    cursor: notif.trip_id ? "pointer" : "default",
+                    cursor: (notif.trip_id || notif.type === "friend_request") ? "pointer" : "default",
                     background: notif.read ? "transparent" : "rgba(96,165,250,0.06)",
                     borderBottom: "1px solid rgba(255,255,255,0.05)",
                     transition: "background 0.15s",

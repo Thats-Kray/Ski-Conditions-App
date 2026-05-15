@@ -501,6 +501,20 @@ export async function sendFriendRequest(recipientId) {
 
     if (error) throw error
 
+    // Notify the recipient
+    const { data: senderData } = await supabase
+      .from("profiles")
+      .select("full_name, username")
+      .eq("id", user.id)
+      .single()
+    const senderName = senderData?.full_name || senderData?.username || "Someone"
+    insertNotification({
+      userId: recipientId,
+      type: "friend_request",
+      title: `${senderName} sent you a friend request`,
+      actorId: user.id,
+    })
+
     return { action: "created", request: data }
   }
 
@@ -2315,5 +2329,126 @@ export async function deleteTripMedia(mediaId, storagePath) {
   const { error: storErr } = await supabase.storage.from("trip-media").remove([storagePath])
   if (storErr) throw storErr
   const { error } = await supabase.from("trip_media").delete().eq("id", mediaId)
+  if (error) throw error
+}
+
+// ── Crew Group Chat ───────────────────────────────────────────────────────────
+
+export async function createCrew({ name, emoji = "⛷️", description = "", inviteOnly = true, memberIds = [] }) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in to create a crew.")
+
+  const { data: crew, error: crewErr } = await supabase
+    .from("crews")
+    .insert({ name, emoji, description, created_by: user.id, invite_only: inviteOnly })
+    .select()
+    .single()
+  if (crewErr) throw crewErr
+
+  await supabase.from("crew_members").insert({ crew_id: crew.id, user_id: user.id, role: "admin" })
+
+  for (const memberId of memberIds) {
+    await supabase.from("crew_members")
+      .insert({ crew_id: crew.id, user_id: memberId, role: "member" })
+      .catch(() => {})
+  }
+
+  return crew
+}
+
+export async function getMyCrews() {
+  const user = await getCurrentUser()
+  if (!user) return []
+
+  const { data, error } = await supabase
+    .from("crew_members")
+    .select(`
+      role,
+      joined_at,
+      crew:crew_id ( id, name, emoji, description, invite_only, created_by, created_at )
+    `)
+    .eq("user_id", user.id)
+
+  if (error) throw error
+  return (data || [])
+    .filter((r) => r.crew)
+    .sort((a, b) => new Date(b.joined_at) - new Date(a.joined_at))
+    .map((r) => ({ ...r.crew, myRole: r.role }))
+}
+
+export async function getCrewMembers(crewId) {
+  const { data, error } = await supabase
+    .from("crew_members")
+    .select(`
+      id, role, joined_at,
+      profile:user_id ( id, full_name, username, avatar_url, skill_level )
+    `)
+    .eq("crew_id", crewId)
+  if (error) throw error
+  return data || []
+}
+
+export async function getCrewMessages(crewId, limit = 60) {
+  const { data, error } = await supabase
+    .from("crew_messages")
+    .select(`
+      id, content, created_at,
+      profile:user_id ( id, full_name, username, avatar_url )
+    `)
+    .eq("crew_id", crewId)
+    .order("created_at", { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return (data || []).reverse()
+}
+
+export async function sendCrewMessage(crewId, content) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+
+  const { data, error } = await supabase
+    .from("crew_messages")
+    .insert({ crew_id: crewId, user_id: user.id, content })
+    .select(`
+      id, content, created_at,
+      profile:user_id ( id, full_name, username, avatar_url )
+    `)
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function inviteToCrewGroup(crewId, userId) {
+  const { error } = await supabase
+    .from("crew_members")
+    .insert({ crew_id: crewId, user_id: userId, role: "member" })
+  if (error) throw error
+}
+
+export async function leaveCrewGroup(crewId) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in.")
+  const { error } = await supabase
+    .from("crew_members")
+    .delete()
+    .eq("crew_id", crewId)
+    .eq("user_id", user.id)
+  if (error) throw error
+}
+
+export async function removeCrewMember(crewId, userId) {
+  const { error } = await supabase
+    .from("crew_members")
+    .delete()
+    .eq("crew_id", crewId)
+    .eq("user_id", userId)
+  if (error) throw error
+}
+
+export async function updateCrewGroup(crewId, updates) {
+  const { error } = await supabase
+    .from("crews")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("id", crewId)
   if (error) throw error
 }

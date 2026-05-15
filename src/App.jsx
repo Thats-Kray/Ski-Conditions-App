@@ -8,6 +8,7 @@ import ProfilePage from "./components/ProfilePage"
 import SkiPlansPage from "./components/SkiPlansPage"
 import TripDetailModal from "./components/TripDetailModal"
 import NotificationBell from "./components/NotificationBell"
+import LandingPage from "./components/LandingPage"
 import {
   getCurrentUser,
   getMyProfile,
@@ -580,7 +581,7 @@ const BOTTOM_TABS = [
   { key: "dashboard", icon: "🏔️", label: "Conditions" },
   { key: "map",       icon: "🗺️",  label: "Map" },
   { key: "plans",     icon: "🎿",  label: "Plans" },
-  { key: "friends",   icon: "❤️",  label: "Friends" },
+  { key: "friends",   icon: "🤙",  label: "Crew" },
   { key: "profile",   icon: "👤",  label: "Profile" },
 ]
 
@@ -650,7 +651,7 @@ function TopNav({ activeTab, onTabChange }) {
       <div className="top-nav-inner">
         {/* Branding */}
         <div style={{ fontSize: 17, fontWeight: 900, color: "white", letterSpacing: -0.3, flexShrink: 0 }}>
-          ⛷️ SkiCrew
+          ❄️ PowderDays
         </div>
 
         {/* Tabs */}
@@ -745,6 +746,9 @@ export default function App() {
   const [isRecoveryMode, setIsRecoveryMode] = useState(false)
   const [deepLinkTrip, setDeepLinkTrip] = useState(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [pendingInviteId, setPendingInviteId] = useState(null)
+  const [authReady, setAuthReady] = useState(false)
+  const [browseModeOverride, setBrowseModeOverride] = useState(false)
 
   const userMenuRef = useRef(null)
   const planSectionRef = useRef(null)
@@ -861,13 +865,15 @@ export default function App() {
       setCurrentProfile(profile || null)
 
       // Show onboarding for new users who haven't completed it and have no profile
-      if (!profile && !localStorage.getItem("skicrew_onboarded")) {
+      if (!profile && !localStorage.getItem("skicrew_onboarded") && !localStorage.getItem("powderdays_onboarded")) {
         setShowOnboarding(true)
       }
     } catch (err) {
       console.warn("Header profile load failed:", err)
       setCurrentUser(null)
       setCurrentProfile(null)
+    } finally {
+      setAuthReady(true)
     }
   }
 
@@ -881,8 +887,23 @@ export default function App() {
   }
 
   async function handleAuthSuccess() {
+    setBrowseModeOverride(false)
     await loadHeaderUser()
     setAuthModalMode(null)
+
+    // If user arrived via an invite link, open that trip automatically
+    const storedId = sessionStorage.getItem("pending_invite_trip")
+    if (storedId) {
+      sessionStorage.removeItem("pending_invite_trip")
+      setPendingInviteId(null)
+      try {
+        const trip = await getTripDetail(storedId)
+        setDeepLinkTrip(trip)
+        setActiveTab("plans")
+      } catch {
+        // trip may not exist or user isn't invited — silently ignore
+      }
+    }
   }
 
   function handleOnboardingComplete() {
@@ -966,16 +987,34 @@ export default function App() {
     return () => { document.removeEventListener("mousedown", handleOutsideClick) }
   }, [userMenuOpen])
 
-  // Deep-link: ?trip=<id> → fetch trip and open detail modal
+  // Deep-link: ?trip=<id> → capture invite ID; resolve after auth check completes
   useEffect(() => {
-    const tripId = new URLSearchParams(window.location.search).get("trip")
+    const tripId =
+      new URLSearchParams(window.location.search).get("trip") ||
+      sessionStorage.getItem("pending_invite_trip")
     if (!tripId) return
-    // Remove param from URL without reloading
     window.history.replaceState({}, "", window.location.pathname)
-    getTripDetail(tripId)
-      .then((trip) => { setDeepLinkTrip(trip); setActiveTab("plans") })
-      .catch(() => {})
+    setPendingInviteId(tripId)
+    sessionStorage.setItem("pending_invite_trip", tripId)
   }, [])
+
+  // Once we know the auth state, handle the pending invite
+  useEffect(() => {
+    if (!authReady || !pendingInviteId) return
+    if (!currentUser) return // invite overlay will prompt login
+    // Logged in — fetch and open the trip
+    getTripDetail(pendingInviteId)
+      .then((trip) => {
+        setDeepLinkTrip(trip)
+        setActiveTab("plans")
+        setPendingInviteId(null)
+        sessionStorage.removeItem("pending_invite_trip")
+      })
+      .catch(() => {
+        setPendingInviteId(null)
+        sessionStorage.removeItem("pending_invite_trip")
+      })
+  }, [authReady, currentUser, pendingInviteId])
 
   const headerDisplayName =
     currentProfile?.full_name ||
@@ -1069,6 +1108,44 @@ export default function App() {
         block: "start",
       })
     }, 50)
+  }
+
+  // Show landing page for unauthenticated users (unless they chose to browse)
+  const showLandingPage = authReady && !currentUser && !browseModeOverride && !isRecoveryMode
+
+  if (showLandingPage) {
+    return (
+      <>
+        <style>{`body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif; margin: 0; }`}</style>
+        {/* Auth modals render on top of landing page */}
+        {authModalMode && (
+          <div
+            onClick={closeAuthModal}
+            style={{
+              position: "fixed", inset: 0, background: "rgba(2,6,23,0.72)",
+              display: "flex", flexDirection: "column", alignItems: "center",
+              justifyContent: "flex-start", overflowY: "auto",
+              padding: "20px 16px max(20px, env(safe-area-inset-bottom)) 16px",
+              zIndex: 200,
+            }}
+          >
+            <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 560 }}>
+              <AuthForm
+                mode={authModalMode}
+                onSuccess={() => { handleAuthSuccess(); setBrowseModeOverride(false) }}
+                onPasswordResetSuccess={handlePasswordResetSuccess}
+                onCancel={closeAuthModal}
+              />
+            </div>
+          </div>
+        )}
+        <LandingPage
+          onSignIn={() => openAuthModal("login")}
+          onSignUp={() => openAuthModal("signup")}
+          onBrowse={() => setBrowseModeOverride(true)}
+        />
+      </>
+    )
   }
 
   return (
@@ -1182,6 +1259,56 @@ export default function App() {
         />
       )}
 
+      {/* Invite landing — shown when an unauthenticated user opens a ?trip= link */}
+      {pendingInviteId && !currentUser && authReady && !authModalMode && !isRecoveryMode && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 190,
+          background: "linear-gradient(170deg,rgba(2,6,23,0.98) 0%,rgba(8,17,30,1) 100%)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "24px 20px max(24px,env(safe-area-inset-bottom)) 20px",
+        }}>
+          <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
+            <div style={{ fontSize: 64, marginBottom: 18 }}>🎿</div>
+            <div style={{ fontSize: 26, fontWeight: 900, color: "white", lineHeight: 1.15, marginBottom: 12 }}>
+              You're invited to a ski trip!
+            </div>
+            <div style={{ fontSize: 15, color: "rgba(255,255,255,0.58)", marginBottom: 36, lineHeight: 1.6 }}>
+              Sign in or create a free account to view the details, RSVP, and join the crew.
+            </div>
+
+            <div style={{ display: "grid", gap: 12 }}>
+              <button
+                onClick={() => openAuthModal("login")}
+                style={{ padding: "14px 20px", borderRadius: 14, background: "linear-gradient(135deg,#2563eb,#0891b2)", border: "none", color: "white", fontWeight: 800, fontSize: 16, cursor: "pointer", boxShadow: "0 4px 20px rgba(37,99,235,0.4)" }}
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => openAuthModal("signup")}
+                style={{ padding: "14px 20px", borderRadius: 14, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", color: "white", fontWeight: 700, fontSize: 16, cursor: "pointer" }}
+              >
+                Create Free Account
+              </button>
+              <button
+                onClick={() => { setPendingInviteId(null); sessionStorage.removeItem("pending_invite_trip") }}
+                style={{ marginTop: 6, background: "none", border: "none", color: "rgba(255,255,255,0.32)", fontSize: 13, cursor: "pointer", fontWeight: 600 }}
+              >
+                Browse without an account
+              </button>
+            </div>
+
+            <div style={{ marginTop: 40, fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 600, letterSpacing: 0.4 }}>
+              ❄️ PowderDays — Plan your ski season with your crew
+            </div>
+          </div>
+        </div>
+      )}
+
       <TopNav activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setUserMenuOpen(false) }} />
       <BottomNav activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setUserMenuOpen(false) }} />
 
@@ -1199,7 +1326,7 @@ export default function App() {
                 </h1>
               </div>
             ) : (
-              <div style={{ fontSize: 18, fontWeight: 900, color: "white", letterSpacing: -0.3 }}>⛷️ SkiCrew</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "white", letterSpacing: -0.3 }}>❄️ PowderDays</div>
             )}
           </div>
 
@@ -1207,6 +1334,7 @@ export default function App() {
           <div ref={userMenuRef} style={{ display: "flex", gap: 8, alignItems: "center", position: "relative" }}>
             <NotificationBell
               currentUser={currentUser}
+              onTabChange={setActiveTab}
               onOpenTrip={async (tripId) => {
                 try {
                   const trip = await getTripDetail(tripId)

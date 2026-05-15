@@ -491,14 +491,9 @@ export default function AuthForm({
               ) : null}
 
               {formMode === "signup" ? (
-                <>
-                  <button type="button" style={secondaryButtonStyle} onClick={() => switchMode("login")}>
-                    Already have an account?
-                  </button>
-                  <button type="button" style={secondaryButtonStyle} onClick={() => switchMode("phone")}>
-                    Use Phone Instead
-                  </button>
-                </>
+                <button type="button" style={secondaryButtonStyle} onClick={() => switchMode("login")}>
+                  Already have an account?
+                </button>
               ) : null}
 
               {formMode === "forgot" ? (
