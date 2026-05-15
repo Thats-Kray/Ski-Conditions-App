@@ -7,7 +7,7 @@ create table if not exists public.ski_sessions (
   user_id          uuid not null references auth.users(id) on delete cascade,
   resort_name      text not null,
   session_date     date not null,
-  trip_id          uuid references public.trips(id) on delete set null,
+  trip_id          uuid references public.ski_trips(id) on delete set null,
   is_powder_day    boolean not null default false,
   notes            text,
   -- Strava fields — null until Phase 2 integration

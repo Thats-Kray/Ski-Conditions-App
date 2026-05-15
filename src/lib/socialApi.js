@@ -2348,9 +2348,10 @@ export async function createCrew({ name, emoji = "⛷️", description = "", inv
   await supabase.from("crew_members").insert({ crew_id: crew.id, user_id: user.id, role: "admin" })
 
   for (const memberId of memberIds) {
-    await supabase.from("crew_members")
-      .insert({ crew_id: crew.id, user_id: memberId, role: "member" })
-      .catch(() => {})
+    try {
+      await supabase.from("crew_members")
+        .insert({ crew_id: crew.id, user_id: memberId, role: "member" })
+    } catch (_) {}
   }
 
   return crew
