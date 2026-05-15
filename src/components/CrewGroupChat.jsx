@@ -570,6 +570,15 @@ function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack, onLef
           </div>
         )}
         {messages.map((msg) => {
+          if (msg.is_system) {
+            return (
+              <div key={msg.id} style={{ textAlign: "center", padding: "4px 0" }}>
+                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", fontStyle: "italic" }}>
+                  {msg.content}
+                </span>
+              </div>
+            )
+          }
           const isMe = msg.profile?.id === currentUserId
           const name = msg.profile?.full_name || msg.profile?.username || "?"
           return (

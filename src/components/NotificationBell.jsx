@@ -5,15 +5,18 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
   deleteNotification,
+  acceptCrewInvite,
+  declineCrewInvite,
 } from "../lib/socialApi"
 
 const TYPE_META = {
-  invite:       { icon: "✉️", color: "#60a5fa" },
-  rsvp:         { icon: "✓",  color: "#22c55e" },
-  host_update:  { icon: "📢", color: "#fbbf24" },
-  chat:         { icon: "💬", color: "#a78bfa" },
+  invite:        { icon: "✉️", color: "#60a5fa" },
+  rsvp:          { icon: "✓",  color: "#22c55e" },
+  host_update:   { icon: "📢", color: "#fbbf24" },
+  chat:          { icon: "💬", color: "#a78bfa" },
   friend_request:{ icon: "🤝", color: "#fb923c" },
-  trip_update:  { icon: "🎿", color: "#67e8f9" },
+  trip_update:   { icon: "🎿", color: "#67e8f9" },
+  crew_invite:   { icon: "🤙", color: "#2563eb" },
 }
 
 function timeAgo(ts) {
@@ -77,6 +80,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange 
   }
 
   async function handleClickNotif(notif) {
+    if (notif.type === "crew_invite") return // handled by accept/decline buttons
     if (!notif.read) {
       await markNotificationRead(notif.id)
       setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, read: true } : n))
@@ -87,6 +91,30 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange 
     } else if (notif.trip_id && onOpenTrip) {
       onOpenTrip(notif.trip_id)
       setOpen(false)
+    }
+  }
+
+  async function handleCrewAccept(e, notif) {
+    e.stopPropagation()
+    try {
+      await acceptCrewInvite(notif.crew_id)
+      await markNotificationRead(notif.id)
+      setNotifications((prev) => prev.filter((n) => n.id !== notif.id))
+      if (onTabChange) onTabChange("friends")
+      setOpen(false)
+    } catch (err) {
+      console.warn("Accept crew invite failed:", err)
+    }
+  }
+
+  async function handleCrewDecline(e, notif) {
+    e.stopPropagation()
+    try {
+      await declineCrewInvite(notif.crew_id)
+      await deleteNotification(notif.id)
+      setNotifications((prev) => prev.filter((n) => n.id !== notif.id))
+    } catch (err) {
+      console.warn("Decline crew invite failed:", err)
     }
   }
 
@@ -217,6 +245,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange 
                     gap: 12,
                     padding: "12px 16px",
                     cursor: (notif.trip_id || notif.type === "friend_request") ? "pointer" : "default",
+
                     background: notif.read ? "transparent" : "rgba(96,165,250,0.06)",
                     borderBottom: "1px solid rgba(255,255,255,0.05)",
                     transition: "background 0.15s",
@@ -279,11 +308,28 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange 
                     <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 3 }}>
                       {timeAgo(notif.created_at)}
                     </div>
+                    {notif.type === "crew_invite" && notif.crew_id && (
+                      <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                        <button
+                          onClick={(e) => handleCrewAccept(e, notif)}
+                          style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: "none", background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          onClick={(e) => handleCrewDecline(e, notif)}
+                          style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Delete */}
+                  {/* Delete (hidden for crew invites — use accept/decline instead) */}
                   <button
                     onClick={(e) => handleDelete(e, notif.id)}
+                    style={{ display: notif.type === "crew_invite" ? "none" : undefined }}
                     style={{
                       background: "none",
                       border: "none",
