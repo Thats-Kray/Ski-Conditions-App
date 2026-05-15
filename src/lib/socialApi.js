@@ -2453,3 +2453,11 @@ export async function updateCrewGroup(crewId, updates) {
     .eq("id", crewId)
   if (error) throw error
 }
+
+export async function deleteCrew(crewId) {
+  const { error } = await supabase
+    .from("crews")
+    .delete()
+    .eq("id", crewId)
+  if (error) throw error
+}

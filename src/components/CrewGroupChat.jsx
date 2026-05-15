@@ -9,6 +9,8 @@ import {
   inviteToCrewGroup,
   leaveCrewGroup,
   removeCrewMember,
+  updateCrewGroup,
+  deleteCrew,
   getCurrentUser,
 } from "../lib/socialApi"
 
@@ -240,15 +242,93 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
   )
 }
 
+// ── Edit Crew Modal ───────────────────────────────────────────────────────────
+
+function EditCrewModal({ crew, onSaved, onClose }) {
+  const [name, setName]         = useState(crew.name)
+  const [emoji, setEmoji]       = useState(crew.emoji)
+  const [description, setDesc]  = useState(crew.description || "")
+  const [inviteOnly, setInviteOnly] = useState(crew.invite_only)
+  const [saving, setSaving]     = useState(false)
+  const [error, setError]       = useState("")
+
+  async function handleSave() {
+    if (!name.trim()) { setError("Crew name can't be empty."); return }
+    setSaving(true); setError("")
+    try {
+      await updateCrewGroup(crew.id, { name: name.trim(), emoji, description: description.trim(), invite_only: inviteOnly })
+      onSaved({ ...crew, name: name.trim(), emoji, description: description.trim(), invite_only: inviteOnly })
+    } catch (e) {
+      setError(e.message || "Failed to save.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const inputStyle = {
+    width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 15,
+    border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
+    color: "white", outline: "none", boxSizing: "border-box",
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "24px 20px 40px", width: "100%", maxWidth: 480 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ fontSize: 17, fontWeight: 900, color: "white" }}>Edit Crew</div>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}>✕</button>
+        </div>
+
+        {error && <div style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 10, background: "rgba(239,68,68,0.14)", border: "1px solid rgba(239,68,68,0.3)", color: "#fecaca", fontSize: 13 }}>{error}</div>}
+
+        {/* Emoji */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Emoji</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {EMOJI_OPTIONS.map((e) => (
+              <button key={e} onClick={() => setEmoji(e)} style={{ fontSize: 22, width: 40, height: 40, borderRadius: 10, cursor: "pointer", background: emoji === e ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.05)", border: emoji === e ? "2px solid rgba(96,165,250,0.6)" : "2px solid transparent" }}>{e}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 6 }}>Name</div>
+          <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 6 }}>Description</div>
+          <input style={inputStyle} value={description} onChange={(e) => setDesc(e.target.value)} placeholder="Optional" />
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Permissions</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[{ v: true, label: "🔒 Invite Only" }, { v: false, label: "🌐 Open" }].map(({ v, label }) => (
+              <button key={String(v)} onClick={() => setInviteOnly(v)} style={{ flex: 1, padding: "9px 12px", borderRadius: 10, cursor: "pointer", background: inviteOnly === v ? "rgba(96,165,250,0.18)" : "rgba(255,255,255,0.05)", border: inviteOnly === v ? "1px solid rgba(96,165,250,0.5)" : "1px solid rgba(255,255,255,0.1)", color: inviteOnly === v ? "#93c5fd" : "rgba(255,255,255,0.55)", fontWeight: 700, fontSize: 13 }}>{label}</button>
+            ))}
+          </div>
+        </div>
+
+        <button onClick={handleSave} disabled={saving} style={{ width: "100%", padding: "13px", borderRadius: 12, border: "none", background: saving ? "rgba(37,99,235,0.5)" : "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", fontWeight: 800, fontSize: 15, cursor: saving ? "default" : "pointer" }}>
+          {saving ? "Saving…" : "Save Changes"}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Crew Chat View ────────────────────────────────────────────────────────────
 
-function CrewChatView({ crew, currentUserId, friends, onBack, onLeft }) {
+function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack, onLeft }) {
+  const [crew, setCrew] = useState(initialCrew)
   const [messages, setMessages] = useState([])
   const [members, setMembers] = useState([])
   const [input, setInput] = useState("")
   const [sending, setSending] = useState(false)
   const [showMembers, setShowMembers] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
   const [loadingMsgs, setLoadingMsgs] = useState(true)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
@@ -259,8 +339,8 @@ function CrewChatView({ crew, currentUserId, friends, onBack, onLeft }) {
     setLoadingMsgs(true)
     try {
       const [msgs, mems] = await Promise.all([
-        getCrewMessages(crew.id),
-        getCrewMembers(crew.id),
+        getCrewMessages(initialCrew.id),
+        getCrewMembers(initialCrew.id),
       ])
       setMessages(msgs)
       setMembers(mems)
@@ -275,18 +355,18 @@ function CrewChatView({ crew, currentUserId, friends, onBack, onLeft }) {
     loadAll()
 
     const channel = supabase
-      .channel(`crew-${crew.id}`)
+      .channel(`crew-${initialCrew.id}`)
       .on("postgres_changes", {
         event: "INSERT", schema: "public",
-        table: "crew_messages", filter: `crew_id=eq.${crew.id}`,
+        table: "crew_messages", filter: `crew_id=eq.${initialCrew.id}`,
       }, () => {
-        getCrewMessages(crew.id).then(setMessages).catch(() => {})
+        getCrewMessages(initialCrew.id).then(setMessages).catch(() => {})
       })
       .on("postgres_changes", {
         event: "*", schema: "public",
-        table: "crew_members", filter: `crew_id=eq.${crew.id}`,
+        table: "crew_members", filter: `crew_id=eq.${initialCrew.id}`,
       }, () => {
-        getCrewMembers(crew.id).then(setMembers).catch(() => {})
+        getCrewMembers(initialCrew.id).then(setMembers).catch(() => {})
       })
       .subscribe()
 
@@ -322,6 +402,16 @@ function CrewChatView({ crew, currentUserId, friends, onBack, onLeft }) {
       onLeft()
     } catch (e) {
       alert(e.message || "Failed to leave crew.")
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm(`Delete "${crew.name}" permanently? This removes all messages and members.`)) return
+    try {
+      await deleteCrew(crew.id)
+      onLeft()
+    } catch (e) {
+      alert(e.message || "Failed to delete crew.")
     }
   }
 
@@ -398,19 +488,24 @@ function CrewChatView({ crew, currentUserId, friends, onBack, onLeft }) {
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               {(isAdmin || !crew.invite_only) && invitableFriends.length > 0 && (
-                <button
-                  onClick={() => setShowInvite((v) => !v)}
-                  style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "#2563eb", color: "white", fontWeight: 700, fontSize: 12, cursor: "pointer" }}
-                >
+                <button onClick={() => setShowInvite((v) => !v)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "#2563eb", color: "white", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                   + Add
                 </button>
               )}
-              <button
-                onClick={handleLeave}
-                style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "rgba(239,68,68,0.15)", color: "#fca5a5", fontWeight: 700, fontSize: 12, cursor: "pointer" }}
-              >
-                Leave
-              </button>
+              {isAdmin && (
+                <button onClick={() => setShowEdit(true)} style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.7)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                  Edit
+                </button>
+              )}
+              {isAdmin ? (
+                <button onClick={handleDelete} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "rgba(239,68,68,0.15)", color: "#fca5a5", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                  Delete
+                </button>
+              ) : (
+                <button onClick={handleLeave} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "rgba(239,68,68,0.15)", color: "#fca5a5", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                  Leave
+                </button>
+              )}
             </div>
           </div>
 
@@ -538,6 +633,14 @@ function CrewChatView({ crew, currentUserId, friends, onBack, onLeft }) {
           ↑
         </button>
       </form>
+
+      {showEdit && (
+        <EditCrewModal
+          crew={crew}
+          onSaved={(updated) => { setCrew(updated); setShowEdit(false) }}
+          onClose={() => setShowEdit(false)}
+        />
+      )}
     </div>
   )
 }
