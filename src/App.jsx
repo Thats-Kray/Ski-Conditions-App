@@ -3,7 +3,7 @@ import { useMobile } from "./lib/useMobile"
 import AuthForm from "./components/AuthForm"
 import OnboardingFlow from "./components/OnboardingFlow"
 import PowderMap from "./components/PowderMap"
-import FriendsPage from "./components/FriendsPage"
+import MessagingCenter from "./components/MessagingCenter"
 import ProfilePage from "./components/ProfilePage"
 import SkiPlansPage from "./components/SkiPlansPage"
 import TripDetailModal from "./components/TripDetailModal"
@@ -601,7 +601,7 @@ const BOTTOM_TABS = [
   { key: "dashboard", icon: "🏔️", label: "Conditions" },
   { key: "map",       icon: "🗺️",  label: "Map" },
   { key: "plans",     icon: "🎿",  label: "Plans" },
-  { key: "friends",   icon: "🤙",  label: "Crew" },
+  { key: "friends",   icon: "💬",  label: "Messages" },
   { key: "profile",   icon: "👤",  label: "Profile" },
 ]
 
@@ -1585,10 +1585,10 @@ export default function App() {
         {activeTab === "friends" && (
           <div style={{ marginTop: 8 }}>
             {currentUser ? (
-              <FriendsPage />
+              <MessagingCenter />
             ) : (
               <AuthGate onSignIn={() => openAuthModal("login")} onSignUp={() => openAuthModal("signup")}
-                icon="🤙" title="Your Crew is waiting" desc="Sign in to chat with your crew, add friends, and coordinate the season." />
+                icon="💬" title="Your Crew is waiting" desc="Sign in to chat with your crew, add friends, and coordinate the season." />
             )}
           </div>
         )}

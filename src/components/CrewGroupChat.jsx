@@ -323,7 +323,7 @@ function EditCrewModal({ crew, onSaved, onClose }) {
 
 // ── Crew Chat View ────────────────────────────────────────────────────────────
 
-function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack, onLeft }) {
+export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack, onLeft }) {
   const [crew, setCrew] = useState(initialCrew)
   const [messages, setMessages] = useState([])
   const [members, setMembers] = useState([])

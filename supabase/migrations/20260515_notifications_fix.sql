@@ -81,5 +81,13 @@ $$;
 -- Grant execute to authenticated role
 grant execute on function public.send_notification to authenticated;
 
--- 5. Add notifications to the realtime publication so the bell receives live updates
-alter publication supabase_realtime add table public.notifications;
+-- 5. Add notifications to the realtime publication (safe — skips if already added)
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and tablename = 'notifications'
+  ) then
+    alter publication supabase_realtime add table public.notifications;
+  end if;
+end $$;

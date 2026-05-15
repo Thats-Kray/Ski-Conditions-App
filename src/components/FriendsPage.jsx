@@ -213,7 +213,7 @@ function CrewInviteCard({ invite, onAccept, onDecline, working }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function FriendsPage() {
+export default function FriendsPage({ hideCrew = false }) {
   const [searchText, setSearchText]           = useState("")
   const [searchResults, setSearchResults]     = useState([])
   const [incomingRequests, setIncomingRequests] = useState([])
@@ -409,7 +409,7 @@ export default function FriendsPage() {
       <div style={{ display: "flex", gap: 2, marginBottom: 16, background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 4 }}>
         {[
           { key: "leaderboard", label: "🏆 Board" },
-          { key: "crews",       label: "🤙 Crews" },
+          ...(hideCrew ? [] : [{ key: "crews", label: "🤙 Crews" }]),
           { key: "friends",     label: "👥 Friends" },
         ].map(({ key, label }) => (
           <button key={key} onClick={() => setActiveSection(key)} style={{
