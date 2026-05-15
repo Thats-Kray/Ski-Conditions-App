@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import CrewGroupChat from "./CrewGroupChat";
 import LeaderboardPage from "./LeaderboardPage";
+import UserProfileModal from "./UserProfileModal";
 import {
   searchProfiles,
   sendFriendRequest,
@@ -240,6 +241,7 @@ export default function FriendsPage({ hideCrew = false }) {
   const [votingOptionId, setVotingOptionId]   = useState(null)
   const [showPastPlans, setShowPastPlans]     = useState(false)
   const [showLegacyInvites, setShowLegacyInvites] = useState(false)
+  const [viewingUserId, setViewingUserId]         = useState(null)
 
   function showToast(type, text) {
     setToast({ type, text })
@@ -468,8 +470,10 @@ export default function FriendsPage({ hideCrew = false }) {
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {incomingRequests.map((req) => (
                   <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <Avatar profile={req.requester_profile} size={38} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <button onClick={() => setViewingUserId(req.requester_profile?.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+                      <Avatar profile={req.requester_profile} size={38} />
+                    </button>
+                    <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(req.requester_profile?.id)}>
                       <div style={{ fontWeight: 800, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {getDisplayName(req.requester_profile)}
                       </div>
@@ -575,8 +579,10 @@ export default function FriendsPage({ hideCrew = false }) {
                       display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
                       borderRadius: 12, background: "rgba(255,255,255,0.04)",
                     }}>
-                      <Avatar profile={p} size={40} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <button onClick={() => setViewingUserId(p.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+                        <Avatar profile={p} size={40} />
+                      </button>
+                      <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(p.id)}>
                         <div style={{ fontWeight: 700, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {getDisplayName(p)}
                         </div>
@@ -654,8 +660,10 @@ export default function FriendsPage({ hideCrew = false }) {
                         borderRadius: 12, background: "rgba(255,255,255,0.04)",
                         border: "1px solid transparent", minHeight: 64,
                       }}>
-                        <Avatar profile={friend} size={42} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                        <button onClick={() => setViewingUserId(friend.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+                          <Avatar profile={friend} size={42} />
+                        </button>
+                        <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(friend.id)}>
                           <div style={{ fontWeight: 800, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {getDisplayName(friend)}
                           </div>
@@ -858,6 +866,9 @@ export default function FriendsPage({ hideCrew = false }) {
           onClose={() => setShowDateComposer(false)}
           onCreated={async () => setDatePolls(await getMyDatePolls().catch(() => ({ created: [], received: [] })))}
         />
+      )}
+      {viewingUserId && (
+        <UserProfileModal userId={viewingUserId} onClose={() => setViewingUserId(null)} />
       )}
     </div>
   )

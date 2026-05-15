@@ -1,5 +1,7 @@
+import { useState } from "react"
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
+import UserProfileModal from "./UserProfileModal"
 
 function scoreColor(score) {
   if (score == null) return "#bfdbfe"   // fallback light blue
@@ -46,18 +48,20 @@ function avatarFallback(name) {
     .toUpperCase()
 }
 
-function SkierRow({ person }) {
+function SkierRow({ person, onViewProfile }) {
   const name = displayName(person)
   const eta = formatPlanTime(person.eta)
 
   return (
     <div
+      onClick={() => onViewProfile?.(person.id)}
       style={{
         display: "grid",
         gridTemplateColumns: "34px 1fr",
         gap: 8,
         alignItems: "center",
         marginTop: 8,
+        cursor: person.id ? "pointer" : "default",
       }}
     >
       <div
@@ -138,6 +142,8 @@ export default function PowderMap({
   skierCounts = {},
   skierDetails = {},
 }) {
+  const [viewingUserId, setViewingUserId] = useState(null)
+
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <div
@@ -259,7 +265,7 @@ export default function PowderMap({
                       ) : (
                         <div>
                           {people.map((person) => (
-                            <SkierRow key={person.id} person={person} />
+                            <SkierRow key={person.id} person={person} onViewProfile={setViewingUserId} />
                           ))}
                         </div>
                       )}
@@ -271,6 +277,9 @@ export default function PowderMap({
           })}
         </MapContainer>
       </div>
+      {viewingUserId && (
+        <UserProfileModal userId={viewingUserId} onClose={() => setViewingUserId(null)} />
+      )}
     </div>
   )
 }

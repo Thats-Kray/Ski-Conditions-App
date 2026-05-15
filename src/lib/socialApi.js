@@ -454,6 +454,16 @@ export async function searchProfiles(searchText) {
   return data || [];
 }
 
+export async function getProfileById(userId) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url, skill_level, sport_type, favorite_mountain, ski_passes, vehicle_label, vehicle_seats")
+    .eq("id", userId)
+    .single()
+  if (error) throw error
+  return data
+}
+
 /* -----------------------------
    Friend Requests
 ----------------------------- */

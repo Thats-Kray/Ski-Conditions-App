@@ -5,6 +5,7 @@ import {
   markArrival,
   markDriving,
 } from "../lib/socialApi"
+import UserProfileModal from "./UserProfileModal"
 
 function formatPlanTime(isoString) {
   if (!isoString) return "No ETA"
@@ -111,6 +112,7 @@ export default function TodaysCrew() {
   const [message, setMessage] = useState("")
   const [arriving, setArriving] = useState(false)
   const [driving, setDriving] = useState(false)
+  const [viewingUserId, setViewingUserId] = useState(null)
 
   const today = new Date().toISOString().slice(0, 10)
 
@@ -296,9 +298,17 @@ export default function TodaysCrew() {
                   alignItems: "center",
                 }}
               >
-                <Avatar plan={plan} currentUser={user} />
+                <div
+                  onClick={() => plan.user_id !== user?.id && setViewingUserId(plan.user_id)}
+                  style={{ cursor: plan.user_id !== user?.id ? "pointer" : "default" }}
+                >
+                  <Avatar plan={plan} currentUser={user} />
+                </div>
 
-                <div>
+                <div
+                  onClick={() => plan.user_id !== user?.id && setViewingUserId(plan.user_id)}
+                  style={{ cursor: plan.user_id !== user?.id ? "pointer" : "default" }}
+                >
                   <div style={{ fontWeight: 800 }}>
                     {displayNameForPlan(plan, user)}
                   </div>
@@ -341,6 +351,9 @@ export default function TodaysCrew() {
         <div style={{ fontSize: 13, opacity: 0.7 }}>
           {message}
         </div>
+      )}
+      {viewingUserId && (
+        <UserProfileModal userId={viewingUserId} onClose={() => setViewingUserId(null)} />
       )}
     </div>
   )

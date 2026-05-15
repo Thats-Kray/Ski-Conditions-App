@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { supabase } from "../lib/supabase"
+import UserProfileModal from "./UserProfileModal"
 import {
   createCrew,
   getMyCrews,
@@ -333,6 +334,7 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
   const [showInvite, setShowInvite] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [loadingMsgs, setLoadingMsgs] = useState(true)
+  const [viewingUserId, setViewingUserId] = useState(null)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -539,8 +541,10 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
               const isMe = p?.id === currentUserId
               return (
                 <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Avatar profile={p} size={28} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div onClick={() => !isMe && setViewingUserId(p?.id)} style={{ cursor: isMe ? "default" : "pointer" }}>
+                    <Avatar profile={p} size={28} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0, cursor: isMe ? "default" : "pointer" }} onClick={() => !isMe && setViewingUserId(p?.id)}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{name}</span>
                     {isMe && <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>you</span>}
                     {m.role === "admin" && <span style={{ fontSize: 10, color: "#fbbf24", fontWeight: 800, marginLeft: 6, background: "rgba(251,191,36,0.15)", borderRadius: 4, padding: "1px 5px" }}>Admin</span>}
@@ -586,7 +590,11 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
           const name = msg.profile?.full_name || msg.profile?.username || "?"
           return (
             <div key={msg.id} style={{ display: "flex", gap: 8, flexDirection: isMe ? "row-reverse" : "row", alignItems: "flex-end" }}>
-              {!isMe && <Avatar profile={msg.profile} size={28} />}
+              {!isMe && (
+                <div onClick={() => setViewingUserId(msg.profile?.id)} style={{ cursor: "pointer", flexShrink: 0 }}>
+                  <Avatar profile={msg.profile} size={28} />
+                </div>
+              )}
               <div style={{ maxWidth: "72%", display: "flex", flexDirection: "column", gap: 2, alignItems: isMe ? "flex-end" : "flex-start" }}>
                 {!isMe && (
                   <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", paddingLeft: 4 }}>{name}</div>
@@ -652,6 +660,9 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
           onSaved={(updated) => { setCrew(updated); setShowEdit(false) }}
           onClose={() => setShowEdit(false)}
         />
+      )}
+      {viewingUserId && (
+        <UserProfileModal userId={viewingUserId} onClose={() => setViewingUserId(null)} />
       )}
     </div>
   )
