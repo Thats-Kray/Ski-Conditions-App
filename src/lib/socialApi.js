@@ -1811,14 +1811,21 @@ export async function getFriendsLeaderboard() {
 
 async function insertNotification({ userId, type, title, body = null, tripId = null, actorId = null, crewId = null }) {
   if (!userId) return
-  const payload = { user_id: userId, type, title, body, trip_id: tripId, actor_id: actorId }
-  // crew_id is a newer column — only include if set to avoid schema cache errors
-  if (crewId) payload.crew_id = crewId
   try {
-    const { error } = await supabase.from("notifications").insert(payload)
-    if (error) console.error("Notification insert error:", error)
+    // Use the SECURITY DEFINER RPC so cross-user inserts bypass RLS.
+    // Direct table inserts fail when auth.uid() != the recipient's user_id.
+    const { error } = await supabase.rpc("send_notification", {
+      p_user_id:  userId,
+      p_type:     type,
+      p_title:    title,
+      p_body:     body ?? null,
+      p_trip_id:  tripId ?? null,
+      p_actor_id: actorId ?? null,
+      p_crew_id:  crewId ?? null,
+    })
+    if (error) console.error("send_notification RPC error:", error)
   } catch (e) {
-    console.error("Notification insert failed:", e)
+    console.error("send_notification failed:", e)
   }
 }
 
