@@ -1811,18 +1811,14 @@ export async function getFriendsLeaderboard() {
 
 async function insertNotification({ userId, type, title, body = null, tripId = null, actorId = null, crewId = null }) {
   if (!userId) return
+  const payload = { user_id: userId, type, title, body, trip_id: tripId, actor_id: actorId }
+  // crew_id is a newer column — only include if set to avoid schema cache errors
+  if (crewId) payload.crew_id = crewId
   try {
-    await supabase.from("notifications").insert({
-      user_id: userId,
-      type,
-      title,
-      body,
-      trip_id: tripId,
-      actor_id: actorId,
-      crew_id: crewId,
-    })
+    const { error } = await supabase.from("notifications").insert(payload)
+    if (error) console.error("Notification insert error:", error)
   } catch (e) {
-    console.warn("Notification insert failed:", e)
+    console.error("Notification insert failed:", e)
   }
 }
 
@@ -2379,6 +2375,25 @@ export async function getMyCrews() {
     .filter((r) => r.crew)
     .sort((a, b) => new Date(b.joined_at) - new Date(a.joined_at))
     .map((r) => ({ ...r.crew, myRole: r.role }))
+}
+
+export async function getPendingCrewInvites() {
+  const user = await getCurrentUser()
+  if (!user) return []
+
+  const { data, error } = await supabase
+    .from("crew_members")
+    .select(`
+      id,
+      crew:crew_id ( id, name, emoji, description, created_by,
+        creator:created_by ( full_name, username )
+      )
+    `)
+    .eq("user_id", user.id)
+    .eq("status", "pending")
+
+  if (error) { console.error("getPendingCrewInvites error:", error); return [] }
+  return (data || []).filter((r) => r.crew).map((r) => r.crew)
 }
 
 export async function getCrewMembers(crewId) {

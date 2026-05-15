@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase"
 import {
   createCrew,
   getMyCrews,
+  getPendingCrewInvites,
   getCrewMembers,
   getCrewMessages,
   sendCrewMessage,
@@ -11,6 +12,8 @@ import {
   removeCrewMember,
   updateCrewGroup,
   deleteCrew,
+  acceptCrewInvite,
+  declineCrewInvite,
   getCurrentUser,
 } from "../lib/socialApi"
 
@@ -658,6 +661,7 @@ function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack, onLef
 
 export default function CrewGroupChat({ friends = [] }) {
   const [crews, setCrews] = useState([])
+  const [pendingInvites, setPendingInvites] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedCrew, setSelectedCrew] = useState(null)
   const [showCreate, setShowCreate] = useState(false)
@@ -665,9 +669,14 @@ export default function CrewGroupChat({ friends = [] }) {
 
   async function loadCrews() {
     try {
-      const [user, crewData] = await Promise.all([getCurrentUser(), getMyCrews()])
+      const [user, crewData, pending] = await Promise.all([
+        getCurrentUser(),
+        getMyCrews(),
+        getPendingCrewInvites(),
+      ])
       setCurrentUserId(user?.id || null)
       setCrews(crewData)
+      setPendingInvites(pending)
     } catch (e) {
       console.warn("Crews load error:", e)
     } finally {
@@ -676,6 +685,28 @@ export default function CrewGroupChat({ friends = [] }) {
   }
 
   useEffect(() => { loadCrews() }, [])
+
+  async function handleAcceptInvite(crewId) {
+    try {
+      await acceptCrewInvite(crewId)
+      await loadCrews()
+      // Open the crew chat immediately after accepting
+      const accepted = await getMyCrews()
+      const crew = accepted.find((c) => c.id === crewId)
+      if (crew) setSelectedCrew(crew)
+    } catch (e) {
+      console.error("Accept invite error:", e)
+    }
+  }
+
+  async function handleDeclineInvite(crewId) {
+    try {
+      await declineCrewInvite(crewId)
+      setPendingInvites((prev) => prev.filter((c) => c.id !== crewId))
+    } catch (e) {
+      console.error("Decline invite error:", e)
+    }
+  }
 
   function handleCreated(crew) {
     setShowCreate(false)
@@ -729,7 +760,42 @@ export default function CrewGroupChat({ friends = [] }) {
         </div>
       )}
 
-      {!loading && crews.length === 0 && (
+      {/* ── Pending invites ── */}
+      {!loading && pendingInvites.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 10 }}>
+            Crew Invites · {pendingInvites.length}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {pendingInvites.map((crew) => {
+              const inviterName = crew.creator?.full_name || crew.creator?.username || null
+              return (
+                <div key={crew.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 16, background: "rgba(37,99,235,0.08)", border: "1px solid rgba(37,99,235,0.25)" }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(37,99,235,0.2)", border: "1px solid rgba(96,165,250,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
+                    {crew.emoji}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{crew.name}</div>
+                    {inviterName && (
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>Invited by {inviterName}</div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                    <button onClick={() => handleAcceptInvite(crew.id)} style={{ padding: "7px 14px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+                      Accept
+                    </button>
+                    <button onClick={() => handleDeclineInvite(crew.id)} style={{ padding: "7px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {!loading && crews.length === 0 && pendingInvites.length === 0 && (
         <div style={{
           textAlign: "center", padding: "40px 20px",
           background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
