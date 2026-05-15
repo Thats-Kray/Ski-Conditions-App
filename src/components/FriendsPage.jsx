@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import CrewGroupChat from "./CrewGroupChat";
+import LeaderboardPage from "./LeaderboardPage";
 import {
   searchProfiles,
   sendFriendRequest,
@@ -451,7 +452,7 @@ export default function FriendsPage() {
     message: "",
   });
 
-  const [activeSection, setActiveSection] = useState("crews");
+  const [activeSection, setActiveSection] = useState("leaderboard");
 
   const [showPingComposer, setShowPingComposer] = useState(false);
   const [pings, setPings] = useState({ sent: [], received: [] });
@@ -775,8 +776,9 @@ export default function FriendsPage() {
       {/* ── Internal tab bar ── */}
       <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: "1px solid rgba(255,255,255,0.07)", paddingBottom: 14 }}>
         {[
-          { key: "crews",   label: "🤙 Crews" },
-          { key: "friends", label: "👥 Friends" },
+          { key: "leaderboard", label: "🏆 Board" },
+          { key: "crews",       label: "🤙 Crews" },
+          { key: "friends",     label: "👥 Friends" },
         ].map(({ key, label }) => (
           <button
             key={key}
@@ -792,6 +794,11 @@ export default function FriendsPage() {
           </button>
         ))}
       </div>
+
+      {/* ── Leaderboard tab ── */}
+      {activeSection === "leaderboard" && (
+        <LeaderboardPage />
+      )}
 
       {/* ── Crews tab ── */}
       {activeSection === "crews" && (
@@ -1577,58 +1584,6 @@ export default function FriendsPage() {
             </div>
           </SectionCard>
 
-          <SectionCard
-            title="Friends Leaderboard"
-            subtitle="Your most frequent mountain companions."
-          >
-            <div style={{ display: "grid", gap: 10 }}>
-              {loadingPage ? <EmptyState text="Loading leaderboard..." /> : null}
-
-              {!loadingPage && leaderboard.length === 0 ? (
-                <EmptyState text="No friends yet. Accept a request or send one to get the board going." />
-              ) : null}
-
-              {leaderboard.map((friend, index) => (
-                <RowCard
-                  key={friend.id}
-                  left={
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div
-                        style={{
-                          width: 26,
-                          height: 26,
-                          borderRadius: "999px",
-                          background: "rgba(255,255,255,0.1)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "0.85rem",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {index + 1}
-                      </div>
-                      <Avatar profile={friend} />
-                      <div>
-                        <div style={{ fontWeight: 700 }}>{getDisplayName(friend)}</div>
-                        <div style={{ fontSize: "0.9rem", color: "rgba(255,255,255,0.72)" }}>
-                          {friend.daysTogether} days together · {friend.daysOnMountain} total ski days
-                        </div>
-                      </div>
-                    </div>
-                  }
-                  right={
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontWeight: 700 }}>{friend.topResort || "—"}</div>
-                      <div style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.58)" }}>
-                        top shared resort
-                      </div>
-                    </div>
-                  }
-                />
-              ))}
-            </div>
-          </SectionCard>
         </div>
       </div>
 
