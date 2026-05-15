@@ -192,7 +192,8 @@ export default function PowderMap({
 
       <div
         style={{
-          height: 520,
+          height: "min(520px, calc(100dvh - 340px))",
+          minHeight: 280,
           borderRadius: 20,
           overflow: "hidden",
           border: "1px solid rgba(255,255,255,0.1)",
