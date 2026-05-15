@@ -19,6 +19,11 @@ const TYPE_META = {
   crew_invite:   { icon: "🤙", color: "#2563eb" },
 }
 
+function getNotifCrewId(notif) {
+  if (notif.crew_id) return notif.crew_id
+  try { return JSON.parse(notif.body || "{}").crewId || null } catch { return null }
+}
+
 function timeAgo(ts) {
   const seconds = Math.floor((Date.now() - new Date(ts).getTime()) / 1000)
   if (seconds < 60) return "just now"
@@ -96,8 +101,10 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange 
 
   async function handleCrewAccept(e, notif) {
     e.stopPropagation()
+    const crewId = getNotifCrewId(notif)
+    if (!crewId) return
     try {
-      await acceptCrewInvite(notif.crew_id)
+      await acceptCrewInvite(crewId)
       await markNotificationRead(notif.id)
       setNotifications((prev) => prev.filter((n) => n.id !== notif.id))
       if (onTabChange) onTabChange("friends")
@@ -109,8 +116,10 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange 
 
   async function handleCrewDecline(e, notif) {
     e.stopPropagation()
+    const crewId = getNotifCrewId(notif)
+    if (!crewId) return
     try {
-      await declineCrewInvite(notif.crew_id)
+      await declineCrewInvite(crewId)
       await deleteNotification(notif.id)
       setNotifications((prev) => prev.filter((n) => n.id !== notif.id))
     } catch (err) {
@@ -293,7 +302,13 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange 
                     }}>
                       {notif.title}
                     </div>
-                    {notif.body && (
+                    {notif.body && (() => {
+                      let displayBody = notif.body
+                      try {
+                        const parsed = JSON.parse(notif.body)
+                        displayBody = parsed.text || displayBody
+                      } catch {}
+                      return (
                       <div style={{
                         fontSize: 12,
                         color: "rgba(255,255,255,0.45)",
@@ -302,13 +317,14 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange 
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
                       }}>
-                        {notif.body}
+                        {displayBody}
                       </div>
-                    )}
+                      )
+                    })()}
                     <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 3 }}>
                       {timeAgo(notif.created_at)}
                     </div>
-                    {notif.type === "crew_invite" && notif.crew_id && (
+                    {notif.type === "crew_invite" && getNotifCrewId(notif) && (
                       <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                         <button
                           onClick={(e) => handleCrewAccept(e, notif)}
@@ -329,8 +345,8 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange 
                   {/* Delete (hidden for crew invites — use accept/decline instead) */}
                   <button
                     onClick={(e) => handleDelete(e, notif.id)}
-                    style={{ display: notif.type === "crew_invite" ? "none" : undefined }}
                     style={{
+                      display: notif.type === "crew_invite" ? "none" : undefined,
                       background: "none",
                       border: "none",
                       color: "rgba(255,255,255,0.25)",

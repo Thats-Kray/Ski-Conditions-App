@@ -2412,7 +2412,7 @@ export async function getCrewMessages(crewId, limit = 60) {
   const { data, error } = await supabase
     .from("crew_messages")
     .select(`
-      id, content, created_at,
+      id, content, is_system, created_at,
       profile:user_id ( id, full_name, username, avatar_url )
     `)
     .eq("crew_id", crewId)
@@ -2465,12 +2465,14 @@ export async function inviteToCrewGroup(crewId, userId) {
     is_system: true,
   }).then(() => {}).catch(() => {})
 
-  // Notification to the invited user
+  // Notification to the invited user.
+  // crewId is stored in both crew_id column (if schema cache has it) and body
+  // JSON as a fallback so the insert succeeds even before schema cache refreshes.
   insertNotification({
     userId,
     type: "crew_invite",
     title: `${inviterName} added you to ${crewName}`,
-    body: "Tap Accept to join the group chat.",
+    body: JSON.stringify({ crewId, text: "Tap Accept to join the group chat." }),
     crewId,
     actorId: inviter.id,
   })
