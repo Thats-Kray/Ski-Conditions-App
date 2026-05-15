@@ -577,6 +577,26 @@ function LeaderCard({ title, icon, resort }) {
   )
 }
 
+function AuthGate({ icon, title, desc, onSignIn, onSignUp }) {
+  return (
+    <div style={{ display: "grid", placeItems: "center", minHeight: 360, padding: "40px 20px" }}>
+      <div style={{ textAlign: "center", maxWidth: 320, display: "grid", gap: 16, justifyItems: "center" }}>
+        <div style={{ fontSize: 48 }}>{icon}</div>
+        <div style={{ fontSize: 22, fontWeight: 900, color: "white", letterSpacing: -0.4 }}>{title}</div>
+        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.48)", lineHeight: 1.6 }}>{desc}</div>
+        <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+          <button onClick={onSignUp} style={{ background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", border: "none", borderRadius: 12, padding: "12px 22px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>
+            Create Free Account
+          </button>
+          <button onClick={onSignIn} style={{ background: "rgba(255,255,255,0.07)", color: "white", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "12px 22px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+            Sign In
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const BOTTOM_TABS = [
   { key: "dashboard", icon: "🏔️", label: "Conditions" },
   { key: "map",       icon: "🗺️",  label: "Map" },
@@ -1564,7 +1584,12 @@ export default function App() {
 
         {activeTab === "friends" && (
           <div style={{ marginTop: 8 }}>
-            <FriendsPage />
+            {currentUser ? (
+              <FriendsPage />
+            ) : (
+              <AuthGate onSignIn={() => openAuthModal("login")} onSignUp={() => openAuthModal("signup")}
+                icon="🤙" title="Your Crew is waiting" desc="Sign in to chat with your crew, add friends, and coordinate the season." />
+            )}
           </div>
         )}
 
@@ -1590,7 +1615,12 @@ export default function App() {
         )}
 
         {activeTab === "plans" && (
-          <SkiPlansPage onRequireLogin={requireLogin} resorts={RESORTS} />
+          currentUser ? (
+            <SkiPlansPage onRequireLogin={requireLogin} resorts={RESORTS} />
+          ) : (
+            <AuthGate onSignIn={() => openAuthModal("login")} onSignUp={() => openAuthModal("signup")}
+              icon="🎿" title="Plan trips with your crew" desc="Sign in to create trips, invite friends, share rides, and track your whole season." />
+          )
         )}
       </div>
     </div>
