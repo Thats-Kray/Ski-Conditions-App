@@ -484,9 +484,6 @@ export default function AuthForm({
                   <button type="button" style={secondaryButtonStyle} onClick={() => switchMode("forgot")}>
                     Forgot Password?
                   </button>
-                  <button type="button" style={secondaryButtonStyle} onClick={() => switchMode("phone")}>
-                    Use Phone
-                  </button>
                 </>
               ) : null}
 
