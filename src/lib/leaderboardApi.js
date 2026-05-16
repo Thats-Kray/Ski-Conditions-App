@@ -1,5 +1,5 @@
 import { supabase } from "./supabase"
-import { getCurrentUser } from "./socialApi"
+import { getCurrentUser, getAcceptedFriends } from "./socialApi"
 
 // ── Season helpers ────────────────────────────────────────────────────────────
 
@@ -19,7 +19,7 @@ function seasonDateRange(startYear) {
   }
 }
 
-// ── Log a ski day ─────────────────────────────────────────────────────────────
+// ── Log a ski day ──────────────────────────────────────────────────────────────
 
 export async function logSkiDay({ resortName, sessionDate, isPowderDay = false, notes = null, tripId = null }) {
   const user = await getCurrentUser()
@@ -65,65 +65,90 @@ export async function getMySessions(startYear) {
   return data || []
 }
 
-// ── Leaderboard ───────────────────────────────────────────────────────────────
+// ── Leaderboard (via SECURITY DEFINER RPC — bypasses RLS) ────────────────────
+
+async function fetchLeaderboard(startYear, mode) {
+  const user = await getCurrentUser()
+  if (!user) return []
+
+  const { data, error } = await supabase.rpc("get_leaderboard", {
+    p_start_year: startYear,
+    p_mode: mode,
+  })
+
+  if (error) throw error
+
+  return (data || []).map((row) => ({
+    id:          row.id,
+    full_name:   row.full_name,
+    username:    row.username,
+    avatar_url:  row.avatar_url,
+    skill_level: row.skill_level,
+    isMe:        row.id === user.id,
+    days:        Number(row.days),
+    resorts:     Number(row.resorts),
+    powderDays:  Number(row.powder_days),
+    verticalFt:  Number(row.vertical_ft),
+    milesSki:    parseFloat(Number(row.miles_ski).toFixed(1)),
+    topResort:   row.top_resort,
+  }))
+}
 
 export async function getLeaderboard(startYear) {
   const user = await getCurrentUser()
   if (!user) return []
 
-  const { from, to } = seasonDateRange(startYear)
+  // The DB's friends-mode filter may be stale, so we merge client-side:
+  // 1. Public RPC (SECURITY DEFINER) reads all sessions regardless of RLS
+  // 2. getAcceptedFriends() gives us the full friend profile list
+  // 3. Filter public results to self + friends, then backfill friends with 0 days
+  const [publicRows, friends] = await Promise.all([
+    (async () => {
+      const { data, error } = await supabase.rpc("get_leaderboard", {
+        p_start_year: startYear,
+        p_mode: "public",
+      })
+      if (error) throw error
+      return data || []
+    })(),
+    getAcceptedFriends(),
+  ])
 
-  // Get accepted friend IDs
-  const { data: friendships } = await supabase
-    .from("friendships")
-    .select("requester_id, addressee_id")
-    .eq("status", "accepted")
-    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+  const friendIdSet = new Set(friends.map((f) => f.id))
+  friendIdSet.add(user.id)
 
-  const friendIds = (friendships || []).map((f) =>
-    f.requester_id === user.id ? f.addressee_id : f.requester_id
-  )
-  const allIds = [user.id, ...friendIds]
+  const rowMap = new Map()
+  for (const row of publicRows) {
+    if (friendIdSet.has(row.id)) rowMap.set(row.id, row)
+  }
 
-  // Fetch profiles
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, full_name, username, avatar_url, skill_level")
-    .in("id", allIds)
-
-  // Fetch sessions for all users in date range
-  const { data: sessions, error } = await supabase
-    .from("ski_sessions")
-    .select("user_id, resort_name, session_date, is_powder_day, vertical_feet, miles_skied")
-    .in("user_id", allIds)
-    .gte("session_date", from)
-    .lte("session_date", to)
-
-  if (error) throw error
-
-  // Aggregate per user
-  const entries = (profiles || []).map((profile) => {
-    const userSessions = (sessions || []).filter((s) => s.user_id === profile.id)
-    const days        = userSessions.length
-    const resorts     = new Set(userSessions.map((s) => s.resort_name)).size
-    const powderDays  = userSessions.filter((s) => s.is_powder_day).length
-    const verticalFt  = userSessions.reduce((sum, s) => sum + (s.vertical_feet || 0), 0)
-    const milesSki    = userSessions.reduce((sum, s) => sum + (s.miles_skied || 0), 0)
-    const topResortMap = {}
-    userSessions.forEach((s) => { topResortMap[s.resort_name] = (topResortMap[s.resort_name] || 0) + 1 })
-    const topResort = Object.entries(topResortMap).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
-
-    return {
-      ...profile,
-      isMe: profile.id === user.id,
-      days,
-      resorts,
-      powderDays,
-      verticalFt,
-      milesSki: parseFloat(milesSki.toFixed(1)),
-      topResort,
+  // Friends with no sessions this season still appear with 0 stats
+  for (const friend of friends) {
+    if (!rowMap.has(friend.id)) {
+      rowMap.set(friend.id, {
+        id: friend.id, full_name: friend.full_name, username: friend.username,
+        avatar_url: friend.avatar_url, skill_level: friend.skill_level,
+        days: 0, resorts: 0, powder_days: 0, vertical_ft: 0, miles_ski: 0, top_resort: null,
+      })
     }
-  })
+  }
 
-  return entries
+  return [...rowMap.values()].map((row) => ({
+    id:          row.id,
+    full_name:   row.full_name,
+    username:    row.username,
+    avatar_url:  row.avatar_url,
+    skill_level: row.skill_level,
+    isMe:        row.id === user.id,
+    days:        Number(row.days || 0),
+    resorts:     Number(row.resorts || 0),
+    powderDays:  Number(row.powder_days || 0),
+    verticalFt:  Number(row.vertical_ft || 0),
+    milesSki:    parseFloat(Number(row.miles_ski || 0).toFixed(1)),
+    topResort:   row.top_resort,
+  }))
+}
+
+export async function getPublicLeaderboard(startYear) {
+  return fetchLeaderboard(startYear, "public")
 }

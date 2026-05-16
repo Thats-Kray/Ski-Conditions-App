@@ -410,7 +410,7 @@ export default function FriendsPage({ hideCrew = false }) {
       {/* ── Top tab bar ── */}
       <div style={{ display: "flex", gap: 2, marginBottom: 16, background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 4 }}>
         {[
-          { key: "leaderboard", label: "🏆 Board" },
+          { key: "leaderboard", label: "🏆 Friend Leaderboard" },
           ...(hideCrew ? [] : [{ key: "crews", label: "🤙 Crews" }]),
           { key: "friends",     label: "👥 Friends" },
         ].map(({ key, label }) => (
