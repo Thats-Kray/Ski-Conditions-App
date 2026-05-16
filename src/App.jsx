@@ -9,6 +9,7 @@ import SkiPlansPage from "./components/SkiPlansPage"
 import TripDetailModal from "./components/TripDetailModal"
 import NotificationBell from "./components/NotificationBell"
 import LandingPage from "./components/LandingPage"
+import HomeDashboard from "./components/HomeDashboard"
 import {
   getCurrentUser,
   getMyProfile,
@@ -585,12 +586,17 @@ function AuthGate({ icon, title, desc, onSignIn, onSignUp }) {
   )
 }
 
+const HOME_TAB = { key: "home", icon: "🏠", label: "Home" }
+
 const BOTTOM_TABS = [
   { key: "dashboard", icon: "🏔️", label: "Conditions" },
   { key: "plans",     icon: "🎿",  label: "Plans" },
   { key: "friends",   icon: "💬",  label: "Friends" },
   { key: "profile",   icon: "👤",  label: "Profile" },
 ]
+
+// Desktop nav includes the Home tab first; mobile nav does not
+const TOP_TABS = [HOME_TAB, ...BOTTOM_TABS]
 
 function ProfileAvatar({ profile, size, isActive }) {
   const name = profile?.full_name || profile?.username || "U"
@@ -691,7 +697,7 @@ function TopNav({ activeTab, onTabChange, currentProfile, currentUser, onNotifTa
 
         {/* Tabs */}
         <div style={{ display: "flex", gap: 4 }}>
-          {BOTTOM_TABS.map(({ key, icon, label }) => {
+          {TOP_TABS.map(({ key, icon, label }) => {
             const isActive = activeTab === key
             const isProfile = key === "profile"
             return (
@@ -764,7 +770,7 @@ function TabButton({ active, onClick, children }) {
 
 export default function App() {
   const isMobile = useMobile()
-  const [activeTab, setActiveTab] = useState("dashboard")
+  const [activeTab, setActiveTab] = useState("home")
   const [conditionsSubTab, setConditionsSubTab] = useState("conditions")
   const [passFilter, setPassFilter] = useState("All")
   const [query, setQuery] = useState("")
@@ -1176,6 +1182,12 @@ export default function App() {
           50% { transform: translateY(-4px) scale(1.03); }
         }
         .bottom-nav button { position: relative; }
+        @keyframes ticker-scroll {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .ticker-track { will-change: transform; }
+        .conv-row:hover { background: rgba(255,255,255,0.04) !important; }
       `}</style>
 
 {isRecoveryMode ? (
@@ -1338,10 +1350,19 @@ export default function App() {
       />
 
       <div className="mobile-scroll-pad" style={{ maxWidth: 1320, margin: "0 auto", padding: isMobile ? "16px 14px 20px" : "30px 20px 48px" }}>
-        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: activeTab === "dashboard" ? 20 : 16 }}>
-          {/* Left: branding — full title on dashboard, compact elsewhere */}
+        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: (activeTab === "dashboard" || (activeTab === "home" && isMobile)) ? 20 : 16 }}>
+          {/* Left: branding */}
           <div>
-            {activeTab === "dashboard" ? (
+            {activeTab === "home" && !isMobile ? (
+              <div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", padding: "5px 10px", borderRadius: 999, fontSize: 11, color: "rgba(255,255,255,0.65)", marginBottom: 8 }}>
+                  ❄️ Welcome back
+                </div>
+                <h1 style={{ margin: 0, fontSize: 30, fontWeight: 900, letterSpacing: -0.5 }}>
+                  PowderDays Dashboard
+                </h1>
+              </div>
+            ) : (activeTab === "dashboard" || (activeTab === "home" && isMobile)) ? (
               <div>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", padding: "5px 10px", borderRadius: 999, fontSize: 11, color: "rgba(255,255,255,0.65)", marginBottom: 8 }}>
                   ❄️ Morning Decision Engine
@@ -1357,7 +1378,7 @@ export default function App() {
 
           {/* Right: actions */}
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {activeTab === "dashboard" && conditionsSubTab === "conditions" && (
+            {(activeTab === "dashboard" || (activeTab === "home" && isMobile)) && conditionsSubTab === "conditions" && (
               <button
                 onClick={refresh}
                 disabled={loading}
@@ -1375,7 +1396,7 @@ export default function App() {
         </header>
 
         {/* Dashboard description — only shown on conditions sub-tab */}
-        {activeTab === "dashboard" && conditionsSubTab === "conditions" && (
+        {(activeTab === "dashboard" || (activeTab === "home" && isMobile)) && conditionsSubTab === "conditions" && (
           <p style={{ margin: "0 0 20px", color: "rgba(255,255,255,0.55)", fontSize: 14, maxWidth: 680, lineHeight: 1.6 }}>
             Resort snow, NWS forecasts, terrain metrics, and live COtrip travel conditions — blended into one morning ski decision engine.
           </p>
@@ -1387,7 +1408,17 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === "dashboard" && (
+        {/* ── Home Dashboard (desktop only) ── */}
+        {activeTab === "home" && !isMobile && (
+          <HomeDashboard
+            resorts={rows}
+            currentUser={currentUser}
+            onTabChange={setActiveTab}
+          />
+        )}
+
+        {/* On mobile, "home" falls through to conditions content */}
+        {(activeTab === "dashboard" || (activeTab === "home" && isMobile)) && (
           <>
             {/* Sub-tab switcher */}
             <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
