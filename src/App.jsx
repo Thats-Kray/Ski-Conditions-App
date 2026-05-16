@@ -588,7 +588,7 @@ function AuthGate({ icon, title, desc, onSignIn, onSignUp }) {
 const BOTTOM_TABS = [
   { key: "dashboard", icon: "🏔️", label: "Conditions" },
   { key: "plans",     icon: "🎿",  label: "Plans" },
-  { key: "friends",   icon: "💬",  label: "Messages" },
+  { key: "friends",   icon: "💬",  label: "Friends" },
   { key: "profile",   icon: "👤",  label: "Profile" },
 ]
 
