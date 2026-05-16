@@ -445,7 +445,7 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
   const invitableFriends = friends.filter((f) => !memberUserIds.has(f.id))
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 180px)", minHeight: 400 }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
 
       {/* ── Header ── */}
       <div style={{
@@ -453,12 +453,14 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
         padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.08)",
         background: "rgba(10,14,30,0.6)", borderRadius: "16px 16px 0 0", flexShrink: 0,
       }}>
-        <button
-          onClick={onBack}
-          style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 20, cursor: "pointer", padding: "0 4px 0 0", lineHeight: 1 }}
-        >
-          ←
-        </button>
+        {onBack && (
+          <button
+            onClick={onBack}
+            style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 20, cursor: "pointer", padding: "0 4px 0 0", lineHeight: 1 }}
+          >
+            ←
+          </button>
+        )}
         <div style={{ fontSize: 26 }}>{crew.emoji}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 900, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

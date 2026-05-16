@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "../lib/supabase"
+import { useMobile } from "../lib/useMobile"
 import {
   getCurrentUser,
   getMyCrews,
@@ -12,14 +13,12 @@ import {
 import { CrewChatView } from "./CrewGroupChat"
 import FriendsPage from "./FriendsPage"
 
-// ── Local read-status tracking (localStorage per crew) ──────────────────────
+// ── Local read-status tracking ───────────────────────────────────────────────
 
 const LS_PREFIX = "pd_cr_"
-
 function getLastRead(crewId) {
   try { return localStorage.getItem(LS_PREFIX + crewId) || null } catch { return null }
 }
-
 function markRead(crewId) {
   try { localStorage.setItem(LS_PREFIX + crewId, new Date().toISOString()) } catch {}
 }
@@ -59,6 +58,139 @@ function Avatar({ profile, size = 32 }) {
   )
 }
 
+// ── Sidebar: Conversation Row ─────────────────────────────────────────────────
+
+function ConversationRow({ crew, unread, onOpen, active }) {
+  const preview = (() => {
+    const msg = crew.lastMessage
+    if (!msg) return "No messages yet"
+    if (msg.is_system) return msg.content
+    const sender = msg.profile?.full_name?.split(" ")[0] || msg.profile?.username || "Someone"
+    const content = msg.content || ""
+    return `${sender}: ${content.length > 38 ? content.slice(0, 38) + "…" : content}`
+  })()
+
+  return (
+    <div
+      onClick={onOpen}
+      style={{
+        display: "flex", alignItems: "center", gap: 12,
+        padding: "11px 14px",
+        cursor: "pointer",
+        background: active
+          ? "rgba(96,165,250,0.14)"
+          : unread ? "rgba(96,165,250,0.04)" : "transparent",
+        borderLeft: `3px solid ${active ? "#60a5fa" : "transparent"}`,
+        transition: "background 0.15s",
+        position: "relative",
+      }}
+      className="conv-row"
+    >
+      {/* Crew emoji badge */}
+      <div style={{ position: "relative", flexShrink: 0 }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+          background: active
+            ? "linear-gradient(135deg,rgba(37,99,235,0.35),rgba(8,145,178,0.3))"
+            : "linear-gradient(135deg,rgba(37,99,235,0.18),rgba(8,145,178,0.14))",
+          border: `1px solid ${active ? "rgba(96,165,250,0.4)" : "rgba(96,165,250,0.15)"}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 22,
+          transition: "all 0.15s",
+        }}>
+          {crew.emoji}
+        </div>
+        {unread && !active && (
+          <div style={{
+            position: "absolute", top: -3, right: -3,
+            width: 11, height: 11, borderRadius: "50%",
+            background: "#3b82f6",
+            border: "2px solid rgba(6,10,22,1)",
+          }} />
+        )}
+      </div>
+
+      {/* Text */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 6, marginBottom: 3 }}>
+          <div style={{
+            fontWeight: unread ? 800 : 600, fontSize: 14,
+            color: active ? "#93c5fd" : "white",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            flex: 1, minWidth: 0,
+          }}>
+            {crew.name}
+          </div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", flexShrink: 0 }}>
+            {timeAgo(crew.lastMessage?.created_at)}
+          </div>
+        </div>
+        <div style={{
+          fontSize: 12,
+          color: unread ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.32)",
+          fontWeight: unread ? 500 : 400,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>
+          {preview}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Sidebar: Pending Invite Row ───────────────────────────────────────────────
+
+function InviteRow({ crew, onAccept, onDecline, accepting }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 10,
+      padding: "10px 14px",
+      background: "rgba(37,99,235,0.07)",
+      borderLeft: "3px solid rgba(96,165,250,0.5)",
+    }}>
+      <div style={{
+        width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+        background: "linear-gradient(135deg,rgba(37,99,235,0.25),rgba(8,145,178,0.2))",
+        border: "1px solid rgba(96,165,250,0.25)",
+        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
+      }}>
+        {crew.emoji}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {crew.name}
+        </div>
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>
+          {crew.creator?.full_name?.split(" ")[0] || "Someone"} invited you
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+          <button
+            onClick={onAccept}
+            disabled={accepting}
+            style={{
+              padding: "4px 12px", borderRadius: 6, border: "none",
+              background: accepting ? "rgba(37,99,235,0.4)" : "linear-gradient(135deg,#2563eb,#0891b2)",
+              color: "white", fontSize: 11, fontWeight: 800, cursor: accepting ? "default" : "pointer",
+            }}
+          >
+            {accepting ? "…" : "Accept"}
+          </button>
+          <button
+            onClick={onDecline}
+            style={{
+              padding: "4px 10px", borderRadius: 6,
+              border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.06)",
+              color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 700, cursor: "pointer",
+            }}
+          >
+            Decline
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Create Crew Modal ─────────────────────────────────────────────────────────
 
 const EMOJI_OPTIONS = ["⛷️", "🏂", "🤙", "🏔️", "❄️", "🔥", "💎", "🎿", "🌨️", "🦅", "🐻", "🐺"]
@@ -88,12 +220,14 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 500, display: "flex", alignItems: "flex-end", background: "rgba(0,0,0,0.6)" }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ width: "100%", maxHeight: "90vh", overflowY: "auto", background: "rgba(10,14,30,0.99)", borderRadius: "24px 24px 0 0", padding: "24px 20px 40px" }}>
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center", background: "rgba(0,0,0,0.65)" }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div style={{ width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", background: "rgba(10,14,30,0.99)", borderRadius: "22px 22px 0 0", padding: "24px 20px 40px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div style={{ fontWeight: 900, fontSize: 18, color: "white" }}>New Crew</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 22, cursor: "pointer", padding: 4 }}>×</button>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 18, cursor: "pointer", padding: "4px 8px", borderRadius: 8, lineHeight: 1 }}>✕</button>
         </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
@@ -150,113 +284,15 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
   )
 }
 
-// ── Conversation Row ──────────────────────────────────────────────────────────
+// ── Desktop empty state ───────────────────────────────────────────────────────
 
-function ConversationRow({ crew, lastMessage, unread, onOpen }) {
-  const preview = (() => {
-    if (!lastMessage) return "No messages yet"
-    if (lastMessage.is_system) return lastMessage.content
-    const sender = lastMessage.profile?.full_name || lastMessage.profile?.username || "Someone"
-    const content = lastMessage.content || ""
-    return `${sender}: ${content.length > 40 ? content.slice(0, 40) + "…" : content}`
-  })()
-
+function EmptyChat() {
   return (
-    <div onClick={onOpen} style={{
-      display: "flex", alignItems: "center", gap: 14, padding: "14px 16px",
-      cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.04)",
-      background: unread ? "rgba(96,165,250,0.04)" : "transparent",
-      transition: "background 0.15s",
-    }}
-      className="msg-row"
-    >
-      {/* Crew emoji avatar */}
-      <div style={{ position: "relative", flexShrink: 0 }}>
-        <div style={{
-          width: 54, height: 54, borderRadius: 18,
-          background: "linear-gradient(135deg,rgba(37,99,235,0.2),rgba(8,145,178,0.15))",
-          border: "1px solid rgba(96,165,250,0.18)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 26,
-        }}>
-          {crew.emoji}
-        </div>
-        {unread && (
-          <div style={{
-            position: "absolute", top: -2, right: -2, width: 13, height: 13,
-            borderRadius: "50%", background: "#3b82f6",
-            border: "2.5px solid rgb(2,6,23)",
-          }} />
-        )}
-      </div>
-
-      {/* Text content */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
-          <div style={{
-            fontWeight: unread ? 800 : 600, fontSize: 15, color: "white",
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>
-            {crew.name}
-          </div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", flexShrink: 0, marginLeft: 8 }}>
-            {timeAgo(lastMessage?.created_at)}
-          </div>
-        </div>
-        <div style={{
-          fontSize: 13,
-          color: unread ? "rgba(255,255,255,0.62)" : "rgba(255,255,255,0.35)",
-          fontWeight: unread ? 500 : 400,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}>
-          {preview}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Pending Invite Row ────────────────────────────────────────────────────────
-
-function InviteRow({ crew, onAccept, onDecline, accepting }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 12, padding: "13px 16px",
-      background: "rgba(37,99,235,0.08)",
-      borderBottom: "1px solid rgba(96,165,250,0.12)",
-    }}>
-      <div style={{
-        width: 46, height: 46, borderRadius: 14,
-        background: "linear-gradient(135deg,rgba(37,99,235,0.25),rgba(8,145,178,0.2))",
-        border: "1px solid rgba(96,165,250,0.25)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 22, flexShrink: 0,
-      }}>
-        {crew.emoji}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {crew.name}
-        </div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 1 }}>
-          {crew.creator?.full_name || crew.creator?.username || "Someone"} invited you
-        </div>
-      </div>
-      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-        <button onClick={onDecline} style={{
-          padding: "6px 12px", borderRadius: 8,
-          border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.06)",
-          color: "rgba(255,255,255,0.55)", fontSize: 12, fontWeight: 700, cursor: "pointer",
-        }}>
-          Decline
-        </button>
-        <button onClick={onAccept} disabled={accepting} style={{
-          padding: "6px 14px", borderRadius: 8, border: "none",
-          background: accepting ? "rgba(37,99,235,0.4)" : "linear-gradient(135deg,#2563eb,#0891b2)",
-          color: "white", fontSize: 12, fontWeight: 800, cursor: accepting ? "default" : "pointer",
-        }}>
-          {accepting ? "…" : "Accept"}
-        </button>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "rgba(255,255,255,0.25)", padding: 40 }}>
+      <div style={{ fontSize: 52 }}>💬</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>Select a conversation</div>
+      <div style={{ fontSize: 13, textAlign: "center", lineHeight: 1.6, maxWidth: 260 }}>
+        Choose a crew from the sidebar to start chatting, or create a new one.
       </div>
     </div>
   )
@@ -265,7 +301,8 @@ function InviteRow({ crew, onAccept, onDecline, accepting }) {
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function MessagingCenter() {
-  const [view, setView] = useState("inbox") // "inbox" | "people"
+  const isMobile = useMobile()
+  const [panel, setPanel] = useState("chats")        // "chats" | "people"
   const [selectedCrew, setSelectedCrew] = useState(null)
   const [conversations, setConversations] = useState([])
   const [pendingInvites, setPendingInvites] = useState([])
@@ -274,6 +311,7 @@ export default function MessagingCenter() {
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [acceptingId, setAcceptingId] = useState(null)
+  const [filter, setFilter] = useState("all")        // "all" | "unread"
   const channelRef = useRef(null)
 
   const loadInbox = useCallback(async () => {
@@ -294,7 +332,6 @@ export default function MessagingCenter() {
         return
       }
 
-      // Fetch recent messages across all crews in one query
       const crewIds = crews.map(c => c.id)
       const { data: recentMsgs } = await supabase
         .from("crew_messages")
@@ -303,7 +340,6 @@ export default function MessagingCenter() {
         .order("created_at", { ascending: false })
         .limit(Math.min(crewIds.length * 6, 120))
 
-      // Last message per crew
       const lastMsgMap = {}
       for (const msg of (recentMsgs || [])) {
         if (!lastMsgMap[msg.crew_id]) lastMsgMap[msg.crew_id] = msg
@@ -328,26 +364,18 @@ export default function MessagingCenter() {
     }
   }, [])
 
-  useEffect(() => {
-    loadInbox()
-  }, [loadInbox])
+  useEffect(() => { loadInbox() }, [loadInbox])
 
-  // Realtime: watch crew_members (membership changes) + crew_messages (new messages)
   useEffect(() => {
     if (!currentUser) return
-
     if (channelRef.current) supabase.removeChannel(channelRef.current)
 
     channelRef.current = supabase
       .channel("msg-center-inbox")
-      // Membership changes for this user (invite accepted, new invite, left crew)
       .on("postgres_changes", {
         event: "*", schema: "public", table: "crew_members",
         filter: `user_id=eq.${currentUser.id}`,
-      }, () => {
-        loadInbox()
-      })
-      // New messages in any crew — update last-message preview + unread dot
+      }, () => loadInbox())
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "crew_messages",
       }, (payload) => {
@@ -355,15 +383,11 @@ export default function MessagingCenter() {
         if (!crewId) return
         setConversations(prev => {
           const inList = prev.some(c => c.id === crewId)
-          if (!inList) {
-            // New crew appeared (e.g. just accepted invite) — full reload
-            loadInbox()
-            return prev
-          }
+          if (!inList) { loadInbox(); return prev }
           const updated = prev.map(c => {
             if (c.id !== crewId) return c
             const newMsg = { ...payload.new, profile: null }
-            return { ...c, lastMessage: newMsg, unread: true }
+            return { ...c, lastMessage: newMsg, unread: c.id !== selectedCrew?.id }
           })
           return updated.sort((a, b) =>
             new Date(b.lastMessage?.created_at || b.created_at) -
@@ -373,10 +397,8 @@ export default function MessagingCenter() {
       })
       .subscribe()
 
-    return () => {
-      if (channelRef.current) supabase.removeChannel(channelRef.current)
-    }
-  }, [currentUser, loadInbox])
+    return () => { if (channelRef.current) supabase.removeChannel(channelRef.current) }
+  }, [currentUser, loadInbox, selectedCrew?.id])
 
   async function handleAcceptInvite(crew) {
     setAcceptingId(crew.id)
@@ -384,8 +406,7 @@ export default function MessagingCenter() {
       await acceptCrewInvite(crew.id)
       setPendingInvites(prev => prev.filter(c => c.id !== crew.id))
       await loadInbox()
-      // Open the crew chat
-      setSelectedCrew({ ...crew, myRole: "member" })
+      openCrew({ ...crew, myRole: "member" })
     } catch (e) {
       console.warn("Accept invite failed:", e)
     } finally {
@@ -406,134 +427,270 @@ export default function MessagingCenter() {
     markRead(crew.id)
     setConversations(prev => prev.map(c => c.id === crew.id ? { ...c, unread: false } : c))
     setSelectedCrew(crew)
+    setPanel("chats")
   }
 
-  function handleBack() {
-    setSelectedCrew(null)
-    loadInbox() // refresh previews in case messages were sent
-  }
+  const displayedConversations = filter === "unread"
+    ? conversations.filter(c => c.unread)
+    : conversations
 
   const totalUnread = conversations.filter(c => c.unread).length + pendingInvites.length
 
-  // ── If a crew is selected, show full chat ──────────────────────────────────
-  if (selectedCrew) {
-    return (
-      <CrewChatView
-        crew={selectedCrew}
-        currentUserId={currentUser?.id}
-        friends={friends}
-        onBack={handleBack}
-        onLeft={() => { setSelectedCrew(null); loadInbox() }}
-      />
-    )
-  }
+  // Layout: on mobile show sidebar OR chat, never both
+  const showSidebar = !isMobile || !selectedCrew
+  const showMainPanel = !isMobile || !!selectedCrew
+
+  // Container height accounts for fixed navbars
+  const containerHeight = isMobile
+    ? "calc(100dvh - 88px)"
+    : "calc(100dvh - 132px)"
 
   return (
-    <div style={{ color: "white", paddingBottom: 80 }}>
+    <div style={{
+      display: "flex",
+      height: containerHeight,
+      background: "rgba(4,8,20,0.85)",
+      borderRadius: isMobile ? 0 : 18,
+      overflow: "hidden",
+      border: isMobile ? "none" : "1px solid rgba(255,255,255,0.07)",
+      boxShadow: isMobile ? "none" : "0 8px 40px rgba(0,0,0,0.35)",
+    }}>
 
-      {/* ── Header ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4, padding: "0 2px" }}>
-        <div style={{ fontSize: 22, fontWeight: 900, color: "white", letterSpacing: -0.5 }}>Messages</div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button
-            onClick={() => setView(v => v === "people" ? "inbox" : "people")}
-            style={{
-              display: "flex", alignItems: "center", gap: 6, padding: "8px 14px",
-              borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)",
-              background: view === "people" ? "rgba(96,165,250,0.15)" : "rgba(255,255,255,0.06)",
-              color: view === "people" ? "#60a5fa" : "rgba(255,255,255,0.7)",
-              fontWeight: 700, fontSize: 13, cursor: "pointer",
-            }}
-          >
-            👥 People
-          </button>
-          <button
-            onClick={() => setShowCreate(true)}
-            style={{
-              width: 38, height: 38, borderRadius: 12, border: "none",
-              background: "linear-gradient(135deg,#2563eb,#0891b2)",
-              color: "white", fontSize: 20, cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
-            title="New Crew"
-          >
-            +
-          </button>
-        </div>
-      </div>
+      {/* ── Sidebar ── */}
+      {showSidebar && (
+        <div style={{
+          width: isMobile ? "100%" : 280,
+          display: "flex",
+          flexDirection: "column",
+          borderRight: isMobile ? "none" : "1px solid rgba(255,255,255,0.07)",
+          background: "rgba(5,9,20,0.95)",
+          flexShrink: 0,
+        }}>
 
-      {/* ── People / Friends view ── */}
-      {view === "people" && (
-        <div style={{ marginTop: 16 }}>
-          <FriendsPage hideCrew />
-        </div>
-      )}
-
-      {/* ── Inbox ── */}
-      {view === "inbox" && (
-        <>
-          {loading ? (
-            <div style={{ textAlign: "center", padding: "48px 0", color: "rgba(255,255,255,0.3)", fontSize: 14 }}>
-              Loading…
-            </div>
-          ) : (
-            <>
-              {/* Pending invites */}
-              {pendingInvites.length > 0 && (
-                <div style={{ marginTop: 16, borderRadius: 16, overflow: "hidden", border: "1px solid rgba(96,165,250,0.2)" }}>
-                  <div style={{ padding: "10px 16px 8px", fontSize: 11, fontWeight: 800, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 0.8, background: "rgba(37,99,235,0.06)" }}>
-                    Crew Invites · {pendingInvites.length}
-                  </div>
-                  {pendingInvites.map(crew => (
-                    <InviteRow
-                      key={crew.id}
-                      crew={crew}
-                      accepting={acceptingId === crew.id}
-                      onAccept={() => handleAcceptInvite(crew)}
-                      onDecline={() => handleDeclineInvite(crew)}
-                    />
-                  ))}
-                </div>
+          {/* Sidebar header */}
+          <div style={{
+            padding: "14px 16px 12px",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            flexShrink: 0,
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 900, color: "white", letterSpacing: -0.3 }}>
+              Messages
+              {totalUnread > 0 && (
+                <span style={{
+                  marginLeft: 8, fontSize: 11, fontWeight: 800,
+                  background: "#2563eb", color: "white",
+                  borderRadius: 999, padding: "1px 7px",
+                }}>
+                  {totalUnread}
+                </span>
               )}
+            </div>
+            <button
+              onClick={() => setShowCreate(true)}
+              title="New Crew"
+              style={{
+                width: 32, height: 32, borderRadius: 9, border: "none",
+                background: "linear-gradient(135deg,#2563eb,#0891b2)",
+                color: "white", fontSize: 17, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 2px 10px rgba(37,99,235,0.35)",
+              }}
+            >
+              ✏️
+            </button>
+          </div>
 
-              {/* Conversations */}
-              {conversations.length === 0 && pendingInvites.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "64px 20px" }}>
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>💬</div>
-                  <div style={{ fontWeight: 800, fontSize: 18, color: "white", marginBottom: 8 }}>No chats yet</div>
-                  <div style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", marginBottom: 24 }}>
-                    Create a crew to start chatting with your ski friends
-                  </div>
-                  <button onClick={() => setShowCreate(true)} style={{
-                    padding: "12px 24px", borderRadius: 14, border: "none",
-                    background: "linear-gradient(135deg,#2563eb,#0891b2)",
-                    color: "white", fontWeight: 800, fontSize: 15, cursor: "pointer",
-                  }}>
-                    + New Crew
-                  </button>
-                </div>
-              ) : (
-                <div style={{ marginTop: 16, borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.07)" }}>
-                  {/* Unread badge */}
-                  {totalUnread > 0 && (
-                    <div style={{ padding: "10px 16px 8px", fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 0.8, background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                      {totalUnread} unread
+          {/* Panel toggle: Chats / People */}
+          <div style={{
+            padding: "8px 12px",
+            borderBottom: "1px solid rgba(255,255,255,0.05)",
+            display: "flex", gap: 4, flexShrink: 0,
+          }}>
+            {[
+              { key: "chats",  label: "Chats" },
+              { key: "people", label: "People" },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => { setPanel(key); if (isMobile) setSelectedCrew(null) }}
+                style={{
+                  flex: 1, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer",
+                  background: panel === key ? "rgba(96,165,250,0.18)" : "transparent",
+                  color: panel === key ? "#60a5fa" : "rgba(255,255,255,0.4)",
+                  fontWeight: panel === key ? 800 : 500, fontSize: 13,
+                  transition: "all 0.15s",
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Filter chips — only in Chats panel */}
+          {panel === "chats" && (
+            <div style={{
+              padding: "8px 12px 6px",
+              display: "flex", gap: 6, flexShrink: 0,
+            }}>
+              {[
+                { key: "all",    label: "All" },
+                { key: "unread", label: `Unread${totalUnread > 0 ? ` · ${totalUnread}` : ""}` },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setFilter(key)}
+                  style={{
+                    padding: "4px 12px", borderRadius: 999, border: "none", cursor: "pointer",
+                    background: filter === key ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.06)",
+                    color: filter === key ? "#60a5fa" : "rgba(255,255,255,0.4)",
+                    fontWeight: filter === key ? 700 : 500, fontSize: 12,
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Scrollable list area */}
+          <div style={{ flex: 1, overflowY: "auto" }}>
+
+            {panel === "chats" && (
+              <>
+                {/* Pending invites */}
+                {pendingInvites.length > 0 && (
+                  <>
+                    <div style={{
+                      padding: "10px 14px 6px",
+                      fontSize: 10, fontWeight: 800, color: "#60a5fa",
+                      textTransform: "uppercase", letterSpacing: 0.9,
+                    }}>
+                      Crew Invites · {pendingInvites.length}
                     </div>
-                  )}
-                  {conversations.map(crew => (
+                    {pendingInvites.map(crew => (
+                      <InviteRow
+                        key={crew.id}
+                        crew={crew}
+                        accepting={acceptingId === crew.id}
+                        onAccept={() => handleAcceptInvite(crew)}
+                        onDecline={() => handleDeclineInvite(crew)}
+                      />
+                    ))}
+                    <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "8px 0" }} />
+                  </>
+                )}
+
+                {/* Section label */}
+                {conversations.length > 0 && (
+                  <div style={{
+                    padding: "10px 14px 4px",
+                    fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,0.3)",
+                    textTransform: "uppercase", letterSpacing: 0.9,
+                  }}>
+                    Crews
+                  </div>
+                )}
+
+                {/* Conversation rows */}
+                {loading ? (
+                  <div style={{ padding: "24px 16px", textAlign: "center", color: "rgba(255,255,255,0.25)", fontSize: 13 }}>
+                    Loading…
+                  </div>
+                ) : displayedConversations.length === 0 ? (
+                  <div style={{ padding: "32px 20px", textAlign: "center" }}>
+                    <div style={{ fontSize: 36, marginBottom: 10 }}>💬</div>
+                    <div style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", lineHeight: 1.5 }}>
+                      {filter === "unread" ? "No unread conversations." : "No crews yet. Create one to get started."}
+                    </div>
+                    {filter === "all" && (
+                      <button
+                        onClick={() => setShowCreate(true)}
+                        style={{
+                          marginTop: 14, padding: "9px 18px", borderRadius: 10, border: "none",
+                          background: "linear-gradient(135deg,#2563eb,#0891b2)",
+                          color: "white", fontWeight: 800, fontSize: 13, cursor: "pointer",
+                        }}
+                      >
+                        + New Crew
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  displayedConversations.map(crew => (
                     <ConversationRow
                       key={crew.id}
                       crew={crew}
-                      lastMessage={crew.lastMessage}
                       unread={crew.unread}
+                      active={selectedCrew?.id === crew.id}
                       onOpen={() => openCrew(crew)}
                     />
-                  ))}
+                  ))
+                )}
+              </>
+            )}
+
+            {panel === "people" && (
+              <div style={{ padding: "12px 12px 0" }}>
+                <div style={{ padding: "0 2px 10px", fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: 0.9 }}>
+                  Friends
                 </div>
-              )}
-            </>
+                {friends.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "32px 16px", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
+                    No friends yet.
+                  </div>
+                ) : (
+                  friends.map(f => (
+                    <div key={f.id} style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "9px 8px", borderRadius: 10, cursor: "default",
+                    }}>
+                      <Avatar profile={f} size={34} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {f.full_name || f.username}
+                        </div>
+                        {f.username && (
+                          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>@{f.username}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Main panel ── */}
+      {showMainPanel && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+          {panel === "people" && !isMobile ? (
+            // Desktop: show full FriendsPage in right panel
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+              <FriendsPage hideCrew />
+            </div>
+          ) : selectedCrew ? (
+            <CrewChatView
+              crew={selectedCrew}
+              currentUserId={currentUser?.id}
+              friends={friends}
+              onBack={isMobile ? () => setSelectedCrew(null) : null}
+              onLeft={() => { setSelectedCrew(null); loadInbox() }}
+            />
+          ) : (
+            <EmptyChat />
           )}
-        </>
+        </div>
+      )}
+
+      {/* Mobile: people panel takes full screen */}
+      {isMobile && panel === "people" && !selectedCrew && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(4,8,20,0.95)", overflowY: "auto", padding: "16px 14px", zIndex: 10 }}>
+          <FriendsPage hideCrew />
+        </div>
       )}
 
       {showCreate && (
@@ -541,16 +698,14 @@ export default function MessagingCenter() {
           friends={friends}
           onCreated={crew => {
             setShowCreate(false)
-            loadInbox().then(() => {
-              setSelectedCrew({ ...crew, myRole: "admin" })
-            })
+            loadInbox().then(() => openCrew({ ...crew, myRole: "admin" }))
           }}
           onClose={() => setShowCreate(false)}
         />
       )}
 
       <style>{`
-        .msg-row:hover { background: rgba(255,255,255,0.04) !important; }
+        .conv-row:hover { background: rgba(255,255,255,0.05) !important; }
       `}</style>
     </div>
   )
