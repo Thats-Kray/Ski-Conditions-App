@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase"
 import {
   getMyCrews,
   getAcceptedFriends,
-  getMySkiPlans,
+  getAllVisibleTrips,
 } from "../lib/socialApi"
 import { getLeaderboard, getCurrentSeason } from "../lib/leaderboardApi"
 import { CrewChatView } from "./CrewGroupChat"
@@ -38,10 +38,26 @@ function timeAgo(ts) {
   return `${Math.floor(h / 24)}d`
 }
 
-function planResortName(plan) {
-  const r = plan.resort || plan.resort_name || ""
-  if (typeof r === "object") return r?.name || "Unknown Resort"
-  return r || "Unknown Resort"
+const RESORT_NAMES = {
+  vail: "Vail", beavercreek: "Beaver Creek", breckenridge: "Breckenridge",
+  keystone: "Keystone", crestedbutte: "Crested Butte", telluride: "Telluride",
+  winterpark: "Winter Park", coppermountain: "Copper Mountain",
+  arapahoebasin: "A-Basin", steamboat: "Steamboat", eldora: "Eldora",
+  aspensnowmass: "Aspen",
+}
+
+const RESORT_EMOJI = {
+  vail: "🏔️", beavercreek: "⛰️", breckenridge: "❄️", keystone: "🎯",
+  crestedbutte: "🌨️", telluride: "🌅", winterpark: "🌲", coppermountain: "🔴",
+  arapahoebasin: "💎", steamboat: "♨️", eldora: "🌿", aspensnowmass: "✨",
+}
+
+function tripResortName(trip) {
+  return trip.title || RESORT_NAMES[trip.resort_key] || trip.resort_key || "Unknown Resort"
+}
+
+function tripResortEmoji(trip) {
+  return RESORT_EMOJI[trip.resort_key] || "⛷️"
 }
 
 const LS_PREFIX = "pd_cr_"
@@ -180,22 +196,31 @@ function ConditionsWidget({ resorts, onTabChange }) {
 // ── Panel 2: Upcoming Ski Plans ───────────────────────────────────────────────
 
 function PlansWidget({ currentUser, onTabChange }) {
-  const [plans, setPlans] = useState([])
+  const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!currentUser) { setLoading(false); return }
-    getMySkiPlans()
-      .then(data => {
-        const now = new Date(); now.setHours(0, 0, 0, 0)
-        const upcoming = (data || [])
-          .filter(p => p.ski_date && new Date(`${p.ski_date}T12:00:00`) >= now)
-          .slice(0, 4)
-        setPlans(upcoming)
+    getAllVisibleTrips()
+      .then(({ mine = [], rsvpd = [], invited = [] }) => {
+        // Combine own trips + RSVPd + invited, tag them, sort, take next 3
+        const all = [
+          ...mine.map(t => ({ ...t, _role: "mine" })),
+          ...rsvpd.map(t => ({ ...t, _role: "going" })),
+          ...invited.map(t => ({ ...t, _role: "invited" })),
+        ]
+        // Dedupe by id (rsvpd could overlap with invited)
+        const seen = new Set()
+        const unique = all.filter(t => { if (seen.has(t.id)) return false; seen.add(t.id); return true })
+        unique.sort((a, b) => (a.ski_date || "").localeCompare(b.ski_date || ""))
+        setTrips(unique.slice(0, 3))
       })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [currentUser])
+
+  const ROLE_LABEL = { mine: "Host", going: "Going", invited: "Invited" }
+  const ROLE_COLOR = { mine: "#60a5fa", going: "#22c55e", invited: "#fbbf24" }
 
   return (
     <DashCard>
@@ -220,61 +245,58 @@ function PlansWidget({ currentUser, onTabChange }) {
           <EmptyState icon="🎿" text="Sign in to see your plans" />
         ) : loading ? (
           <EmptyState icon="⏳" text="Loading…" />
-        ) : plans.length === 0 ? (
+        ) : trips.length === 0 ? (
           <EmptyState icon="🏔️" text="No upcoming trips" sub="Tap + to plan your next powder day" />
-        ) : plans.map((plan, i) => {
-          const date = new Date(`${plan.ski_date}T12:00:00`)
+        ) : trips.map((trip, i) => {
+          const date = new Date(`${trip.ski_date}T12:00:00`)
           const isValid = !isNaN(date)
           return (
             <div
-              key={plan.id}
+              key={trip.id}
               onClick={() => onTabChange("plans")}
               style={{
                 display: "flex", alignItems: "center", gap: 12,
                 padding: "12px 16px",
-                borderBottom: i < plans.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+                borderBottom: i < trips.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
                 cursor: "pointer",
                 transition: "background 0.12s",
               }}
               onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.04)"}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}
             >
-              {/* Date badge */}
+              {/* Resort emoji badge */}
               <div style={{
                 width: 46, height: 46, borderRadius: 12, flexShrink: 0,
                 background: "linear-gradient(135deg,rgba(37,99,235,0.22),rgba(8,145,178,0.18))",
                 border: "1px solid rgba(96,165,250,0.2)",
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                lineHeight: 1.15,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 22,
               }}>
-                {isValid ? (
-                  <>
-                    <div style={{ fontSize: 9, fontWeight: 800, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                      {date.toLocaleDateString(undefined, { month: "short" })}
-                    </div>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: "white" }}>{date.getDate()}</div>
-                  </>
-                ) : (
-                  <div style={{ fontSize: 18 }}>🎿</div>
-                )}
+                {tripResortEmoji(trip)}
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {planResortName(plan)}
+                  {tripResortName(trip)}
                 </div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.38)", marginTop: 3 }}>
-                  {isValid ? date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) : plan.ski_date}
-                  {plan.status && ` · ${plan.status}`}
+                <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 3 }}>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.38)" }}>
+                    {isValid ? date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) : trip.ski_date}
+                  </span>
+                  {trip._role && (
+                    <span style={{ fontSize: 10, fontWeight: 800, color: ROLE_COLOR[trip._role], background: `${ROLE_COLOR[trip._role]}18`, borderRadius: 999, padding: "1px 6px" }}>
+                      {ROLE_LABEL[trip._role]}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <div style={{ fontSize: 16, flexShrink: 0 }}>›</div>
+              <div style={{ fontSize: 16, color: "rgba(255,255,255,0.3)", flexShrink: 0 }}>›</div>
             </div>
           )
         })}
       </div>
-      {plans.length > 0 && (
+      {trips.length > 0 && (
         <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
           <button
             onClick={() => onTabChange("plans")}
