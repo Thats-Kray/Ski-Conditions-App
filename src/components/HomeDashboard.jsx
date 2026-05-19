@@ -7,7 +7,10 @@ import {
   getAllVisibleTrips,
   getMyTripConversations,
   getCurrentUser,
+  getDMConversations,
+  markDMsRead,
 } from "../lib/socialApi"
+import DirectMessageView from "./DirectMessageView"
 import { getLeaderboard, getCurrentSeason } from "../lib/leaderboardApi"
 import { CrewChatView } from "./CrewGroupChat"
 import TripDetailModal from "./TripDetailModal"
@@ -600,10 +603,11 @@ function MessagingWidget({ currentUser }) {
   const loadConversations = useCallback(async () => {
     if (!currentUser?.id) { setLoading(false); return }
     try {
-      const [crews, friendList, trips] = await Promise.all([
+      const [crews, friendList, trips, dms] = await Promise.all([
         getMyCrews(),
         getAcceptedFriends(),
         getMyTripConversations(currentUser.id),
+        getDMConversations().catch(() => []),
       ])
       setFriends(friendList || [])
 
@@ -660,8 +664,22 @@ function MessagingWidget({ currentUser }) {
         })
       }
 
+      // ── DM conversations ──
+      const dmConvs = (dms || []).map(d => ({
+        type: "dm",
+        id: d.partnerId,
+        partnerId: d.partnerId,
+        partner: d.partner,
+        name: d.partner?.full_name || d.partner?.username || "Friend",
+        emoji: null,
+        lastMessage: d.lastMessage,
+        unread: d.unread,
+        data: d,
+        _ts: new Date(d.lastMessage?.created_at || 0).getTime(),
+      }))
+
       // Merge and sort by most recent activity
-      const merged = [...crewConvs, ...tripConvs].sort((a, b) => b._ts - a._ts)
+      const merged = [...crewConvs, ...tripConvs, ...dmConvs].sort((a, b) => b._ts - a._ts)
       setAllConvs(merged)
     } catch (e) {
       console.warn("MessagingWidget load error:", e)
@@ -681,12 +699,17 @@ function MessagingWidget({ currentUser }) {
       .channel("home-dash-inbox")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "crew_messages" }, () => loadConversations())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "trip_comments" }, () => loadConversations())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "direct_messages" }, () => loadConversations())
       .subscribe()
     return () => { if (channelRef.current) supabase.removeChannel(channelRef.current) }
   }, [currentUser?.id, loadConversations])
 
   function openConv(conv) {
-    markRead(conv.type === "trip" ? "trip_" + conv.id : conv.id)
+    if (conv.type === "dm") {
+      markDMsRead(conv.partnerId).catch(() => {})
+    } else {
+      markRead(conv.type === "trip" ? "trip_" + conv.id : conv.id)
+    }
     setAllConvs(prev => prev.map(c => c.id === conv.id && c.type === conv.type ? { ...c, unread: false } : c))
     setSelected(conv)
   }
@@ -709,10 +732,16 @@ function MessagingWidget({ currentUser }) {
             const lastMsg = conv.lastMessage
             const preview = (() => {
               if (!lastMsg) return "No messages yet"
-              const sender = lastMsg.profile?.full_name?.split(" ")[0] || lastMsg.profile?.username || "Someone"
               const content = lastMsg.content || ""
-              return `${sender}: ${content.length > 32 ? content.slice(0, 32) + "…" : content}`
+              const truncated = content.length > 32 ? content.slice(0, 32) + "…" : content
+              if (conv.type === "dm") {
+                const isMe = lastMsg.sender_id === currentUser?.id
+                return isMe ? `You: ${truncated}` : truncated
+              }
+              const sender = lastMsg.profile?.full_name?.split(" ")[0] || lastMsg.profile?.username || "Someone"
+              return `${sender}: ${truncated}`
             })()
+            const avatarName = conv.partner?.full_name || conv.partner?.username || "?"
             return (
               <div
                 key={`${conv.type}-${conv.id}`}
@@ -721,9 +750,15 @@ function MessagingWidget({ currentUser }) {
                 className="conv-row"
               >
                 <div style={{ position: "relative", flexShrink: 0 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: conv.type === "trip" ? "linear-gradient(135deg,rgba(251,191,36,0.2),rgba(234,88,12,0.15))" : "linear-gradient(135deg,rgba(37,99,235,0.2),rgba(8,145,178,0.15))", border: `1px solid ${conv.type === "trip" ? "rgba(251,191,36,0.2)" : "rgba(96,165,250,0.15)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
-                    {conv.emoji}
-                  </div>
+                  {conv.type === "dm" ? (
+                    conv.partner?.avatar_url
+                      ? <img src={conv.partner.avatar_url} alt={avatarName} style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover" }} />
+                      : <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,rgba(37,99,235,0.5),rgba(8,145,178,0.5))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, color: "white" }}>{avatarName.charAt(0).toUpperCase()}</div>
+                  ) : (
+                    <div style={{ width: 38, height: 38, borderRadius: 10, background: conv.type === "trip" ? "linear-gradient(135deg,rgba(251,191,36,0.2),rgba(234,88,12,0.15))" : "linear-gradient(135deg,rgba(37,99,235,0.2),rgba(8,145,178,0.15))", border: `1px solid ${conv.type === "trip" ? "rgba(251,191,36,0.2)" : "rgba(96,165,250,0.15)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
+                      {conv.emoji}
+                    </div>
+                  )}
                   {conv.unread && !active && (
                     <div style={{ position: "absolute", top: -2, right: -2, width: 9, height: 9, borderRadius: "50%", background: "#3b82f6", border: "2px solid rgba(6,10,22,1)" }} />
                   )}
@@ -749,7 +784,14 @@ function MessagingWidget({ currentUser }) {
 
       {/* Panel 5: Message thread */}
       <DashCard>
-        {selected?.type === "crew" ? (
+        {selected?.type === "dm" ? (
+          <DirectMessageView
+            partner={selected.partner}
+            partnerId={selected.partnerId}
+            currentUser={currentUser}
+            onBack={null}
+          />
+        ) : selected?.type === "crew" ? (
           <CrewChatView
             crew={selected.data}
             currentUserId={currentUser?.id}
