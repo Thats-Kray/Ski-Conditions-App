@@ -1,13 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from "react"
+import { useMobile } from "../lib/useMobile"
 import { supabase } from "../lib/supabase"
 import {
   getMyCrews,
   getAcceptedFriends,
   getAllVisibleTrips,
+  getMyTripConversations,
+  getCurrentUser,
 } from "../lib/socialApi"
 import { getLeaderboard, getCurrentSeason } from "../lib/leaderboardApi"
 import { CrewChatView } from "./CrewGroupChat"
 import TripDetailModal from "./TripDetailModal"
+import TripChatView, { tripDisplayName } from "./TripChatView"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -587,69 +591,104 @@ function LeaderboardTicker({ currentUser }) {
 // ── Panels 4+5: Messaging ─────────────────────────────────────────────────────
 
 function MessagingWidget({ currentUser }) {
-  const [conversations, setConversations] = useState([])
-  const [selectedCrew, setSelectedCrew] = useState(null)
-  const [friends, setFriends] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [allConvs, setAllConvs]       = useState([])   // merged crews + trips sorted by recency
+  const [selected, setSelected]       = useState(null)  // { type: "crew"|"trip", data: {...} }
+  const [friends, setFriends]         = useState([])
+  const [loading, setLoading]         = useState(true)
   const channelRef = useRef(null)
 
   const loadConversations = useCallback(async () => {
+    if (!currentUser?.id) { setLoading(false); return }
     try {
-      const [crews, friendList] = await Promise.all([getMyCrews(), getAcceptedFriends()])
+      const [crews, friendList, trips] = await Promise.all([
+        getMyCrews(),
+        getAcceptedFriends(),
+        getMyTripConversations(currentUser.id),
+      ])
       setFriends(friendList || [])
 
-      if (!crews.length) { setConversations([]); setLoading(false); return }
-
-      const crewIds = crews.map(c => c.id)
-      const { data: msgs } = await supabase
-        .from("crew_messages")
-        .select("crew_id, content, is_system, created_at, profile:user_id(full_name, username)")
-        .in("crew_id", crewIds)
-        .order("created_at", { ascending: false })
-        .limit(Math.min(crewIds.length * 6, 120))
-
-      const lastMsgMap = {}
-      for (const m of (msgs || [])) {
-        if (!lastMsgMap[m.crew_id]) lastMsgMap[m.crew_id] = m
+      // ── Crew last messages ──
+      let crewConvs = []
+      if (crews.length > 0) {
+        const crewIds = crews.map(c => c.id)
+        const { data: msgs } = await supabase
+          .from("crew_messages")
+          .select("crew_id, content, is_system, created_at, profile:user_id(full_name, username)")
+          .in("crew_id", crewIds)
+          .order("created_at", { ascending: false })
+          .limit(Math.min(crewIds.length * 6, 120))
+        const lastMsgMap = {}
+        for (const m of (msgs || [])) {
+          if (!lastMsgMap[m.crew_id]) lastMsgMap[m.crew_id] = m
+        }
+        crewConvs = crews.map(crew => {
+          const lastMessage = lastMsgMap[crew.id] || null
+          const lastRead = getLastRead(crew.id)
+          const unread = lastMessage && (!lastRead || new Date(lastMessage.created_at) > new Date(lastRead))
+          return { type: "crew", id: crew.id, name: crew.name, emoji: crew.emoji, lastMessage, lastComment: null, unread, data: crew, _ts: new Date(lastMessage?.created_at || crew.created_at).getTime() }
+        })
       }
 
-      const enriched = crews.map(crew => {
-        const lastMessage = lastMsgMap[crew.id] || null
-        const lastRead = getLastRead(crew.id)
-        const unread = lastMessage && (!lastRead || new Date(lastMessage.created_at) > new Date(lastRead))
-        return { ...crew, lastMessage, unread }
-      }).sort((a, b) =>
-        new Date(b.lastMessage?.created_at || b.created_at) -
-        new Date(a.lastMessage?.created_at || a.created_at)
-      )
+      // ── Trip last comments ──
+      let tripConvs = []
+      if (trips.length > 0) {
+        const tripIds = trips.map(t => t.id)
+        const { data: comments } = await supabase
+          .from("trip_comments")
+          .select("trip_id, content, user_id, created_at")
+          .in("trip_id", tripIds)
+          .order("created_at", { ascending: false })
+          .limit(Math.min(tripIds.length * 6, 120))
+        const lastCommentMap = {}
+        for (const c of (comments || [])) {
+          if (!lastCommentMap[c.trip_id]) lastCommentMap[c.trip_id] = c
+        }
+        // Enrich with sender names
+        const senderIds = [...new Set(Object.values(lastCommentMap).map(c => c.user_id))]
+        let senderMap = {}
+        if (senderIds.length) {
+          const { data: senders } = await supabase.from("profiles").select("id, full_name, username").in("id", senderIds)
+          senderMap = Object.fromEntries((senders || []).map(p => [p.id, p]))
+        }
+        tripConvs = trips.map(trip => {
+          const lastComment = lastCommentMap[trip.id]
+            ? { ...lastCommentMap[trip.id], profile: senderMap[lastCommentMap[trip.id].user_id] || null }
+            : null
+          const lastRead = getLastRead("trip_" + trip.id)
+          const unread = lastComment && (!lastRead || new Date(lastComment.created_at) > new Date(lastRead))
+          return { type: "trip", id: trip.id, name: tripDisplayName(trip), emoji: "🎿", lastMessage: lastComment, lastComment, unread, data: trip, _ts: new Date(lastComment?.created_at || trip.ski_date).getTime() }
+        })
+      }
 
-      setConversations(enriched)
+      // Merge and sort by most recent activity
+      const merged = [...crewConvs, ...tripConvs].sort((a, b) => b._ts - a._ts)
+      setAllConvs(merged)
     } catch (e) {
       console.warn("MessagingWidget load error:", e)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [currentUser?.id])
 
   useEffect(() => {
-    if (!currentUser) { setLoading(false); return }
     loadConversations()
-  }, [currentUser, loadConversations])
+  }, [loadConversations])
 
   useEffect(() => {
-    if (!currentUser) return
+    if (!currentUser?.id) return
     if (channelRef.current) supabase.removeChannel(channelRef.current)
     channelRef.current = supabase
       .channel("home-dash-inbox")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "crew_messages" }, () => loadConversations())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "trip_comments" }, () => loadConversations())
       .subscribe()
     return () => { if (channelRef.current) supabase.removeChannel(channelRef.current) }
-  }, [currentUser, loadConversations])
+  }, [currentUser?.id, loadConversations])
 
-  function openCrew(crew) {
-    markRead(crew.id)
-    setConversations(prev => prev.map(c => c.id === crew.id ? { ...c, unread: false } : c))
-    setSelectedCrew(crew)
+  function openConv(conv) {
+    markRead(conv.type === "trip" ? "trip_" + conv.id : conv.id)
+    setAllConvs(prev => prev.map(c => c.id === conv.id && c.type === conv.type ? { ...c, unread: false } : c))
+    setSelected(conv)
   }
 
   return (
@@ -660,14 +699,14 @@ function MessagingWidget({ currentUser }) {
         <CardHeader title="💬 Messages" />
         <div style={{ flex: 1, overflowY: "auto" }}>
           {!currentUser ? (
-            <EmptyState icon="💬" text="Sign in to chat with your crew" />
+            <EmptyState icon="💬" text="Sign in to chat" />
           ) : loading ? (
             <EmptyState icon="⏳" text="Loading…" />
-          ) : conversations.length === 0 ? (
-            <EmptyState icon="💬" text="No crew chats yet" sub="Create or join a crew to get started" />
-          ) : conversations.map((crew) => {
-            const active = selectedCrew?.id === crew.id
-            const lastMsg = crew.lastMessage
+          ) : allConvs.length === 0 ? (
+            <EmptyState icon="💬" text="No conversations yet" sub="Join a crew or create a ski plan" />
+          ) : allConvs.map((conv) => {
+            const active = selected?.id === conv.id && selected?.type === conv.type
+            const lastMsg = conv.lastMessage
             const preview = (() => {
               if (!lastMsg) return "No messages yet"
               const sender = lastMsg.profile?.full_name?.split(" ")[0] || lastMsg.profile?.username || "Someone"
@@ -676,44 +715,29 @@ function MessagingWidget({ currentUser }) {
             })()
             return (
               <div
-                key={crew.id}
-                onClick={() => openCrew(crew)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "10px 14px",
-                  borderLeft: `3px solid ${active ? "#60a5fa" : "transparent"}`,
-                  borderBottom: "1px solid rgba(255,255,255,0.04)",
-                  background: active ? "rgba(96,165,250,0.1)" : "transparent",
-                  cursor: "pointer",
-                  transition: "background 0.12s",
-                }}
+                key={`${conv.type}-${conv.id}`}
+                onClick={() => openConv(conv)}
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderLeft: `3px solid ${active ? "#60a5fa" : "transparent"}`, borderBottom: "1px solid rgba(255,255,255,0.04)", background: active ? "rgba(96,165,250,0.1)" : "transparent", cursor: "pointer", transition: "background 0.12s" }}
                 className="conv-row"
               >
-                {/* Emoji badge */}
                 <div style={{ position: "relative", flexShrink: 0 }}>
-                  <div style={{
-                    width: 38, height: 38, borderRadius: 10,
-                    background: "linear-gradient(135deg,rgba(37,99,235,0.2),rgba(8,145,178,0.15))",
-                    border: "1px solid rgba(96,165,250,0.15)",
-                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
-                  }}>
-                    {crew.emoji}
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: conv.type === "trip" ? "linear-gradient(135deg,rgba(251,191,36,0.2),rgba(234,88,12,0.15))" : "linear-gradient(135deg,rgba(37,99,235,0.2),rgba(8,145,178,0.15))", border: `1px solid ${conv.type === "trip" ? "rgba(251,191,36,0.2)" : "rgba(96,165,250,0.15)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
+                    {conv.emoji}
                   </div>
-                  {crew.unread && !active && (
+                  {conv.unread && !active && (
                     <div style={{ position: "absolute", top: -2, right: -2, width: 9, height: 9, borderRadius: "50%", background: "#3b82f6", border: "2px solid rgba(6,10,22,1)" }} />
                   )}
                 </div>
-
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 4, marginBottom: 2 }}>
-                    <div style={{ fontWeight: crew.unread ? 800 : 600, fontSize: 13, color: active ? "#93c5fd" : "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {crew.name}
+                    <div style={{ fontWeight: conv.unread ? 800 : 600, fontSize: 13, color: active ? "#93c5fd" : "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {conv.name}
                     </div>
                     <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", flexShrink: 0 }}>
                       {timeAgo(lastMsg?.created_at)}
                     </div>
                   </div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.33)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <div style={{ fontSize: 11, color: conv.unread ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.33)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {preview}
                   </div>
                 </div>
@@ -725,18 +749,157 @@ function MessagingWidget({ currentUser }) {
 
       {/* Panel 5: Message thread */}
       <DashCard>
-        {selectedCrew ? (
+        {selected?.type === "crew" ? (
           <CrewChatView
-            crew={selectedCrew}
+            crew={selected.data}
             currentUserId={currentUser?.id}
             friends={friends}
             onBack={null}
-            onLeft={() => { setSelectedCrew(null); loadConversations() }}
+            onLeft={() => { setSelected(null); loadConversations() }}
+          />
+        ) : selected?.type === "trip" ? (
+          <TripChatView
+            trip={selected.data}
+            currentUser={currentUser}
+            onBack={null}
           />
         ) : (
-          <EmptyState icon="💬" text="Select a conversation" sub="Choose a crew from the left panel to start chatting" />
+          <EmptyState icon="💬" text="Select a conversation" sub="Choose a chat from the left" />
         )}
       </DashCard>
+    </div>
+  )
+}
+
+// ── Mobile: Crew list (tap → Friends tab) ────────────────────────────────────
+
+function MobileCrewListWidget({ currentUser, onTabChange }) {
+  const [conversations, setConversations] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!currentUser) { setLoading(false); return }
+    ;(async () => {
+      try {
+        const crews = await getMyCrews()
+        if (!crews.length) { setConversations([]); setLoading(false); return }
+
+        const crewIds = crews.map(c => c.id)
+        const { data: msgs } = await supabase
+          .from("crew_messages")
+          .select("crew_id, content, is_system, created_at, profile:user_id(full_name, username)")
+          .in("crew_id", crewIds)
+          .order("created_at", { ascending: false })
+          .limit(Math.min(crewIds.length * 6, 120))
+
+        const lastMsgMap = {}
+        for (const m of (msgs || [])) {
+          if (!lastMsgMap[m.crew_id]) lastMsgMap[m.crew_id] = m
+        }
+
+        const enriched = crews.map(crew => {
+          const lastMessage = lastMsgMap[crew.id] || null
+          const lastRead = getLastRead(crew.id)
+          const unread = lastMessage && (!lastRead || new Date(lastMessage.created_at) > new Date(lastRead))
+          return { ...crew, lastMessage, unread }
+        }).sort((a, b) =>
+          new Date(b.lastMessage?.created_at || b.created_at) -
+          new Date(a.lastMessage?.created_at || a.created_at)
+        ).slice(0, 4)
+
+        setConversations(enriched)
+      } catch (e) {
+        console.warn("MobileCrewListWidget:", e)
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [currentUser])
+
+  return (
+    <DashCard>
+      <CardHeader
+        title="💬 Messages"
+        action={
+          <button
+            onClick={() => onTabChange("friends")}
+            style={{ background: "none", border: "none", color: "#60a5fa", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 8px", borderRadius: 8 }}
+          >
+            Open →
+          </button>
+        }
+      />
+      <div>
+        {!currentUser ? (
+          <EmptyState icon="💬" text="Sign in to see messages" />
+        ) : loading ? (
+          <EmptyState icon="⏳" text="Loading…" />
+        ) : conversations.length === 0 ? (
+          <EmptyState icon="💬" text="No crew chats yet" sub="Join a crew to get started" />
+        ) : conversations.map((crew, i) => {
+          const lastMsg = crew.lastMessage
+          const preview = (() => {
+            if (!lastMsg) return "No messages yet"
+            const sender = lastMsg.profile?.full_name?.split(" ")[0] || lastMsg.profile?.username || "Someone"
+            const content = lastMsg.content || ""
+            return `${sender}: ${content.length > 42 ? content.slice(0, 42) + "…" : content}`
+          })()
+          return (
+            <div
+              key={crew.id}
+              onClick={() => onTabChange("friends")}
+              className="conv-row"
+              style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "13px 16px",
+                borderBottom: i < conversations.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+                cursor: "pointer",
+              }}
+            >
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  background: "linear-gradient(135deg,rgba(37,99,235,0.2),rgba(8,145,178,0.15))",
+                  border: "1px solid rgba(96,165,250,0.15)",
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
+                }}>
+                  {crew.emoji}
+                </div>
+                {crew.unread && (
+                  <div style={{ position: "absolute", top: -2, right: -2, width: 10, height: 10, borderRadius: "50%", background: "#3b82f6", border: "2px solid rgba(6,10,22,1)" }} />
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 4, marginBottom: 3 }}>
+                  <div style={{ fontWeight: crew.unread ? 800 : 600, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {crew.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", flexShrink: 0 }}>
+                    {timeAgo(lastMsg?.created_at)}
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {preview}
+                </div>
+              </div>
+              <div style={{ fontSize: 16, color: "rgba(255,255,255,0.2)", flexShrink: 0 }}>›</div>
+            </div>
+          )
+        })}
+      </div>
+    </DashCard>
+  )
+}
+
+// ── Mobile layout ─────────────────────────────────────────────────────────────
+
+function MobileHomeDashboard({ resorts, currentUser, onTabChange }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <ConditionsWidget resorts={resorts} onTabChange={onTabChange} />
+      <PlansWidget currentUser={currentUser} resorts={resorts} onTabChange={onTabChange} />
+      <LeaderboardTicker currentUser={currentUser} />
+      <MobileCrewListWidget currentUser={currentUser} onTabChange={onTabChange} />
     </div>
   )
 }
@@ -744,6 +907,12 @@ function MessagingWidget({ currentUser }) {
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export default function HomeDashboard({ resorts, currentUser, onTabChange }) {
+  const isMobile = useMobile()
+
+  if (isMobile) {
+    return <MobileHomeDashboard resorts={resorts} currentUser={currentUser} onTabChange={onTabChange} />
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Row 1: Conditions + Plans */}
