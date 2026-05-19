@@ -195,21 +195,140 @@ function ConditionsWidget({ resorts, onTabChange }) {
 
 // ── Panel 2: Upcoming Ski Plans ───────────────────────────────────────────────
 
-function PlansWidget({ currentUser, onTabChange }) {
+const ROLE_LABEL = { mine: "Host", going: "Going", invited: "Invited" }
+const ROLE_COLOR = { mine: "#60a5fa", going: "#22c55e", invited: "#fbbf24" }
+const RSVP_LABEL = { going: "Going ✓", maybe: "Maybe", cantgo: "Can't Go" }
+const RSVP_COLOR = { going: "#22c55e", maybe: "#fbbf24", cantgo: "#f87171" }
+
+function TripAvatar({ profile, size = 26, style = {} }) {
+  const name = profile?.full_name || profile?.username || "?"
+  if (profile?.avatar_url) {
+    return (
+      <img
+        src={profile.avatar_url}
+        alt={name}
+        style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(10,14,30,0.9)", flexShrink: 0, ...style }}
+      />
+    )
+  }
+  const colors = ["#2563eb","#0891b2","#7c3aed","#16a34a","#ea580c"]
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%", flexShrink: 0,
+      background: colors[name.length % colors.length],
+      border: "2px solid rgba(10,14,30,0.9)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: size * 0.38, fontWeight: 800, color: "white", ...style,
+    }}>
+      {name.charAt(0).toUpperCase()}
+    </div>
+  )
+}
+
+function AvatarStack({ attendees, total, onClick }) {
+  const visible = attendees.slice(0, 3)
+  const overflow = total - visible.length
+  return (
+    <div
+      onClick={e => { e.stopPropagation(); onClick() }}
+      title={`${total} going — click to see guest list`}
+      style={{ display: "flex", alignItems: "center", cursor: "pointer", flexShrink: 0 }}
+    >
+      {visible.map((person, i) => (
+        <TripAvatar
+          key={person.id || i}
+          profile={person}
+          size={26}
+          style={{ marginLeft: i === 0 ? 0 : -8 }}
+        />
+      ))}
+      {overflow > 0 && (
+        <div style={{
+          width: 26, height: 26, borderRadius: "50%", marginLeft: -8,
+          background: "rgba(255,255,255,0.12)", border: "2px solid rgba(10,14,30,0.9)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 9, fontWeight: 900, color: "rgba(255,255,255,0.7)",
+        }}>
+          +{overflow}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function RsvpPanel({ trip, onClose }) {
+  const rsvps = trip.rsvps || []
+  const host = trip.host_profile
+
+  const groups = [
+    { label: "Going", color: "#22c55e", items: rsvps.filter(r => r.status === "going") },
+    { label: "Maybe", color: "#fbbf24", items: rsvps.filter(r => r.status === "maybe") },
+    { label: "Can't Go", color: "#f87171", items: rsvps.filter(r => r.status === "cantgo") },
+  ].filter(g => g.items.length > 0)
+
+  return (
+    <div
+      style={{
+        position: "absolute", top: "100%", right: 0, zIndex: 50,
+        width: 240, background: "rgba(10,14,30,0.98)",
+        border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14,
+        boxShadow: "0 16px 48px rgba(0,0,0,0.5)",
+        overflow: "hidden", marginTop: 6,
+      }}
+      onClick={e => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: "white" }}>Guest List</div>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 16, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+      </div>
+
+      {/* Host */}
+      {host && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          <TripAvatar profile={host} size={22} />
+          <div style={{ flex: 1, fontSize: 12, color: "white", fontWeight: 600 }}>{host.full_name || host.username}</div>
+          <span style={{ fontSize: 10, fontWeight: 800, color: "#60a5fa" }}>Host</span>
+        </div>
+      )}
+
+      {/* RSVP groups */}
+      {groups.length === 0 ? (
+        <div style={{ padding: "14px", fontSize: 12, color: "rgba(255,255,255,0.35)", textAlign: "center" }}>No RSVPs yet</div>
+      ) : groups.map(group => (
+        <div key={group.label}>
+          <div style={{ padding: "6px 14px 2px", fontSize: 9, fontWeight: 900, color: group.color, textTransform: "uppercase", letterSpacing: 0.8 }}>
+            {group.label} · {group.items.length}
+          </div>
+          {group.items.map((r, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px" }}>
+              <TripAvatar profile={r.profile} size={22} />
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>
+                {r.profile?.full_name || r.profile?.username || "Skier"}
+                {r.plus_ones > 0 && <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 10 }}> +{r.plus_ones}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function PlansWidget({ currentUser, resorts, onTabChange }) {
   const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(true)
+  const [openRsvpId, setOpenRsvpId] = useState(null)
 
   useEffect(() => {
     if (!currentUser) { setLoading(false); return }
     getAllVisibleTrips()
       .then(({ mine = [], rsvpd = [], invited = [] }) => {
-        // Combine own trips + RSVPd + invited, tag them, sort, take next 3
         const all = [
           ...mine.map(t => ({ ...t, _role: "mine" })),
           ...rsvpd.map(t => ({ ...t, _role: "going" })),
           ...invited.map(t => ({ ...t, _role: "invited" })),
         ]
-        // Dedupe by id (rsvpd could overlap with invited)
         const seen = new Set()
         const unique = all.filter(t => { if (seen.has(t.id)) return false; seen.add(t.id); return true })
         unique.sort((a, b) => (a.ski_date || "").localeCompare(b.ski_date || ""))
@@ -219,8 +338,13 @@ function PlansWidget({ currentUser, onTabChange }) {
       .finally(() => setLoading(false))
   }, [currentUser])
 
-  const ROLE_LABEL = { mine: "Host", going: "Going", invited: "Invited" }
-  const ROLE_COLOR = { mine: "#60a5fa", going: "#22c55e", invited: "#fbbf24" }
+  // Close RSVP panel on outside click
+  useEffect(() => {
+    if (!openRsvpId) return
+    const handler = () => setOpenRsvpId(null)
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [openRsvpId])
 
   return (
     <DashCard>
@@ -250,48 +374,93 @@ function PlansWidget({ currentUser, onTabChange }) {
         ) : trips.map((trip, i) => {
           const date = new Date(`${trip.ski_date}T12:00:00`)
           const isValid = !isNaN(date)
-          return (
-            <div
-              key={trip.id}
-              onClick={() => onTabChange("plans")}
-              style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "12px 16px",
-                borderBottom: i < trips.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
-                cursor: "pointer",
-                transition: "background 0.12s",
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.04)"}
-              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-            >
-              {/* Resort emoji badge */}
-              <div style={{
-                width: 46, height: 46, borderRadius: 12, flexShrink: 0,
-                background: "linear-gradient(135deg,rgba(37,99,235,0.22),rgba(8,145,178,0.18))",
-                border: "1px solid rgba(96,165,250,0.2)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 22,
-              }}>
-                {tripResortEmoji(trip)}
-              </div>
 
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {tripResortName(trip)}
+          // Match live resort conditions
+          const cond = resorts.find(r => r.resortKey === trip.resort_key)
+
+          // Build attendee list: host first, then going RSVPs (excluding host)
+          const goingRsvps = (trip.rsvps || []).filter(r => r.status === "going")
+          const hostProfile = trip.host_profile
+          const attendees = [
+            ...(hostProfile ? [hostProfile] : []),
+            ...goingRsvps.filter(r => r.user_id !== trip.host_id).map(r => r.profile).filter(Boolean),
+          ]
+          const totalAttendees = attendees.length
+
+          return (
+            <div key={trip.id} style={{ position: "relative" }}>
+              <div
+                onClick={() => onTabChange("plans")}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "12px 16px",
+                  borderBottom: i < trips.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+                  cursor: "pointer", transition: "background 0.12s",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.04)"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+              >
+                {/* Resort emoji badge */}
+                <div style={{
+                  width: 46, height: 46, borderRadius: 12, flexShrink: 0,
+                  background: "linear-gradient(135deg,rgba(37,99,235,0.22),rgba(8,145,178,0.18))",
+                  border: "1px solid rgba(96,165,250,0.2)",
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22,
+                }}>
+                  {tripResortEmoji(trip)}
                 </div>
-                <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 3 }}>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.38)" }}>
-                    {isValid ? date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) : trip.ski_date}
-                  </span>
-                  {trip._role && (
-                    <span style={{ fontSize: 10, fontWeight: 800, color: ROLE_COLOR[trip._role], background: `${ROLE_COLOR[trip._role]}18`, borderRadius: 999, padding: "1px 6px" }}>
-                      {ROLE_LABEL[trip._role]}
+
+                {/* Main info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {tripResortName(trip)}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 2 }}>
+                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.38)" }}>
+                      {isValid ? date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) : trip.ski_date}
                     </span>
+                    {trip._role && (
+                      <span style={{ fontSize: 10, fontWeight: 800, color: ROLE_COLOR[trip._role], background: `${ROLE_COLOR[trip._role]}18`, borderRadius: 999, padding: "1px 6px" }}>
+                        {ROLE_LABEL[trip._role]}
+                      </span>
+                    )}
+                  </div>
+                  {/* Snow + weather row */}
+                  {cond && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 4, alignItems: "center", flexWrap: "wrap" }}>
+                      {cond.snowPrev24in != null && (
+                        <span style={{ fontSize: 10, color: "#93c5fd" }}>❄️ {cond.snowPrev24in}"</span>
+                      )}
+                      {cond.tempF != null && (
+                        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.38)" }}>🌡️ {cond.tempF}°F</span>
+                      )}
+                      {cond.powderTier && cond.powderTier !== "Closed" && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: tierColor(cond.powderTier) }}>{cond.powderTier}</span>
+                      )}
+                      {cond.shortForecast && (
+                        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.28)" }}>{cond.shortForecast.slice(0, 28)}</span>
+                      )}
+                    </div>
                   )}
                 </div>
+
+                {/* Avatar stack + chevron */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  {totalAttendees > 0 && (
+                    <AvatarStack
+                      attendees={attendees}
+                      total={totalAttendees}
+                      onClick={() => setOpenRsvpId(openRsvpId === trip.id ? null : trip.id)}
+                    />
+                  )}
+                  <div style={{ fontSize: 14, color: "rgba(255,255,255,0.25)" }}>›</div>
+                </div>
               </div>
 
-              <div style={{ fontSize: 16, color: "rgba(255,255,255,0.3)", flexShrink: 0 }}>›</div>
+              {/* RSVP dropdown panel */}
+              {openRsvpId === trip.id && (
+                <RsvpPanel trip={trip} onClose={() => setOpenRsvpId(null)} />
+              )}
             </div>
           )
         })}
@@ -568,7 +737,7 @@ export default function HomeDashboard({ resorts, currentUser, onTabChange }) {
       {/* Row 1: Conditions + Plans */}
       <div style={{ display: "grid", gridTemplateColumns: "1.15fr 1fr", gap: 16, minHeight: 260 }}>
         <ConditionsWidget resorts={resorts} onTabChange={onTabChange} />
-        <PlansWidget currentUser={currentUser} onTabChange={onTabChange} />
+        <PlansWidget currentUser={currentUser} resorts={resorts} onTabChange={onTabChange} />
       </div>
 
       {/* Row 2: Leaderboard ticker */}
