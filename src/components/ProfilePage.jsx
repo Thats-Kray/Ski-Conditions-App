@@ -110,6 +110,24 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
         {/* subtle background glow */}
         <div style={{ position: "absolute", top: -40, right: -40, width: 180, height: 180, borderRadius: "50%", background: "rgba(37,99,235,0.12)", pointerEvents: "none" }} />
 
+        {/* Top-right action buttons */}
+        <div style={{ position: "absolute", top: 14, right: 14, display: "flex", gap: 8, zIndex: 1 }}>
+          <button
+            onClick={() => setIsEditing(true)}
+            title="Edit Profile"
+            style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 15, backdropFilter: "blur(6px)" }}
+          >
+            ✏️
+          </button>
+          <button
+            onClick={onLogOut}
+            title="Sign Out"
+            style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.22)", borderRadius: 10, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 15, backdropFilter: "blur(6px)" }}
+          >
+            🚪
+          </button>
+        </div>
+
         <div style={{ display: "flex", alignItems: "flex-start", gap: 16, position: "relative" }}>
           <Avatar url={profile?.avatar_url} name={fullName} size={78} />
 
@@ -225,24 +243,6 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
         </div>
       )}
 
-      {/* ── Account actions ── */}
-      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px", display: "grid", gap: 10 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 2 }}>Account</div>
-
-        <button
-          onClick={() => setIsEditing(true)}
-          style={{ width: "100%", background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", border: "none", borderRadius: 12, padding: "12px 16px", fontWeight: 800, fontSize: 14, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 4px 18px rgba(37,99,235,0.3)" }}
-        >
-          <span style={{ fontSize: 18 }}>✏️</span> Edit Profile
-        </button>
-
-        <button
-          onClick={onLogOut}
-          style={{ width: "100%", background: "rgba(239,68,68,0.1)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 12, padding: "12px 16px", fontWeight: 700, fontSize: 14, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}
-        >
-          <span style={{ fontSize: 18 }}>🚪</span> Sign Out
-        </button>
-      </div>
 
     </div>
   )

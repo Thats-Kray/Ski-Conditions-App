@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { getLeaderboard, getMySessions, logSkiDay, deleteSkiDay, getCurrentSeason } from "../lib/leaderboardApi"
+import { getLeaderboard, getPublicLeaderboard, getMySessions, logSkiDay, deleteSkiDay, getCurrentSeason } from "../lib/leaderboardApi"
 
 const RESORT_NAMES = [
   "Vail", "Beaver Creek", "Breckenridge", "Keystone", "Park City",
@@ -193,6 +193,7 @@ function LeaderboardRow({ entry, rank, category }) {
 
 export default function LeaderboardPage() {
   const season = getCurrentSeason()
+  const [boardMode, setBoardMode] = useState("friends")
   const [category, setCategory]   = useState("days")
   const [entries, setEntries]     = useState([])
   const [mySessions, setMySessions] = useState([])
@@ -203,13 +204,13 @@ export default function LeaderboardPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
+      const fetchBoard = boardMode === "public" ? getPublicLeaderboard : getLeaderboard
       const [board, sessions] = await Promise.all([
-        getLeaderboard(season.startYear),
+        fetchBoard(season.startYear),
         getMySessions(season.startYear),
       ])
       setMySessions(sessions)
 
-      // Sort by selected category
       const cat = CATEGORIES.find((c) => c.key === category)
       const sorted = [...board].sort((a, b) => cat.stat(b) - cat.stat(a))
       setEntries(sorted)
@@ -218,7 +219,7 @@ export default function LeaderboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [season.startYear, category])
+  }, [season.startYear, category, boardMode])
 
   useEffect(() => { load() }, [load])
 
@@ -233,17 +234,42 @@ export default function LeaderboardPage() {
   return (
     <div style={{ paddingBottom: 32 }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
         <div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 999, padding: "4px 11px", fontSize: 11, fontWeight: 700, color: "#fbbf24", marginBottom: 8 }}>
             🏆 {season.label} Season
           </div>
           <h2 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: -0.5, color: "white" }}>Leaderboard</h2>
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: "rgba(255,255,255,0.45)" }}>You + your crew, ranked</p>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: "rgba(255,255,255,0.45)" }}>
+            {boardMode === "friends" ? "You + your friends, ranked" : "All PowderDays skiers"}
+          </p>
         </div>
         <button onClick={() => setShowLog(true)} style={{ background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", border: "none", borderRadius: 12, padding: "10px 16px", fontSize: 13, fontWeight: 900, cursor: "pointer", boxShadow: "0 6px 20px rgba(37,99,235,0.4)", whiteSpace: "nowrap" }}>
           + Log Day
         </button>
+      </div>
+
+      {/* Friends / Public toggle */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 20, background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 4 }}>
+        {[
+          { key: "friends", label: "👥 Friends" },
+          { key: "public",  label: "🌐 Global" },
+        ].map((mode) => (
+          <button
+            key={mode.key}
+            onClick={() => setBoardMode(mode.key)}
+            style={{
+              flex: 1, padding: "8px 0", borderRadius: 9,
+              background: boardMode === mode.key ? "rgba(255,255,255,0.12)" : "transparent",
+              border: boardMode === mode.key ? "1px solid rgba(255,255,255,0.18)" : "1px solid transparent",
+              color: boardMode === mode.key ? "white" : "rgba(255,255,255,0.4)",
+              fontSize: 13, fontWeight: boardMode === mode.key ? 800 : 600, cursor: "pointer",
+              transition: "all 0.15s",
+            }}
+          >
+            {mode.label}
+          </button>
+        ))}
       </div>
 
       {/* My season snapshot */}
@@ -318,8 +344,12 @@ export default function LeaderboardPage() {
       ) : entries.length === 0 ? (
         <div style={{ textAlign: "center", padding: "48px 24px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16 }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>🏔️</div>
-          <div style={{ fontSize: 17, fontWeight: 900, color: "white", marginBottom: 8 }}>No days logged yet</div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 20 }}>Be the first to log a ski day and top the board.</div>
+          <div style={{ fontSize: 17, fontWeight: 900, color: "white", marginBottom: 8 }}>
+            {boardMode === "friends" ? "No friends on the board yet" : "No days logged yet"}
+          </div>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 20 }}>
+            {boardMode === "friends" ? "Add friends to see how you stack up." : "Be the first to log a ski day and top the board."}
+          </div>
           <button onClick={() => setShowLog(true)} style={{ background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>
             Log Your First Day
           </button>

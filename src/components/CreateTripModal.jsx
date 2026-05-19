@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { createTrip, addCarpool } from "../lib/socialApi"
+import { createTrip, addCarpool, getMyProfile } from "../lib/socialApi"
 
 const RESORTS = [
   { key: "vail",          name: "Vail",           pass: "Epic", photo: "/resorts/vail.jpg",           accent: "#60a5fa" },
@@ -68,6 +68,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
   const [carLabel, setCarLabel] = useState("")
   const [carSeats, setCarSeats] = useState(3)
   const [carSaving, setCarSaving] = useState(false)
+  const [profileVehicle, setProfileVehicle] = useState(null) // { label, seats } from profile
 
   const selectedResort = RESORTS.find((r) => r.key === resortKey)
   const accent = selectedResort?.accent || "#60a5fa"
@@ -97,6 +98,15 @@ export default function CreateTripModal({ onClose, onCreated }) {
         theme,
       })
       setCreatedTrip(trip)
+      // Pre-fill car fields from the user's saved vehicle
+      getMyProfile().then((profile) => {
+        if (profile?.vehicle_label || profile?.vehicle_seats) {
+          const v = { label: profile.vehicle_label || "", seats: profile.vehicle_seats || 3 }
+          setProfileVehicle(v)
+          setCarLabel(v.label)
+          setCarSeats(v.seats)
+        }
+      }).catch(() => {})
       setStep(3)
     } catch (err) {
       setError(err.message || "Failed to create trip.")
@@ -113,6 +123,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
       setCars((prev) => [...prev, { label: carLabel.trim() || null, seats: carSeats }])
       setCarLabel("")
       setCarSeats(3)
+      setProfileVehicle(null)
     } catch (e) { console.warn(e) }
     finally { setCarSaving(false) }
   }
@@ -553,8 +564,15 @@ export default function CreateTripModal({ onClose, onCreated }) {
 
             {/* Add a car form */}
             <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 16, padding: "16px" }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.7)", marginBottom: 12 }}>
-                {cars.length === 0 ? "Are you driving? Add your car:" : "Add another car:"}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.7)" }}>
+                  {cars.length === 0 ? "Are you driving? Add your car:" : "Add another car:"}
+                </span>
+                {profileVehicle && cars.length === 0 && (
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 999, padding: "2px 8px" }}>
+                    from your profile
+                  </span>
+                )}
               </div>
               <div style={{ display: "grid", gap: 10 }}>
                 <input

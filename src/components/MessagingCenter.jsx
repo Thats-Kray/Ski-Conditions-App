@@ -9,9 +9,11 @@ import {
   declineCrewInvite,
   createCrew,
   getAcceptedFriends,
+  getMyTripConversations,
 } from "../lib/socialApi"
 import { CrewChatView } from "./CrewGroupChat"
 import FriendsPage from "./FriendsPage"
+import TripChatView, { tripDisplayName } from "./TripChatView"
 
 // ── Local read-status tracking ───────────────────────────────────────────────
 
@@ -292,7 +294,7 @@ function EmptyChat() {
       <div style={{ fontSize: 52 }}>💬</div>
       <div style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>Select a conversation</div>
       <div style={{ fontSize: 13, textAlign: "center", lineHeight: 1.6, maxWidth: 260 }}>
-        Choose a crew from the sidebar to start chatting, or create a new one.
+        Select a ski plan or crew chat from the sidebar.
       </div>
     </div>
   )
@@ -304,7 +306,9 @@ export default function MessagingCenter() {
   const isMobile = useMobile()
   const [panel, setPanel] = useState("chats")        // "chats" | "people"
   const [selectedCrew, setSelectedCrew] = useState(null)
+  const [selectedTrip, setSelectedTrip] = useState(null)
   const [conversations, setConversations] = useState([])
+  const [tripConversations, setTripConversations] = useState([])
   const [pendingInvites, setPendingInvites] = useState([])
   const [currentUser, setCurrentUser] = useState(null)
   const [friends, setFriends] = useState([])
@@ -316,47 +320,85 @@ export default function MessagingCenter() {
 
   const loadInbox = useCallback(async () => {
     try {
-      const [user, crews, pending, friendList] = await Promise.all([
-        getCurrentUser(),
+      const user = await getCurrentUser()
+      setCurrentUser(user)
+
+      const [crews, pending, friendList, trips] = await Promise.all([
         getMyCrews(),
         getPendingCrewInvites(),
         getAcceptedFriends(),
+        getMyTripConversations(user.id),
       ])
-      setCurrentUser(user)
       setFriends(friendList || [])
       setPendingInvites(pending || [])
 
-      if (crews.length === 0) {
+      // ── Crew conversations ──
+      if (crews.length > 0) {
+        const crewIds = crews.map(c => c.id)
+        const { data: recentMsgs } = await supabase
+          .from("crew_messages")
+          .select("crew_id, content, is_system, created_at, profile:user_id(full_name, username)")
+          .in("crew_id", crewIds)
+          .order("created_at", { ascending: false })
+          .limit(Math.min(crewIds.length * 6, 120))
+
+        const lastMsgMap = {}
+        for (const msg of (recentMsgs || [])) {
+          if (!lastMsgMap[msg.crew_id]) lastMsgMap[msg.crew_id] = msg
+        }
+
+        const enriched = crews.map(crew => {
+          const lastMessage = lastMsgMap[crew.id] || null
+          const lastRead = getLastRead(crew.id)
+          const unread = lastMessage && (!lastRead || new Date(lastMessage.created_at) > new Date(lastRead))
+          return { ...crew, lastMessage, unread }
+        }).sort((a, b) =>
+          new Date(b.lastMessage?.created_at || b.created_at) - new Date(a.lastMessage?.created_at || a.created_at)
+        )
+        setConversations(enriched)
+      } else {
         setConversations([])
-        setLoading(false)
-        return
       }
 
-      const crewIds = crews.map(c => c.id)
-      const { data: recentMsgs } = await supabase
-        .from("crew_messages")
-        .select("crew_id, content, is_system, created_at, profile:user_id(full_name, username)")
-        .in("crew_id", crewIds)
-        .order("created_at", { ascending: false })
-        .limit(Math.min(crewIds.length * 6, 120))
+      // ── Trip conversations ──
+      if (trips.length > 0) {
+        const tripIds = trips.map(t => t.id)
+        const { data: recentComments, error: commentErr } = await supabase
+          .from("trip_comments")
+          .select("trip_id, content, user_id, created_at")
+          .in("trip_id", tripIds)
+          .order("created_at", { ascending: false })
+          .limit(Math.min(tripIds.length * 6, 120))
+        if (commentErr) console.error("[PowderDays] MessagingCenter trip_comments fetch:", commentErr)
 
-      const lastMsgMap = {}
-      for (const msg of (recentMsgs || [])) {
-        if (!lastMsgMap[msg.crew_id]) lastMsgMap[msg.crew_id] = msg
+        const lastCommentMap = {}
+        for (const c of (recentComments || [])) {
+          if (!lastCommentMap[c.trip_id]) lastCommentMap[c.trip_id] = c
+        }
+
+        // Enrich last comment previews with sender names
+        const senderIds = [...new Set(Object.values(lastCommentMap).map(c => c.user_id))]
+        let senderMap = {}
+        if (senderIds.length) {
+          const { data: senders } = await supabase
+            .from("profiles").select("id, full_name, username").in("id", senderIds)
+          senderMap = Object.fromEntries((senders || []).map(p => [p.id, p]))
+        }
+
+        const enrichedTrips = trips.map(trip => {
+          const lastComment = lastCommentMap[trip.id]
+            ? { ...lastCommentMap[trip.id], profile: senderMap[lastCommentMap[trip.id].user_id] || null }
+            : null
+          const lastRead = getLastRead("trip_" + trip.id)
+          const unread = lastComment && (!lastRead || new Date(lastComment.created_at) > new Date(lastRead))
+          return { ...trip, lastComment, unread }
+        }).sort((a, b) =>
+          new Date(b.lastComment?.created_at || b.ski_date) - new Date(a.lastComment?.created_at || a.ski_date)
+        )
+        setTripConversations(enrichedTrips)
+      } else {
+        setTripConversations([])
       }
-
-      const enriched = crews.map(crew => {
-        const lastMessage = lastMsgMap[crew.id] || null
-        const lastRead = getLastRead(crew.id)
-        const unread = lastMessage && (!lastRead || new Date(lastMessage.created_at) > new Date(lastRead))
-        return { ...crew, lastMessage, unread }
-      }).sort((a, b) => {
-        const ta = new Date(a.lastMessage?.created_at || a.created_at)
-        const tb = new Date(b.lastMessage?.created_at || b.created_at)
-        return tb - ta
-      })
-
-      setConversations(enriched)
     } catch (e) {
       console.warn("MessagingCenter load error:", e)
     } finally {
@@ -395,10 +437,29 @@ export default function MessagingCenter() {
           )
         })
       })
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "trip_comments",
+      }, (payload) => {
+        const tripId = payload.new?.trip_id
+        if (!tripId) return
+        setTripConversations(prev => {
+          const inList = prev.some(t => t.id === tripId)
+          if (!inList) { loadInbox(); return prev }
+          const updated = prev.map(t => {
+            if (t.id !== tripId) return t
+            const newComment = { ...payload.new, profile: null }
+            return { ...t, lastComment: newComment, unread: t.id !== selectedTrip?.id }
+          })
+          return updated.sort((a, b) =>
+            new Date(b.lastComment?.created_at || b.ski_date) -
+            new Date(a.lastComment?.created_at || a.ski_date)
+          )
+        })
+      })
       .subscribe()
 
     return () => { if (channelRef.current) supabase.removeChannel(channelRef.current) }
-  }, [currentUser, loadInbox, selectedCrew?.id])
+  }, [currentUser, loadInbox, selectedCrew?.id, selectedTrip?.id])
 
   async function handleAcceptInvite(crew) {
     setAcceptingId(crew.id)
@@ -427,18 +488,34 @@ export default function MessagingCenter() {
     markRead(crew.id)
     setConversations(prev => prev.map(c => c.id === crew.id ? { ...c, unread: false } : c))
     setSelectedCrew(crew)
+    setSelectedTrip(null)
     setPanel("chats")
   }
 
-  const displayedConversations = filter === "unread"
-    ? conversations.filter(c => c.unread)
-    : conversations
+  function openTrip(trip) {
+    markRead("trip_" + trip.id)
+    setTripConversations(prev => prev.map(t => t.id === trip.id ? { ...t, unread: false } : t))
+    setSelectedTrip(trip)
+    setSelectedCrew(null)
+    setPanel("chats")
+  }
 
-  const totalUnread = conversations.filter(c => c.unread).length + pendingInvites.length
+  // Merge crews and trips into a single list sorted by most recent activity
+  const allConversations = [
+    ...conversations.map(c => ({ _type: "crew", _ts: new Date(c.lastMessage?.created_at || c.created_at).getTime(), ...c })),
+    ...tripConversations.map(t => ({ _type: "trip", _ts: new Date(t.lastComment?.created_at || t.ski_date).getTime(), ...t })),
+  ].sort((a, b) => b._ts - a._ts)
+
+  const displayedAll = filter === "unread"
+    ? allConversations.filter(c => c.unread)
+    : allConversations
+
+  const totalUnread = conversations.filter(c => c.unread).length + tripConversations.filter(t => t.unread).length + pendingInvites.length
 
   // Layout: on mobile show sidebar OR chat, never both
-  const showSidebar = !isMobile || !selectedCrew
-  const showMainPanel = !isMobile || !!selectedCrew
+  const hasActiveConv = !!(selectedCrew || selectedTrip)
+  const showSidebar = !isMobile || !hasActiveConv
+  const showMainPanel = !isMobile || hasActiveConv
 
   // Container height accounts for fixed navbars
   const containerHeight = isMobile
@@ -513,7 +590,7 @@ export default function MessagingCenter() {
             ].map(({ key, label }) => (
               <button
                 key={key}
-                onClick={() => { setPanel(key); if (isMobile) setSelectedCrew(null) }}
+                onClick={() => { setPanel(key); if (isMobile) { setSelectedCrew(null); setSelectedTrip(null) } }}
                 style={{
                   flex: 1, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer",
                   background: panel === key ? "rgba(96,165,250,0.18)" : "transparent",
@@ -582,51 +659,47 @@ export default function MessagingCenter() {
                   </>
                 )}
 
-                {/* Section label */}
-                {conversations.length > 0 && (
-                  <div style={{
-                    padding: "10px 14px 4px",
-                    fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,0.3)",
-                    textTransform: "uppercase", letterSpacing: 0.9,
-                  }}>
-                    Crews
-                  </div>
-                )}
-
-                {/* Conversation rows */}
+                {/* Merged conversation list */}
                 {loading ? (
-                  <div style={{ padding: "24px 16px", textAlign: "center", color: "rgba(255,255,255,0.25)", fontSize: 13 }}>
-                    Loading…
-                  </div>
-                ) : displayedConversations.length === 0 ? (
+                  <div style={{ padding: "24px 16px", textAlign: "center", color: "rgba(255,255,255,0.25)", fontSize: 13 }}>Loading…</div>
+                ) : displayedAll.length > 0 ? (
+                  displayedAll.map(conv => {
+                    if (conv._type === "trip") {
+                      return (
+                        <ConversationRow
+                          key={`trip-${conv.id}`}
+                          crew={{ id: conv.id, name: tripDisplayName(conv), emoji: "🎿", lastMessage: conv.lastComment ? { ...conv.lastComment, is_system: false } : null }}
+                          unread={conv.unread}
+                          active={selectedTrip?.id === conv.id}
+                          onOpen={() => openTrip(conv)}
+                        />
+                      )
+                    }
+                    return (
+                      <ConversationRow
+                        key={`crew-${conv.id}`}
+                        crew={conv}
+                        unread={conv.unread}
+                        active={selectedCrew?.id === conv.id}
+                        onOpen={() => openCrew(conv)}
+                      />
+                    )
+                  })
+                ) : (
                   <div style={{ padding: "32px 20px", textAlign: "center" }}>
                     <div style={{ fontSize: 36, marginBottom: 10 }}>💬</div>
                     <div style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", lineHeight: 1.5 }}>
-                      {filter === "unread" ? "No unread conversations." : "No crews yet. Create one to get started."}
+                      {filter === "unread" ? "No unread conversations." : "No chats yet. Create a crew or plan a ski trip to get started."}
                     </div>
                     {filter === "all" && (
                       <button
                         onClick={() => setShowCreate(true)}
-                        style={{
-                          marginTop: 14, padding: "9px 18px", borderRadius: 10, border: "none",
-                          background: "linear-gradient(135deg,#2563eb,#0891b2)",
-                          color: "white", fontWeight: 800, fontSize: 13, cursor: "pointer",
-                        }}
+                        style={{ marginTop: 14, padding: "9px 18px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", fontWeight: 800, fontSize: 13, cursor: "pointer" }}
                       >
                         + New Crew
                       </button>
                     )}
                   </div>
-                ) : (
-                  displayedConversations.map(crew => (
-                    <ConversationRow
-                      key={crew.id}
-                      crew={crew}
-                      unread={crew.unread}
-                      active={selectedCrew?.id === crew.id}
-                      onOpen={() => openCrew(crew)}
-                    />
-                  ))
                 )}
               </>
             )}
@@ -672,6 +745,12 @@ export default function MessagingCenter() {
             <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
               <FriendsPage hideCrew />
             </div>
+          ) : selectedTrip ? (
+            <TripChatView
+              trip={selectedTrip}
+              currentUser={currentUser}
+              onBack={isMobile ? () => setSelectedTrip(null) : null}
+            />
           ) : selectedCrew ? (
             <CrewChatView
               crew={selectedCrew}
@@ -687,7 +766,7 @@ export default function MessagingCenter() {
       )}
 
       {/* Mobile: people panel takes full screen */}
-      {isMobile && panel === "people" && !selectedCrew && (
+      {isMobile && panel === "people" && !hasActiveConv && (
         <div style={{ position: "absolute", inset: 0, background: "rgba(4,8,20,0.95)", overflowY: "auto", padding: "16px 14px", zIndex: 10 }}>
           <FriendsPage hideCrew />
         </div>
