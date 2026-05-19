@@ -24,6 +24,9 @@ import {
 } from "../lib/socialApi";
 import { SkiPingComposer, PingCard } from "./SkiPingModal";
 import { DateMatchmakerComposer, DatePollCard } from "./DateMatchmaker";
+import { resortName, resortEmoji as getResortEmoji } from "../lib/resorts";
+import { formatDate } from "../lib/format";
+import Avatar from "./ui/Avatar";
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -36,33 +39,12 @@ function getDisplayName(person) {
   );
 }
 
-const RESORT_NAME_MAP = {
-  arapahoebasin: "Arapahoe Basin", coppermountain: "Copper Mountain",
-  winterpark: "Winter Park", vail: "Vail", beavercreek: "Beaver Creek",
-  breckenridge: "Breckenridge", keystone: "Keystone", crestedbutte: "Crested Butte",
-  telluride: "Telluride", steamboat: "Steamboat", eldora: "Eldora",
-  aspen: "Aspen Snowmass", aspensnowmass: "Aspen Snowmass",
-}
-
-const RESORT_EMOJI = {
-  vail: "🏔️", beavercreek: "⛰️", breckenridge: "❄️", keystone: "🎯",
-  crestedbutte: "🌨️", telluride: "🌅", winterpark: "🌲", coppermountain: "🔴",
-  arapahoebasin: "💎", steamboat: "♨️", eldora: "🌿", aspensnowmass: "✨",
-}
-
 function formatResortName(v) {
   if (!v) return "Unknown resort"
   if (typeof v === "object") return v?.name || "Unknown resort"
   const s = String(v).trim()
   if (s.startsWith("{")) { try { const p = JSON.parse(s); return p?.name || "Unknown resort" } catch { return s } }
-  const key = s.toLowerCase().replace(/\s+/g, "")
-  return RESORT_NAME_MAP[key] || s.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())
-}
-
-function formatDate(d) {
-  if (!d) return ""
-  const date = new Date(`${d}T12:00:00`)
-  return isNaN(date) ? d : date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
+  return resortName(s) || s.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())
 }
 
 function isPast(plan) {
@@ -73,27 +55,6 @@ function isPast(plan) {
 }
 
 // ── Shared UI atoms ───────────────────────────────────────────────────────────
-
-function Avatar({ profile, size = 40 }) {
-  const name = getDisplayName(profile)
-  if (profile?.avatar_url) {
-    return (
-      <img src={profile.avatar_url} alt={name}
-        style={{ width: size, height: size, borderRadius: 999, objectFit: "cover", flexShrink: 0, border: "2px solid rgba(255,255,255,0.1)" }} />
-    )
-  }
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: 999, flexShrink: 0,
-      background: "linear-gradient(135deg, rgba(37,99,235,0.6), rgba(8,145,178,0.5))",
-      border: "2px solid rgba(96,165,250,0.25)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontWeight: 800, fontSize: size * 0.38, color: "white",
-    }}>
-      {name.charAt(0).toUpperCase()}
-    </div>
-  )
-}
 
 function FriendAvatar({ profile, size = 26 }) {
   const name = profile?.full_name || profile?.username || "?"
@@ -145,7 +106,7 @@ function WeekendPlanner({ days }) {
               {day.trips.map((trip) => (
                 <div key={trip.id} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "7px 9px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
-                    <span style={{ fontSize: 12 }}>{RESORT_EMOJI[trip.resort_key] || "⛷️"}</span>
+                    <span style={{ fontSize: 12 }}>{getResortEmoji(trip.resort_key)}</span>
                     <div style={{ fontSize: 11, fontWeight: 800, color: "white" }}>{trip.resort_name}</div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center" }}>
@@ -678,7 +639,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
                             )}
                             {friend.topResort && (
                               <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
-                                {RESORT_EMOJI[friend.topResort] || "⛷️"} {formatResortName(friend.topResort)}
+                                {getResortEmoji(friend.topResort)} {formatResortName(friend.topResort)}
                               </span>
                             )}
                           </div>
@@ -788,7 +749,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
                       background: "linear-gradient(135deg, rgba(37,99,235,0.12), rgba(8,145,178,0.08))",
                       border: "1px solid rgba(96,165,250,0.15)",
                     }}>
-                      <span style={{ fontSize: 22, flexShrink: 0 }}>{RESORT_EMOJI[plan.resort_key] || "⛷️"}</span>
+                      <span style={{ fontSize: 22, flexShrink: 0 }}>{getResortEmoji(plan.resort_key)}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 800, fontSize: 14, color: "white" }}>{formatResortName(plan.resort_key)}</div>
                         <div style={{ fontSize: 12, color: "#93c5fd", marginTop: 1 }}>{formatDate(plan.ski_date)}</div>
@@ -810,7 +771,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
                 <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
                   {pastPlans.map((plan) => (
                     <div key={plan.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                      <span style={{ fontSize: 16 }}>{RESORT_EMOJI[plan.resort_key] || "⛷️"}</span>
+                      <span style={{ fontSize: 16 }}>{getResortEmoji(plan.resort_key)}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: 13, color: "rgba(255,255,255,0.7)" }}>{formatResortName(plan.resort_key)}</div>
                         <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>{formatDate(plan.ski_date)}</div>

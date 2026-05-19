@@ -1,5 +1,7 @@
 import { useState } from "react"
 import { createSkiPing, respondToPing } from "../lib/socialApi"
+import Avatar from "./ui/Avatar"
+import { formatDate } from "../lib/format"
 
 const RESORT_OPTIONS = [
   { key: "vail", label: "Vail" },
@@ -22,34 +24,7 @@ const RESPONSE_OPTS = [
   { value: "no",    label: "Can't 😔",     bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.3)",   color: "#f87171" },
 ]
 
-function Avatar({ profile, size = 32 }) {
-  const name = profile?.full_name || profile?.username || "?"
-  if (profile?.avatar_url) {
-    return (
-      <img
-        src={profile.avatar_url}
-        alt={name}
-        style={{ width: size, height: size, borderRadius: 999, objectFit: "cover", flexShrink: 0 }}
-      />
-    )
-  }
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: 999,
-      background: "rgba(96,165,250,0.2)", border: "1px solid rgba(96,165,250,0.35)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: size * 0.42, fontWeight: 800, color: "#93c5fd", flexShrink: 0,
-    }}>
-      {name.charAt(0).toUpperCase()}
-    </div>
-  )
-}
 
-function formatDate(iso) {
-  if (!iso) return null
-  const d = new Date(`${iso}T12:00:00`)
-  return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
-}
 
 // ─── Ping composer modal ──────────────────────────────────────────────────────
 

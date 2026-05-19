@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "../lib/supabase"
 import { getDMMessages, sendDM } from "../lib/socialApi"
+import { timeAgo } from "../lib/format"
+import Avatar from "./ui/Avatar"
 
 const SKILL_COLORS = {
   green:        "#22c55e",
@@ -15,29 +17,6 @@ const SKILL_LABELS = {
   black:        "Black Diamond",
   double_black: "Double Black",
   experts_only: "Experts Only",
-}
-
-function timeAgo(ts) {
-  if (!ts) return ""
-  const diff = Date.now() - new Date(ts).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return "now"
-  if (m < 60) return `${m}m`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h`
-  return `${Math.floor(h / 24)}d`
-}
-
-function Avatar({ profile, size = 36 }) {
-  const name = profile?.full_name || profile?.username || "?"
-  if (profile?.avatar_url) {
-    return <img src={profile.avatar_url} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-  }
-  return (
-    <div style={{ width: size, height: size, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,rgba(37,99,235,0.5),rgba(8,145,178,0.5))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.42, fontWeight: 800, color: "white" }}>
-      {name.charAt(0).toUpperCase()}
-    </div>
-  )
 }
 
 export default function DirectMessageView({ partner, partnerId, currentUser, onBack }) {

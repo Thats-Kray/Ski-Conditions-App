@@ -27,32 +27,9 @@ import {
   getTripMedia,
   deleteTripMedia,
 } from "../lib/socialApi"
-
-// ── Constants ──────────────────────────────────────────────────────────────
-
-const RESORT_NAMES = {
-  vail: "Vail", beavercreek: "Beaver Creek", breckenridge: "Breckenridge",
-  keystone: "Keystone", crestedbutte: "Crested Butte", telluride: "Telluride",
-  winterpark: "Winter Park", coppermountain: "Copper Mountain",
-  arapahoebasin: "Arapahoe Basin", steamboat: "Steamboat", eldora: "Eldora",
-  aspensnowmass: "Aspen Snowmass",
-}
-
-const RESORT_PHOTOS = {
-  vail: "/resorts/vail.jpg", beavercreek: "/resorts/beaver-creek.jpg",
-  breckenridge: "/resorts/breckenridge.jpg", keystone: "/resorts/keystone.jpg",
-  crestedbutte: "/resorts/crested-butte.jpg", telluride: "/resorts/telluride.jpg",
-  winterpark: "/resorts/winter-park.jpg", coppermountain: "/resorts/copper-mountain.jpg",
-  arapahoebasin: "/resorts/arapahoe-basin.jpg", steamboat: "/resorts/steamboat.jpg",
-  eldora: "/resorts/eldora.jpg", aspensnowmass: "/resorts/aspen-snowmass.jpg",
-}
-
-const RESORT_ACCENTS = {
-  vail: "#60a5fa", beavercreek: "#fbbf24", breckenridge: "#34d399",
-  keystone: "#818cf8", crestedbutte: "#c084fc", telluride: "#fb7185",
-  winterpark: "#fb923c", coppermountain: "#f97316", arapahoebasin: "#94a3b8",
-  steamboat: "#d97706", eldora: "#2dd4bf", aspensnowmass: "#e2e8f0",
-}
+import { RESORT_NAMES, RESORT_PHOTOS, RESORT_ACCENTS } from "../lib/resorts"
+import { formatDateFull } from "../lib/format"
+import Avatar from "./ui/Avatar"
 
 const RESORT_COORDS = {
   vail: { lat: 39.6403, lon: -106.3742 },
@@ -83,12 +60,6 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8787"
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatDateFull(dateStr) {
-  return new Date(dateStr + "T12:00:00").toLocaleDateString([], {
-    weekday: "long", month: "long", day: "numeric",
-  })
-}
-
 function daysUntil(dateStr) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -113,23 +84,6 @@ function googleCalendarUrl(trip, resortName) {
 }
 
 // ── Small components ─────────────────────────────────────────────────────────
-
-function Avatar({ profile, size = 32 }) {
-  const name = profile?.full_name || profile?.username || "?"
-  if (profile?.avatar_url) {
-    return <img src={profile.avatar_url} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-  }
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: "50%",
-      background: "rgba(255,255,255,0.14)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: Math.round(size * 0.4), fontWeight: 800, color: "white", flexShrink: 0,
-    }}>
-      {name.charAt(0).toUpperCase()}
-    </div>
-  )
-}
 
 function GifPreview({ url }) {
   const [loaded, setLoaded] = useState(false)

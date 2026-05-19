@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { getLeaderboard, getPublicLeaderboard, getMySessions, logSkiDay, deleteSkiDay, getCurrentSeason } from "../lib/leaderboardApi"
+import Avatar from "./ui/Avatar"
 
 const RESORT_NAMES = [
   "Vail", "Beaver Creek", "Breckenridge", "Keystone", "Park City",
@@ -20,21 +21,6 @@ const CATEGORIES = [
 ]
 
 const RANK_MEDALS = ["🥇", "🥈", "🥉"]
-
-function Avatar({ profile, size = 36 }) {
-  const initials = (profile?.full_name || profile?.username || "?")
-    .split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
-  const colors = ["#2563eb","#0891b2","#7c3aed","#16a34a","#ea580c","#db2777"]
-  const color  = colors[(profile?.full_name || profile?.username || "").length % colors.length]
-  if (profile?.avatar_url) {
-    return <img src={profile.avatar_url} alt={initials} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-  }
-  return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.36, fontWeight: 800, color: "white", flexShrink: 0 }}>
-      {initials}
-    </div>
-  )
-}
 
 function LogDayModal({ onClose, onLogged }) {
   const today = new Date().toISOString().split("T")[0]

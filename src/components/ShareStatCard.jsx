@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { fmt } from "../lib/format"
 
 const SKILL_COLORS = {
   green:        "#22c55e",
@@ -6,11 +7,6 @@ const SKILL_COLORS = {
   black:        "#e2e8f0",
   double_black: "#f43f5e",
   experts_only: "#c084fc",
-}
-
-function fmt(n) {
-  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k"
-  return String(n)
 }
 
 function drawRoundedRect(ctx, x, y, w, h, r) {

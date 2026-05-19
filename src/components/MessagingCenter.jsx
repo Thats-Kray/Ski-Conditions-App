@@ -12,11 +12,15 @@ import {
   getMyTripConversations,
   getDMConversations,
   markDMsRead,
+  getIncomingFriendRequests,
 } from "../lib/socialApi"
 import { CrewChatView } from "./CrewGroupChat"
 import FriendsPage from "./FriendsPage"
 import TripChatView, { tripDisplayName } from "./TripChatView"
 import DirectMessageView from "./DirectMessageView"
+import { timeAgo } from "../lib/format"
+import Avatar from "./ui/Avatar"
+import { SkiPingComposer } from "./SkiPingModal"
 
 // ── Local read-status tracking ───────────────────────────────────────────────
 
@@ -26,41 +30,6 @@ function getLastRead(crewId) {
 }
 function markRead(crewId) {
   try { localStorage.setItem(LS_PREFIX + crewId, new Date().toISOString()) } catch {}
-}
-
-// ── Utilities ────────────────────────────────────────────────────────────────
-
-function timeAgo(ts) {
-  if (!ts) return ""
-  const diff = Date.now() - new Date(ts).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return "now"
-  if (m < 60) return `${m}m`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h`
-  const d = Math.floor(h / 24)
-  if (d < 7) return `${d}d`
-  return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" })
-}
-
-function Avatar({ profile, size = 32 }) {
-  const name = profile?.full_name || profile?.username || "?"
-  if (profile?.avatar_url) {
-    return (
-      <img src={profile.avatar_url} alt={name}
-        style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-    )
-  }
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: "50%", flexShrink: 0,
-      background: "linear-gradient(135deg,rgba(37,99,235,0.5),rgba(8,145,178,0.5))",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: size * 0.42, fontWeight: 800, color: "white",
-    }}>
-      {name.charAt(0).toUpperCase()}
-    </div>
-  )
 }
 
 // ── Sidebar: Conversation Row ─────────────────────────────────────────────────
@@ -319,6 +288,8 @@ export default function MessagingCenter() {
   const [friends, setFriends] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
+  const [showPingComposer, setShowPingComposer] = useState(false)
+  const [pendingFriendCount, setPendingFriendCount] = useState(0)
   const [acceptingId, setAcceptingId] = useState(null)
   const [filter, setFilter] = useState("all")        // "all" | "unread"
   const channelRef = useRef(null)
@@ -328,16 +299,18 @@ export default function MessagingCenter() {
       const user = await getCurrentUser()
       setCurrentUser(user)
 
-      const [crews, pending, friendList, trips, dms] = await Promise.all([
+      const [crews, pending, friendList, trips, dms, friendRequests] = await Promise.all([
         getMyCrews(),
         getPendingCrewInvites(),
         getAcceptedFriends(),
         getMyTripConversations(user.id),
         getDMConversations().catch(() => []),
+        getIncomingFriendRequests().catch(() => []),
       ])
       setFriends(friendList || [])
       setDmConversations(dms || [])
       setPendingInvites(pending || [])
+      setPendingFriendCount((friendRequests || []).length)
 
       // ── Crew conversations ──
       if (crews.length > 0) {
@@ -622,16 +595,16 @@ export default function MessagingCenter() {
             </button>
           </div>
 
-          {/* Panel toggle: Chats / People */}
+          {/* Panel toggle: Chats / Friends */}
           <div style={{
             padding: "8px 12px",
             borderBottom: "1px solid rgba(255,255,255,0.05)",
             display: "flex", gap: 4, flexShrink: 0,
           }}>
             {[
-              { key: "chats",  label: "Chats" },
-              { key: "people", label: "People" },
-            ].map(({ key, label }) => (
+              { key: "chats",  label: "Chats",   badge: 0 },
+              { key: "people", label: "Friends",  badge: pendingFriendCount },
+            ].map(({ key, label, badge }) => (
               <button
                 key={key}
                 onClick={() => { setPanel(key); if (isMobile) { setSelectedCrew(null); setSelectedTrip(null) } }}
@@ -641,9 +614,20 @@ export default function MessagingCenter() {
                   color: panel === key ? "#60a5fa" : "rgba(255,255,255,0.4)",
                   fontWeight: panel === key ? 800 : 500, fontSize: 13,
                   transition: "all 0.15s",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
                 }}
               >
                 {label}
+                {badge > 0 && (
+                  <span style={{
+                    background: "#ef4444", color: "white",
+                    fontSize: 10, fontWeight: 800,
+                    borderRadius: 999, padding: "1px 5px",
+                    lineHeight: 1.4,
+                  }}>
+                    {badge}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -794,6 +778,20 @@ export default function MessagingCenter() {
 
             {panel === "people" && (
               <div style={{ padding: "12px 12px 0" }}>
+                {/* Ping CTA */}
+                <button
+                  onClick={() => setShowPingComposer(true)}
+                  style={{
+                    width: "100%", padding: "10px 14px", borderRadius: 12, border: "none",
+                    background: "linear-gradient(135deg,rgba(59,130,246,0.2),rgba(16,185,129,0.12))",
+                    border: "1px solid rgba(59,130,246,0.3)",
+                    color: "#93c5fd", fontWeight: 800, fontSize: 13, cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    marginBottom: 14,
+                  }}
+                >
+                  👋 Ping Friends to Ski
+                </button>
                 <div style={{ padding: "0 2px 10px", fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: 0.9 }}>
                   Friends
                 </div>
@@ -882,6 +880,14 @@ export default function MessagingCenter() {
             loadInbox().then(() => openCrew({ ...crew, myRole: "admin" }))
           }}
           onClose={() => setShowCreate(false)}
+        />
+      )}
+
+      {showPingComposer && (
+        <SkiPingComposer
+          friends={friends}
+          onClose={() => setShowPingComposer(false)}
+          onSent={() => setShowPingComposer(false)}
         />
       )}
 

@@ -5,38 +5,9 @@ import CreateTripModal from "./CreateTripModal"
 import TripDetailModal from "./TripDetailModal"
 import SkiCheckInForm from "./SkiCheckInForm"
 import TodaysCrew from "./TodaysCrew"
-
-const RESORT_NAMES = {
-  vail: "Vail", beavercreek: "Beaver Creek", breckenridge: "Breckenridge",
-  keystone: "Keystone", crestedbutte: "Crested Butte", telluride: "Telluride",
-  winterpark: "Winter Park", coppermountain: "Copper Mountain",
-  arapahoebasin: "A-Basin", steamboat: "Steamboat", eldora: "Eldora",
-  aspensnowmass: "Aspen",
-}
-
-const RESORT_EMOJI = {
-  vail: "🏔️", beavercreek: "⛰️", breckenridge: "❄️", keystone: "🎯",
-  crestedbutte: "🌨️", telluride: "🌅", winterpark: "🌲", coppermountain: "🔴",
-  arapahoebasin: "💎", steamboat: "♨️", eldora: "🌿", aspensnowmass: "✨",
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return ""
-  const d = new Date(`${dateStr}T12:00:00`)
-  return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
-}
-
-function Avatar({ profile, size = 28 }) {
-  const name = profile?.full_name || profile?.username || "?"
-  if (profile?.avatar_url) {
-    return <img src={profile.avatar_url} alt={name} style={{ width: size, height: size, borderRadius: 999, objectFit: "cover", border: "2px solid rgba(10,14,30,0.8)" }} />
-  }
-  return (
-    <div style={{ width: size, height: size, borderRadius: 999, background: "rgba(96,165,250,0.2)", border: "2px solid rgba(96,165,250,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.4, fontWeight: 800, color: "#93c5fd" }}>
-      {name.charAt(0).toUpperCase()}
-    </div>
-  )
-}
+import { resortName, resortEmoji } from "../lib/resorts"
+import { formatDate } from "../lib/format"
+import Avatar from "./ui/Avatar"
 
 /* ── Compact upcoming trip strip ───────────────────────────────────── */
 function UpcomingStrip({ trips, invitedTrips, currentUser, onOpen }) {
@@ -75,9 +46,9 @@ function UpcomingStrip({ trips, invitedTrips, currentUser, onOpen }) {
               }}
               className="strip-card"
             >
-              <div style={{ fontSize: 22 }}>{RESORT_EMOJI[trip.resort_key] || "⛷️"}</div>
+              <div style={{ fontSize: 22 }}>{resortEmoji(trip.resort_key)}</div>
               <div style={{ fontSize: 13, fontWeight: 800, color: "white", lineHeight: 1.2 }}>
-                {RESORT_NAMES[trip.resort_key] || trip.resort_key}
+                {resortName(trip.resort_key) || trip.resort_key}
               </div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>{formatDate(trip.ski_date)}</div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -262,10 +233,10 @@ function CalendarView({ myTrips, rsvpdTrips, invitedTrips, friendsTrips, skiPlan
                 gap: 10,
               }}
             >
-              <span style={{ fontSize: 18 }}>{RESORT_EMOJI[t.resort_key] || "⛷️"}</span>
+              <span style={{ fontSize: 18 }}>{resortEmoji(t.resort_key)}</span>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>
-                  {t.title || RESORT_NAMES[t.resort_key] || t.resort_key}
+                  {t.title || resortName(t.resort_key) || t.resort_key}
                 </div>
                 <div style={{ fontSize: 11, color: DOT_COLORS[t._role], fontWeight: 700, marginTop: 2 }}>
                   {DOT_LABELS[t._role]}
@@ -279,45 +250,6 @@ function CalendarView({ myTrips, rsvpdTrips, invitedTrips, friendsTrips, skiPlan
   )
 }
 
-/* ── Trip sections (Trips sub-tab) ─────────────────────────────────── */
-function TripSection({ title, subtitle, badge, trips, currentUser, onUpdate, onRequireLogin, isInvited = false, accentColor }) {
-  const [deletedIds, setDeletedIds] = useState(new Set())
-  const visible = trips.filter((t) => !deletedIds.has(t.id))
-  if (!visible.length) return null
-  return (
-    <section>
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ fontSize: 16, fontWeight: 900, color: "white" }}>{title}</div>
-          {badge != null && (
-            <div style={{
-              background: accentColor ? `${accentColor}22` : "rgba(255,255,255,0.08)",
-              border: `1px solid ${accentColor ? `${accentColor}44` : "rgba(255,255,255,0.1)"}`,
-              borderRadius: 999, padding: "2px 9px", fontSize: 11, fontWeight: 800,
-              color: accentColor || "rgba(255,255,255,0.55)",
-            }}>
-              {badge}
-            </div>
-          )}
-        </div>
-        {subtitle && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>{subtitle}</div>}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
-        {visible.map((trip) => (
-          <TripCard
-            key={trip.id}
-            trip={trip}
-            currentUser={currentUser}
-            onUpdate={onUpdate}
-            onRequireLogin={onRequireLogin}
-            isInvited={isInvited}
-            onDeleted={() => { setDeletedIds((p) => new Set([...p, trip.id])); onUpdate() }}
-          />
-        ))}
-      </div>
-    </section>
-  )
-}
 
 /* ── Main page ─────────────────────────────────────────────────────── */
 export default function SkiPlansPage({ onRequireLogin, resorts }) {
@@ -327,6 +259,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
   const [friendsTrips, setFriendsTrips] = useState([])
   const [invitedTrips, setInvitedTrips] = useState([])
   const [skiPlans, setSkiPlans] = useState([])
+  const [deletedIds, setDeletedIds] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [stripTrip, setStripTrip] = useState(null)
@@ -364,7 +297,17 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
     setShowCreate(true)
   }
 
-  const hasAnyTrips = myTrips.length + rsvpdTrips.length + friendsTrips.length + invitedTrips.length > 0
+  const seenIds = new Set()
+  const flatTrips = [
+    ...invitedTrips.map((t) => ({ ...t, _isInvited: true })),
+    ...myTrips.map((t) => ({ ...t, _isInvited: false })),
+    ...rsvpdTrips.map((t) => ({ ...t, _isInvited: false })),
+    ...friendsTrips.map((t) => ({ ...t, _isInvited: false })),
+  ].filter((t) => {
+    if (seenIds.has(t.id) || deletedIds.has(t.id)) return false
+    seenIds.add(t.id)
+    return true
+  }).sort((a, b) => (a.ski_date || "").localeCompare(b.ski_date || ""))
 
   const SUB_TABS = [
     { key: "trips",    label: "🎿 Trips" },
@@ -455,57 +398,48 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
               <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>Sign in to see your trips</div>
               <button onClick={() => onRequireLogin?.()} style={{ background: "linear-gradient(135deg, #2563eb, #0891b2)", color: "white", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>Sign In</button>
             </div>
-          ) : !hasAnyTrips ? (
+          ) : flatTrips.length === 0 ? (
             <div style={{ borderRadius: 24, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", padding: "52px 28px", textAlign: "center", display: "grid", gap: 18, justifyItems: "center" }}>
               <div style={{ fontSize: 38 }}>🏔️</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: "white" }}>Plan your first powder day</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: "white" }}>No ski trips yet</div>
               <div style={{ fontSize: 14, color: "rgba(255,255,255,0.48)", maxWidth: 340, lineHeight: 1.6 }}>Create a trip, pick a mountain, then let your crew RSVP in one tap.</div>
               <button onClick={handleCreateClick} style={{ background: "linear-gradient(135deg, #2563eb, #0891b2)", color: "white", border: "none", borderRadius: 14, padding: "13px 28px", fontSize: 14, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 28px rgba(37,99,235,0.4)" }}>
-                Drop Your First Trip 🎿
+                Plan a Trip 🎿
               </button>
             </div>
           ) : (
-            <div style={{ display: "grid", gap: 32 }}>
+            <div style={{ display: "grid", gap: 16 }}>
               {invitedTrips.length > 0 && (
-                <TripSection
-                  title="✉️ Pending Invites"
-                  subtitle="You've been invited — tap to RSVP"
-                  badge={invitedTrips.length}
-                  trips={invitedTrips}
-                  currentUser={currentUser}
-                  onUpdate={loadTrips}
-                  onRequireLogin={onRequireLogin}
-                  isInvited
-                  accentColor="#60a5fa"
-                />
+                <div style={{
+                  background: "rgba(96,165,250,0.07)",
+                  border: "1px solid rgba(96,165,250,0.25)",
+                  borderLeft: "4px solid #60a5fa",
+                  borderRadius: 14,
+                  padding: "13px 18px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#93c5fd" }}>
+                    ✉️ You have {invitedTrips.length} trip invite{invitedTrips.length > 1 ? "s" : ""}
+                  </span>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>Respond below ↓</span>
+                </div>
               )}
-              <TripSection
-                title="Your Trips"
-                subtitle="Trips you're hosting"
-                badge={myTrips.length || null}
-                trips={myTrips}
-                currentUser={currentUser}
-                onUpdate={loadTrips}
-                onRequireLogin={onRequireLogin}
-              />
-              <TripSection
-                title="You're Going"
-                subtitle="Trips you've RSVP'd to"
-                badge={rsvpdTrips.length || null}
-                trips={rsvpdTrips}
-                currentUser={currentUser}
-                onUpdate={loadTrips}
-                onRequireLogin={onRequireLogin}
-              />
-              <TripSection
-                title="Friends' Trips"
-                subtitle="Your crew is planning — jump in"
-                badge={friendsTrips.length || null}
-                trips={friendsTrips}
-                currentUser={currentUser}
-                onUpdate={loadTrips}
-                onRequireLogin={onRequireLogin}
-              />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+                {flatTrips.map((trip) => (
+                  <TripCard
+                    key={trip.id}
+                    trip={trip}
+                    currentUser={currentUser}
+                    onUpdate={loadTrips}
+                    onRequireLogin={onRequireLogin}
+                    isInvited={trip._isInvited}
+                    onDeleted={() => { setDeletedIds((p) => new Set([...p, trip.id])); loadTrips() }}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </>

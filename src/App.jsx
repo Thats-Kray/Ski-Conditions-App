@@ -588,9 +588,9 @@ function AuthGate({ icon, title, desc, onSignIn, onSignUp }) {
 
 const BOTTOM_TABS = [
   { key: "home",      icon: "🏠", label: "Home" },
-  { key: "dashboard", icon: "🏔️", label: "Conditions" },
+  { key: "dashboard", icon: "🏔️", label: "Snow" },
   { key: "plans",     icon: "🎿",  label: "Plans" },
-  { key: "friends",   icon: "💬",  label: "Friends" },
+  { key: "friends",   icon: "💬",  label: "Social" },
   { key: "profile",   icon: "👤",  label: "Profile" },
 ]
 
@@ -1368,7 +1368,7 @@ export default function App() {
                   ❄️ Morning Decision Engine
                 </div>
                 <h1 style={{ margin: 0, fontSize: isMobile ? 24 : 30, fontWeight: 900, letterSpacing: -0.5 }}>
-                  {isMobile ? "Pow Dashboard" : "Colorado Powder Dashboard"}
+                  {isMobile ? "Snow Conditions" : "Colorado Snow Conditions"}
                 </h1>
               </div>
             ) : (
@@ -1422,7 +1422,7 @@ export default function App() {
             {/* Sub-tab switcher */}
             <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
               {[
-                { key: "conditions", label: "🏔️ Conditions" },
+                { key: "conditions", label: "🏔️ Snow" },
                 { key: "map",        label: "🗺️ Map" },
               ].map(({ key, label }) => (
                 <button

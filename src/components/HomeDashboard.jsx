@@ -15,6 +15,10 @@ import { getLeaderboard, getCurrentSeason } from "../lib/leaderboardApi"
 import { CrewChatView } from "./CrewGroupChat"
 import TripDetailModal from "./TripDetailModal"
 import TripChatView, { tripDisplayName } from "./TripChatView"
+import { resortName, resortEmoji } from "../lib/resorts"
+import { timeAgo } from "../lib/format"
+import Avatar from "./ui/Avatar"
+import { SkiPingComposer } from "./SkiPingModal"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -36,36 +40,12 @@ function scoreGradient(score) {
   return               "linear-gradient(135deg,#7f1d1d,#451a03)"
 }
 
-function timeAgo(ts) {
-  if (!ts) return ""
-  const m = Math.floor((Date.now() - new Date(ts).getTime()) / 60000)
-  if (m < 1) return "now"
-  if (m < 60) return `${m}m`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h`
-  return `${Math.floor(h / 24)}d`
-}
-
-const RESORT_NAMES = {
-  vail: "Vail", beavercreek: "Beaver Creek", breckenridge: "Breckenridge",
-  keystone: "Keystone", crestedbutte: "Crested Butte", telluride: "Telluride",
-  winterpark: "Winter Park", coppermountain: "Copper Mountain",
-  arapahoebasin: "A-Basin", steamboat: "Steamboat", eldora: "Eldora",
-  aspensnowmass: "Aspen",
-}
-
-const RESORT_EMOJI = {
-  vail: "🏔️", beavercreek: "⛰️", breckenridge: "❄️", keystone: "🎯",
-  crestedbutte: "🌨️", telluride: "🌅", winterpark: "🌲", coppermountain: "🔴",
-  arapahoebasin: "💎", steamboat: "♨️", eldora: "🌿", aspensnowmass: "✨",
-}
-
 function tripResortName(trip) {
-  return trip.title || RESORT_NAMES[trip.resort_key] || trip.resort_key || "Unknown Resort"
+  return trip.title || resortName(trip.resort_key) || trip.resort_key || "Unknown Resort"
 }
 
 function tripResortEmoji(trip) {
-  return RESORT_EMOJI[trip.resort_key] || "⛷️"
+  return resortEmoji(trip.resort_key)
 }
 
 const LS_PREFIX = "pd_cr_"
@@ -73,19 +53,6 @@ function getLastRead(id) { try { return localStorage.getItem(LS_PREFIX + id) || 
 function markRead(id)    { try { localStorage.setItem(LS_PREFIX + id, new Date().toISOString()) } catch {} }
 
 // ── Shared primitives ─────────────────────────────────────────────────────────
-
-function Avatar({ profile, size = 32 }) {
-  const name = profile?.full_name || profile?.username || "?"
-  if (profile?.avatar_url) {
-    return <img src={profile.avatar_url} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-  }
-  const colors = ["#2563eb","#0891b2","#7c3aed","#16a34a","#ea580c"]
-  return (
-    <div style={{ width: size, height: size, borderRadius: "50%", flexShrink: 0, background: colors[name.length % colors.length], display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.42, fontWeight: 800, color: "white" }}>
-      {name.charAt(0).toUpperCase()}
-    </div>
-  )
-}
 
 function DashCard({ children, style = {} }) {
   return (
@@ -933,6 +900,47 @@ function MobileCrewListWidget({ currentUser, onTabChange }) {
   )
 }
 
+// ── Ski Ping CTA ──────────────────────────────────────────────────────────────
+
+function PingCta({ currentUser }) {
+  const [open, setOpen] = useState(false)
+  const [friends, setFriends] = useState(null)
+
+  if (!currentUser) return null
+
+  async function handleOpen() {
+    setOpen(true)
+    if (!friends) {
+      getAcceptedFriends().then(setFriends).catch(() => setFriends([]))
+    }
+  }
+
+  return (
+    <>
+      <div style={{ textAlign: "center", padding: "4px 0 2px" }}>
+        <button
+          onClick={handleOpen}
+          style={{
+            background: "none", border: "none", cursor: "pointer",
+            color: "#60a5fa", fontSize: 13, fontWeight: 700,
+            textDecoration: "underline", textUnderlineOffset: 3,
+            padding: "6px 12px",
+          }}
+        >
+          👋 Ping a friend to ski →
+        </button>
+      </div>
+      {open && friends !== null && (
+        <SkiPingComposer
+          friends={friends}
+          onClose={() => setOpen(false)}
+          onSent={() => setOpen(false)}
+        />
+      )}
+    </>
+  )
+}
+
 // ── Mobile layout ─────────────────────────────────────────────────────────────
 
 function MobileHomeDashboard({ resorts, currentUser, onTabChange }) {
@@ -942,6 +950,7 @@ function MobileHomeDashboard({ resorts, currentUser, onTabChange }) {
       <PlansWidget currentUser={currentUser} resorts={resorts} onTabChange={onTabChange} />
       <LeaderboardTicker currentUser={currentUser} />
       <MobileCrewListWidget currentUser={currentUser} onTabChange={onTabChange} />
+      <PingCta currentUser={currentUser} />
     </div>
   )
 }
@@ -968,6 +977,9 @@ export default function HomeDashboard({ resorts, currentUser, onTabChange }) {
 
       {/* Row 3: Crew chat list + message thread */}
       <MessagingWidget currentUser={currentUser} />
+
+      {/* Ping CTA */}
+      <PingCta currentUser={currentUser} />
     </div>
   )
 }

@@ -1,51 +1,8 @@
 import { useState } from "react"
 import { rsvpToTrip, cancelTripRsvp, deleteTrip } from "../lib/socialApi"
 import TripDetailModal from "./TripDetailModal"
-
-const RESORT_NAMES = {
-  vail: "Vail",
-  beavercreek: "Beaver Creek",
-  breckenridge: "Breckenridge",
-  keystone: "Keystone",
-  crestedbutte: "Crested Butte",
-  telluride: "Telluride",
-  winterpark: "Winter Park",
-  coppermountain: "Copper Mountain",
-  arapahoebasin: "Arapahoe Basin",
-  steamboat: "Steamboat",
-  eldora: "Eldora",
-  aspensnowmass: "Aspen Snowmass",
-}
-
-const RESORT_PHOTOS = {
-  vail: "/resorts/vail.jpg",
-  beavercreek: "/resorts/beaver-creek.jpg",
-  breckenridge: "/resorts/breckenridge.jpg",
-  keystone: "/resorts/keystone.jpg",
-  crestedbutte: "/resorts/crested-butte.jpg",
-  telluride: "/resorts/telluride.jpg",
-  winterpark: "/resorts/winter-park.jpg",
-  coppermountain: "/resorts/copper-mountain.jpg",
-  arapahoebasin: "/resorts/arapahoe-basin.jpg",
-  steamboat: "/resorts/steamboat.jpg",
-  eldora: "/resorts/eldora.jpg",
-  aspensnowmass: "/resorts/aspen-snowmass.jpg",
-}
-
-const RESORT_ACCENTS = {
-  vail: "#60a5fa",
-  beavercreek: "#fbbf24",
-  breckenridge: "#34d399",
-  keystone: "#818cf8",
-  crestedbutte: "#c084fc",
-  telluride: "#fb7185",
-  winterpark: "#fb923c",
-  coppermountain: "#f97316",
-  arapahoebasin: "#94a3b8",
-  steamboat: "#d97706",
-  eldora: "#2dd4bf",
-  aspensnowmass: "#e2e8f0",
-}
+import { RESORT_NAMES, RESORT_PHOTOS, RESORT_ACCENTS } from "../lib/resorts"
+import { formatDateFull } from "../lib/format"
 
 
 function daysUntil(dateStr) {
@@ -58,14 +15,6 @@ function daysUntil(dateStr) {
   if (diff === 1) return "Tomorrow"
   if (diff <= 6) return `In ${diff} days`
   return null
-}
-
-function formatDateFull(dateStr) {
-  return new Date(dateStr + "T12:00:00").toLocaleDateString([], {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  })
 }
 
 function CardAvatar({ profile, size = 32 }) {

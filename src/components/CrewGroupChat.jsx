@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { supabase } from "../lib/supabase"
 import UserProfileModal from "./UserProfileModal"
+import Avatar from "./ui/Avatar"
 import {
   createCrew,
   getMyCrews,
@@ -29,29 +30,6 @@ function timeLabel(ts) {
   if (diffDays === 1) return "Yesterday"
   if (diffDays < 7) return d.toLocaleDateString([], { weekday: "short" })
   return d.toLocaleDateString([], { month: "short", day: "numeric" })
-}
-
-function Avatar({ profile, size = 32 }) {
-  const name = profile?.full_name || profile?.username || "?"
-  if (profile?.avatar_url) {
-    return (
-      <img
-        src={profile.avatar_url}
-        alt={name}
-        style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
-      />
-    )
-  }
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: "50%", flexShrink: 0,
-      background: "linear-gradient(135deg,rgba(37,99,235,0.5),rgba(8,145,178,0.5))",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: size * 0.4, fontWeight: 800, color: "white",
-    }}>
-      {name.charAt(0).toUpperCase()}
-    </div>
-  )
 }
 
 // ── Create Crew Modal ─────────────────────────────────────────────────────────
