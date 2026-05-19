@@ -1125,6 +1125,10 @@ export async function createTrip({ resort_key, ski_date, title, description, mee
     .single()
 
   if (error) throw error
+
+  // Auto-log a ski day for the host if the trip date is today or already passed
+  if (data) autoLogSessionForTrip(user.id, resort_key, ski_date, data.id)
+
   return data
 }
 
@@ -1202,6 +1206,20 @@ export async function getAllVisibleTrips() {
   return { mine, friends, rsvpd, invited }
 }
 
+// Inline session auto-log — avoids circular import with leaderboardApi
+function autoLogSessionForTrip(userId, resortKey, skiDate, tripId) {
+  if (!resortKey || !skiDate) return
+  const today = new Date().toISOString().slice(0, 10)
+  if (skiDate > today) return
+  supabase
+    .from("ski_sessions")
+    .upsert(
+      { user_id: userId, resort_name: resortKey, session_date: skiDate, trip_id: tripId },
+      { onConflict: "user_id,session_date,resort_name" }
+    )
+    .then(() => {}).catch(() => {})  // fire-and-forget
+}
+
 export async function rsvpToTrip(tripId, status) {
   const user = await getCurrentUser()
   if (!user) throw new Error("You must be logged in to RSVP.")
@@ -1226,6 +1244,13 @@ export async function rsvpToTrip(tripId, status) {
     .eq("trip_id", tripId)
     .eq("invitee_id", user.id)
     .eq("status", "pending")
+
+  // Auto-log a ski day if going to a past/today trip
+  if (status === "going") {
+    const { data: trip } = await supabase
+      .from("ski_trips").select("resort_key, ski_date").eq("id", tripId).single()
+    if (trip) autoLogSessionForTrip(user.id, trip.resort_key, trip.ski_date, tripId)
+  }
 
   return data
 }
@@ -1314,11 +1339,14 @@ export async function rsvpWithMessage(tripId, status, { message, gifUrl, plusOne
     .eq("status", "pending")
 
   // Notify host of RSVP
-  const { data: trip } = await supabase.from("ski_trips").select("title, resort_key").eq("id", tripId).single()
+  const { data: trip } = await supabase.from("ski_trips").select("title, resort_key, ski_date").eq("id", tripId).single()
   const { data: actorProfile } = await supabase.from("profiles").select("full_name, username").eq("id", user.id).single()
   const actorName = actorProfile?.full_name || actorProfile?.username || "Someone"
   const tripTitle = trip?.title || RESORT_DISPLAY[trip?.resort_key] || "the trip"
   notifyRsvp(tripId, tripTitle, actorName, status, user.id)  // fire-and-forget
+
+  // Auto-log a ski day if going to a past/today trip
+  if (status === "going" && trip) autoLogSessionForTrip(user.id, trip.resort_key, trip.ski_date, tripId)
 
   return data
 }
