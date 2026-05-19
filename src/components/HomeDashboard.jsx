@@ -7,6 +7,7 @@ import {
 } from "../lib/socialApi"
 import { getLeaderboard, getCurrentSeason } from "../lib/leaderboardApi"
 import { CrewChatView } from "./CrewGroupChat"
+import TripDetailModal from "./TripDetailModal"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -319,6 +320,7 @@ function PlansWidget({ currentUser, resorts, onTabChange }) {
   const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(true)
   const [openRsvpId, setOpenRsvpId] = useState(null)
+  const [selectedTrip, setSelectedTrip] = useState(null)
 
   useEffect(() => {
     if (!currentUser) { setLoading(false); return }
@@ -347,6 +349,7 @@ function PlansWidget({ currentUser, resorts, onTabChange }) {
   }, [openRsvpId])
 
   return (
+    <>
     <DashCard>
       <CardHeader
         title="🎿 Upcoming Ski Plans"
@@ -390,7 +393,7 @@ function PlansWidget({ currentUser, resorts, onTabChange }) {
           return (
             <div key={trip.id} style={{ position: "relative" }}>
               <div
-                onClick={() => onTabChange("plans")}
+                onClick={() => { setOpenRsvpId(null); setSelectedTrip(trip) }}
                 style={{
                   display: "flex", alignItems: "center", gap: 12,
                   padding: "12px 16px",
@@ -476,6 +479,15 @@ function PlansWidget({ currentUser, resorts, onTabChange }) {
         </div>
       )}
     </DashCard>
+    {selectedTrip && (
+      <TripDetailModal
+        trip={selectedTrip}
+        currentUser={currentUser}
+        onClose={() => setSelectedTrip(null)}
+        onUpdate={() => {}}
+      />
+    )}
+    </>
   )
 }
 
