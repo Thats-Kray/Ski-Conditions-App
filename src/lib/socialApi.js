@@ -2570,3 +2570,146 @@ export async function deleteCrew(crewId) {
     .eq("id", crewId)
   if (error) throw error
 }
+
+// ── Trip conversations (for MessagingCenter inbox) ────────────────────────────
+
+export async function getMyTripConversations(userId) {
+  if (!userId) return []
+
+  const allTripIds = new Set()
+
+  // Run all 4 sources in parallel, each independently resilient
+  const [hostedRes, rsvpdRes, invitedRes, commentedRes] = await Promise.allSettled([
+    supabase.from("ski_trips").select("id, title, resort_key, ski_date").eq("host_id", userId).order("ski_date", { ascending: false }),
+    supabase.from("trip_rsvps").select("trip_id").eq("user_id", userId),
+    supabase.from("trip_invites").select("trip_id").eq("invitee_id", userId),
+    supabase.from("trip_comments").select("trip_id").eq("user_id", userId),
+  ])
+
+  // Collect hosted trips (already have full rows)
+  const hostedTrips = hostedRes.status === "fulfilled" ? (hostedRes.value.data || []) : []
+  for (const t of hostedTrips) allTripIds.add(t.id)
+
+  // Collect extra IDs from rsvps, invites, comments
+  const extraSources = [rsvpdRes, invitedRes, commentedRes]
+  for (const res of extraSources) {
+    if (res.status === "fulfilled") {
+      for (const row of (res.value.data || [])) {
+        if (row.trip_id) allTripIds.add(row.trip_id)
+      }
+    }
+  }
+
+  // Remove IDs already in hosted (we have full rows for those)
+  const hostedIds = new Set(hostedTrips.map(t => t.id))
+  const extraIds = [...allTripIds].filter(id => !hostedIds.has(id))
+
+  let extraTrips = []
+  if (extraIds.length > 0) {
+    const { data } = await supabase
+      .from("ski_trips")
+      .select("id, title, resort_key, ski_date")
+      .in("id", extraIds)
+    extraTrips = data || []
+  }
+
+  return [...hostedTrips, ...extraTrips]
+}
+
+export async function getTripChatMessages(tripId) {
+  const { data: comments, error } = await supabase
+    .from("trip_comments")
+    .select("id, trip_id, user_id, content, created_at")
+    .eq("trip_id", tripId)
+    .order("created_at", { ascending: true })
+  if (error) throw error
+  if (!comments?.length) return []
+  const userIds = [...new Set(comments.map((c) => c.user_id))]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .in("id", userIds)
+  const pm = new Map((profiles || []).map((p) => [p.id, p]))
+  return comments.map((c) => ({ ...c, profile: pm.get(c.user_id) || null }))
+}
+
+// ── Direct Messages ───────────────────────────────────────────────────────────
+
+export async function getDMConversations() {
+  const user = await getCurrentUser()
+  if (!user) return []
+
+  const { data, error } = await supabase
+    .from("direct_messages")
+    .select("id, sender_id, recipient_id, content, created_at, read_at")
+    .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
+    .order("created_at", { ascending: false })
+    .limit(300)
+
+  if (error) throw error
+
+  const convMap = new Map()
+  for (const msg of (data || [])) {
+    const partnerId = msg.sender_id === user.id ? msg.recipient_id : msg.sender_id
+    if (!convMap.has(partnerId)) convMap.set(partnerId, msg)
+  }
+
+  if (convMap.size === 0) return []
+
+  const partnerIds = [...convMap.keys()]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url, skill_level")
+    .in("id", partnerIds)
+
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]))
+
+  return partnerIds
+    .map(partnerId => ({
+      partnerId,
+      partner: profileMap.get(partnerId) || null,
+      lastMessage: convMap.get(partnerId),
+      unread: convMap.get(partnerId)?.recipient_id === user.id && !convMap.get(partnerId)?.read_at,
+    }))
+    .sort((a, b) => new Date(b.lastMessage.created_at) - new Date(a.lastMessage.created_at))
+}
+
+export async function getDMMessages(partnerId) {
+  const user = await getCurrentUser()
+  if (!user) return []
+
+  const { data, error } = await supabase
+    .from("direct_messages")
+    .select("id, sender_id, recipient_id, content, created_at, read_at")
+    .or(`and(sender_id.eq.${user.id},recipient_id.eq.${partnerId}),and(sender_id.eq.${partnerId},recipient_id.eq.${user.id})`)
+    .order("created_at", { ascending: true })
+
+  if (error) throw error
+  return data || []
+}
+
+export async function sendDM(recipientId, content) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in")
+
+  const { data, error } = await supabase
+    .from("direct_messages")
+    .insert({ sender_id: user.id, recipient_id: recipientId, content: content.trim() })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function markDMsRead(partnerId) {
+  const user = await getCurrentUser()
+  if (!user) return
+
+  await supabase
+    .from("direct_messages")
+    .update({ read_at: new Date().toISOString() })
+    .eq("recipient_id", user.id)
+    .eq("sender_id", partnerId)
+    .is("read_at", null)
+}

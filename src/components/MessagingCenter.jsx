@@ -10,10 +10,13 @@ import {
   createCrew,
   getAcceptedFriends,
   getMyTripConversations,
+  getDMConversations,
+  markDMsRead,
 } from "../lib/socialApi"
 import { CrewChatView } from "./CrewGroupChat"
 import FriendsPage from "./FriendsPage"
 import TripChatView, { tripDisplayName } from "./TripChatView"
+import DirectMessageView from "./DirectMessageView"
 
 // ── Local read-status tracking ───────────────────────────────────────────────
 
@@ -307,8 +310,10 @@ export default function MessagingCenter() {
   const [panel, setPanel] = useState("chats")        // "chats" | "people"
   const [selectedCrew, setSelectedCrew] = useState(null)
   const [selectedTrip, setSelectedTrip] = useState(null)
+  const [selectedDM,   setSelectedDM]   = useState(null)
   const [conversations, setConversations] = useState([])
   const [tripConversations, setTripConversations] = useState([])
+  const [dmConversations, setDmConversations] = useState([])
   const [pendingInvites, setPendingInvites] = useState([])
   const [currentUser, setCurrentUser] = useState(null)
   const [friends, setFriends] = useState([])
@@ -323,13 +328,15 @@ export default function MessagingCenter() {
       const user = await getCurrentUser()
       setCurrentUser(user)
 
-      const [crews, pending, friendList, trips] = await Promise.all([
+      const [crews, pending, friendList, trips, dms] = await Promise.all([
         getMyCrews(),
         getPendingCrewInvites(),
         getAcceptedFriends(),
         getMyTripConversations(user.id),
+        getDMConversations().catch(() => []),
       ])
       setFriends(friendList || [])
+      setDmConversations(dms || [])
       setPendingInvites(pending || [])
 
       // ── Crew conversations ──
@@ -456,6 +463,26 @@ export default function MessagingCenter() {
           )
         })
       })
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "direct_messages",
+      }, (payload) => {
+        const msg = payload.new
+        if (!msg) return
+        const uid = currentUser?.id
+        if (!uid) return
+        const isFromMe  = msg.sender_id   === uid
+        const partnerId = isFromMe ? msg.recipient_id : msg.sender_id
+        setDmConversations(prev => {
+          const existing = prev.find(d => d.partnerId === partnerId)
+          if (!existing) { loadInbox(); return prev }
+          const updated = prev.map(d =>
+            d.partnerId === partnerId
+              ? { ...d, lastMessage: msg, unread: !isFromMe && selectedDM?.partnerId !== partnerId }
+              : d
+          )
+          return updated.sort((a, b) => new Date(b.lastMessage?.created_at) - new Date(a.lastMessage?.created_at))
+        })
+      })
       .subscribe()
 
     return () => { if (channelRef.current) supabase.removeChannel(channelRef.current) }
@@ -489,6 +516,7 @@ export default function MessagingCenter() {
     setConversations(prev => prev.map(c => c.id === crew.id ? { ...c, unread: false } : c))
     setSelectedCrew(crew)
     setSelectedTrip(null)
+    setSelectedDM(null)
     setPanel("chats")
   }
 
@@ -497,23 +525,39 @@ export default function MessagingCenter() {
     setTripConversations(prev => prev.map(t => t.id === trip.id ? { ...t, unread: false } : t))
     setSelectedTrip(trip)
     setSelectedCrew(null)
+    setSelectedDM(null)
     setPanel("chats")
   }
 
-  // Merge crews and trips into a single list sorted by most recent activity
+  function openDM(dm) {
+    if (dm.partnerId) markDMsRead(dm.partnerId).catch(() => {})
+    setDmConversations(prev => prev.map(d => d.partnerId === dm.partnerId ? { ...d, unread: false } : d))
+    setSelectedDM(dm)
+    setSelectedCrew(null)
+    setSelectedTrip(null)
+    setPanel("chats")
+  }
+
+  function handleMessageFriend(friend) {
+    const existing = dmConversations.find(d => d.partnerId === friend.id)
+    openDM(existing || { partnerId: friend.id, partner: friend, lastMessage: null, unread: false })
+  }
+
+  // Merge crews, trips, and DMs into a single list sorted by most recent activity
   const allConversations = [
     ...conversations.map(c => ({ _type: "crew", _ts: new Date(c.lastMessage?.created_at || c.created_at).getTime(), ...c })),
     ...tripConversations.map(t => ({ _type: "trip", _ts: new Date(t.lastComment?.created_at || t.ski_date).getTime(), ...t })),
+    ...dmConversations.map(d => ({ _type: "dm", _ts: new Date(d.lastMessage?.created_at || 0).getTime(), ...d })),
   ].sort((a, b) => b._ts - a._ts)
 
   const displayedAll = filter === "unread"
     ? allConversations.filter(c => c.unread)
     : allConversations
 
-  const totalUnread = conversations.filter(c => c.unread).length + tripConversations.filter(t => t.unread).length + pendingInvites.length
+  const totalUnread = conversations.filter(c => c.unread).length + tripConversations.filter(t => t.unread).length + dmConversations.filter(d => d.unread).length + pendingInvites.length
 
   // Layout: on mobile show sidebar OR chat, never both
-  const hasActiveConv = !!(selectedCrew || selectedTrip)
+  const hasActiveConv = !!(selectedCrew || selectedTrip || selectedDM)
   const showSidebar = !isMobile || !hasActiveConv
   const showMainPanel = !isMobile || hasActiveConv
 
@@ -675,6 +719,50 @@ export default function MessagingCenter() {
                         />
                       )
                     }
+                    if (conv._type === "dm") {
+                      const partnerName = conv.partner?.full_name || conv.partner?.username || "Friend"
+                      const lastMsg = conv.lastMessage
+                      const preview = lastMsg
+                        ? (lastMsg.sender_id === currentUser?.id ? `You: ${lastMsg.content}` : lastMsg.content)
+                        : "No messages yet"
+                      return (
+                        <div
+                          key={`dm-${conv.partnerId}`}
+                          onClick={() => openDM(conv)}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 12, padding: "11px 14px",
+                            cursor: "pointer",
+                            background: selectedDM?.partnerId === conv.partnerId
+                              ? "rgba(96,165,250,0.14)"
+                              : conv.unread ? "rgba(96,165,250,0.04)" : "transparent",
+                            borderLeft: `3px solid ${selectedDM?.partnerId === conv.partnerId ? "#60a5fa" : "transparent"}`,
+                            transition: "background 0.15s",
+                            position: "relative",
+                          }}
+                          className="conv-row"
+                        >
+                          <div style={{ position: "relative", flexShrink: 0 }}>
+                            <Avatar profile={conv.partner} size={44} />
+                            {conv.unread && selectedDM?.partnerId !== conv.partnerId && (
+                              <div style={{ position: "absolute", top: -3, right: -3, width: 11, height: 11, borderRadius: "50%", background: "#3b82f6", border: "2px solid rgba(6,10,22,1)" }} />
+                            )}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 6, marginBottom: 3 }}>
+                              <div style={{ fontWeight: conv.unread ? 800 : 600, fontSize: 14, color: selectedDM?.partnerId === conv.partnerId ? "#93c5fd" : "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
+                                {partnerName}
+                              </div>
+                              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", flexShrink: 0 }}>
+                                {timeAgo(lastMsg?.created_at)}
+                              </div>
+                            </div>
+                            <div style={{ fontSize: 12, color: conv.unread ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.32)", fontWeight: conv.unread ? 500 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {preview.length > 48 ? preview.slice(0, 48) + "…" : preview}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    }
                     return (
                       <ConversationRow
                         key={`crew-${conv.id}`}
@@ -717,7 +805,7 @@ export default function MessagingCenter() {
                   friends.map(f => (
                     <div key={f.id} style={{
                       display: "flex", alignItems: "center", gap: 10,
-                      padding: "9px 8px", borderRadius: 10, cursor: "default",
+                      padding: "9px 8px", borderRadius: 10,
                     }}>
                       <Avatar profile={f} size={34} />
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -728,6 +816,13 @@ export default function MessagingCenter() {
                           <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>@{f.username}</div>
                         )}
                       </div>
+                      <button
+                        onClick={() => handleMessageFriend(f)}
+                        title="Message"
+                        style={{ background: "rgba(37,99,235,0.15)", border: "1px solid rgba(96,165,250,0.2)", borderRadius: 8, padding: "5px 10px", color: "#60a5fa", fontSize: 13, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}
+                      >
+                        💬
+                      </button>
                     </div>
                   ))
                 )}
@@ -743,8 +838,15 @@ export default function MessagingCenter() {
           {panel === "people" && !isMobile ? (
             // Desktop: show full FriendsPage in right panel
             <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
-              <FriendsPage hideCrew />
+              <FriendsPage hideCrew onMessageFriend={handleMessageFriend} />
             </div>
+          ) : selectedDM ? (
+            <DirectMessageView
+              partner={selectedDM.partner}
+              partnerId={selectedDM.partnerId}
+              currentUser={currentUser}
+              onBack={isMobile ? () => setSelectedDM(null) : null}
+            />
           ) : selectedTrip ? (
             <TripChatView
               trip={selectedTrip}
@@ -768,7 +870,7 @@ export default function MessagingCenter() {
       {/* Mobile: people panel takes full screen */}
       {isMobile && panel === "people" && !hasActiveConv && (
         <div style={{ position: "absolute", inset: 0, background: "rgba(4,8,20,0.95)", overflowY: "auto", padding: "16px 14px", zIndex: 10 }}>
-          <FriendsPage hideCrew />
+          <FriendsPage hideCrew onMessageFriend={handleMessageFriend} />
         </div>
       )}
 

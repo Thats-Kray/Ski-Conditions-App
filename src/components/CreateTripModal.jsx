@@ -56,7 +56,9 @@ export default function CreateTripModal({ onClose, onCreated }) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [meetingSpot, setMeetingSpot] = useState("")
-  const [departureTime, setDepartureTime] = useState("")
+  const [deptHour, setDeptHour] = useState("")
+  const [deptMinute, setDeptMinute] = useState("00")
+  const [deptAmpm, setDeptAmpm] = useState("AM")
   const [spotifyUrl, setSpotifyUrl] = useState("")
   const [theme, setTheme] = useState("default")
   const [loading, setLoading] = useState(false)
@@ -87,13 +89,14 @@ export default function CreateTripModal({ onClose, onCreated }) {
     setLoading(true)
     setError("")
     try {
+      const departureTime = deptHour ? `${deptHour}:${deptMinute} ${deptAmpm}` : null
       const trip = await createTrip({
         resort_key: resortKey,
         ski_date: skiDate,
         title: title.trim() || null,
         description: description.trim() || null,
         meeting_spot: meetingSpot.trim() || null,
-        departure_time: departureTime.trim() || null,
+        departure_time: departureTime,
         spotify_playlist_url: spotifyUrl.trim() || null,
         theme,
       })
@@ -372,13 +375,59 @@ export default function CreateTripModal({ onClose, onCreated }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
                 <label style={labelStyle}>Departure</label>
-                <input
-                  type="text"
-                  value={departureTime}
-                  onChange={(e) => setDepartureTime(e.target.value)}
-                  placeholder="7:00 AM"
-                  style={inputStyle}
-                />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <select
+                    value={deptHour}
+                    onChange={(e) => setDeptHour(e.target.value)}
+                    style={{
+                      ...inputStyle,
+                      width: "auto",
+                      flex: "1 1 0",
+                      colorScheme: "dark",
+                      cursor: "pointer",
+                      appearance: "none",
+                      textAlign: "center",
+                    }}
+                  >
+                    <option value="">HH</option>
+                    {[1,2,3,4,5,6,7,8,9,10,11,12].map((h) => (
+                      <option key={h} value={String(h)}>{h}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={deptMinute}
+                    onChange={(e) => setDeptMinute(e.target.value)}
+                    style={{
+                      ...inputStyle,
+                      width: "auto",
+                      flex: "1 1 0",
+                      colorScheme: "dark",
+                      cursor: "pointer",
+                      appearance: "none",
+                      textAlign: "center",
+                    }}
+                  >
+                    {["00","15","30","45"].map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={deptAmpm}
+                    onChange={(e) => setDeptAmpm(e.target.value)}
+                    style={{
+                      ...inputStyle,
+                      width: "auto",
+                      flex: "1 1 0",
+                      colorScheme: "dark",
+                      cursor: "pointer",
+                      appearance: "none",
+                      textAlign: "center",
+                    }}
+                  >
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
               </div>
               <div>
                 <label style={labelStyle}>Meet At</label>

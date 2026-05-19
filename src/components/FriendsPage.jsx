@@ -214,7 +214,7 @@ function CrewInviteCard({ invite, onAccept, onDecline, working }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function FriendsPage({ hideCrew = false }) {
+export default function FriendsPage({ hideCrew = false, onMessageFriend = null }) {
   const [searchText, setSearchText]           = useState("")
   const [searchResults, setSearchResults]     = useState([])
   const [incomingRequests, setIncomingRequests] = useState([])
@@ -683,6 +683,15 @@ export default function FriendsPage({ hideCrew = false }) {
                             )}
                           </div>
                         </div>
+                        {onMessageFriend && (
+                          <button
+                            onClick={() => onMessageFriend(friend)}
+                            title="Message"
+                            style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(96,165,250,0.25)", background: "rgba(37,99,235,0.12)", color: "#60a5fa", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, minHeight: 40 }}
+                          >
+                            💬
+                          </button>
+                        )}
                         <button
                           onClick={() => setShowInviteId(showInviteId === friend.id ? null : friend.id)}
                           style={{
