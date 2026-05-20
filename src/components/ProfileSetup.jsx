@@ -6,7 +6,7 @@ import {
   uploadProfilePhoto,
 } from "../lib/socialApi"
 
-const PASS_OPTIONS = ["Epic", "Ikon", "Mountain Collective", "Indy", "Loveland", "A-Basin"]
+const PASS_OPTIONS = ["Epic", "Ikon", "Mountain Collective", "Indy", "Loveland"]
 
 const SPORT_OPTIONS = [
   { key: "ski",       label: "Skier",        emoji: "⛷️" },
@@ -24,7 +24,7 @@ const SKILL_OPTIONS = [
 
 const MOUNTAIN_OPTIONS = [
   "Vail", "Beaver Creek", "Breckenridge", "Keystone", "Crested Butte",
-  "Telluride", "Winter Park", "Copper Mountain", "Arapahoe Basin",
+  "Telluride", "Winter Park", "Copper Mountain",
   "Steamboat", "Eldora", "Aspen Snowmass",
 ]
 

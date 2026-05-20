@@ -218,94 +218,103 @@ function EditProfileModal({ profile, onSaved, onClose }) {
         background: "linear-gradient(160deg,#0f172a,#0a0f1e)",
         border: "1px solid rgba(255,255,255,0.1)",
         borderRadius: "22px 22px 0 0",
-        padding: "24px 20px max(32px, env(safe-area-inset-bottom))",
-        maxHeight: "90vh", overflowY: "auto",
+        maxHeight: "92dvh",
+        display: "flex", flexDirection: "column",
+        overflow: "hidden",
       }}>
-        <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.2)", margin: "0 auto 22px" }} />
-
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
-          <div style={{ fontSize: 17, fontWeight: 900, color: "white" }}>Edit Profile</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
-        </div>
-
-        {/* Display name */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Display Name</div>
-          <input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Your name" style={fieldStyle} />
-        </div>
-
-        {/* Sport type */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Sport</div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {[{ key: "ski", label: "⛷️ Ski" }, { key: "snowboard", label: "🏂 Snowboard" }, { key: "both", label: "🤙 Both" }].map(({ key, label }) => (
-              <button key={key} onClick={() => setSportType(key)} style={{
-                flex: 1, padding: "9px 8px", borderRadius: 10,
-                border: `1.5px solid ${sportType === key ? "#3b82f6" : "rgba(255,255,255,0.12)"}`,
-                background: sportType === key ? "rgba(59,130,246,0.18)" : "rgba(255,255,255,0.05)",
-                color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer",
-              }}>{label}</button>
-            ))}
+        {/* Fixed handle + header */}
+        <div style={{ flexShrink: 0, padding: "16px 20px 0" }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.2)", margin: "0 auto 18px" }} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <div style={{ fontSize: 17, fontWeight: 900, color: "white" }}>Edit Profile</div>
+            <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
           </div>
         </div>
 
-        {/* Skill level */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Skill Level</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {SKILL_OPTIONS.map(opt => (
-              <button key={opt.key} onClick={() => setSkillLevel(opt.key)} style={{
-                padding: "7px 14px", borderRadius: 10,
-                border: `1.5px solid ${skillLevel === opt.key ? opt.color : "rgba(255,255,255,0.1)"}`,
-                background: skillLevel === opt.key ? `${opt.color}18` : "rgba(255,255,255,0.04)",
-                color: skillLevel === opt.key ? opt.color : "rgba(255,255,255,0.6)",
-                fontWeight: skillLevel === opt.key ? 800 : 500, fontSize: 12, cursor: "pointer",
-              }}>{opt.label}</button>
-            ))}
-          </div>
-        </div>
+        {/* Scrollable form fields */}
+        <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "16px 20px 8px" }}>
 
-        {/* Ski passes */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Ski Passes</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {PASS_OPTIONS.map(p => {
-              const active = skiPasses.includes(p)
-              return (
-                <button key={p} onClick={() => togglePass(p)} style={{
+          {/* Display name */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Display Name</div>
+            <input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Your name" style={fieldStyle} />
+          </div>
+
+          {/* Sport type */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Sport</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[{ key: "ski", label: "⛷️ Ski" }, { key: "snowboard", label: "🏂 Snowboard" }, { key: "both", label: "🤙 Both" }].map(({ key, label }) => (
+                <button key={key} onClick={() => setSportType(key)} style={{
+                  flex: 1, padding: "9px 8px", borderRadius: 10,
+                  border: `1.5px solid ${sportType === key ? "#3b82f6" : "rgba(255,255,255,0.12)"}`,
+                  background: sportType === key ? "rgba(59,130,246,0.18)" : "rgba(255,255,255,0.05)",
+                  color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                }}>{label}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Skill level */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Skill Level</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {SKILL_OPTIONS.map(opt => (
+                <button key={opt.key} onClick={() => setSkillLevel(opt.key)} style={{
                   padding: "7px 14px", borderRadius: 10,
-                  border: `1.5px solid ${active ? "#22c55e" : "rgba(255,255,255,0.1)"}`,
-                  background: active ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)",
-                  color: active ? "#22c55e" : "rgba(255,255,255,0.6)",
-                  fontWeight: active ? 800 : 500, fontSize: 12, cursor: "pointer",
-                }}>{p}</button>
-              )
-            })}
+                  border: `1.5px solid ${skillLevel === opt.key ? opt.color : "rgba(255,255,255,0.1)"}`,
+                  background: skillLevel === opt.key ? `${opt.color}18` : "rgba(255,255,255,0.04)",
+                  color: skillLevel === opt.key ? opt.color : "rgba(255,255,255,0.6)",
+                  fontWeight: skillLevel === opt.key ? 800 : 500, fontSize: 12, cursor: "pointer",
+                }}>{opt.label}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Ski passes */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Ski Passes</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {PASS_OPTIONS.map(p => {
+                const active = skiPasses.includes(p)
+                return (
+                  <button key={p} onClick={() => togglePass(p)} style={{
+                    padding: "7px 14px", borderRadius: 10,
+                    border: `1.5px solid ${active ? "#22c55e" : "rgba(255,255,255,0.1)"}`,
+                    background: active ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)",
+                    color: active ? "#22c55e" : "rgba(255,255,255,0.6)",
+                    fontWeight: active ? 800 : 500, fontSize: 12, cursor: "pointer",
+                  }}>{p}</button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Vehicle */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Vehicle (optional)</div>
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10 }}>
+              <input value={vehicleLabel} onChange={e => setVehicleLabel(e.target.value)} placeholder='e.g. "Blue Subaru"' style={fieldStyle} />
+              <input value={vehicleSeats} onChange={e => setVehicleSeats(e.target.value)} placeholder="Seats" type="number" min="1" max="8" style={fieldStyle} />
+            </div>
           </div>
         </div>
 
-        {/* Vehicle */}
-        <div style={{ marginBottom: 22 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Vehicle (optional)</div>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10 }}>
-            <input value={vehicleLabel} onChange={e => setVehicleLabel(e.target.value)} placeholder='e.g. "Blue Subaru"' style={fieldStyle} />
-            <input value={vehicleSeats} onChange={e => setVehicleSeats(e.target.value)} placeholder="Seats" type="number" min="1" max="8" style={fieldStyle} />
-          </div>
+        {/* Sticky footer */}
+        <div style={{ flexShrink: 0, padding: "12px 20px max(24px, env(safe-area-inset-bottom))", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+          {error && <div style={{ fontSize: 13, color: "#f87171", marginBottom: 12 }}>{error}</div>}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              width: "100%", padding: "14px", borderRadius: 14, border: "none",
+              background: saving ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg,#2563eb,#0891b2)",
+              color: "white", fontWeight: 900, fontSize: 15, cursor: saving ? "default" : "pointer",
+            }}
+          >
+            {saving ? "Saving…" : "Save Changes"}
+          </button>
         </div>
-
-        {error && <div style={{ fontSize: 13, color: "#f87171", marginBottom: 12 }}>{error}</div>}
-
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          style={{
-            width: "100%", padding: "14px", borderRadius: 14, border: "none",
-            background: saving ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg,#2563eb,#0891b2)",
-            color: "white", fontWeight: 900, fontSize: 15, cursor: saving ? "default" : "pointer",
-          }}
-        >
-          {saving ? "Saving…" : "Save Changes"}
-        </button>
       </div>
     </div>
   )
