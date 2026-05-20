@@ -323,6 +323,13 @@ async function fetchDriveRisk(resortKey) {
   )
 }
 
+async function fetchResortConditions(resortKey) {
+  return fetchJson(
+    `${API_BASE}/api/resort-conditions?resort=${encodeURIComponent(resortKey)}`,
+    `Resort conditions fetch failed for ${resortKey}`
+  )
+}
+
 function Row({ label, value }) {
   return (
     <div
@@ -464,7 +471,7 @@ function ResortCard({ r, skierCounts, skierDetails }) {
             <Row label="Drive Risk"       value={<span style={{ color: riskColor(r.driveRisk), fontWeight: 900 }}>{r.driveRisk || "Unknown"}</span>} />
             {(r.observedUpdated || r.forecastUpdated) && (
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4, lineHeight: 1.5 }}>
-                Resort report: {r.observedUpdated || "—"}<br />
+                Resort report: {r.observedUpdated || "—"}{r.conditionsSource ? ` (${r.conditionsSource})` : ""}<br />
                 Forecast: {r.forecastUpdated ? new Date(r.forecastUpdated).toLocaleString() : "—"}
               </div>
             )}
@@ -791,34 +798,48 @@ export default function App() {
     try {
       const entries = await Promise.all(
         RESORTS.map(async (r) => {
-          const [wxRes, nwsSnowRes, resortSnowRes, driveRes] = await Promise.allSettled([
+          const [wxRes, nwsSnowRes, resortSnowRes, driveRes, conditionsRes] = await Promise.allSettled([
             fetchNwsNowish(r.lat, r.lon),
             fetchNwsSnow(r.lat, r.lon),
             fetchResortSnow(r.resortKey),
             fetchDriveRisk(r.resortKey),
+            fetchResortConditions(r.resortKey),
           ])
 
-          const wx = wxRes.status === "fulfilled" ? wxRes.value : {}
-          const nwsSnow = nwsSnowRes.status === "fulfilled" ? nwsSnowRes.value : {}
+          const wx         = wxRes.status         === "fulfilled" ? wxRes.value         : {}
+          const nwsSnow    = nwsSnowRes.status    === "fulfilled" ? nwsSnowRes.value    : {}
           const resortSnow = resortSnowRes.status === "fulfilled" ? resortSnowRes.value : {}
-          const driveRisk =
-            driveRes.status === "fulfilled"
-              ? driveRes.value
-              : { risk: "Unknown", penalty: 0, alertCount: 0, alerts: [] }
+          const driveRisk  = driveRes.status      === "fulfilled"
+            ? driveRes.value
+            : { risk: "Unknown", penalty: 0, alertCount: 0, alerts: [] }
+          const cond = conditionsRes.status === "fulfilled" ? conditionsRes.value : {}
+
+          // Resort-reported depth/lifts/runs take priority over satellite estimates
+          const baseDepth   = cond.baseDepth    ?? resortSnow.baseDepth   ?? null
+          const summitDepth = cond.summitDepth  ?? resortSnow.summitDepth ?? null
+          const liftsOpen   = cond.liftsOpen    ?? resortSnow.liftsOpen   ?? null
+          const liftsTotal  = cond.liftsTotal   ?? resortSnow.liftsTotal  ?? null
+          const runsOpen    = cond.runsOpen     ?? resortSnow.runsOpen    ?? null
+          const runsTotal   = cond.runsTotal    ?? resortSnow.runsTotal   ?? null
+          // Resort-measured 24/48h snowfall is more accurate than modeled when available
+          const snowPrev24in = cond.snowLast24in ?? resortSnow.snowPrev24in ?? null
+          const snowPrev48in = cond.snowLast48in ?? resortSnow.snowPrev48in ?? null
+          // Live isOpen from conditions API overrides the hardcoded value
+          const isOpen = cond.isOpen != null ? cond.isOpen : r.isOpen
 
           const rawPowderScore = computeRawPowderScore({
             tempF: wx.tempF,
             windMph: wx.windMph,
             forecastText: wx.shortForecast,
-            snowPrev24in: resortSnow.snowPrev24in,
-            snowPrev48in: resortSnow.snowPrev48in,
+            snowPrev24in,
+            snowPrev48in,
             snow24in: nwsSnow.snow24in,
             snow48in: nwsSnow.snow48in,
-            baseDepth: resortSnow.baseDepth,
-            liftsOpen: resortSnow.liftsOpen,
-            liftsTotal: resortSnow.liftsTotal,
-            runsOpen: resortSnow.runsOpen,
-            runsTotal: resortSnow.runsTotal,
+            baseDepth,
+            liftsOpen,
+            liftsTotal,
+            runsOpen,
+            runsTotal,
             drivePenalty: driveRisk.penalty,
           })
 
@@ -827,17 +848,19 @@ export default function App() {
             {
               ...wx,
               ...r,
-              snowPrev24in: resortSnow.snowPrev24in,
-              snowPrev48in: resortSnow.snowPrev48in,
+              isOpen,
+              snowPrev24in,
+              snowPrev48in,
               snow24in: nwsSnow.snow24in,
               snow48in: nwsSnow.snow48in,
-              baseDepth: resortSnow.baseDepth,
-              summitDepth: resortSnow.summitDepth,
-              liftsOpen: resortSnow.liftsOpen,
-              liftsTotal: resortSnow.liftsTotal,
-              runsOpen: resortSnow.runsOpen,
-              runsTotal: resortSnow.runsTotal,
-              observedUpdated: resortSnow.updatedLabel || resortSnow.fetchedAt,
+              baseDepth,
+              summitDepth,
+              liftsOpen,
+              liftsTotal,
+              runsOpen,
+              runsTotal,
+              conditionsSource: cond.source ?? null,
+              observedUpdated: cond.fetchedAt ?? resortSnow.updatedLabel ?? resortSnow.fetchedAt,
               forecastUpdated: nwsSnow.updated || wx.updated,
               rawPowderScore,
               driveRisk: driveRisk.risk,

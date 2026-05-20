@@ -11,12 +11,13 @@ app.use(cors({
 const PORT = process.env.PORT || 8787
 const cache = new Map()
 const TTL = 5 * 60 * 1000
+const CONDITIONS_TTL = 30 * 60 * 1000
 
-async function cached(key, fn) {
+async function cached(key, fn, ttl = TTL) {
   const hit = cache.get(key)
   const now = Date.now()
 
-  if (hit && now - hit.time < TTL) {
+  if (hit && now - hit.time < ttl) {
     return hit.value
   }
 
@@ -210,6 +211,87 @@ const NWS_HEADERS = {
   "User-Agent": "ski-dashboard (contact@example.com)",
   Accept: "application/geo+json",
 }
+
+// ── Mountain Conditions (lifts, runs, snow depth) ────────────────────────────
+
+// Vail Resorts CMS — all 5 Colorado Epic resorts share the same API path
+const VAIL_RESORT_DOMAINS = {
+  vail:         "www.vail.com",
+  beavercreek:  "www.beavercreek.com",
+  breckenridge: "www.breckenridge.com",
+  keystone:     "www.keystoneresort.com",
+  crestedbutte: "www.skicb.com",
+}
+
+// mtnpowder.com — Ikon Colorado resorts + Telluride (Epic, independent operator)
+// TODO: Verify these resort IDs during the 2026/27 season (opens ~November 2026)
+// Test each: https://mtnpowder.com/feed?resortId=X  →  check "Name" field matches
+const MTNPOWDER_IDS = {
+  telluride:      42,
+  winterpark:     48,
+  coppermountain: 12,
+  arapahoebasin:   3,
+  steamboat:      40,
+  eldora:         19,
+  aspensnowmass:   5,
+}
+
+async function fetchVailConditions(domain) {
+  const url = `https://${domain}/api/resort-data/mountain/v2/conditions/`
+  const data = await cached(url, async () => {
+    const r = await fetch(url, {
+      headers: { "User-Agent": "ski-dashboard (contact@example.com)", Accept: "application/json" },
+    })
+    if (!r.ok) throw new Error(`Vail Resorts conditions error ${r.status}`)
+    return r.json()
+  }, CONDITIONS_TTL)
+
+  const lifts   = data?.Lifts
+  const terrain = data?.Terrain
+  const snow    = data?.SnowReport
+
+  return {
+    isOpen:       data?.MountainStatus === "Open",
+    liftsOpen:    lifts?.Open        ?? null,
+    liftsTotal:   lifts?.Total       ?? null,
+    runsOpen:     terrain?.Open      ?? null,
+    runsTotal:    terrain?.Total     ?? null,
+    baseDepth:    snow?.BaseDepth    ?? null,
+    summitDepth:  snow?.SummitDepth  ?? null,
+    snowLast24in: snow?.NewSnow24Hrs ?? null,
+    snowLast48in: snow?.NewSnow48Hrs ?? null,
+    source:       "vailresorts",
+  }
+}
+
+async function fetchMtnPowderConditions(resortId) {
+  const url = `https://mtnpowder.com/feed?resortId=${resortId}`
+  const data = await cached(url, async () => {
+    const r = await fetch(url, {
+      headers: { "User-Agent": "ski-dashboard (contact@example.com)" },
+    })
+    if (!r.ok) throw new Error(`mtnpowder error ${r.status}`)
+    return r.json()
+  }, CONDITIONS_TTL)
+
+  const sr = data?.SnowReport
+  if (!sr) return null
+
+  return {
+    isOpen:       data?.OperatingStatus === "Open",
+    liftsOpen:    sr.TotalOpenLifts  ?? null,
+    liftsTotal:   sr.TotalLifts      ?? null,
+    runsOpen:     sr.TotalOpenTrails ?? null,
+    runsTotal:    sr.TotalTrails     ?? null,
+    baseDepth:    sr.BaseIn          ?? null,
+    summitDepth:  sr.SummitIn        ?? null,
+    snowLast24in: sr.Last24HoursIn   ?? null,
+    snowLast48in: sr.Last48HoursIn   ?? null,
+    source:       "mtnpowder",
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const RESORT_COORDS = {
   vail:           { name: "Vail",           lat: 39.6403, lon: -106.3742 },
@@ -423,6 +505,224 @@ app.get("/api/drive-risk", async (req, res) => {
       alerts: alerts.slice(0, 8),
       sourceUrl: config.url,
       fetchedAt: new Date().toISOString(),
+    })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get("/api/resort-conditions", async (req, res) => {
+  const resortParam = req.query.resort
+  const resortKey   = normalizeResortKey(resortParam)
+
+  if (!resortParam) {
+    return res.status(400).json({ error: "resort parameter is required" })
+  }
+
+  try {
+    let conditions = null
+
+    if (VAIL_RESORT_DOMAINS[resortKey]) {
+      conditions = await fetchVailConditions(VAIL_RESORT_DOMAINS[resortKey])
+    } else if (MTNPOWDER_IDS[resortKey] != null) {
+      conditions = await fetchMtnPowderConditions(MTNPOWDER_IDS[resortKey])
+    } else {
+      return res.status(404).json({ error: `No conditions source configured for "${resortParam}"` })
+    }
+
+    res.json({ resort: resortKey, ...(conditions || {}), fetchedAt: new Date().toISOString() })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Resort Conditions (lifts / runs / depths) ────────────────────────────────
+
+// Vail Resorts properties share a common JSON API endpoint
+const VAIL_RESORT_DOMAINS = {
+  vail:         "www.vail.com",
+  beavercreek:  "www.beavercreek.com",
+  breckenridge: "www.breckenridge.com",
+  keystone:     "www.keystoneresort.com",
+  crestedbutte: "www.skicb.com",
+}
+
+// Ikon resorts + Telluride (Epic but independently operated) — scrape HTML
+// NOTE: verify these URLs when 2026/27 season opens in November 2026
+const IKON_RESORT_REPORT_URLS = {
+  steamboat:      "https://www.steamboat.com/the-mountain/mountain-report",
+  winterpark:     "https://www.winterparkresort.com/the-mountain/mountain-report",
+  coppermountain: "https://www.coppercolorado.com/the-mountain/mountain-report",
+  arapahoebasin:  "https://www.arapahoebasin.com/snow-report/",
+  eldora:         "https://www.eldora.com/the-mountain/mountain-report",
+  aspensnowmass:  "https://www.aspensnowmass.com/our-mountains/mountain-report",
+  telluride:      "https://www.tellurideskiresort.com/mountain-information/snow-conditions/",
+}
+
+const BROWSER_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/json,*/*",
+  "Accept-Language": "en-US,en;q=0.9",
+}
+
+async function fetchVailResortsConditions(domain) {
+  const url = `https://${domain}/api/resort-data/mountain/v2/conditions/`
+  try {
+    const data = await cached(url, async () => {
+      const r = await fetch(url, { headers: BROWSER_HEADERS })
+      if (!r.ok) throw new Error(`Vail API ${r.status}`)
+      return r.json()
+    }, CONDITIONS_TTL)
+
+    const sr     = data?.SnowReport || {}
+    const lifts  = data?.Lifts      || {}
+    const terrain = data?.Terrain   || {}
+    const status  = (data?.MountainStatus || "").toLowerCase()
+
+    return {
+      isOpen:       status === "open",
+      liftsOpen:    lifts.Open      ?? null,
+      liftsTotal:   lifts.Total     ?? null,
+      runsOpen:     terrain.Open    ?? null,
+      runsTotal:    terrain.Total   ?? null,
+      baseDepth:    sr.BaseDepth    ?? null,
+      summitDepth:  sr.SummitDepth  ?? sr.MidMtnDepth ?? null,
+      snowLast24in: sr.NewSnow24Hrs ?? null,
+      source:       "vailresorts-api",
+    }
+  } catch {
+    return null
+  }
+}
+
+function parseConditionsHtml(html) {
+  const $ = cheerio.load(html)
+
+  // 1. JSON-LD schema.org SkiResort
+  let fromJsonLd = null
+  $('script[type="application/ld+json"]').each((_, el) => {
+    try {
+      const d = JSON.parse($(el).html())
+      const entry = Array.isArray(d) ? d.find(x => x["@type"] === "SkiResort") : (d["@type"] === "SkiResort" ? d : null)
+      if (entry) fromJsonLd = entry
+    } catch {}
+  })
+
+  // 2. Aggregate all inline script text for pattern matching
+  const scripts = $("script:not([src])").map((_, el) => $(el).html() || "").get().join("\n")
+  const allText = scripts + "\n" + $("body").text()
+
+  // 3. __NEXT_DATA__ / window data blobs — try to parse any JSON containing lift counts
+  let fromPageData = {}
+  const nextDataEl = $("#__NEXT_DATA__").html()
+  if (nextDataEl) {
+    try {
+      const nd = JSON.parse(nextDataEl)
+      const str = JSON.stringify(nd)
+      // Look for common keys
+      const lo = str.match(/"(?:liftsOpen|openLifts|OpenLifts|openLiftCount|lifts_open)"\s*:\s*(\d+)/i)
+      const lt = str.match(/"(?:liftsTotal|totalLifts|TotalLifts|totalLiftCount|lifts_total)"\s*:\s*(\d+)/i)
+      const ro = str.match(/"(?:runsOpen|openTrails|OpenTrails|openRunCount|trails_open|openRuns)"\s*:\s*(\d+)/i)
+      const rt = str.match(/"(?:runsTotal|totalTrails|TotalTrails|totalRunCount|trails_total|totalRuns)"\s*:\s*(\d+)/i)
+      const bd = str.match(/"(?:baseDepth|baseDepthIn|BaseDepth|base_depth_in|baseIn)"\s*:\s*(\d+(?:\.\d+)?)/i)
+      const sd = str.match(/"(?:summitDepth|summitDepthIn|SummitDepth|summit_depth_in|summitIn)"\s*:\s*(\d+(?:\.\d+)?)/i)
+      fromPageData = {
+        liftsOpen:   lo ? parseInt(lo[1]) : null,
+        liftsTotal:  lt ? parseInt(lt[1]) : null,
+        runsOpen:    ro ? parseInt(ro[1]) : null,
+        runsTotal:   rt ? parseInt(rt[1]) : null,
+        baseDepth:   bd ? parseFloat(bd[1]) : null,
+        summitDepth: sd ? parseFloat(sd[1]) : null,
+      }
+    } catch {}
+  }
+
+  // 4. Inline script patterns (SnoCountry, custom widgets, etc.)
+  const liftPairMatch =
+    scripts.match(/"openLifts"\s*:\s*(\d+)[^}]*"totalLifts"\s*:\s*(\d+)/i) ||
+    scripts.match(/"liftsOpen"\s*:\s*(\d+)[^}]*"liftsTotal"\s*:\s*(\d+)/i) ||
+    scripts.match(/(\d+)\s*(?:of|\/)\s*(\d+)\s*lifts?\s*(?:open|operating)/i)
+
+  const runPairMatch =
+    scripts.match(/"openTrails"\s*:\s*(\d+)[^}]*"totalTrails"\s*:\s*(\d+)/i) ||
+    scripts.match(/"runsOpen"\s*:\s*(\d+)[^}]*"runsTotal"\s*:\s*(\d+)/i) ||
+    scripts.match(/(\d+)\s*(?:of|\/)\s*(\d+)\s*(?:runs?|trails?)\s*(?:open|operating)/i)
+
+  // 5. Data attributes (SnoCountry widget pattern)
+  const condWidget = $("[data-lifts-open], [data-open-lifts]").first()
+  const fromDataAttrs = condWidget.length ? {
+    liftsOpen:  parseInt(condWidget.attr("data-lifts-open") || condWidget.attr("data-open-lifts"))  || null,
+    liftsTotal: parseInt(condWidget.attr("data-lifts-total") || condWidget.attr("data-total-lifts")) || null,
+    runsOpen:   parseInt(condWidget.attr("data-runs-open") || condWidget.attr("data-open-runs"))     || null,
+    runsTotal:  parseInt(condWidget.attr("data-runs-total") || condWidget.attr("data-total-runs"))   || null,
+  } : {}
+
+  // 6. Base depth from text — "42" snow-depth
+  const baseMatch =
+    allText.match(/base[^:]*?:\s*(\d+(?:\.\d+)?)\s*[""""]/) ||
+    allText.match(/(\d+(?:\.\d+)?)["""″]\s*base/) ||
+    scripts.match(/"baseDepthIn"\s*:\s*(\d+(?:\.\d+)?)/)
+
+  // 7. Open status from common markers
+  const isOpen =
+    /resort.{0,30}(?:is\s+)?open|now\s+open|lifts?\s+open/i.test(allText) &&
+    !/closed\s+for\s+(?:the\s+)?season|resort\s+(?:is\s+)?closed/i.test(allText)
+
+  // Merge — priority: fromPageData > fromDataAttrs > inline scripts
+  return {
+    isOpen,
+    liftsOpen:   fromPageData.liftsOpen   ?? fromDataAttrs.liftsOpen  ?? (liftPairMatch ? parseInt(liftPairMatch[1]) : null),
+    liftsTotal:  fromPageData.liftsTotal  ?? fromDataAttrs.liftsTotal ?? (liftPairMatch ? parseInt(liftPairMatch[2]) : null),
+    runsOpen:    fromPageData.runsOpen    ?? fromDataAttrs.runsOpen   ?? (runPairMatch  ? parseInt(runPairMatch[1])  : null),
+    runsTotal:   fromPageData.runsTotal   ?? fromDataAttrs.runsTotal  ?? (runPairMatch  ? parseInt(runPairMatch[2])  : null),
+    baseDepth:   fromPageData.baseDepth   ?? (baseMatch ? parseFloat(baseMatch[1]) : null),
+    summitDepth: fromPageData.summitDepth ?? null,
+    source:      "html-scrape",
+  }
+}
+
+async function fetchHtmlConditions(url) {
+  try {
+    const html = await cached(url, async () => {
+      const r = await fetch(url, { headers: BROWSER_HEADERS })
+      if (!r.ok) throw new Error(`Conditions page ${r.status}`)
+      return r.text()
+    }, CONDITIONS_TTL)
+    return parseConditionsHtml(html)
+  } catch {
+    return null
+  }
+}
+
+app.get("/api/resort-conditions", async (req, res) => {
+  const resortParam = req.query.resort
+  const resortKey = normalizeResortKey(resortParam)
+
+  if (!resortParam) {
+    return res.status(400).json({ error: "resort parameter is required" })
+  }
+
+  try {
+    let conditions = null
+
+    if (VAIL_RESORT_DOMAINS[resortKey]) {
+      conditions = await fetchVailResortsConditions(VAIL_RESORT_DOMAINS[resortKey])
+    } else if (IKON_RESORT_REPORT_URLS[resortKey]) {
+      conditions = await fetchHtmlConditions(IKON_RESORT_REPORT_URLS[resortKey])
+    }
+
+    res.json({
+      resort: resortKey,
+      fetchedAt: new Date().toISOString(),
+      isOpen:      conditions?.isOpen      ?? null,
+      liftsOpen:   conditions?.liftsOpen   ?? null,
+      liftsTotal:  conditions?.liftsTotal  ?? null,
+      runsOpen:    conditions?.runsOpen    ?? null,
+      runsTotal:   conditions?.runsTotal   ?? null,
+      baseDepth:   conditions?.baseDepth   ?? null,
+      summitDepth: conditions?.summitDepth ?? null,
+      snowLast24in: conditions?.snowLast24in ?? null,
+      source:      conditions?.source      ?? null,
     })
   } catch (err) {
     res.status(500).json({ error: err.message })
