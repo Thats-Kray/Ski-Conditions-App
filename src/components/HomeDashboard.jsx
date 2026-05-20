@@ -987,7 +987,7 @@ function OffseasonBanner() {
             borderRadius: 20, padding: "5px 14px",
             fontSize: 12, fontWeight: 700, color: "#93c5fd",
           }}>
-            🎿 Opens November 2026
+            🎿 Rope Drops Winter 2026
           </div>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: 6,
