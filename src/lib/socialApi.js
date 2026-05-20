@@ -1268,14 +1268,18 @@ export async function cancelTripRsvp(tripId) {
   if (error) throw error
 }
 
-export async function addTripComment(tripId, content) {
+export async function addTripComment(tripId, content, mediaUrl = null, mediaType = null) {
   const user = await getCurrentUser()
   if (!user) throw new Error("You must be logged in to comment.")
 
+  const row = { trip_id: tripId, user_id: user.id, content: content.trim() }
+  if (mediaUrl)  row.media_url  = mediaUrl
+  if (mediaType) row.media_type = mediaType
+
   const { data, error } = await supabase
     .from("trip_comments")
-    .insert({ trip_id: tripId, user_id: user.id, content: content.trim() })
-    .select("id, trip_id, user_id, content, created_at")
+    .insert(row)
+    .select("id, trip_id, user_id, content, media_url, media_type, created_at")
     .single()
 
   if (error) throw error
@@ -2462,7 +2466,7 @@ export async function getCrewMessages(crewId, limit = 60) {
   const { data, error } = await supabase
     .from("crew_messages")
     .select(`
-      id, content, is_system, created_at,
+      id, content, media_url, media_type, is_system, created_at,
       profile:user_id ( id, full_name, username, avatar_url )
     `)
     .eq("crew_id", crewId)
@@ -2472,15 +2476,19 @@ export async function getCrewMessages(crewId, limit = 60) {
   return (data || []).reverse()
 }
 
-export async function sendCrewMessage(crewId, content) {
+export async function sendCrewMessage(crewId, content, mediaUrl = null, mediaType = null) {
   const user = await getCurrentUser()
   if (!user) throw new Error("Must be logged in.")
 
+  const row = { crew_id: crewId, user_id: user.id, content }
+  if (mediaUrl)  row.media_url  = mediaUrl
+  if (mediaType) row.media_type = mediaType
+
   const { data, error } = await supabase
     .from("crew_messages")
-    .insert({ crew_id: crewId, user_id: user.id, content })
+    .insert(row)
     .select(`
-      id, content, created_at,
+      id, content, media_url, media_type, created_at,
       profile:user_id ( id, full_name, username, avatar_url )
     `)
     .single()
@@ -2647,7 +2655,7 @@ export async function getMyTripConversations(userId) {
 export async function getTripChatMessages(tripId) {
   const { data: comments, error } = await supabase
     .from("trip_comments")
-    .select("id, trip_id, user_id, content, created_at")
+    .select("id, trip_id, user_id, content, media_url, media_type, created_at")
     .eq("trip_id", tripId)
     .order("created_at", { ascending: true })
   if (error) throw error
@@ -2708,7 +2716,7 @@ export async function getDMMessages(partnerId) {
 
   const { data, error } = await supabase
     .from("direct_messages")
-    .select("id, sender_id, recipient_id, content, created_at, read_at")
+    .select("id, sender_id, recipient_id, content, media_url, media_type, created_at, read_at")
     .or(`and(sender_id.eq.${user.id},recipient_id.eq.${partnerId}),and(sender_id.eq.${partnerId},recipient_id.eq.${user.id})`)
     .order("created_at", { ascending: true })
 
@@ -2716,18 +2724,38 @@ export async function getDMMessages(partnerId) {
   return data || []
 }
 
-export async function sendDM(recipientId, content) {
+export async function sendDM(recipientId, content, mediaUrl = null, mediaType = null) {
   const user = await getCurrentUser()
   if (!user) throw new Error("Must be logged in")
 
+  const row = { sender_id: user.id, recipient_id: recipientId, content: content.trim() }
+  if (mediaUrl)  row.media_url  = mediaUrl
+  if (mediaType) row.media_type = mediaType
+
   const { data, error } = await supabase
     .from("direct_messages")
-    .insert({ sender_id: user.id, recipient_id: recipientId, content: content.trim() })
+    .insert(row)
     .select()
     .single()
 
   if (error) throw error
   return data
+}
+
+export async function uploadChatMedia(file) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in")
+
+  const ext  = file.name.split(".").pop().toLowerCase()
+  const path = `${user.id}/${Date.now()}.${ext}`
+
+  const { error } = await supabase.storage
+    .from("chat-media")
+    .upload(path, file, { cacheControl: "3600", upsert: false })
+  if (error) throw error
+
+  const { data } = supabase.storage.from("chat-media").getPublicUrl(path)
+  return data.publicUrl
 }
 
 export async function markDMsRead(partnerId) {

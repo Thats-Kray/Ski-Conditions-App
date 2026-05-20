@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase"
 import { getDMMessages, sendDM } from "../lib/socialApi"
 import { timeAgo } from "../lib/format"
 import Avatar from "./ui/Avatar"
+import MediaMessageInput, { MessageMedia } from "./ui/MediaMessageInput"
 
 const SKILL_COLORS = {
   green:        "#22c55e",
@@ -21,7 +22,6 @@ const SKILL_LABELS = {
 
 export default function DirectMessageView({ partner, partnerId, currentUser, onBack }) {
   const [messages, setMessages] = useState([])
-  const [input, setInput]       = useState("")
   const [sending, setSending]   = useState(false)
   const bottomRef = useRef(null)
 
@@ -47,14 +47,10 @@ export default function DirectMessageView({ partner, partnerId, currentUser, onB
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages.length])
 
-  async function handleSend(e) {
-    e.preventDefault()
-    if (!input.trim() || sending) return
-    const text = input.trim()
-    setInput("")
+  async function handleSend(text, mediaUrl, mediaType) {
+    if ((!text && !mediaUrl) || sending) return
     setSending(true)
-    try { await sendDM(partnerId, text); await load() }
-    catch { setInput(text) }
+    try { await sendDM(partnerId, text || "", mediaUrl, mediaType); await load() }
     finally { setSending(false) }
   }
 
@@ -100,8 +96,9 @@ export default function DirectMessageView({ partner, partnerId, currentUser, onB
             <div key={msg.id || i} style={{ display: "flex", flexDirection: isMe ? "row-reverse" : "row", alignItems: "flex-end", gap: 8 }}>
               {!isMe && <Avatar profile={partner} size={26} />}
               <div style={{ maxWidth: "72%", minWidth: 0 }}>
-                <div style={{ background: isMe ? "linear-gradient(135deg,#2563eb,#0891b2)" : "rgba(255,255,255,0.09)", color: "white", borderRadius: isMe ? "14px 14px 0 14px" : "0 14px 14px 14px", padding: "9px 13px", fontSize: 14, lineHeight: 1.45, wordBreak: "break-word" }}>
-                  {msg.content}
+                <div style={{ background: isMe ? "linear-gradient(135deg,#2563eb,#0891b2)" : "rgba(255,255,255,0.09)", color: "white", borderRadius: isMe ? "14px 14px 0 14px" : "0 14px 14px 14px", padding: msg.media_url && !msg.content ? "6px" : "9px 13px", fontSize: 14, lineHeight: 1.45, wordBreak: "break-word", overflow: "hidden" }}>
+                  {msg.media_url && <MessageMedia mediaUrl={msg.media_url} mediaType={msg.media_type} />}
+                  {msg.content && <div style={{ marginTop: msg.media_url ? 6 : 0 }}>{msg.content}</div>}
                 </div>
                 <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 3, textAlign: isMe ? "right" : "left", paddingLeft: isMe ? 0 : 8, paddingRight: isMe ? 8 : 0 }}>
                   {timeAgo(msg.created_at)}{isMe && msg.read_at ? " · Read" : ""}
@@ -114,22 +111,11 @@ export default function DirectMessageView({ partner, partnerId, currentUser, onB
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSend} style={{ display: "flex", gap: 8, padding: "10px 14px 14px", borderTop: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
-        <input
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder={`Message ${partnerName}…`}
-          maxLength={1000}
-          style={{ flex: 1, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "10px 16px", color: "white", fontSize: 14, outline: "none" }}
-        />
-        <button
-          type="submit"
-          disabled={!input.trim() || sending}
-          style={{ background: input.trim() ? "linear-gradient(135deg,#2563eb,#0891b2)" : "rgba(255,255,255,0.08)", color: "white", border: "none", borderRadius: 999, padding: "0 18px", fontWeight: 800, fontSize: 13, cursor: input.trim() ? "pointer" : "default" }}
-        >
-          Send
-        </button>
-      </form>
+      <MediaMessageInput
+        placeholder={`Message ${partnerName}…`}
+        onSend={handleSend}
+        sending={sending}
+      />
     </div>
   )
 }

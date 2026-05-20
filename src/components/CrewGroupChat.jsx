@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { supabase } from "../lib/supabase"
 import UserProfileModal from "./UserProfileModal"
 import Avatar from "./ui/Avatar"
+import MediaMessageInput, { MessageMedia } from "./ui/MediaMessageInput"
 import {
   createCrew,
   getMyCrews,
@@ -306,7 +307,6 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
   const [crew, setCrew] = useState(initialCrew)
   const [messages, setMessages] = useState([])
   const [members, setMembers] = useState([])
-  const [input, setInput] = useState("")
   const [sending, setSending] = useState(false)
   const [showMembers, setShowMembers] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
@@ -360,21 +360,16 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  async function handleSend(e) {
-    e?.preventDefault()
-    const text = input.trim()
-    if (!text || sending) return
+  async function handleSend(text, mediaUrl, mediaType) {
+    if ((!text && !mediaUrl) || sending) return
     setSending(true)
-    setInput("")
     try {
-      const msg = await sendCrewMessage(crew.id, text)
+      const msg = await sendCrewMessage(crew.id, text || "", mediaUrl, mediaType)
       setMessages((prev) => [...prev, msg])
     } catch (err) {
       console.warn("Send failed:", err)
-      setInput(text)
     } finally {
       setSending(false)
-      inputRef.current?.focus()
     }
   }
 
@@ -580,14 +575,15 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
                   <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", paddingLeft: 4 }}>{name}</div>
                 )}
                 <div style={{
-                  padding: "9px 13px", borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                  background: isMe
-                    ? "linear-gradient(135deg,#2563eb,#0891b2)"
-                    : "rgba(255,255,255,0.1)",
+                  padding: msg.media_url && !msg.content ? "6px" : "9px 13px",
+                  borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                  background: isMe ? "linear-gradient(135deg,#2563eb,#0891b2)" : "rgba(255,255,255,0.1)",
                   color: "white", fontSize: 14, lineHeight: 1.45,
                   boxShadow: isMe ? "0 2px 8px rgba(37,99,235,0.3)" : "none",
+                  overflow: "hidden",
                 }}>
-                  {msg.content}
+                  {msg.media_url && <MessageMedia mediaUrl={msg.media_url} mediaType={msg.media_type} />}
+                  {msg.content && <div style={{ marginTop: msg.media_url ? 6 : 0 }}>{msg.content}</div>}
                 </div>
                 <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", paddingLeft: 4, paddingRight: 4 }}>
                   {timeLabel(msg.created_at)}
@@ -600,39 +596,12 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
       </div>
 
       {/* ── Input bar ── */}
-      <form
-        onSubmit={handleSend}
-        style={{
-          display: "flex", gap: 8, padding: "10px 12px",
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-          background: "rgba(8,12,26,0.9)", flexShrink: 0,
-          borderRadius: "0 0 16px 16px",
-        }}
-      >
-        <input
-          ref={inputRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() } }}
-          placeholder={`Message ${crew.name}…`}
-          style={{
-            flex: 1, padding: "10px 14px", borderRadius: 20, fontSize: 16,
-            border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.07)",
-            color: "white", outline: "none",
-          }}
-        />
-        <button
-          type="submit"
-          disabled={!input.trim() || sending}
-          style={{
-            width: 40, height: 40, borderRadius: "50%", border: "none", cursor: "pointer",
-            background: input.trim() ? "linear-gradient(135deg,#2563eb,#0891b2)" : "rgba(255,255,255,0.08)",
-            color: "white", fontSize: 16, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
-          }}
-        >
-          ↑
-        </button>
-      </form>
+      <MediaMessageInput
+        placeholder={`Message ${crew.name}…`}
+        onSend={handleSend}
+        sending={sending}
+        inputRef={inputRef}
+      />
 
       {showEdit && (
         <EditCrewModal
