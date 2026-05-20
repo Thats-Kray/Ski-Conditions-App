@@ -52,17 +52,96 @@ export async function getMySessions(startYear) {
   const user = await getCurrentUser()
   if (!user) return []
   const { from, to } = seasonDateRange(startYear)
+  const today = new Date().toISOString().slice(0, 10)
 
-  const { data, error } = await supabase
-    .from("ski_sessions")
-    .select("*")
-    .eq("user_id", user.id)
-    .gte("session_date", from)
-    .lte("session_date", to)
-    .order("session_date", { ascending: false })
+  // Fetch logged sessions + past trip attendance in parallel
+  const [{ data: sessions, error }, { data: rsvps }, { data: hosted }] = await Promise.all([
+    supabase
+      .from("ski_sessions")
+      .select("*")
+      .eq("user_id", user.id)
+      .gte("session_date", from)
+      .lte("session_date", to)
+      .order("session_date", { ascending: false }),
+
+    // "Going" RSVPs on past trips — catches trips RSVPd while still future
+    supabase
+      .from("trip_rsvps")
+      .select("trip_id, ski_trips!inner(resort_key, ski_date)")
+      .eq("user_id", user.id)
+      .eq("status", "going"),
+
+    // Trips the user hosted that are in the past
+    supabase
+      .from("ski_trips")
+      .select("id, resort_key, ski_date")
+      .eq("host_id", user.id)
+      .lte("ski_date", today)
+      .gte("ski_date", from)
+      .lte("ski_date", to),
+  ])
 
   if (error) throw error
-  return data || []
+
+  // Build index of already-logged (date:resort) keys
+  const loggedKeys = new Set((sessions || []).map(s => `${s.session_date}:${s.resort_name}`))
+
+  // Collect trip-sourced entries that fall in the season and have no session yet
+  const tripEntries = [
+    ...(rsvps || []).map(r => ({
+      trip_id: r.trip_id,
+      resort_name: r.ski_trips?.resort_key,
+      session_date: r.ski_trips?.ski_date,
+    })),
+    ...(hosted || []).map(t => ({
+      trip_id: t.id,
+      resort_name: t.resort_key,
+      session_date: t.ski_date,
+    })),
+  ].filter(e =>
+    e.resort_name &&
+    e.session_date &&
+    e.session_date <= today &&
+    e.session_date >= from &&
+    e.session_date <= to &&
+    !loggedKeys.has(`${e.session_date}:${e.resort_name}`)
+  )
+
+  // Deduplicate trip entries by (date, resort)
+  const seen = new Set()
+  const uniqueTrips = tripEntries.filter(e => {
+    const key = `${e.session_date}:${e.resort_name}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+
+  // Background-upsert the gaps so future loads are instant
+  if (uniqueTrips.length > 0) {
+    supabase
+      .from("ski_sessions")
+      .upsert(
+        uniqueTrips.map(e => ({ user_id: user.id, resort_name: e.resort_name, session_date: e.session_date, trip_id: e.trip_id })),
+        { onConflict: "user_id,session_date,resort_name" }
+      )
+      .then(() => {}).catch(() => {})
+  }
+
+  // Merge: real sessions take priority (they may have vertical_feet etc.)
+  const synthetic = uniqueTrips.map(e => ({
+    id: `trip-${e.trip_id}`,
+    user_id: user.id,
+    resort_name: e.resort_name,
+    session_date: e.session_date,
+    trip_id: e.trip_id,
+    is_powder_day: false,
+    vertical_feet: null,
+    miles_skied: null,
+    created_at: null,
+  }))
+
+  return [...(sessions || []), ...synthetic]
+    .sort((a, b) => (b.session_date || "").localeCompare(a.session_date || ""))
 }
 
 // ── Leaderboard (via SECURITY DEFINER RPC — bypasses RLS) ────────────────────
