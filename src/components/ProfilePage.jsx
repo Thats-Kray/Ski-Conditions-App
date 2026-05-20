@@ -186,6 +186,7 @@ function EditProfileModal({ profile, onSaved, onClose }) {
       await upsertMyProfile({
         first_name: nameParts[0] || "",
         last_name: nameParts.slice(1).join(" ") || "",
+        avatar_url: profile?.avatar_url || null,
         skill_level: skillLevel || null,
         sport_type: sportType || "ski",
         ski_passes: skiPasses,
