@@ -941,11 +941,91 @@ function PingCta({ currentUser }) {
   )
 }
 
+// ── Offseason launch banner ───────────────────────────────────────────────────
+
+function OffseasonBanner() {
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem("pd_offseason_banner_26") === "1" } catch { return false }
+  })
+
+  if (dismissed) return null
+
+  return (
+    <div style={{
+      position: "relative",
+      background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f2744 100%)",
+      border: "1px solid rgba(96,165,250,0.3)",
+      borderRadius: 20,
+      padding: "20px 48px 20px 24px",
+      display: "flex",
+      alignItems: "flex-start",
+      gap: 16,
+    }}>
+      {/* Snowflake accent */}
+      <div style={{ fontSize: 36, flexShrink: 0, lineHeight: 1 }}>❄️</div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 11, fontWeight: 800, letterSpacing: 1.2,
+          color: "#60a5fa", textTransform: "uppercase", marginBottom: 6,
+        }}>
+          Colorado Season Wrap — Winter 2025/26
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 6, lineHeight: 1.4 }}>
+          The mountains are closing for the summer. See you on the slopes this fall! ⛷️
+        </div>
+        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}>
+          PowderDays is officially launching for the <span style={{ color: "#93c5fd", fontWeight: 700 }}>2026/27 season</span>.
+          Invite your crew now — resort conditions, trip planning, and leaderboards
+          will be live when the lifts spin up in <span style={{ color: "#93c5fd", fontWeight: 700 }}>November 2026</span>.
+        </div>
+
+        <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            background: "rgba(96,165,250,0.12)", border: "1px solid rgba(96,165,250,0.25)",
+            borderRadius: 20, padding: "5px 14px",
+            fontSize: 12, fontWeight: 700, color: "#93c5fd",
+          }}>
+            🎿 Opens November 2026
+          </div>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.2)",
+            borderRadius: 20, padding: "5px 14px",
+            fontSize: 12, fontWeight: 700, color: "#6ee7b7",
+          }}>
+            11 Colorado Resorts Tracked
+          </div>
+        </div>
+      </div>
+
+      {/* Dismiss button */}
+      <button
+        onClick={() => {
+          try { localStorage.setItem("pd_offseason_banner_26", "1") } catch {}
+          setDismissed(true)
+        }}
+        style={{
+          position: "absolute", top: 12, right: 12,
+          background: "none", border: "none", cursor: "pointer",
+          color: "rgba(255,255,255,0.35)", fontSize: 18, lineHeight: 1,
+          padding: 4, borderRadius: 6,
+        }}
+        aria-label="Dismiss"
+      >
+        ×
+      </button>
+    </div>
+  )
+}
+
 // ── Mobile layout ─────────────────────────────────────────────────────────────
 
 function MobileHomeDashboard({ resorts, currentUser, onTabChange }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <OffseasonBanner />
       <ConditionsWidget resorts={resorts} onTabChange={onTabChange} />
       <PlansWidget currentUser={currentUser} resorts={resorts} onTabChange={onTabChange} />
       <LeaderboardTicker currentUser={currentUser} />
@@ -966,6 +1046,9 @@ export default function HomeDashboard({ resorts, currentUser, onTabChange }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Offseason launch banner */}
+      <OffseasonBanner />
+
       {/* Row 1: Conditions + Plans */}
       <div style={{ display: "grid", gridTemplateColumns: "1.15fr 1fr", gap: 16, minHeight: 260 }}>
         <ConditionsWidget resorts={resorts} onTabChange={onTabChange} />
