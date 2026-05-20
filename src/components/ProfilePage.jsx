@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import {
   getCurrentUser,
   getMyProfile,
   getAcceptedFriends,
   getAllVisibleTrips,
   upsertMyProfile,
+  uploadProfilePhoto,
 } from "../lib/socialApi"
 import { getMySessions, getCurrentSeason } from "../lib/leaderboardApi"
 import ShareStatCard from "./ShareStatCard"
@@ -321,6 +322,9 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   const [seasonStats, setSeasonStats] = useState(null)
   const [recentSessions, setRecentSessions] = useState([])
   const [showShare, setShowShare]     = useState(false)
+  const [photoMenuOpen, setPhotoMenuOpen] = useState(false)
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const fileInputRef = useRef(null)
 
   const season = getCurrentSeason()
 
@@ -336,7 +340,6 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
       ])
       setProfile(prof)
       setFriends(Array.isArray(friendData) ? friendData : [])
-      // getAllVisibleTrips returns { mine, rsvpd, friends, invited } — count unique trips user attends
       const { mine = [], rsvpd = [] } = tripData || {}
       const seen = new Set()
       let count = 0
@@ -357,6 +360,36 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
 
   useEffect(() => { load() }, [load])
 
+  async function handlePhotoFileChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoMenuOpen(false)
+    setPhotoUploading(true)
+    try {
+      const url = await uploadProfilePhoto(file)
+      await upsertMyProfile({ ...profile, avatar_url: url })
+      await load()
+    } catch (err) {
+      alert(err.message || "Photo upload failed.")
+    } finally {
+      setPhotoUploading(false)
+      e.target.value = ""
+    }
+  }
+
+  async function handleRemovePhoto() {
+    setPhotoMenuOpen(false)
+    setPhotoUploading(true)
+    try {
+      await upsertMyProfile({ ...profile, avatar_url: null })
+      await load()
+    } catch (err) {
+      alert(err.message || "Could not remove photo.")
+    } finally {
+      setPhotoUploading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div style={{ padding: 32, textAlign: "center", color: "rgba(255,255,255,0.35)", fontSize: 14 }}>
@@ -372,100 +405,172 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   return (
     <div style={{ display: "grid", gap: 14 }}>
 
+      {/* Hidden file input for photo upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        onChange={handlePhotoFileChange}
+      />
+
       {/* ── Hero ── */}
       <div style={{
-        background: "linear-gradient(135deg,rgba(30,58,95,0.75),rgba(8,17,30,0.95))",
-        border: "1px solid rgba(96,165,250,0.18)",
+        background: "linear-gradient(160deg,rgba(15,23,42,0.98),rgba(10,17,34,0.98))",
+        border: "1px solid rgba(96,165,250,0.15)",
         borderRadius: 22,
-        padding: "22px 20px 18px",
+        padding: "24px 20px 20px",
         position: "relative",
-        overflow: "hidden",
       }}>
-        <div style={{ position: "absolute", top: -40, right: -40, width: 180, height: 180, borderRadius: "50%", background: "rgba(37,99,235,0.12)", pointerEvents: "none" }} />
 
-        <div style={{ position: "absolute", top: 14, right: 14, display: "flex", gap: 8, zIndex: 1 }}>
-          <button
-            onClick={() => setShowEdit(true)}
-            title="Edit Profile"
-            style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 15, backdropFilter: "blur(6px)" }}
-          >
-            ✏️
-          </button>
-          <button
-            onClick={onLogOut}
-            title="Sign Out"
-            style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.22)", borderRadius: 10, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 15, backdropFilter: "blur(6px)" }}
-          >
-            🚪
-          </button>
-        </div>
+        {/* Sign out — top right */}
+        <button
+          onClick={onLogOut}
+          title="Sign Out"
+          style={{ position: "absolute", top: 14, right: 14, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 15 }}
+        >🚪</button>
 
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 16, position: "relative" }}>
-          <Avatar profile={{ avatar_url: profile?.avatar_url, full_name: fullName }} size={78} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1.1 }}>{fullName}</div>
-              <span style={{ fontSize: 20 }}>{sportEmoji}</span>
-            </div>
-            {profile?.username && (
-              <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, marginTop: 3 }}>@{profile.username}</div>
-            )}
-            {profile?.favorite_mountain && (
-              <div style={{ color: "#60a5fa", fontSize: 12, fontWeight: 700, marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
-                📍 {profile.favorite_mountain}
+        {/* Centered photo + name block */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+
+          {/* Avatar with camera overlay */}
+          <div style={{ position: "relative", marginBottom: 14 }}>
+            <div
+              onClick={() => !photoUploading && setPhotoMenuOpen(v => !v)}
+              style={{ cursor: photoUploading ? "default" : "pointer", position: "relative" }}
+            >
+              {/* Glowing ring border like Strava */}
+              <div style={{
+                width: 96, height: 96, borderRadius: "50%",
+                background: "linear-gradient(135deg,#3b82f6,#0891b2)",
+                padding: 3, flexShrink: 0,
+              }}>
+                <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: "#0a0f1e" }}>
+                  {photoUploading ? (
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.4)", fontSize: 22 }}>⏳</div>
+                  ) : profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  ) : (
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: ["#2563eb","#0891b2","#7c3aed","#16a34a","#ea580c"][fullName.length % 5], fontSize: 32, fontWeight: 900, color: "white" }}>
+                      {fullName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-            {skillObj && (
-              <div style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, background: `${skillObj.color}18`, border: `1px solid ${skillObj.color}44`, borderRadius: 999, padding: "3px 10px" }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: skillObj.color }} />
-                <span style={{ fontSize: 11, fontWeight: 800, color: skillObj.color }}>{skillObj.label}</span>
+
+              {/* Camera badge */}
+              {!photoUploading && (
+                <div style={{
+                  position: "absolute", bottom: 2, right: 2,
+                  width: 26, height: 26, borderRadius: "50%",
+                  background: "#2563eb", border: "2px solid #0a0f1e",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 13,
+                }}>📷</div>
+              )}
+            </div>
+
+            {/* Photo action sheet */}
+            {photoMenuOpen && (
+              <div
+                style={{
+                  position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)",
+                  background: "#1e293b", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 14,
+                  overflow: "hidden", zIndex: 50, minWidth: 180, boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+                }}
+              >
+                <button
+                  onClick={() => { setPhotoMenuOpen(false); fileInputRef.current?.click() }}
+                  style={{ width: "100%", padding: "13px 18px", background: "none", border: "none", color: "white", fontSize: 14, fontWeight: 700, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}
+                >
+                  📤 Upload Photo
+                </button>
+                {profile?.avatar_url && (
+                  <>
+                    <div style={{ height: 1, background: "rgba(255,255,255,0.07)" }} />
+                    <button
+                      onClick={handleRemovePhoto}
+                      style={{ width: "100%", padding: "13px 18px", background: "none", border: "none", color: "#f87171", fontSize: 14, fontWeight: 700, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}
+                    >
+                      🗑️ Remove Photo
+                    </button>
+                  </>
+                )}
+                <div style={{ height: 1, background: "rgba(255,255,255,0.07)" }} />
+                <button
+                  onClick={() => setPhotoMenuOpen(false)}
+                  style={{ width: "100%", padding: "11px 18px", background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                >
+                  Cancel
+                </button>
               </div>
             )}
           </div>
+
+          {/* Name + sport + username */}
+          <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1.15, textAlign: "center" }}>
+            {fullName} <span style={{ fontSize: 18 }}>{sportEmoji}</span>
+          </div>
+          {profile?.username && (
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginTop: 3 }}>@{profile.username}</div>
+          )}
+          {profile?.favorite_mountain && (
+            <div style={{ color: "#60a5fa", fontSize: 12, fontWeight: 700, marginTop: 5 }}>📍 {profile.favorite_mountain}</div>
+          )}
+          {skillObj && (
+            <div style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, background: `${skillObj.color}18`, border: `1px solid ${skillObj.color}44`, borderRadius: 999, padding: "3px 12px" }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: skillObj.color }} />
+              <span style={{ fontSize: 11, fontWeight: 800, color: skillObj.color }}>{skillObj.label}</span>
+            </div>
+          )}
         </div>
 
-        {/* Stats row */}
-        <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
+        {/* Stats row — like Instagram/Strava */}
+        <div style={{ display: "flex", marginTop: 20, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 16 }}>
           <button
             onClick={() => onTabChange?.("plans")}
-            style={{ flex: 1, minWidth: 80, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "10px 12px", cursor: "pointer", textAlign: "center" }}
+            style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "center", padding: "4px 0" }}
           >
-            <div style={{ fontSize: 20, fontWeight: 900, color: "white", lineHeight: 1 }}>{tripCount}</div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 3 }}>Trips</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1 }}>{tripCount}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Trips</div>
           </button>
+          <div style={{ width: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
           <button
             onClick={() => onTabChange?.("friends")}
-            style={{ flex: 1, minWidth: 80, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "10px 12px", cursor: "pointer", textAlign: "center" }}
+            style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "center", padding: "4px 0" }}
           >
-            <div style={{ fontSize: 20, fontWeight: 900, color: "white", lineHeight: 1 }}>{friends.length}</div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 3 }}>Friends</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1 }}>{friends.length}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Friends</div>
           </button>
-          <div style={{ flex: 1, minWidth: 80, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
-            <div style={{ fontSize: 20, fontWeight: 900, color: seasonStats?.days > 0 ? "#60a5fa" : "white", lineHeight: 1 }}>{seasonStats?.days ?? "—"}</div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 3 }}>Days</div>
+          <div style={{ width: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
+          <div style={{ flex: 1, textAlign: "center", padding: "4px 0" }}>
+            <div style={{ fontSize: 22, fontWeight: 900, color: seasonStats?.days > 0 ? "#60a5fa" : "white", lineHeight: 1 }}>{seasonStats?.days ?? "—"}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Days</div>
           </div>
+        </div>
+
+        {/* Edit Profile + Share buttons — like Instagram */}
+        <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+          <button
+            onClick={() => setShowEdit(true)}
+            style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "1px solid rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.08)", color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer" }}
+          >
+            Edit Profile
+          </button>
+          {seasonStats?.days > 0 && (
+            <button
+              onClick={() => setShowShare(true)}
+              style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer" }}
+            >
+              Share Season
+            </button>
+          )}
         </div>
       </div>
 
       {/* ── Season Stats ── */}
       {seasonStats && (
         <SeasonStatsCard stats={seasonStats} season={season} />
-      )}
-
-      {/* ── Share Your Season CTA ── */}
-      {seasonStats && seasonStats.days > 0 && (
-        <button
-          onClick={() => setShowShare(true)}
-          style={{
-            width: "100%", padding: "15px 20px", borderRadius: 16, border: "none",
-            background: "linear-gradient(135deg,rgba(37,99,235,0.85),rgba(8,145,178,0.8))",
-            color: "white", fontWeight: 900, fontSize: 15, cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-            boxShadow: "0 6px 24px rgba(37,99,235,0.3)",
-          }}
-        >
-          📤 Share Your Season →
-        </button>
       )}
 
       {/* ── Recent Sessions feed ── */}
