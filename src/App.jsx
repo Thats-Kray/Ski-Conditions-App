@@ -7,7 +7,7 @@ import MessagingCenter from "./components/MessagingCenter"
 import ProfilePage from "./components/ProfilePage"
 import SkiPlansPage from "./components/SkiPlansPage"
 import TripDetailModal from "./components/TripDetailModal"
-import NotificationBell from "./components/NotificationBell"
+import { useNotificationCount } from "./components/NotificationBell"
 import LandingPage from "./components/LandingPage"
 import HomeDashboard from "./components/HomeDashboard"
 import {
@@ -113,7 +113,7 @@ const RESORTS = [
     resortKey: "arapahoebasin",
     photoPath: "/resorts/arapahoe-basin.jpg",
     directionsQuery: "Arapahoe Basin Ski Area Parking Lot, Dillon CO",
-    isOpen: true,
+    isOpen: false,
   },
   {
     name: "Steamboat",
@@ -610,12 +610,13 @@ function ProfileAvatar({ profile, size, isActive }) {
   )
 }
 
-function BottomNav({ activeTab, onTabChange, currentProfile, currentUser, onNotifTabChange, onNotifOpenTrip }) {
+function BottomNav({ activeTab, onTabChange, currentProfile, notifCount }) {
   return (
     <nav className="bottom-nav">
       {BOTTOM_TABS.map(({ key, icon, label }) => {
         const isActive = activeTab === key
         const isProfile = key === "profile"
+        const isSocial = key === "friends"
         return (
           <button
             key={key}
@@ -640,13 +641,13 @@ function BottomNav({ activeTab, onTabChange, currentProfile, currentUser, onNoti
             {isProfile && currentProfile ? (
               <ProfileAvatar profile={currentProfile} size={26} isActive={isActive} />
             ) : (
-              <span style={{
-                fontSize: 22,
-                lineHeight: 1,
-                filter: isActive ? "drop-shadow(0 0 6px rgba(96,165,250,0.6))" : "none",
-                transition: "filter 0.15s ease",
-              }}>
+              <span style={{ position: "relative", fontSize: 22, lineHeight: 1, filter: isActive ? "drop-shadow(0 0 6px rgba(96,165,250,0.6))" : "none", transition: "filter 0.15s ease" }}>
                 {icon}
+                {isSocial && notifCount > 0 && (
+                  <span style={{ position: "absolute", top: -4, right: -6, minWidth: 16, height: 16, borderRadius: 999, background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "1.5px solid rgba(8,17,30,1)", lineHeight: 1 }}>
+                    {notifCount > 9 ? "9+" : notifCount}
+                  </span>
+                )}
               </span>
             )}
             <span style={{
@@ -672,19 +673,11 @@ function BottomNav({ activeTab, onTabChange, currentProfile, currentUser, onNoti
           </button>
         )
       })}
-      {/* Notification bell as a nav tab */}
-      <NotificationBell
-        currentUser={currentUser}
-        onTabChange={onNotifTabChange}
-        onOpenTrip={onNotifOpenTrip}
-        variant="tab"
-        dropUp
-      />
     </nav>
   )
 }
 
-function TopNav({ activeTab, onTabChange, currentProfile, currentUser, onNotifTabChange, onNotifOpenTrip }) {
+function TopNav({ activeTab, onTabChange, currentProfile, notifCount }) {
   return (
     <nav className="top-nav">
       <div className="top-nav-inner">
@@ -698,6 +691,7 @@ function TopNav({ activeTab, onTabChange, currentProfile, currentUser, onNotifTa
           {TOP_TABS.map(({ key, icon, label }) => {
             const isActive = activeTab === key
             const isProfile = key === "profile"
+            const isSocial = key === "friends"
             return (
               <button
                 key={key}
@@ -716,7 +710,14 @@ function TopNav({ activeTab, onTabChange, currentProfile, currentUser, onNotifTa
                 {isProfile && currentProfile ? (
                   <ProfileAvatar profile={currentProfile} size={20} isActive={isActive} />
                 ) : (
-                  <span style={{ fontSize: 16 }}>{icon}</span>
+                  <span style={{ position: "relative", fontSize: 16 }}>
+                    {icon}
+                    {isSocial && notifCount > 0 && (
+                      <span style={{ position: "absolute", top: -4, right: -6, minWidth: 14, height: 14, borderRadius: 999, background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white", fontSize: 8, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 2px", border: "1.5px solid rgba(8,17,30,1)", lineHeight: 1 }}>
+                        {notifCount > 9 ? "9+" : notifCount}
+                      </span>
+                    )}
+                  </span>
                 )}
                 {label}
                 {isActive && (
@@ -729,15 +730,6 @@ function TopNav({ activeTab, onTabChange, currentProfile, currentUser, onNotifTa
               </button>
             )
           })}
-        </div>
-
-        {/* Right side: notification bell */}
-        <div style={{ flexShrink: 0 }}>
-          <NotificationBell
-            currentUser={currentUser}
-            onTabChange={onNotifTabChange}
-            onOpenTrip={onNotifOpenTrip}
-          />
         </div>
       </div>
     </nav>
@@ -780,6 +772,7 @@ export default function App() {
   const [skierDetails, setSkierDetails] = useState({})
   const [currentUser, setCurrentUser] = useState(null)
   const [currentProfile, setCurrentProfile] = useState(null)
+  const notifCount = useNotificationCount(currentUser)
   const [authModalMode, setAuthModalMode] = useState(null)
   const [isRecoveryMode, setIsRecoveryMode] = useState(false)
   const [deepLinkTrip, setDeepLinkTrip] = useState(null)
@@ -1334,17 +1327,13 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         currentProfile={currentProfile}
-        currentUser={currentUser}
-        onNotifTabChange={setActiveTab}
-        onNotifOpenTrip={async (tripId) => { try { setDeepLinkTrip(await getTripDetail(tripId)) } catch (e) { console.warn(e) } }}
+        notifCount={notifCount}
       />
       <BottomNav
         activeTab={activeTab}
         onTabChange={setActiveTab}
         currentProfile={currentProfile}
-        currentUser={currentUser}
-        onNotifTabChange={setActiveTab}
-        onNotifOpenTrip={async (tripId) => { try { setDeepLinkTrip(await getTripDetail(tripId)) } catch (e) { console.warn(e) } }}
+        notifCount={notifCount}
       />
 
       <div className="mobile-scroll-pad" style={{ maxWidth: 1320, margin: "0 auto", padding: isMobile ? "16px 14px 20px" : "30px 20px 48px" }}>

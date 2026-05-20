@@ -25,6 +25,23 @@ function getNotifCrewId(notif) {
   try { return JSON.parse(notif.body || "{}").crewId || null } catch { return null }
 }
 
+export function useNotificationCount(currentUser) {
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    if (!currentUser) { setCount(0); return }
+    let cancelled = false
+    getNotifications().then((data) => { if (!cancelled) setCount(data.filter((n) => !n.read).length) }).catch(() => {})
+    const channel = supabase
+      .channel("notifications-count")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${currentUser.id}` },
+        () => getNotifications().then((data) => { if (!cancelled) setCount(data.filter((n) => !n.read).length) }).catch(() => {})
+      )
+      .subscribe()
+    return () => { cancelled = true; supabase.removeChannel(channel) }
+  }, [currentUser])
+  return count
+}
+
 export default function NotificationBell({ currentUser, onOpenTrip, onTabChange, dropUp = false, variant = "icon" }) {
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState([])

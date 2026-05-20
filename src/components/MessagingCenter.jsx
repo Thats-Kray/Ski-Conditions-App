@@ -21,6 +21,8 @@ import DirectMessageView from "./DirectMessageView"
 import { timeAgo } from "../lib/format"
 import Avatar from "./ui/Avatar"
 import { SkiPingComposer } from "./SkiPingModal"
+import { DateMatchmakerComposer } from "./DateMatchmaker"
+import NotificationBell from "./NotificationBell"
 
 // ── Local read-status tracking ───────────────────────────────────────────────
 
@@ -289,6 +291,7 @@ export default function MessagingCenter() {
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [showPingComposer, setShowPingComposer] = useState(false)
+  const [showDateMatchmaker, setShowDateMatchmaker] = useState(false)
   const [pendingFriendCount, setPendingFriendCount] = useState(0)
   const [acceptingId, setAcceptingId] = useState(null)
   const [filter, setFilter] = useState("all")        // "all" | "unread"
@@ -580,19 +583,22 @@ export default function MessagingCenter() {
                 </span>
               )}
             </div>
-            <button
-              onClick={() => setShowCreate(true)}
-              title="New Crew"
-              style={{
-                width: 32, height: 32, borderRadius: 9, border: "none",
-                background: "linear-gradient(135deg,#2563eb,#0891b2)",
-                color: "white", fontSize: 17, cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 2px 10px rgba(37,99,235,0.35)",
-              }}
-            >
-              ✏️
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <NotificationBell currentUser={currentUser} variant="icon" />
+              <button
+                onClick={() => setShowCreate(true)}
+                title="New Crew"
+                style={{
+                  width: 32, height: 32, borderRadius: 9, border: "none",
+                  background: "linear-gradient(135deg,#2563eb,#0891b2)",
+                  color: "white", fontSize: 17, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 2px 10px rgba(37,99,235,0.35)",
+                }}
+              >
+                ✏️
+              </button>
+            </div>
           </div>
 
           {/* Panel toggle: Chats / Friends */}
@@ -656,6 +662,24 @@ export default function MessagingCenter() {
                   {label}
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Date matchmaker CTA — chats panel only */}
+          {panel === "chats" && (
+            <div style={{ padding: "6px 12px 4px", flexShrink: 0 }}>
+              <button
+                onClick={() => setShowDateMatchmaker(true)}
+                style={{
+                  width: "100%", padding: "9px 14px", borderRadius: 10, border: "none", cursor: "pointer",
+                  background: "rgba(139,92,246,0.12)", color: "#a78bfa",
+                  fontWeight: 700, fontSize: 13, textAlign: "left",
+                  display: "flex", alignItems: "center", gap: 8,
+                  transition: "background 0.15s",
+                }}
+              >
+                📅 Find a Date with Your Crew
+              </button>
             </div>
           )}
 
@@ -888,6 +912,14 @@ export default function MessagingCenter() {
           friends={friends}
           onClose={() => setShowPingComposer(false)}
           onSent={() => setShowPingComposer(false)}
+        />
+      )}
+
+      {showDateMatchmaker && (
+        <DateMatchmakerComposer
+          friends={friends}
+          onClose={() => setShowDateMatchmaker(false)}
+          onCreated={() => setShowDateMatchmaker(false)}
         />
       )}
 

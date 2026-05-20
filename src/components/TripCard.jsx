@@ -4,6 +4,15 @@ import TripDetailModal from "./TripDetailModal"
 import { RESORT_NAMES, RESORT_PHOTOS, RESORT_ACCENTS } from "../lib/resorts"
 import { formatDateFull } from "../lib/format"
 
+const THEME_ACCENTS = {
+  blizzard: "#bfdbfe",
+  powder:   "#3b82f6",
+  aurora:   "#8b5cf6",
+  sunset:   "#fb923c",
+  sunny:    "#fbbf24",
+  windy:    "#94a3b8",
+}
+
 
 function daysUntil(dateStr) {
   const today = new Date()
@@ -112,6 +121,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
 
   const { resort_key: resortKey, ski_date: skiDate } = trip
   const accent = RESORT_ACCENTS[resortKey] || "#60a5fa"
+  const themeAccent = THEME_ACCENTS[trip.theme]
   const photo = RESORT_PHOTOS[resortKey]
   const resortName = RESORT_NAMES[resortKey] || resortKey
   const countdown = daysUntil(skiDate)
@@ -191,6 +201,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
         overflow: "hidden",
         background: isInvited ? "rgba(96,165,250,0.05)" : "rgba(255,255,255,0.04)",
         border: isInvited ? "1.5px solid rgba(96,165,250,0.3)" : "1px solid rgba(255,255,255,0.09)",
+        borderLeft: themeAccent ? `4px solid ${themeAccent}` : undefined,
         boxShadow: isInvited ? "0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(96,165,250,0.1)" : "0 24px 64px rgba(0,0,0,0.5)",
         transition: "transform 0.22s ease, box-shadow 0.22s ease",
         cursor: "pointer",
