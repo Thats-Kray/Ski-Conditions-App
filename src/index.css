@@ -22,38 +22,42 @@
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
 
-  /* ── Blizzard Theme Tokens ──────────────────────────────────────── */
-  --color-bg: #020617;
-  --color-bg-elevated: #0f172a;
-  --color-surface: rgba(255, 255, 255, 0.05);
-  --color-surface-hover: rgba(255, 255, 255, 0.08);
-  --color-border: rgba(255, 255, 255, 0.09);
-  --color-border-subtle: rgba(255, 255, 255, 0.06);
-  --color-accent: #60a5fa;
-  --color-accent-dim: #3b82f6;
-  --color-accent-glow: rgba(96, 165, 250, 0.35);
-  --color-accent-2: #0891b2;
-  --color-text-1: rgba(255, 255, 255, 0.87);
-  --color-text-2: rgba(255, 255, 255, 0.65);
-  --color-text-3: rgba(255, 255, 255, 0.45);
-  --color-text-muted: rgba(255, 255, 255, 0.35);
-  --color-nav-bg: rgba(8, 17, 30, 0.92);
-  --color-badge-border: rgba(255, 255, 255, 0.12);
+  /* ── Blizzard Theme Tokens ─────────────────────────────────── */
+  --color-bg:            #04080f;
+  --color-bg-elevated:   #060d1a;
+  --color-surface:       rgba(255, 255, 255, 0.035);
+  --color-surface-hover: rgba(255, 255, 255, 0.06);
+  --color-border:        rgba(56, 189, 248, 0.12);
+  --color-border-subtle: rgba(56, 189, 248, 0.07);
 
-  --gradient-primary: linear-gradient(135deg, #2563eb, #0891b2);
-  --gradient-elite: linear-gradient(135deg, #8ef6d1, #22c55e);
-  --gradient-bg: linear-gradient(180deg, #020617, #0f172a);
+  --color-accent:        #38bdf8;
+  --color-accent-dim:    rgba(56, 189, 248, 0.15);
+  --color-accent-glow:   rgba(56, 189, 248, 0.28);
+  --color-accent-2:      #818cf8;
 
-  --shadow-card: 0 20px 60px rgba(0, 0, 0, 0.45);
-  --shadow-accent: 0 8px 24px rgba(96, 165, 250, 0.35);
-  --shadow-button: 0 8px 20px rgba(37, 99, 235, 0.35);
+  --color-text-1:        #e0f2fe;
+  --color-text-2:        #7dd3fc;
+  --color-text-3:        rgba(125, 211, 252, 0.45);
+  --color-text-muted:    #334155;
 
-  --radius-card: 18px;
-  --radius-button: 12px;
-  --radius-pill: 999px;
+  --color-nav-bg:        rgba(4, 8, 15, 0.95);
+  --color-badge-border:  rgba(4, 8, 15, 1);
 
-  --transition-fast: 0.12s;
-  --transition-base: 0.2s;
+  --gradient-primary:    linear-gradient(135deg, #0284c7, #38bdf8);
+  --gradient-elite:      linear-gradient(135deg, #0e7490, #38bdf8);
+  --gradient-bg:         radial-gradient(ellipse 80% 35% at 50% 0%, rgba(56,189,248,0.08) 0%, transparent 100%),
+                         linear-gradient(180deg, #04080f 0%, #060d1a 100%);
+
+  --shadow-card:         0 4px 24px rgba(0, 0, 0, 0.5);
+  --shadow-accent:       0 0 20px rgba(56, 189, 248, 0.25);
+  --shadow-button:       0 6px 20px rgba(56, 189, 248, 0.22);
+
+  --radius-card:         18px;
+  --radius-button:       12px;
+  --radius-pill:         999px;
+
+  --transition-fast:     0.12s ease;
+  --transition-base:     0.2s ease;
 
   /* Typography scale */
   --font-size-display: clamp(28px, 6vw, 44px);  /* hero numbers, big stat tiles */
