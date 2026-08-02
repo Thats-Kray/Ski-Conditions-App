@@ -6,9 +6,11 @@ import {
   getAcceptedFriends,
   getAllVisibleTrips,
   getTodaysVisiblePlans,
+  getMyDailyPlan,
   rsvpToTrip,
 } from "../lib/socialApi"
 import CreateTripModal from "./CreateTripModal"
+import SkiCheckInForm from "./SkiCheckInForm"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { timeAgo, formatDate } from "../lib/format"
 import Avatar from "./ui/Avatar"
@@ -265,7 +267,7 @@ function NextTripCard({ currentUser, onTabChange }) {
 
 // ── Card 3: Who's Skiing Today ────────────────────────────────────────────────
 
-function WhosSkiingTodayCard({ onTabChange }) {
+function WhosSkiingTodayCard({ onTabChange, refreshKey }) {
   const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -277,7 +279,7 @@ function WhosSkiingTodayCard({ onTabChange }) {
       .catch(() => { if (!cancelled) setPlans([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [])
+  }, [refreshKey])
 
   return (
     <Card style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -306,6 +308,49 @@ function WhosSkiingTodayCard({ onTabChange }) {
           ))}
         </div>
       )}
+    </Card>
+  )
+}
+
+// ── Check In Today CTA ────────────────────────────────────────────────────────
+
+function CheckInTodayCta({ resorts, currentUser, onCheckedIn }) {
+  const [hasChecked, setHasChecked] = useState(null) // null = still loading
+  const [expanded, setExpanded] = useState(false)
+
+  useEffect(() => {
+    if (!currentUser) { setHasChecked(true); return } // logged-out: hide the CTA entirely
+    let cancelled = false
+    const today = new Date().toISOString().slice(0, 10)
+    getMyDailyPlan(today)
+      .then((plan) => { if (!cancelled) setHasChecked(!!plan) })
+      .catch(() => { if (!cancelled) setHasChecked(false) })
+    return () => { cancelled = true }
+  }, [currentUser])
+
+  if (hasChecked === null || hasChecked) return null // hide once checked in, or while loading, or if logged out
+
+  if (!expanded) {
+    return (
+      <button
+        onClick={() => setExpanded(true)}
+        style={{
+          width: "100%", padding: "14px", borderRadius: "var(--radius-button)",
+          background: "var(--gradient-primary)", color: "var(--color-bg)",
+          border: "none", fontWeight: 900, fontSize: 15, cursor: "pointer",
+        }}
+      >
+        📍 Check In Today
+      </button>
+    )
+  }
+
+  return (
+    <Card>
+      <SkiCheckInForm
+        resorts={resorts}
+        onSaved={() => { setExpanded(false); setHasChecked(true); onCheckedIn?.() }}
+      />
     </Card>
   )
 }
@@ -699,15 +744,16 @@ function OffseasonBanner() {
 
 // ── Mobile layout ─────────────────────────────────────────────────────────────
 
-function MobileHomeDashboard({ resorts, currentUser, onTabChange, onStartSession, sessionActive }) {
+function MobileHomeDashboard({ resorts, currentUser, onTabChange, onStartSession, sessionActive, crewRefreshKey, onCheckedIn }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <StartMyDayCta currentUser={currentUser} sessionActive={sessionActive} resorts={resorts} onStartSession={onStartSession} />
       <AddToHomeScreenNudge currentUser={currentUser} sessionActive={sessionActive} />
       <OffseasonBanner />
+      <CheckInTodayCta resorts={resorts} currentUser={currentUser} onCheckedIn={onCheckedIn} />
       <TodaysBestMountainCard resorts={resorts} onTabChange={onTabChange} />
       <NextTripCard currentUser={currentUser} onTabChange={onTabChange} />
-      <WhosSkiingTodayCard onTabChange={onTabChange} />
+      <WhosSkiingTodayCard onTabChange={onTabChange} refreshKey={crewRefreshKey} />
       <MobileCrewListWidget currentUser={currentUser} onTabChange={onTabChange} />
       <PingCta currentUser={currentUser} />
     </div>
@@ -718,6 +764,8 @@ function MobileHomeDashboard({ resorts, currentUser, onTabChange, onStartSession
 
 export default function HomeDashboard({ resorts, currentUser, onTabChange, onStartSession, sessionActive = false }) {
   const isMobile = useMobile()
+  const [crewRefreshKey, setCrewRefreshKey] = useState(0)
+  const handleCheckedIn = () => setCrewRefreshKey((k) => k + 1)
 
   if (isMobile) {
     return (
@@ -727,6 +775,8 @@ export default function HomeDashboard({ resorts, currentUser, onTabChange, onSta
         onTabChange={onTabChange}
         onStartSession={onStartSession}
         sessionActive={sessionActive}
+        crewRefreshKey={crewRefreshKey}
+        onCheckedIn={handleCheckedIn}
       />
     )
   }
@@ -739,10 +789,13 @@ export default function HomeDashboard({ resorts, currentUser, onTabChange, onSta
       {/* Offseason launch banner */}
       <OffseasonBanner />
 
+      {/* Check In Today CTA */}
+      <CheckInTodayCta resorts={resorts} currentUser={currentUser} onCheckedIn={handleCheckedIn} />
+
       {/* 3-card feed */}
       <TodaysBestMountainCard resorts={resorts} onTabChange={onTabChange} />
       <NextTripCard currentUser={currentUser} onTabChange={onTabChange} />
-      <WhosSkiingTodayCard onTabChange={onTabChange} />
+      <WhosSkiingTodayCard onTabChange={onTabChange} refreshKey={crewRefreshKey} />
 
       {/* Ping CTA */}
       <PingCta currentUser={currentUser} />
