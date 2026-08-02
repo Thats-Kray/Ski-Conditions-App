@@ -12,12 +12,14 @@ import LandingPage from "./components/LandingPage"
 import HomeDashboard from "./components/HomeDashboard"
 import {
   getCurrentUser,
+  getFriendUpcomingTripsByResort,
   getMyProfile,
   getResortSkierCounts,
   getResortSkierDetails,
   getTripDetail,
   logOut,
 } from "./lib/socialApi"
+import Avatar from "./components/ui/Avatar"
 
 import { supabase } from "./lib/supabase"
 
@@ -371,7 +373,38 @@ function scoreGradient(score) {
   return "linear-gradient(135deg, #7f1d1d, #451a03)"                    // Poor
 }
 
-function ResortCard({ r, skierCounts, skierDetails }) {
+function FriendsGoingBadge({ friends }) {
+  const [open, setOpen] = useState(false)
+  if (!friends?.length) return null
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 999, padding: "4px 10px 4px 6px", cursor: "pointer" }}
+      >
+        <div style={{ display: "flex" }}>
+          {friends.slice(0, 3).map((f, i) => (
+            <div key={f.id} style={{ marginLeft: i > 0 ? -8 : 0, border: "2px solid #0b1120", borderRadius: "50%" }}>
+              <Avatar profile={f} size={22} />
+            </div>
+          ))}
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.75)" }}>
+          {friends.length} friend{friends.length === 1 ? "" : "s"} going this weekend
+        </span>
+      </button>
+      {open && (
+        <div style={{ position: "absolute", top: "110%", left: 0, background: "#111827", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: 10, zIndex: 20, minWidth: 160, boxShadow: "0 12px 40px rgba(0,0,0,0.4)" }}>
+          {friends.map((f) => (
+            <div key={f.id} style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", padding: "4px 0" }}>{f.full_name || f.username}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ResortCard({ r, skierCounts, skierDetails, friendsGoing }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -435,6 +468,8 @@ function ResortCard({ r, skierCounts, skierDetails }) {
             </div>
           ))}
         </div>
+
+        <FriendsGoingBadge friends={friendsGoing} />
 
         {/* Forecast */}
         <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "10px 12px", fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.5 }}>
@@ -777,6 +812,7 @@ export default function App() {
   const [live, setLive] = useState({})
   const [skierCounts, setSkierCounts] = useState({})
   const [skierDetails, setSkierDetails] = useState({})
+  const [friendTripsByResort, setFriendTripsByResort] = useState({})
   const [currentUser, setCurrentUser] = useState(null)
   const [currentProfile, setCurrentProfile] = useState(null)
   const notifCount = useNotificationCount(currentUser)
@@ -1028,6 +1064,15 @@ export default function App() {
 
   return () => subscription.unsubscribe()
 }, [])
+
+  useEffect(() => {
+    if (!currentUser) { setFriendTripsByResort({}); return }
+    let cancelled = false
+    getFriendUpcomingTripsByResort()
+      .then((map) => { if (!cancelled) setFriendTripsByResort(map) })
+      .catch(() => { if (!cancelled) setFriendTripsByResort({}) })
+    return () => { cancelled = true }
+  }, [currentUser])
 
   // Deep-link: ?trip=<id> → capture invite ID; resolve after auth check completes
   useEffect(() => {
@@ -1609,7 +1654,7 @@ export default function App() {
 
                 <main className="resort-grid">
                   {rows.map((r) => (
-                    <ResortCard key={r.name} r={r} skierCounts={skierCounts} skierDetails={skierDetails} />
+                    <ResortCard key={r.name} r={r} skierCounts={skierCounts} skierDetails={skierDetails} friendsGoing={friendTripsByResort[r.resortKey] || []} />
                   ))}
                 </main>
               </>
