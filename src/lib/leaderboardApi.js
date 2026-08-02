@@ -1,5 +1,5 @@
 import { supabase } from "./supabase"
-import { getCurrentUser, getAcceptedFriends } from "./socialApi"
+import { getCurrentUser, getAcceptedFriends, logActivity } from "./socialApi"
 
 // ── Season helpers ────────────────────────────────────────────────────────────
 
@@ -35,6 +35,9 @@ export async function logSkiDay({ resortName, sessionDate, isPowderDay = false, 
     .single()
 
   if (error) throw error
+
+  await logActivity("ski_session", { subjectId: data.id, subjectType: "ski_sessions", metadata: { resort_name: data.resort_name, is_powder_day: data.is_powder_day } })
+
   return data
 }
 
