@@ -1021,6 +1021,73 @@ function AddToHomeScreenNudge({ currentUser, sessionActive }) {
   )
 }
 
+// ── Start My Day CTA ──────────────────────────────────────────────────────────
+
+function StartMyDayCta({ currentUser, sessionActive, resorts, onStartSession }) {
+  if (!currentUser) return null
+
+  if (sessionActive) {
+    return (
+      <div style={{
+        background: "rgba(34,197,94,0.08)",
+        border: "1px solid rgba(34,197,94,0.2)",
+        borderRadius: 14,
+        padding: "10px 16px",
+        marginBottom: 16,
+        fontSize: 13,
+        color: "#4ade80",
+        fontWeight: 700,
+      }}>
+        ● Session active — tracking your day
+      </div>
+    )
+  }
+
+  return (
+    <div style={{
+      background: "linear-gradient(135deg, rgba(56,189,248,0.12), rgba(2,132,199,0.08))",
+      border: "1px solid rgba(56,189,248,0.25)",
+      borderRadius: 20,
+      padding: "16px 20px",
+      marginBottom: 16,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+    }}>
+      <div>
+        <div style={{ fontWeight: 900, fontSize: 15, color: "white" }}>Ready to ski?</div>
+        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", marginTop: 2 }}>
+          Track your runs, vertical, and speed
+        </div>
+      </div>
+      <button
+        onClick={() => {
+          // Use top-ranked open resort as default, user can change later
+          const topResort = resorts
+            .filter(r => r.isOpen !== false && r.powderScore != null)
+            .sort((a, b) => (b.powderScore ?? -1) - (a.powderScore ?? -1))[0]
+          onStartSession(topResort?.name ?? "Unknown Resort")
+        }}
+        style={{
+          background: "linear-gradient(135deg, #0284c7, #38bdf8)",
+          border: "none",
+          borderRadius: 14,
+          padding: "12px 20px",
+          color: "white",
+          fontWeight: 900,
+          fontSize: 14,
+          cursor: "pointer",
+          flexShrink: 0,
+          boxShadow: "0 4px 16px rgba(56,189,248,0.3)",
+        }}
+      >
+        Start My Day ⛷
+      </button>
+    </div>
+  )
+}
+
 // ── Offseason launch banner ───────────────────────────────────────────────────
 
 function OffseasonBanner() {
@@ -1102,9 +1169,10 @@ function OffseasonBanner() {
 
 // ── Mobile layout ─────────────────────────────────────────────────────────────
 
-function MobileHomeDashboard({ resorts, currentUser, onTabChange, sessionActive }) {
+function MobileHomeDashboard({ resorts, currentUser, onTabChange, onStartSession, sessionActive }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <StartMyDayCta currentUser={currentUser} sessionActive={sessionActive} resorts={resorts} onStartSession={onStartSession} />
       <AddToHomeScreenNudge currentUser={currentUser} sessionActive={sessionActive} />
       <OffseasonBanner />
       <ConditionsWidget resorts={resorts} onTabChange={onTabChange} />
@@ -1118,7 +1186,7 @@ function MobileHomeDashboard({ resorts, currentUser, onTabChange, sessionActive 
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-export default function HomeDashboard({ resorts, currentUser, onTabChange, sessionActive = false }) {
+export default function HomeDashboard({ resorts, currentUser, onTabChange, onStartSession, sessionActive = false }) {
   const isMobile = useMobile()
 
   if (isMobile) {
@@ -1127,6 +1195,7 @@ export default function HomeDashboard({ resorts, currentUser, onTabChange, sessi
         resorts={resorts}
         currentUser={currentUser}
         onTabChange={onTabChange}
+        onStartSession={onStartSession}
         sessionActive={sessionActive}
       />
     )
@@ -1134,6 +1203,9 @@ export default function HomeDashboard({ resorts, currentUser, onTabChange, sessi
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Start My Day CTA */}
+      <StartMyDayCta currentUser={currentUser} sessionActive={sessionActive} resorts={resorts} onStartSession={onStartSession} />
+
       {/* Offseason launch banner */}
       <OffseasonBanner />
 
