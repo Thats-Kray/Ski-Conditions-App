@@ -11,6 +11,7 @@ import { getMySessions, getCurrentSeason, getAllTimeStats, updateSessionStats } 
 import ShareStatCard from "./ShareStatCard"
 import StravaConnect from "./StravaConnect"
 import SessionStatsForm from "./SessionStatsForm"
+import SeasonCalendar from "./SeasonCalendar"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { fmt } from "../lib/format"
 import Avatar from "./ui/Avatar"
@@ -164,6 +165,27 @@ function StatsViewToggle({ viewMode, onChange }) {
           }}
         >
           {mode === "season" ? "This Season" : "All-Time"}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function HistoryViewToggle({ viewMode, onChange }) {
+  return (
+    <div style={{ display: "flex", gap: 4 }}>
+      {["list", "calendar"].map((mode) => (
+        <button
+          key={mode}
+          onClick={() => onChange(mode)}
+          style={{
+            padding: "6px 14px", borderRadius: "var(--radius-pill)", border: "none", cursor: "pointer",
+            background: viewMode === mode ? "var(--color-accent)" : "rgba(255,255,255,0.06)",
+            color: viewMode === mode ? "var(--color-bg)" : "var(--color-text-2)",
+            fontWeight: 700, fontSize: 13,
+          }}
+        >
+          {mode === "list" ? "List" : "Calendar"}
         </button>
       ))}
     </div>
@@ -465,6 +487,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false)
   const [photoUploading, setPhotoUploading] = useState(false)
   const [viewMode, setViewMode]       = useState("season")
+  const [historyView, setHistoryView] = useState("list")
   const [allTimeStats, setAllTimeStats] = useState(null)
   const [userId, setUserId]           = useState(null)
   const fileInputRef = useRef(null)
@@ -747,8 +770,15 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
         </>
       )}
 
-      {/* ── Recent Sessions feed ── */}
-      <RecentSessionsFeed sessions={recentSessions} onRefresh={load} />
+      {/* ── Session History (List / Calendar) ── */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <HistoryViewToggle viewMode={historyView} onChange={setHistoryView} />
+      </div>
+      {historyView === "list" ? (
+        <RecentSessionsFeed sessions={recentSessions} limit={Infinity} onRefresh={load} />
+      ) : (
+        <SeasonCalendar sessions={recentSessions} startYear={season.startYear} />
+      )}
 
       {/* ── Season Passes ── */}
       {profile?.ski_passes?.length > 0 && (
