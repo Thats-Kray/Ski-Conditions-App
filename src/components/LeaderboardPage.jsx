@@ -64,10 +64,12 @@ function LogDayModal({ onClose, onLogged }) {
     try {
       const session = await logSkiDay({ resortName: resort, sessionDate: date, isPowderDay: isPowder, notes: notes || null })
 
-      // This is the one flow where a day is genuinely complete, so it's the one
-      // that broadcasts. Non-blocking and deduped, so re-logging the same day
-      // (which upserts onto the same row) won't post a second feed entry.
-      logActivityOnce("ski_session", {
+      // Deduped, so re-logging the same day (which upserts onto the same row)
+      // won't post a second feed entry. Awaited rather than fire-and-forget:
+      // `saving` only stays true while this handler runs, so leaving it pending
+      // would let a fast double-submit clear the button and race a second call
+      // past the existence check before the first insert lands.
+      await logActivityOnce("ski_session", {
         subjectId:   session.id,
         subjectType: "ski_sessions",
         metadata:    { resort_name: session.resort_name, is_powder_day: session.is_powder_day },

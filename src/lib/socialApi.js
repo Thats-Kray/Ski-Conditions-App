@@ -2951,12 +2951,17 @@ export async function logActivityOnce(type, { subjectId = null, subjectType = nu
     if (!subjectId) return logActivity(type, { subjectId, subjectType, metadata })
 
     const user = await getCurrentUser()
+    // .limit(1) before .maybeSingle() matters: bare .maybeSingle() *errors* when
+    // more than one row matches, and rows that predate this dedupe existed in
+    // pairs — that error would leave `existing` null and let a third duplicate
+    // through. We only care whether any row exists, so cap the result at one.
     const { data: existing } = await supabase
       .from("activity_feed")
       .select("id")
       .eq("actor_id", user.id)
       .eq("type", type)
       .eq("subject_id", subjectId)
+      .limit(1)
       .maybeSingle()
 
     if (existing) return

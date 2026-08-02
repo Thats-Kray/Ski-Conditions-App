@@ -25,6 +25,7 @@ import {
   getResortSkierDetails,
   getResortVibeData,
   getTripDetail,
+  logActivityOnce,
   logOut,
 } from "./lib/socialApi"
 import { flushSessionToSupabase, logSkiDay } from "./lib/leaderboardApi"
@@ -944,6 +945,23 @@ export default function App() {
         endedAt:      new Date().toISOString(),
       })
       setRecapData(result)
+
+      // The GPS flow's genuine completion point — the counterpart to
+      // LogDayModal's post for retroactively logged days. Only runs on a
+      // successful flush (a throw above skips it), and only once per session:
+      // this handler is entered once per "end session" tap and bails early if
+      // there's no activeSession, and logActivityOnce dedupes by subject_id as
+      // a backstop.
+      if (result?.session?.id) {
+        await logActivityOnce("ski_session", {
+          subjectId:   result.session.id,
+          subjectType: "ski_sessions",
+          metadata:    {
+            resort_name:   result.session.resort_name,
+            is_powder_day: result.session.is_powder_day,
+          },
+        })
+      }
     } catch (err) {
       console.error("Session flush failed:", err)
       // Still clear the active session even on error
