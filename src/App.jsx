@@ -32,6 +32,7 @@ import { useGpsTracker } from "./lib/useGpsTracker"
 import Avatar from "./components/ui/Avatar"
 
 import { supabase, authHeaders } from "./lib/supabase"
+import { normalizeResortKey } from "./lib/resorts"
 
 const RESORTS = [
   // Epic
@@ -898,7 +899,7 @@ export default function App() {
   const [live, setLive] = useState({})
   const [skierCounts, setSkierCounts] = useState({})
   const [skierDetails, setSkierDetails] = useState({})
-  const [resortActivityCounts, setResortActivityCounts] = useState({}) // { [resort_name]: count }
+  const [resortActivityCounts, setResortActivityCounts] = useState({}) // { [resortKey]: count }
   const [friendTripsByResort, setFriendTripsByResort] = useState({})
   const [friendIds, setFriendIds] = useState([]) // accepted friends' user IDs — live map pins (S28)
   const [vibeData, setVibeData] = useState({ checkinCounts: {}, rsvpCounts: {} })
@@ -1176,8 +1177,16 @@ export default function App() {
     weekAgo.setDate(weekAgo.getDate() - 7)
     getResortActivityCounts(weekAgo.toISOString().slice(0, 10))
       .then((rows) => {
+        // ski_sessions.resort_name holds display names ("Beaver Creek") for
+        // real logged sessions but raw resort keys ("beavercreek") for
+        // trip-derived rows, so both shapes are folded onto the resortKey the
+        // read side uses. Counts accumulate: the two forms are one resort.
         const map = {}
-        for (const row of rows) map[row.resort_name] = row.session_count
+        for (const row of rows) {
+          const key = normalizeResortKey(row.resort_name)
+          if (!key) continue
+          map[key] = (map[key] || 0) + Number(row.session_count || 0)
+        }
         setResortActivityCounts(map)
       })
       .catch(() => setResortActivityCounts({}))

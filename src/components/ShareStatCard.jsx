@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { fmt, formatDateFull } from "../lib/format"
-import { RESORT_PHOTOS, resortName } from "../lib/resorts"
+import { RESORT_PHOTOS, resortName, normalizeResortKey } from "../lib/resorts"
 
 const SKILL_COLORS = {
   green:        "#22c55e",
@@ -119,11 +119,6 @@ function drawAvatar(ctx, name, x, y, size, skillLevel) {
 // Normalize a resort key/name the same way `resortName()`/`resortEmoji()` do,
 // so lookups into RESORT_PHOTOS (which is keyed like "vail", "crestedbutte") are reliable
 // even if the stored value has mixed case or spaces.
-function resortPhotoKey(key) {
-  if (!key) return ""
-  return String(key).trim().toLowerCase().replace(/\s+/g, "")
-}
-
 // Loads a remote/static image for canvas drawing. There's no pre-existing async
 // image-loading helper elsewhere in the app to mirror (drawAvatar only draws
 // initials, it never loads profile.avatar_url) — this is a standard load-then-draw
@@ -167,7 +162,7 @@ async function renderCard(canvas, { profile, stats, season, session }) {
   // Session mode: try to load the resort's hero photo as a background layer.
   let heroImg = null
   if (mode === "session") {
-    const photoSrc = RESORT_PHOTOS[resortPhotoKey(session.resort_name)]
+    const photoSrc = RESORT_PHOTOS[normalizeResortKey(session.resort_name)]
     if (photoSrc) {
       try {
         heroImg = await loadImage(photoSrc)

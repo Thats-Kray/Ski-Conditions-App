@@ -54,14 +54,25 @@ export const RESORT_ACCENTS = {
   aspensnowmass:  "#e2e8f0",
 }
 
+/**
+ * Collapses either form of a resort identifier onto the canonical resortKey:
+ * a display name ("Beaver Creek", as ski_sessions.resort_name stores it for
+ * real logged sessions) and an already-normalized key ("beavercreek", as trip
+ * rows store it) both map to "beavercreek". Use this any time a resort string
+ * of unknown provenance has to be matched against a resortKey.
+ */
+export function normalizeResortKey(key) {
+  if (!key) return ""
+  return String(key).trim().toLowerCase().replace(/\s+/g, "")
+}
+
 export function resortName(key) {
   if (!key) return ""
-  const k = String(key).trim().toLowerCase().replace(/\s+/g, "")
+  const k = normalizeResortKey(key)
   return RESORT_NAMES[k] || key
 }
 
 export function resortEmoji(key) {
   if (!key) return "⛷️"
-  const k = String(key).trim().toLowerCase().replace(/\s+/g, "")
-  return RESORT_EMOJI[k] || "⛷️"
+  return RESORT_EMOJI[normalizeResortKey(key)] || "⛷️"
 }
