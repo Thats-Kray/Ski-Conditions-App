@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
-import { getLeaderboard, getPublicLeaderboard, getMySessions, logSkiDay, deleteSkiDay, getCurrentSeason } from "../lib/leaderboardApi"
+import { getLeaderboard, getPublicLeaderboard, getMySessions, logSkiDay, updateSessionStats, deleteSkiDay, getCurrentSeason } from "../lib/leaderboardApi"
 import Avatar from "./ui/Avatar"
+import SessionStatsForm from "./SessionStatsForm"
 
 const RESORT_NAMES = [
   "Vail", "Beaver Creek", "Breckenridge", "Keystone", "Park City",
@@ -33,6 +34,12 @@ function LogDayModal({ onClose, onLogged }) {
   const [search, setSearch]       = useState("")
   const [showDropdown, setShowDropdown] = useState(false)
 
+  // Step 2 — optional post-submit "add your stats" step
+  const [step, setStep]                 = useState("basic") // "basic" | "stats"
+  const [savedSession, setSavedSession] = useState(null)
+  const [statsSaving, setStatsSaving]   = useState(false)
+  const [statsError, setStatsError]     = useState("")
+
   const filtered = search.length > 0
     ? RESORT_NAMES.filter((r) => r.toLowerCase().includes(search.toLowerCase())).slice(0, 8)
     : []
@@ -43,13 +50,27 @@ function LogDayModal({ onClose, onLogged }) {
     setSaving(true)
     setError("")
     try {
-      await logSkiDay({ resortName: resort, sessionDate: date, isPowderDay: isPowder, notes: notes || null })
+      const session = await logSkiDay({ resortName: resort, sessionDate: date, isPowderDay: isPowder, notes: notes || null })
       onLogged()
-      onClose()
+      setSavedSession(session)
+      setStep("stats")
     } catch (err) {
       setError(err.message || "Something went wrong.")
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleSaveStats(stats) {
+    setStatsSaving(true)
+    setStatsError("")
+    try {
+      await updateSessionStats(savedSession.id, stats)
+      onClose()
+    } catch (err) {
+      setStatsError(err.message || "Could not save stats.")
+    } finally {
+      setStatsSaving(false)
     }
   }
 
@@ -63,10 +84,25 @@ function LogDayModal({ onClose, onLogged }) {
     <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
       <div style={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: "white" }}>🎿 Log a Ski Day</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: "white" }}>
+            {step === "basic" ? "🎿 Log a Ski Day" : "📊 Add Your Stats"}
+          </div>
           <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}>✕</button>
         </div>
 
+        {step === "stats" ? (
+          <div style={{ display: "grid", gap: 14 }}>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginTop: -10 }}>
+              Nice — {savedSession?.resort_name || "your day"} is logged. Want to add stats now?
+            </div>
+            {statsError && <div style={{ fontSize: 13, color: "#f87171", padding: "8px 12px", background: "rgba(248,113,113,0.1)", borderRadius: 8 }}>{statsError}</div>}
+            <SessionStatsForm
+              saving={statsSaving}
+              onSave={handleSaveStats}
+              onSkip={onClose}
+            />
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} style={{ display: "grid", gap: 14 }}>
           {/* Resort */}
           <div style={{ position: "relative" }}>
@@ -121,6 +157,7 @@ function LogDayModal({ onClose, onLogged }) {
             {saving ? "Logging…" : "Log This Day"}
           </button>
         </form>
+        )}
       </div>
     </div>
   )

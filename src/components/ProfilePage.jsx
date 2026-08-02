@@ -7,9 +7,10 @@ import {
   upsertMyProfile,
   uploadProfilePhoto,
 } from "../lib/socialApi"
-import { getMySessions, getCurrentSeason } from "../lib/leaderboardApi"
+import { getMySessions, getCurrentSeason, updateSessionStats } from "../lib/leaderboardApi"
 import ShareStatCard from "./ShareStatCard"
 import StravaConnect from "./StravaConnect"
+import SessionStatsForm from "./SessionStatsForm"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { fmt } from "../lib/format"
 import Avatar from "./ui/Avatar"
@@ -122,7 +123,14 @@ function SeasonStatsCard({ stats, season }) {
 
 // ── Recent Sessions Feed ──────────────────────────────────────────────────────
 
-function RecentSessionsFeed({ sessions }) {
+function hasStats(session) {
+  return session.runs_logged != null || session.vertical_feet != null || session.miles_skied != null || session.top_speed_mph != null
+}
+
+function RecentSessionsFeed({ sessions, onRefresh }) {
+  const [editingSessionId, setEditingSessionId] = useState(null)
+  const [savingStatsFor, setSavingStatsFor]       = useState(null)
+
   if (!sessions.length) {
     return (
       <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "18px 16px", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
@@ -130,6 +138,9 @@ function RecentSessionsFeed({ sessions }) {
       </div>
     )
   }
+
+  const editingSession = sessions.find((s) => s.id === editingSessionId)
+
   return (
     <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden" }}>
       <div style={{ padding: "12px 16px 10px", fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>
@@ -140,6 +151,7 @@ function RecentSessionsFeed({ sessions }) {
           const date = new Date(s.session_date + "T12:00:00")
           const dateLabel = date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
           const emoji = resortEmoji(s.resort_key || s.resort_name)
+          const canEditStats = typeof s.id === "string" && !s.id.startsWith("trip-") && !hasStats(s)
           return (
             <div key={s.id || i} style={{
               display: "flex", alignItems: "center", gap: 10,
@@ -157,10 +169,51 @@ function RecentSessionsFeed({ sessions }) {
               {s.vertical_feet > 0 && (
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#60a5fa", flexShrink: 0 }}>+{fmt(s.vertical_feet)} ft</div>
               )}
+              {canEditStats && (
+                <button
+                  onClick={() => setEditingSessionId(s.id)}
+                  title="Add stats"
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, width: 28, height: 28, flexShrink: 0, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}
+                >✏️</button>
+              )}
             </div>
           )
         })}
       </div>
+
+      {editingSession && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+          onClick={() => setEditingSessionId(null)}
+        >
+          <div
+            style={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 480 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "white" }}>📊 Add Your Stats</div>
+              <button
+                onClick={() => setEditingSessionId(null)}
+                style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}
+              >✕</button>
+            </div>
+            <SessionStatsForm
+              initial={editingSession}
+              saving={savingStatsFor === editingSession.id}
+              onSave={async (stats) => {
+                setSavingStatsFor(editingSession.id)
+                try {
+                  await updateSessionStats(editingSession.id, stats)
+                  await onRefresh?.()
+                } finally {
+                  setSavingStatsFor(null)
+                  setEditingSessionId(null)
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -610,7 +663,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
       )}
 
       {/* ── Recent Sessions feed ── */}
-      <RecentSessionsFeed sessions={recentSessions} />
+      <RecentSessionsFeed sessions={recentSessions} onRefresh={load} />
 
       {/* ── Season Passes ── */}
       {profile?.ski_passes?.length > 0 && (
