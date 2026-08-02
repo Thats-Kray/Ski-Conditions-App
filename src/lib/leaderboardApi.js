@@ -1,5 +1,6 @@
 import { supabase } from "./supabase"
 import { getCurrentUser, getAcceptedFriends } from "./socialApi"
+import { computeSegmentStats, computeSessionSummary } from "./useGpsTracker"
 
 // ── Season helpers ────────────────────────────────────────────────────────────
 
@@ -230,4 +231,72 @@ export async function getLeaderboard(startYear) {
 
 export async function getPublicLeaderboard(startYear) {
   return fetchLeaderboard(startYear, "public")
+}
+
+// ── GPS session flush (Sprint 3) ────────────────────────────────────────────────
+
+/**
+ * Writes a completed GPS session to Supabase.
+ * 1. Upserts/creates the ski_sessions row
+ * 2. Batch-inserts all run/lift segments into ski_runs
+ * 3. Updates ski_sessions summary columns
+ *
+ * @param {Object} params
+ * @param {string} params.sessionId  - existing ski_sessions UUID (from "Start My Day")
+ * @param {Array}  params.rawSegments - segments returned by stopTracking()
+ * @param {string} params.startedAt  - ISO timestamp when session started
+ * @param {string} params.endedAt    - ISO timestamp when session ended
+ * @returns {Promise<{session, runs}>}
+ */
+export async function flushSessionToSupabase({ sessionId, rawSegments, startedAt, endedAt }) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in")
+
+  // Compute per-segment stats
+  let runNumber = 0
+  const processedSegments = rawSegments
+    .map((seg) => {
+      if (seg.type === "run") runNumber++
+      return computeSegmentStats(seg, runNumber)
+    })
+    .filter(Boolean)
+
+  // Compute session summary
+  const summary = computeSessionSummary(processedSegments)
+
+  // Insert all ski_runs rows
+  const runRows = processedSegments.map((seg) => ({
+    ...seg,
+    session_id: sessionId,
+  }))
+
+  // Skip the insert call entirely when there's nothing to write — PostgREST
+  // can reject an insert with an empty row array, and an empty session
+  // (e.g. tracking started then immediately stopped) should still succeed.
+  let runs = []
+  if (runRows.length > 0) {
+    const { data, error: runsError } = await supabase
+      .from("ski_runs")
+      .insert(runRows)
+      .select()
+
+    if (runsError) throw new Error(`ski_runs insert failed: ${runsError.message}`)
+    runs = data
+  }
+
+  // Update ski_sessions with summary stats + timestamps
+  const { data: session, error: sessionError } = await supabase
+    .from("ski_sessions")
+    .update({
+      ...summary,
+      session_started_at: startedAt,
+      session_ended_at:   endedAt,
+    })
+    .eq("id", sessionId)
+    .select()
+    .single()
+
+  if (sessionError) throw new Error(`ski_sessions update failed: ${sessionError.message}`)
+
+  return { session, runs }
 }
