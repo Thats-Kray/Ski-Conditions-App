@@ -2182,6 +2182,60 @@ export async function getFriendUpcomingTripsByResort() {
   return byResort // { [resort_key]: [profile, profile, ...] }
 }
 
+// ─── Vibe Score (sprint-27) ────────────────────────────────────────────────────
+// Community-wide (not friend-filtered) check-in + upcoming-RSVP counts per resort,
+// used to compute a secondary "social energy" signal alongside the Powder Score.
+// Note: joins trip_rsvps -> ski_trips via two queries + client-side map, matching
+// the pattern already used by getFriendUpcomingTripsByResort() above, rather than
+// a PostgREST embedded-relation filter (`ski_trips!inner(...)`) — no other query
+// in this file uses that embedding-with-foreign-filter syntax, so this avoids
+// relying on an unverified join shape.
+export async function getResortVibeData() {
+  const today = new Date()
+  const todayStr = today.toISOString().slice(0, 10)
+  const weekAgo = new Date(today)
+  weekAgo.setDate(weekAgo.getDate() - 7)
+  const weekAgoStr = weekAgo.toISOString().slice(0, 10)
+  const weekAhead = new Date(today)
+  weekAhead.setDate(weekAhead.getDate() + 7)
+  const weekAheadStr = weekAhead.toISOString().slice(0, 10)
+
+  const [{ data: checkins, error: checkinErr }, { data: upcomingTrips, error: tripErr }] = await Promise.all([
+    supabase.from("daily_plans").select("resort_key").gte("ski_date", weekAgoStr).lte("ski_date", todayStr),
+    supabase
+      .from("ski_trips")
+      .select("id, resort_key")
+      .eq("status", "upcoming")
+      .gte("ski_date", todayStr)
+      .lte("ski_date", weekAheadStr),
+  ])
+  if (checkinErr) throw checkinErr
+  if (tripErr) throw tripErr
+
+  const checkinCounts = {}
+  for (const c of checkins || []) {
+    if (c.resort_key) checkinCounts[c.resort_key] = (checkinCounts[c.resort_key] || 0) + 1
+  }
+
+  const rsvpCounts = {}
+  const upcomingTripIds = (upcomingTrips || []).map((t) => t.id)
+  if (upcomingTripIds.length > 0) {
+    const tripResortById = new Map((upcomingTrips || []).map((t) => [t.id, t.resort_key]))
+    const { data: rsvpRows, error: rsvpErr } = await supabase
+      .from("trip_rsvps")
+      .select("trip_id, status")
+      .eq("status", "going")
+      .in("trip_id", upcomingTripIds)
+    if (rsvpErr) throw rsvpErr
+    for (const r of rsvpRows || []) {
+      const key = tripResortById.get(r.trip_id)
+      if (key) rsvpCounts[key] = (rsvpCounts[key] || 0) + 1
+    }
+  }
+
+  return { checkinCounts, rsvpCounts } // both { [resort_key]: count }, missing keys mean 0
+}
+
 // ─── Ski Pings ────────────────────────────────────────────────────────────────
 
 export async function createSkiPing({ recipientIds, message, resort_key, ski_date }) {
