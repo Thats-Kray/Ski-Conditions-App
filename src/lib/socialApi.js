@@ -398,6 +398,12 @@ export async function getResortSkierDetails() {
   return [];
 }
 
+export async function getResortActivityCounts(fromDate) {
+  const { data, error } = await supabase.rpc("get_resort_activity_counts", { from_date: fromDate })
+  if (error) throw error
+  return data || [] // [{ resort_name, session_count }]
+}
+
 /* -----------------------------
    Friend / Social Helpers
 ----------------------------- */
