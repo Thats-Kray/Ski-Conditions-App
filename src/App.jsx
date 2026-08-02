@@ -357,6 +357,40 @@ function Row({ label, value }) {
   )
 }
 
+function SevenDayForecastPanel({ dailySnow }) {
+  if (!dailySnow?.length) {
+    return <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Forecast unavailable.</div>
+  }
+  const max = Math.max(...dailySnow.map((d) => d.inches), 1)
+  const best = dailySnow.reduce((a, b) => (b.inches > a.inches ? b : a), dailySnow[0])
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 6, alignItems: "flex-end", height: 60 }}>
+        {dailySnow.map((d) => (
+          <div key={d.date} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flex: 1 }}>
+            <div
+              style={{
+                width: "100%",
+                height: Math.max(4, (d.inches / max) * 44),
+                background: d.date === best.date && best.inches > 0 ? "#34d399" : "rgba(255,255,255,0.15)",
+                borderRadius: 3,
+              }}
+              title={`${d.inches.toFixed(1)}"`}
+            />
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)" }}>{d.day}</div>
+          </div>
+        ))}
+      </div>
+      {best.inches > 0 && (
+        <div style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
+          Best day: {best.day} ❄️ {best.inches.toFixed(0)}"
+        </div>
+      )}
+    </div>
+  )
+}
+
 function tierColor(tier) {
   if (tier === "Elite")     return "#8ef6d1"
   if (tier === "Very Good") return "#9bc6ff"
@@ -426,6 +460,7 @@ function FriendsGoingBadge({ friends }) {
 
 function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGoing, vibeData }) {
   const [expanded, setExpanded] = useState(false)
+  const [weekExpanded, setWeekExpanded] = useState(false)
 
   const vibeCheckins = vibeData?.checkinCounts?.[r.resortKey] || 0
   const vibeRsvps = vibeData?.rsvpCounts?.[r.resortKey] || 0
@@ -546,6 +581,20 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
                 Forecast: {r.forecastUpdated ? new Date(r.forecastUpdated).toLocaleString() : "—"}
               </div>
             )}
+          </div>
+        )}
+
+        {/* This Week toggle */}
+        <button
+          onClick={() => setWeekExpanded((v) => !v)}
+          style={{ background: "none", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "7px 12px", color: "rgba(255,255,255,0.45)", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "color 0.15s" }}
+        >
+          {weekExpanded ? "▲ This Week" : "▼ This Week"}
+        </button>
+
+        {weekExpanded && (
+          <div style={{ padding: "4px 0" }}>
+            <SevenDayForecastPanel dailySnow={r.dailySnow} />
           </div>
         )}
 
@@ -960,6 +1009,7 @@ export default function App() {
               snowPrev48in,
               snow24in: nwsSnow.snow24in,
               snow48in: nwsSnow.snow48in,
+              dailySnow: nwsSnow.dailySnow ?? [],
               baseDepth,
               summitDepth,
               liftsOpen,
