@@ -518,6 +518,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   const [allTimeStats, setAllTimeStats] = useState(null)
   const [userId, setUserId]           = useState(null)
   const [milestoneQueue, setMilestoneQueue] = useState([])
+  const [shareFromMilestone, setShareFromMilestone] = useState(false)
   const fileInputRef = useRef(null)
 
   const season = getCurrentSeason()
@@ -892,14 +893,23 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
           profile={{ ...profile, full_name: fullName }}
           stats={seasonStats}
           season={season}
-          onClose={() => setShowShare(false)}
+          onClose={() => {
+            setShowShare(false)
+            // If this share card was opened from the milestone modal's "Share" button,
+            // advance the queue only now — deferring past the ShareStatCard's own
+            // lifetime keeps the next milestone modal from stacking on top of it.
+            if (shareFromMilestone) {
+              setShareFromMilestone(false)
+              dismissMilestone()
+            }
+          }}
         />
       )}
 
-      {milestoneQueue[0] && (
+      {milestoneQueue[0] && !showShare && (
         <MilestoneModal
           milestone={milestoneQueue[0]}
-          onShare={() => { setShowShare(true); dismissMilestone() }}
+          onShare={() => { setShareFromMilestone(true); setShowShare(true) }}
           onClose={dismissMilestone}
         />
       )}
