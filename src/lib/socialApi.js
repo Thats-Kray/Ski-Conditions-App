@@ -156,6 +156,8 @@ export async function upsertMyProfile(profile) {
     skill_level: profile.skill_level || null,
     vehicle_label: profile.vehicle_label || null,
     vehicle_seats: profile.vehicle_seats || null,
+    powder_alerts_enabled: profile.powder_alerts_enabled ?? false,
+    alert_phone: profile.alert_phone || null,
     updated_at: new Date().toISOString(),
   };
 

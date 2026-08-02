@@ -173,6 +173,8 @@ function EditProfileModal({ profile, onSaved, onClose }) {
   const [skiPasses, setSkiPasses]       = useState(profile?.ski_passes || [])
   const [vehicleLabel, setVehicleLabel] = useState(profile?.vehicle_label || "")
   const [vehicleSeats, setVehicleSeats] = useState(profile?.vehicle_seats || "")
+  const [powderAlertsEnabled, setPowderAlertsEnabled] = useState(profile?.powder_alerts_enabled ?? false)
+  const [alertPhone, setAlertPhone]     = useState(profile?.alert_phone ?? "")
   const [saving, setSaving]             = useState(false)
   const [error, setError]               = useState("")
 
@@ -193,6 +195,8 @@ function EditProfileModal({ profile, onSaved, onClose }) {
         ski_passes: skiPasses,
         vehicle_label: vehicleLabel.trim() || null,
         vehicle_seats: vehicleSeats ? parseInt(vehicleSeats) : null,
+        powder_alerts_enabled: powderAlertsEnabled,
+        alert_phone: alertPhone.trim() || null,
       })
       onSaved()
     } catch (e) {
@@ -297,6 +301,28 @@ function EditProfileModal({ profile, onSaved, onClose }) {
               <input value={vehicleLabel} onChange={e => setVehicleLabel(e.target.value)} placeholder='e.g. "Blue Subaru"' style={fieldStyle} />
               <input value={vehicleSeats} onChange={e => setVehicleSeats(e.target.value)} placeholder="Seats" type="number" min="1" max="8" style={fieldStyle} />
             </div>
+          </div>
+
+          {/* Powder alerts */}
+          <div style={{ marginTop: 16, display: "grid", gap: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Powder Alerts</div>
+            <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: "white", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={powderAlertsEnabled}
+                onChange={e => setPowderAlertsEnabled(e.target.checked)}
+              />
+              📧 Weekly powder forecast every Wednesday
+            </label>
+            {powderAlertsEnabled && (
+              <input
+                type="tel"
+                placeholder="Phone number (for future SMS alerts)"
+                value={alertPhone}
+                onChange={e => setAlertPhone(e.target.value)}
+                style={fieldStyle}
+              />
+            )}
           </div>
         </div>
 
