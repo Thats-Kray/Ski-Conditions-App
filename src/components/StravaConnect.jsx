@@ -51,8 +51,21 @@ export default function StravaConnect({ userId }) {
     }
   }, [userId])
 
-  function handleConnect() {
-    window.location.href = `${API_BASE}/api/strava/auth?userId=${userId}`
+  // OAuth kickoff is a full page navigation, so it can't send an Authorization
+  // header the way the fetch() calls below do. We pass the Supabase access token
+  // as a query param instead; the server verifies it and derives the user id
+  // from it, then signs that id into the OAuth `state`. Passing a raw userId
+  // here would let anyone bind a Strava account to a profile they don't own.
+  async function handleConnect() {
+    const { data } = await supabase.auth.getSession()
+    const accessToken = data?.session?.access_token
+
+    if (!accessToken) {
+      setToast({ type: "error", message: "You must be signed in to connect Strava." })
+      return
+    }
+
+    window.location.href = `${API_BASE}/api/strava/auth?token=${encodeURIComponent(accessToken)}`
   }
 
   async function handleSync() {

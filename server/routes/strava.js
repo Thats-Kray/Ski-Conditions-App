@@ -1,4 +1,5 @@
 import { Router } from "express"
+import jwt from "jsonwebtoken"
 import { createClient } from "@supabase/supabase-js"
 import { syncUserActivities, syncSingleActivity } from "../services/stravaSync.js"
 
@@ -9,6 +10,36 @@ function getSupabase() {
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
   )
+}
+
+function frontendBase() {
+  return process.env.FRONTEND_URL || "http://localhost:5173"
+}
+
+// Signed OAuth `state`, same idea as signAlertToken/verifyAlertToken in
+// ../alertTokens.js — but scoped to this flow and short-lived (an OAuth
+// round-trip is minutes, not the 90 days an unsubscribe link needs), so it
+// lives here rather than widening that module.
+//
+// The point: `state` comes back to /callback from the user's browser, so it is
+// attacker-suppliable. Signing it means /callback can trust the user id inside
+// it, instead of writing Strava tokens into whatever profile id the request
+// happened to name.
+const STRAVA_STATE_TTL = "15m"
+
+function signStravaState(userId) {
+  return jwt.sign(
+    { userId, purpose: "strava_oauth" },
+    process.env.JWT_SECRET,
+    { expiresIn: STRAVA_STATE_TTL }
+  )
+}
+
+function verifyStravaState(state) {
+  const payload = jwt.verify(state, process.env.JWT_SECRET) // throws on invalid/expired
+  if (payload.purpose !== "strava_oauth") throw new Error("Wrong token purpose")
+  if (!payload.userId) throw new Error("Token is missing userId")
+  return payload.userId
 }
 
 // Verifies the caller's Supabase JWT and pins req.userId to the *authenticated*
@@ -60,37 +91,67 @@ function buildGpxFromRuns(runs, trackName) {
 </gpx>`
 }
 
-router.get("/api/strava/auth", (req, res) => {
-  const { userId } = req.query
+// This route is a top-level browser navigation (a link click, not a fetch), so
+// it can't carry an Authorization header like the routes below. The frontend
+// passes its Supabase access token as ?token= instead; we verify it here and
+// hand Strava a *signed* state derived from the verified user id.
+//
+// Taking a raw ?userId= here would let an attacker craft a link that binds a
+// victim's Strava account to the attacker's PowderDays profile (handing the
+// attacker the victim's Strava data), and equally let an attacker bind their
+// own Strava account onto a victim's profile.
+router.get("/api/strava/auth", async (req, res) => {
+  const frontendUrl = frontendBase()
+  const token = typeof req.query.token === "string" ? req.query.token.trim() : ""
 
-  if (!userId) {
-    return res.status(400).json({ error: "userId is required" })
+  if (!token) {
+    return res.redirect(`${frontendUrl}/profile?strava_error=not_authenticated`)
   }
 
-  const params = new URLSearchParams({
-    client_id:       process.env.STRAVA_CLIENT_ID,
-    redirect_uri:    process.env.STRAVA_REDIRECT_URI,
-    response_type:   "code",
-    approval_prompt: "auto",
-    scope:           "activity:read_all",
-    state:           userId,
-  })
+  try {
+    const { data, error } = await getSupabase().auth.getUser(token)
 
-  const stravaAuthUrl = `https://www.strava.com/oauth/authorize?${params}`
-  res.redirect(stravaAuthUrl)
+    if (error || !data?.user) {
+      return res.redirect(`${frontendUrl}/profile?strava_error=not_authenticated`)
+    }
+
+    const params = new URLSearchParams({
+      client_id:       process.env.STRAVA_CLIENT_ID,
+      redirect_uri:    process.env.STRAVA_REDIRECT_URI,
+      response_type:   "code",
+      approval_prompt: "auto",
+      scope:           "activity:read_all",
+      state:           signStravaState(data.user.id),
+    })
+
+    res.redirect(`https://www.strava.com/oauth/authorize?${params}`)
+  } catch (err) {
+    console.error("Strava auth init error:", err.message)
+    res.redirect(`${frontendUrl}/profile?strava_error=server_error`)
+  }
 })
 
 router.get("/api/strava/callback", async (req, res) => {
-  const { code, state: userId, error } = req.query
+  const { code, state, error } = req.query
 
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173"
+  const frontendUrl = frontendBase()
 
   if (error) {
     return res.redirect(`${frontendUrl}/profile?strava_error=access_denied`)
   }
 
-  if (!code || !userId) {
+  if (!code || !state) {
     return res.redirect(`${frontendUrl}/profile?strava_error=missing_params`)
+  }
+
+  // The only trusted source of identity in this request. Never fall back to a
+  // raw id from the query string.
+  let userId
+  try {
+    userId = verifyStravaState(state)
+  } catch (err) {
+    console.error("Strava callback state rejected:", err.message)
+    return res.redirect(`${frontendUrl}/profile?strava_error=invalid_state`)
   }
 
   try {
