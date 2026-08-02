@@ -2938,6 +2938,35 @@ export async function logActivity(type, { subjectId = null, subjectType = null, 
   }
 }
 
+/**
+ * logActivity, but at most once per subject. ski_sessions is upserted on
+ * (user_id, session_date, resort_name), so editing or re-logging the same ski
+ * day returns the same row — while activity_feed has no uniqueness constraint
+ * and would happily collect a duplicate entry per save. The existing feed row
+ * for this subject is the dedupe signal (the upsert result itself can't
+ * distinguish an insert from an update).
+ */
+export async function logActivityOnce(type, { subjectId = null, subjectType = null, metadata = null } = {}) {
+  try {
+    if (!subjectId) return logActivity(type, { subjectId, subjectType, metadata })
+
+    const user = await getCurrentUser()
+    const { data: existing } = await supabase
+      .from("activity_feed")
+      .select("id")
+      .eq("actor_id", user.id)
+      .eq("type", type)
+      .eq("subject_id", subjectId)
+      .maybeSingle()
+
+    if (existing) return
+
+    await logActivity(type, { subjectId, subjectType, metadata })
+  } catch (e) {
+    console.warn("logActivityOnce failed", e) // non-blocking, same as logActivity
+  }
+}
+
 export async function getActivityFeed(limit = 30) {
   const { data, error } = await supabase
     .from("activity_feed")

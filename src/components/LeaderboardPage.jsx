@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { getLeaderboard, getPublicLeaderboard, getMySessions, logSkiDay, updateSessionStats, deleteSkiDay, getCurrentSeason, getLeaderboardReactions, addLeaderboardReaction } from "../lib/leaderboardApi"
+import { logActivityOnce } from "../lib/socialApi"
 import Avatar from "./ui/Avatar"
 import SessionStatsForm from "./SessionStatsForm"
 
@@ -62,6 +63,16 @@ function LogDayModal({ onClose, onLogged }) {
     setError("")
     try {
       const session = await logSkiDay({ resortName: resort, sessionDate: date, isPowderDay: isPowder, notes: notes || null })
+
+      // This is the one flow where a day is genuinely complete, so it's the one
+      // that broadcasts. Non-blocking and deduped, so re-logging the same day
+      // (which upserts onto the same row) won't post a second feed entry.
+      logActivityOnce("ski_session", {
+        subjectId:   session.id,
+        subjectType: "ski_sessions",
+        metadata:    { resort_name: session.resort_name, is_powder_day: session.is_powder_day },
+      })
+
       onLogged()
       setSavedSession(session)
       setStep("stats")

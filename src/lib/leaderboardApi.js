@@ -1,5 +1,5 @@
 import { supabase } from "./supabase"
-import { getCurrentUser, getAcceptedFriends, logActivity } from "./socialApi"
+import { getCurrentUser, getAcceptedFriends } from "./socialApi"
 import { computeSegmentStats, computeSessionSummary } from "./useGpsTracker"
 
 // ── Season helpers ────────────────────────────────────────────────────────────
@@ -22,6 +22,11 @@ function seasonDateRange(startYear) {
 
 // ── Log a ski day ──────────────────────────────────────────────────────────────
 
+// Deliberately does NOT post to the activity feed. This same upsert backs two
+// very different flows: "I skied today" (a completed day, worth broadcasting)
+// and "Start My Day", which creates the row up front just to get an id for GPS
+// tracking — before any skiing has happened. Broadcasting belongs to the
+// caller that knows which one it is; see LogDayModal.
 export async function logSkiDay({ resortName, sessionDate, isPowderDay = false, notes = null, tripId = null }) {
   const user = await getCurrentUser()
   if (!user) throw new Error("Must be logged in to log a ski day.")
@@ -36,8 +41,6 @@ export async function logSkiDay({ resortName, sessionDate, isPowderDay = false, 
     .single()
 
   if (error) throw error
-
-  await logActivity("ski_session", { subjectId: data.id, subjectType: "ski_sessions", metadata: { resort_name: data.resort_name, is_powder_day: data.is_powder_day } })
 
   return data
 }
