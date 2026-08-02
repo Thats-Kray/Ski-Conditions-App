@@ -1546,8 +1546,24 @@ export default function App() {
           session={recapData.session}
           runs={recapData.runs}
           onClose={() => setRecapData(null)}
-          stravaConnected={false}  // wired in Sprint 5
-          onPostToStrava={() => {}}
+          stravaConnected={!!currentProfile?.strava_athlete_id}
+          onPostToStrava={async (sessionId, resortName, sessionDate) => {
+            const res = await fetch(`${API_BASE}/api/strava/upload`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId:       currentUser.id,
+                sessionId,
+                activityName: `${resortName} - ${sessionDate}`,
+                activityDate: sessionDate,
+              }),
+            })
+            if (!res.ok) {
+              const err = await res.json()
+              throw new Error(err.error || "Upload failed")
+            }
+            return res.json()
+          }}
         />
       )}
 

@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { runsToGpx, gpxDownload } from "../lib/gpxExport"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -48,10 +49,37 @@ function StatTile({ value, label }) {
 export default function SessionRecapModal({ session, runs, onClose, stravaConnected, onPostToStrava }) {
   const [breakdownOpen, setBreakdownOpen] = useState(false)
   const [shareStatus, setShareStatus] = useState(null) // null | "copied" | "shared"
+  const [uploadState, setUploadState] = useState("idle") // idle | loading | success | error
+  const [stravaUrl, setStravaUrl] = useState(null)
+  const [uploadError, setUploadError] = useState(null)
 
   if (!session) return null
 
   const runRows = (runs || []).filter((r) => r.run_type === "run")
+  const hasGpsData = (runs || []).some((r) => r.gps_track?.length > 0)
+
+  function handleDownloadGpx() {
+    const name = `${session.resort_name} - ${session.session_date}`
+    try {
+      const gpx = runsToGpx(runs, name)
+      gpxDownload(gpx, `powderdays-${session.session_date}.gpx`)
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  async function handlePostToStrava() {
+    setUploadState("loading")
+    setUploadError(null)
+    try {
+      const result = await onPostToStrava(session.id, session.resort_name, session.session_date)
+      setStravaUrl(result.strava_url)
+      setUploadState("success")
+    } catch (err) {
+      setUploadError(err.message)
+      setUploadState("error")
+    }
+  }
 
   async function handleShare() {
     const text = buildShareText(session)
@@ -218,14 +246,14 @@ export default function SessionRecapModal({ session, runs, onClose, stravaConnec
             {shareStatus === "copied" ? "Copied ✓" : "📤 Share"}
           </button>
 
-          {stravaConnected && (
+          {hasGpsData && (
             <button
-              onClick={onPostToStrava}
+              onClick={handleDownloadGpx}
               style={{
                 flex: 1,
                 minWidth: 100,
-                background: "linear-gradient(135deg, #fc4c02, #e34402)",
-                border: "none",
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.14)",
                 borderRadius: 14,
                 padding: "12px 14px",
                 color: "white",
@@ -234,8 +262,56 @@ export default function SessionRecapModal({ session, runs, onClose, stravaConnec
                 cursor: "pointer",
               }}
             >
-              Post to Strava
+              ⬇ GPX
             </button>
+          )}
+
+          {stravaConnected && (
+            <div style={{ flex: 1, minWidth: 100, display: "flex", flexDirection: "column", gap: 4 }}>
+              {uploadState === "success" ? (
+                <a
+                  href={stravaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "block",
+                    textAlign: "center",
+                    background: "linear-gradient(135deg, #16a34a, #22c55e)",
+                    border: "none",
+                    borderRadius: 14,
+                    padding: "12px 14px",
+                    color: "white",
+                    fontWeight: 800,
+                    fontSize: 13,
+                    textDecoration: "none",
+                  }}
+                >
+                  View on Strava →
+                </a>
+              ) : (
+                <button
+                  onClick={handlePostToStrava}
+                  disabled={uploadState === "loading"}
+                  style={{
+                    width: "100%",
+                    background: "linear-gradient(135deg, #fc4c02, #e34402)",
+                    border: "none",
+                    borderRadius: 14,
+                    padding: "12px 14px",
+                    color: "white",
+                    fontWeight: 800,
+                    fontSize: 13,
+                    cursor: uploadState === "loading" ? "default" : "pointer",
+                    opacity: uploadState === "loading" ? 0.7 : 1,
+                  }}
+                >
+                  {uploadState === "loading" ? "Uploading…" : uploadState === "error" ? "Retry" : "Post to Strava"}
+                </button>
+              )}
+              {uploadState === "error" && uploadError && (
+                <div style={{ fontSize: 11, color: "#f87171", padding: "0 4px" }}>{uploadError}</div>
+              )}
+            </div>
           )}
 
           <button
