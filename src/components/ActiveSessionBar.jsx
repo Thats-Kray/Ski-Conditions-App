@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { computeSegmentStats } from "../lib/useGpsTracker"
+import { supabase } from "../lib/supabase"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -25,15 +26,95 @@ function isGpsPulsing(status, gpsAccuracy) {
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd }) {
+export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd, currentProfile }) {
   const [now, setNow] = useState(Date.now())
   const [sheetOpen, setSheetOpen] = useState(false)
+
+  // ── Live location sharing (S28-T2) ──────────────────────────────────────────
+  // "Share my location" toggle, broadcast on the sharer's own
+  // `mountain:live:{userId}` Supabase Realtime Broadcast channel. Purely
+  // ephemeral — nothing is ever written to a DB table (see S28 privacy model).
+  // The channel is opened `private: true` and gated server-side by RLS
+  // policies on `realtime.messages` (migrations/018_live_location_realtime_authz.sql)
+  // so only the owner can ever broadcast on their own `mountain:live:{id}`
+  // topic — broadcast channels are open by default otherwise, which would
+  // let anyone holding the anon key impersonate a user's position.
+  const [sharingLocation, setSharingLocation] = useState(false)
+  const channelRef = useRef(null)
+  const intervalRef = useRef(null)
 
   // Tick every second for the elapsed-time display
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1_000)
     return () => clearInterval(t)
   }, [])
+
+  useEffect(() => {
+    function stopSharing() {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      if (channelRef.current) {
+        channelRef.current.send({ type: "broadcast", event: "stopped", payload: {} })
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
+    }
+
+    if (!sharingLocation || !currentProfile?.id) {
+      stopSharing()
+      return
+    }
+
+    const channel = supabase.channel(`mountain:live:${currentProfile.id}`, { config: { private: true } })
+    channelRef.current = channel
+
+    function broadcastPosition(position) {
+      channel.send({
+        type: "broadcast",
+        event: "position",
+        payload: {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          name: currentProfile.full_name || currentProfile.username || "Friend",
+          avatar_url: currentProfile.avatar_url || null,
+        },
+      })
+    }
+
+    // Wait for the private channel's RLS-authorized join to be confirmed
+    // before broadcasting anything — sending on a not-yet-SUBSCRIBED private
+    // channel can be dropped, and unlike a public channel, a private channel
+    // has a real (if fast) server round-trip to authorize the join.
+    channel.subscribe((status, err) => {
+      if (status === "SUBSCRIBED") {
+        // getCurrentPosition on a 30s interval (not watchPosition's continuous
+        // stream) to match ROADMAP's "broadcast position every 30s" cadence and
+        // avoid over-broadcasting — GPS tracking itself already runs continuously
+        // via sprint-3's useGpsTracker watchPosition, this is a separate, coarser
+        // cadence just for the shared pin.
+        navigator.geolocation.getCurrentPosition(broadcastPosition, () => {}, { enableHighAccuracy: false })
+        intervalRef.current = setInterval(() => {
+          navigator.geolocation.getCurrentPosition(broadcastPosition, () => {}, { enableHighAccuracy: false })
+        }, 30000)
+      } else if (status === "CHANNEL_ERROR") {
+        console.warn("Live location channel error:", err)
+      }
+    })
+
+    // Cleanup fires on toggle-off AND on unmount — since ActiveSessionBar is
+    // only rendered while `activeSession` is truthy (see App.jsx), ending the
+    // session unmounts this component and this same cleanup sends "stopped"
+    // and tears down the channel, even if the user forgot to toggle it off.
+    return stopSharing
+  }, [sharingLocation, currentProfile?.id])
+
+  // If GPS permission is lost/denied mid-session, don't keep broadcasting a
+  // stale position — auto-disable sharing along with the tracker itself.
+  useEffect(() => {
+    if (tracker.status === "error" && sharingLocation) setSharingLocation(false)
+  }, [tracker.status, sharingLocation])
 
   if (!activeSession) return null
 
@@ -54,6 +135,10 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd 
 
   function handleEnd(e) {
     e?.stopPropagation()
+    // Stop broadcasting immediately rather than waiting for unmount (which
+    // only happens after onSessionEnd's async Supabase flush resolves) —
+    // ending the day should stop sharing right away.
+    setSharingLocation(false)
     const finalSegments = tracker.stopTracking()
     setSheetOpen(false)
     onSessionEnd(finalSegments)
@@ -158,6 +243,62 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd 
               }}
             />
             {tracker.gpsAccuracy != null ? `${Math.round(tracker.gpsAccuracy)}m accuracy` : "acquiring…"}
+          </div>
+
+          {/* Share my location toggle (S28-T2) */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 14,
+              padding: "10px 12px",
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>📍 Share my location</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>
+                {tracker.status === "error"
+                  ? "GPS tracking requires location permission"
+                  : "Friends see a live pin on the map while this is on"}
+              </div>
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); setSharingLocation((v) => !v) }}
+              disabled={tracker.status === "error"}
+              aria-pressed={sharingLocation}
+              aria-label="Share my location toggle"
+              style={{
+                width: 44,
+                height: 26,
+                borderRadius: 999,
+                border: "1px solid rgba(255,255,255,0.18)",
+                background: sharingLocation ? "linear-gradient(135deg, #0284c7, #38bdf8)" : "rgba(255,255,255,0.12)",
+                position: "relative",
+                cursor: tracker.status === "error" ? "not-allowed" : "pointer",
+                opacity: tracker.status === "error" ? 0.5 : 1,
+                flexShrink: 0,
+                transition: "background 0.2s",
+                padding: 0,
+              }}
+            >
+              <span
+                style={{
+                  position: "absolute",
+                  top: 2,
+                  left: sharingLocation ? 20 : 2,
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  background: "white",
+                  transition: "left 0.2s",
+                }}
+              />
+            </button>
           </div>
 
           {/* Controls */}

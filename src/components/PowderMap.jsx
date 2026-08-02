@@ -2,6 +2,7 @@ import { useState } from "react"
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import UserProfileModal from "./UserProfileModal"
+import { useLiveFriendLocations } from "../lib/useLiveFriendLocations"
 
 function scoreColor(score) {
   if (score == null) return "#bfdbfe"   // fallback light blue
@@ -141,8 +142,12 @@ export default function PowderMap({
   resorts,
   skierCounts = {},
   skierDetails = {},
+  friendIds = [],
 }) {
   const [viewingUserId, setViewingUserId] = useState(null)
+  // Live "N friends on mountain now" pins (S28-T3) — ephemeral Realtime
+  // Broadcast, only ever shown for accepted friends.
+  const liveLocations = useLiveFriendLocations(friendIds)
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
@@ -275,6 +280,50 @@ export default function PowderMap({
               </CircleMarker>
             )
           })}
+
+          {/* Live friend location pins (S28-T3) — visually distinct (amber ring)
+              from the resort powder-score markers above. Disappear within ~90s
+              of a friend stopping sharing (staleness cleanup in the hook), or
+              immediately on an explicit "stopped" broadcast. */}
+          {Object.entries(liveLocations).map(([friendId, loc]) => (
+            <CircleMarker
+              key={`friend-${friendId}`}
+              center={[loc.lat, loc.lng]}
+              radius={10}
+              pathOptions={{ color: "#fbbf24", fillColor: "#fbbf24", fillOpacity: 0.9, weight: 2 }}
+              eventHandlers={{ click: () => setViewingUserId(friendId) }}
+            >
+              <Popup maxWidth={220}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 999,
+                      overflow: "hidden",
+                      background: "#fef3c7",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 11,
+                      fontWeight: 900,
+                      color: "#92400e",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {loc.avatar_url ? (
+                      <img src={loc.avatar_url} alt={loc.name || "Friend"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      avatarFallback(loc.name)
+                    )}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 13 }}>{loc.name || "Friend"}</div>
+                    <div style={{ fontSize: 11, color: "#92400e" }}>📍 On the mountain now</div>
+                  </div>
+                </div>
+              </Popup>
+            </CircleMarker>
+          ))}
         </MapContainer>
       </div>
       {viewingUserId && (
