@@ -2,6 +2,7 @@ import express from "express"
 import cors from "cors"
 import fetch from "node-fetch"
 import * as cheerio from "cheerio"
+import { fileURLToPath } from "url"
 import stravaRouter from "./routes/strava.js"
 import { computePowderScore } from "./powderScore.js"
 import { registerWeeklyBriefingCron } from "./cron.js"
@@ -767,8 +768,18 @@ export async function getAllResortConditions() {
   })
 }
 
-registerWeeklyBriefingCron()
+// Only boot the live server + cron schedule when this file is the actual
+// process entry point (`node index.js`). Without this gate, anything that
+// imports index.js as a module — including cron.js, which imports
+// getAllResortConditions from here — forces a full module evaluation that
+// starts a stray Express server and registers a real cron job as a side
+// effect, hanging the importing process (e.g. `node -e "import('./cron.js')..."`,
+// which is exactly the sprint's own manual-verification command for
+// sendWeeklyBriefing()).
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  registerWeeklyBriefingCron()
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`)
-})
+  app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`)
+  })
+}
