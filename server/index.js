@@ -3,9 +3,15 @@ import cors from "cors"
 import fetch from "node-fetch"
 import * as cheerio from "cheerio"
 import { fileURLToPath } from "url"
+import { createClient } from "@supabase/supabase-js"
 import stravaRouter from "./routes/strava.js"
 import { computePowderScore } from "./powderScore.js"
 import { registerWeeklyBriefingCron } from "./cron.js"
+import { signAlertToken, verifyAlertToken } from "./alertTokens.js"
+
+function getSupabase() {
+  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+}
 
 const app = express()
 app.use(cors({
@@ -733,6 +739,44 @@ app.get("/api/resort-conditions", async (req, res) => {
     res.json(data)
   } catch (err) {
     res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Signed, no-login-required unsubscribe/resubscribe links (weekly briefing emails) ──
+
+app.get("/api/unsubscribe", async (req, res) => {
+  try {
+    const payload = verifyAlertToken(req.query.token)
+    if (payload.action !== "unsubscribe") throw new Error("Wrong token action")
+    const { error } = await getSupabase().from("profiles").update({ powder_alerts_enabled: false }).eq("id", payload.userId)
+    if (error) throw error
+    const resubscribeToken = signAlertToken(payload.userId, "resubscribe")
+    res.send(`
+      <html><body style="font-family:sans-serif;background:#04080f;color:#e0f2fe;padding:40px;text-align:center;">
+        <h2>You've been unsubscribed.</h2>
+        <p>You won't receive weekly powder briefings anymore.</p>
+        <a href="/api/resubscribe?token=${resubscribeToken}" style="color:#38bdf8;">Click here to re-enable alerts.</a>
+      </body></html>
+    `)
+  } catch (e) {
+    res.status(400).send(`<html><body style="font-family:sans-serif;padding:40px;text-align:center;">This link is invalid or has expired.</body></html>`)
+  }
+})
+
+app.get("/api/resubscribe", async (req, res) => {
+  try {
+    const payload = verifyAlertToken(req.query.token)
+    if (payload.action !== "resubscribe") throw new Error("Wrong token action")
+    const { error } = await getSupabase().from("profiles").update({ powder_alerts_enabled: true }).eq("id", payload.userId)
+    if (error) throw error
+    res.send(`
+      <html><body style="font-family:sans-serif;background:#04080f;color:#e0f2fe;padding:40px;text-align:center;">
+        <h2>You're back in! ❄️</h2>
+        <p>Weekly powder briefings are re-enabled.</p>
+      </body></html>
+    `)
+  } catch (e) {
+    res.status(400).send(`<html><body style="font-family:sans-serif;padding:40px;text-align:center;">This link is invalid or has expired.</body></html>`)
   }
 })
 
