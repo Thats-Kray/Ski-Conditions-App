@@ -17,8 +17,8 @@ const SKILL_OPTIONS = [
   { key: "experts_only", label: "Experts Only", color: "#c084fc", desc: "No boundaries" },
 ]
 
-const overlay = { position: "fixed", inset: 0, background: "rgba(2,6,23,0.94)", backdropFilter: "blur(16px)", zIndex: 500, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "20px 16px max(40px, env(safe-area-inset-bottom)) 16px" }
-const card = { width: "100%", maxWidth: 480, background: "#0b1424", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 28, boxShadow: "0 40px 100px rgba(0,0,0,0.75)", display: "flex", flexDirection: "column", maxHeight: "calc(100dvh - 40px)" }
+const overlay = { position: "fixed", inset: 0, background: "rgba(4,8,15,0.94)" /* --color-bg at 0.94 opacity */, backdropFilter: "blur(16px)", zIndex: 500, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "20px 16px max(40px, env(safe-area-inset-bottom)) 16px" }
+const card = { width: "100%", maxWidth: 480, background: "var(--color-bg-elevated)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 28, boxShadow: "0 40px 100px rgba(0,0,0,0.75)", display: "flex", flexDirection: "column", maxHeight: "calc(100dvh - 40px)" }
 
 const inputStyle = { background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "white", padding: "11px 14px", borderRadius: 12, outline: "none", fontSize: 16, fontFamily: "inherit", width: "100%", boxSizing: "border-box" }
 
@@ -49,7 +49,7 @@ function WelcomeStep({ onNext }) {
           </div>
         ))}
       </div>
-      <button onClick={onNext} style={{ background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", border: "none", borderRadius: 16, padding: "14px", fontSize: 15, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 28px rgba(37,99,235,0.4)" }}>
+      <button onClick={onNext} style={{ background: "var(--gradient-primary)", color: "white", border: "none", borderRadius: 16, padding: "14px", fontSize: 15, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 28px rgba(37,99,235,0.4)" }}>
         Let's Go 🏔️
       </button>
     </div>
@@ -151,11 +151,11 @@ function ProfileStep({ onNext, onSkip }) {
       </div>
 
       {/* Sticky footer — always visible */}
-      <div style={{ flexShrink: 0, padding: "12px 24px 28px", borderTop: "1px solid rgba(255,255,255,0.07)", background: "#0b1424" }}>
+      <div style={{ flexShrink: 0, padding: "12px 24px 28px", borderTop: "1px solid rgba(255,255,255,0.07)", background: "var(--color-bg-elevated)" }}>
         {error && <div style={{ fontSize: 13, color: "#fda4af", background: "rgba(244,63,94,0.1)", borderRadius: 10, padding: "9px 12px", marginBottom: 12 }}>{error}</div>}
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onSkip} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "12px 18px", color: "rgba(255,255,255,0.5)", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>Skip</button>
-          <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: saving ? "rgba(255,255,255,0.08)" : "linear-gradient(135deg,#2563eb,#0891b2)", color: saving ? "rgba(255,255,255,0.4)" : "white", border: "none", borderRadius: 14, padding: "13px", fontWeight: 900, cursor: saving ? "wait" : "pointer", fontSize: 14, boxShadow: saving ? "none" : "0 6px 24px rgba(37,99,235,0.35)" }}>
+          <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: saving ? "rgba(255,255,255,0.08)" : "var(--gradient-primary)", color: saving ? "rgba(255,255,255,0.4)" : "white", border: "none", borderRadius: 14, padding: "13px", fontWeight: 900, cursor: saving ? "wait" : "pointer", fontSize: 14, boxShadow: saving ? "none" : "0 6px 24px rgba(37,99,235,0.35)" }}>
             {saving ? "Saving…" : "Save & Continue →"}
           </button>
         </div>
@@ -252,10 +252,10 @@ function FriendsStep({ onNext }) {
       </div>
 
       {/* Sticky footer */}
-      <div style={{ flexShrink: 0, padding: "12px 24px 28px", borderTop: "1px solid rgba(255,255,255,0.07)", background: "#0b1424" }}>
+      <div style={{ flexShrink: 0, padding: "12px 24px 28px", borderTop: "1px solid rgba(255,255,255,0.07)", background: "var(--color-bg-elevated)" }}>
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onNext} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "12px 18px", color: "rgba(255,255,255,0.5)", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>Skip</button>
-          <button onClick={onNext} style={{ flex: 1, background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", border: "none", borderRadius: 14, padding: "13px", fontWeight: 900, cursor: "pointer", fontSize: 14, boxShadow: "0 6px 24px rgba(37,99,235,0.35)" }}>
+          <button onClick={onNext} style={{ flex: 1, background: "var(--gradient-primary)", color: "white", border: "none", borderRadius: 14, padding: "13px", fontWeight: 900, cursor: "pointer", fontSize: 14, boxShadow: "0 6px 24px rgba(37,99,235,0.35)" }}>
             {sent.size > 0 ? `Added ${sent.size} — Continue →` : "Continue →"}
           </button>
         </div>

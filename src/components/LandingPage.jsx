@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react"
 
-// ── Swap headline here (1, 2, or 3) ──────────────────────────────────────────
-const HEADLINE = "The group chat for your ski season."
-// const HEADLINE = "Plan the season with your crew. Powered by 10 years of snow data."
-// const HEADLINE = "Where's your crew skiing next? Plan it here."
+const HEADLINE = "Chase more powder days"
 
 const SUBHEAD = "Add your friends, plan trips together, track your season, and use a decade of snowfall data to pick the right week."
 
@@ -13,63 +10,17 @@ const RESORTS = [
   "Keystone", "Eldora", "Aspen Snowmass", "Beaver Creek",
 ]
 
-// ── Nav ───────────────────────────────────────────────────────────────────────
-
-function Nav({ scrolled, onSignIn, onSignUp, onBrowse, scrollTo }) {
-  const [menuOpen, setMenuOpen] = useState(false)
-
-  return (
-    <nav style={{
-      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-      padding: "0 20px",
-      background: scrolled ? "rgba(2,6,23,0.95)" : "transparent",
-      backdropFilter: scrolled ? "blur(16px)" : "none",
-      borderBottom: scrolled ? "1px solid rgba(255,255,255,0.07)" : "none",
-      transition: "background 0.25s, backdrop-filter 0.25s, border 0.25s",
-    }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-        {/* Wordmark */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#2563eb,#0891b2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>❄️</div>
-          <span style={{ fontSize: 17, fontWeight: 900, color: "white", letterSpacing: -0.3 }}>PowderDays</span>
-        </div>
-
-        {/* Desktop nav */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, "@media(max-width:640px)": { display: "none" } }}>
-          <button onClick={() => scrollTo("features")} style={navLink}>Features</button>
-          <button onClick={() => scrollTo("how-it-works")} style={navLink}>How It Works</button>
-          <button onClick={onBrowse} style={navLink}>Live Conditions</button>
-          <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.12)", margin: "0 6px" }} />
-          <button onClick={onSignIn} style={navLinkBold}>Sign In</button>
-          <button onClick={onSignUp} style={navCta}>Start your season</button>
-        </div>
-
-        {/* Mobile: Sign In + hamburger placeholder */}
-        <div style={{ display: "none" }}>
-          <button onClick={onSignIn} style={navLinkBold}>Sign In</button>
-        </div>
-      </div>
-
-      {/* Responsive: two CTA buttons row on small screens below nav */}
-      <style>{`
-        @media(max-width:640px) {
-          .nav-desktop { display: none !important; }
-          .nav-mobile { display: flex !important; }
-        }
-      `}</style>
-    </nav>
-  )
-}
+// ── Nav styles (used by the actual rendered nav bar further down) ─────────────
 
 const navLink = {
-  background: "none", border: "none", color: "rgba(255,255,255,0.55)",
+  background: "none", border: "none", color: "var(--color-text-2)",
   fontSize: 14, fontWeight: 600, cursor: "pointer", padding: "6px 10px",
   borderRadius: 8, transition: "color 0.15s",
 }
-const navLinkBold = { ...navLink, color: "rgba(255,255,255,0.85)", fontWeight: 700 }
+const navLinkBold = { ...navLink, color: "var(--color-text-1)", fontWeight: 700 }
 const navCta = {
   padding: "8px 16px", borderRadius: 10, border: "none",
-  background: "linear-gradient(135deg,#2563eb,#0891b2)",
+  background: "var(--gradient-primary)",
   color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer",
   boxShadow: "0 2px 12px rgba(37,99,235,0.4)",
 }
@@ -81,7 +32,7 @@ function Hero({ onSignUp, scrollTo }) {
     <section style={{
       minHeight: "100vh", display: "flex", alignItems: "center",
       padding: "100px 20px 80px",
-      background: "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(37,99,235,0.18) 0%, transparent 70%), rgba(2,6,23,1)",
+      background: "var(--gradient-bg)",
       position: "relative", overflow: "hidden",
     }}>
       {/* Background glow accents */}
@@ -98,7 +49,7 @@ function Hero({ onSignUp, scrollTo }) {
             borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 700,
             color: "#93c5fd", marginBottom: 24,
           }}>
-            ❄️ Now open for 2025–26 season
+            ❄️ PowderDays — now open for 2025–26 season
           </div>
 
           <h1 style={{
@@ -111,7 +62,7 @@ function Hero({ onSignUp, scrollTo }) {
 
           <p style={{
             margin: 0, fontSize: "clamp(1rem, 2.5vw, 1.15rem)",
-            color: "rgba(255,255,255,0.58)", lineHeight: 1.65,
+            color: "var(--color-text-2)", lineHeight: 1.65,
             marginBottom: 36, maxWidth: 480,
           }}>
             {SUBHEAD}
@@ -122,7 +73,7 @@ function Hero({ onSignUp, scrollTo }) {
               onClick={onSignUp}
               style={{
                 padding: "14px 28px", borderRadius: 12, border: "none",
-                background: "linear-gradient(135deg,#2563eb,#0891b2)",
+                background: "var(--gradient-primary)",
                 color: "white", fontWeight: 800, fontSize: 16, cursor: "pointer",
                 boxShadow: "0 4px 24px rgba(37,99,235,0.45)",
                 letterSpacing: -0.2,
@@ -136,7 +87,7 @@ function Hero({ onSignUp, scrollTo }) {
                 padding: "14px 24px", borderRadius: 12,
                 border: "1px solid rgba(255,255,255,0.15)",
                 background: "rgba(255,255,255,0.05)",
-                color: "rgba(255,255,255,0.8)", fontWeight: 700, fontSize: 16, cursor: "pointer",
+                color: "var(--color-text-1)", fontWeight: 700, fontSize: 16, cursor: "pointer",
               }}
             >
               See how it works
@@ -146,14 +97,14 @@ function Hero({ onSignUp, scrollTo }) {
           <div style={{ marginTop: 28, display: "flex", alignItems: "center", gap: 10 }}>
             {["K","S","J","A","M"].map((l, i) => (
               <div key={l} style={{
-                width: 28, height: 28, borderRadius: "50%", border: "2px solid rgba(2,6,23,1)",
+                width: 28, height: 28, borderRadius: "50%", border: "2px solid var(--color-bg)",
                 marginLeft: i === 0 ? 0 : -10,
-                background: ["#2563eb","#16a34a","#9333ea","#ea580c","#0891b2"][i],
+                background: ["#38bdf8","#16a34a","#9333ea","#ea580c","#818cf8"][i],
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 11, fontWeight: 800, color: "white",
               }}>{l}</div>
             ))}
-            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginLeft: 6 }}>Your crew is waiting</span>
+            <span style={{ fontSize: 13, color: "var(--color-text-3)", marginLeft: 6 }}>Your crew is waiting</span>
           </div>
         </div>
 
@@ -172,7 +123,7 @@ function Hero({ onSignUp, scrollTo }) {
               <div style={{ fontSize: 20 }}>🏆</div>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 900, color: "white" }}>Sarah leads</div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>47 days · your crew</div>
+                <div style={{ fontSize: 10, color: "var(--color-text-3)" }}>47 days · your crew</div>
               </div>
             </div>
           </div>
@@ -202,7 +153,7 @@ function SocialProof() {
         {stats.map((s) => (
           <div key={s.label} style={{ textAlign: "center" }}>
             <div style={{ fontSize: 22, fontWeight: 900, color: "white", letterSpacing: -0.5 }}>{s.val}</div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2, fontWeight: 600 }}>{s.label}</div>
+            <div style={{ fontSize: 12, color: "var(--color-text-3)", marginTop: 2, fontWeight: 600 }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -214,38 +165,31 @@ function SocialProof() {
 
 const FEATURES = [
   {
+    emoji: "❄️",
+    title: "Conditions",
+    desc: "Real-time powder scores across Colorado resorts, backed by a decade of snowfall data. Find the best week to book before someone else does.",
+    accent: "#38bdf8",
+    mockup: <img src="/screenshots/IMG_7798.PNG" alt="Conditions dashboard showing powder scores and pass filters" style={{ width: "100%", borderRadius: 12, display: "block" }} />,
+  },
+  {
     emoji: "🎿",
-    title: "Plan Trips With Your Crew",
-    desc: "Group trip planner with shared dates, who's in / who's out, lodging notes, and a group chat per trip. No more coordinating across seven group texts.",
-    accent: "#2563eb",
+    title: "Crew Planning",
+    desc: "Coordinate ski days with friends — shared dates, RSVPs, lodging notes, and a group chat per trip. No more coordinating across seven group texts.",
+    accent: "#818cf8",
     mockup: <img src="/screenshots/IMG_7796.PNG" alt="Trip planner showing Spring Skiing at Arapahoe Basin with shared logistics" style={{ width: "100%", borderRadius: 12, display: "block" }} />,
   },
   {
     emoji: "🏆",
-    title: "The Season Leaderboard",
-    desc: "Track your days, vertical, and resorts. Settle who actually skied the most this season — and brag (or humble-brag) accordingly.",
+    title: "Session Tracking",
+    desc: "Log your ski days and build a season passport. Track vertical and resorts, and settle who actually skied the most this season.",
     accent: "#fbbf24",
-    mockup: <img src="/screenshots/IMG_7797.PNG" alt="Trip chat showing guest list and crew coordination" style={{ width: "100%", borderRadius: 12, display: "block" }} />,
-  },
-  {
-    emoji: "❄️",
-    title: "Pick the Right Week",
-    desc: "Powder probability and 10 years of historical snowfall for 90+ resorts. Find the best week to book before someone else does.",
-    accent: "#67e8f9",
-    mockup: <img src="/screenshots/IMG_7798.PNG" alt="Conditions dashboard showing powder scores and pass filters" style={{ width: "100%", borderRadius: 12, display: "block" }} />,
-  },
-  {
-    emoji: "📍",
-    title: "Your Season, One Place",
-    desc: "Trips, friends, stats, and snow data all in one app instead of seven group chats and three browser tabs.",
-    accent: "#a78bfa",
-    mockup: <img src="/screenshots/IMG_7799.PNG" alt="Profile page showing season stats, passes, vehicle, and crew" style={{ width: "100%", borderRadius: 12, display: "block" }} />,
+    mockup: <img src="/screenshots/IMG_7797.PNG" alt="Season leaderboard showing days skied and crew stats" style={{ width: "100%", borderRadius: 12, display: "block" }} />,
   },
 ]
 
 function Features() {
   return (
-    <section id="features" style={{ padding: "96px 20px", background: "rgba(2,6,23,1)" }}>
+    <section id="features" style={{ padding: "96px 20px", background: "var(--color-bg)" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 56 }}>
           <div style={{
@@ -259,7 +203,7 @@ function Features() {
           <h2 style={{ margin: 0, fontSize: "clamp(1.8rem, 4vw, 2.6rem)", fontWeight: 900, color: "white", letterSpacing: -0.8, lineHeight: 1.15 }}>
             Built for how ski crews actually work
           </h2>
-          <p style={{ margin: "14px auto 0", maxWidth: 480, fontSize: 16, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
+          <p style={{ margin: "14px auto 0", maxWidth: 480, fontSize: 16, color: "var(--color-text-2)", lineHeight: 1.6 }}>
             Not a weather app with a bolt-on social tab. The social layer is the point.
           </p>
         </div>
@@ -282,7 +226,7 @@ function Features() {
                   {f.emoji}
                 </div>
                 <div style={{ fontSize: 17, fontWeight: 900, color: "white", marginBottom: 6, letterSpacing: -0.3 }}>{f.title}</div>
-                <div style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>{f.desc}</div>
+                <div style={{ fontSize: 14, color: "var(--color-text-2)", lineHeight: 1.6 }}>{f.desc}</div>
               </div>
               {/* Mini mockup */}
               <div style={{ marginTop: "auto", opacity: 0.92 }}>
@@ -331,7 +275,7 @@ function HowItWorks() {
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
                 <div style={{
                   width: 44, height: 44, borderRadius: "50%",
-                  background: "linear-gradient(135deg,#2563eb,#0891b2)",
+                  background: "var(--gradient-primary)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontWeight: 900, fontSize: 18, color: "white",
                   boxShadow: "0 0 0 6px rgba(37,99,235,0.12)",
@@ -345,7 +289,7 @@ function HowItWorks() {
               {/* Content */}
               <div style={{ paddingBottom: i < steps.length - 1 ? 32 : 0, paddingTop: 8 }}>
                 <div style={{ fontSize: 18, fontWeight: 900, color: "white", marginBottom: 6, letterSpacing: -0.3 }}>{s.title}</div>
-                <div style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", lineHeight: 1.65 }}>{s.desc}</div>
+                <div style={{ fontSize: 14, color: "var(--color-text-2)", lineHeight: 1.65 }}>{s.desc}</div>
               </div>
             </div>
           ))}
@@ -363,10 +307,10 @@ function Resorts() {
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>Browse the data</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-text-3)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>Browse the data</div>
             <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>Colorado resorts covered</div>
           </div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>
+          <div style={{ fontSize: 13, color: "var(--color-text-3)", fontWeight: 600 }}>
             90+ resorts · 10 years of snowfall history
           </div>
         </div>
@@ -378,7 +322,7 @@ function Resorts() {
                 padding: "8px 16px", borderRadius: 999,
                 border: "1px solid rgba(255,255,255,0.1)",
                 background: "rgba(255,255,255,0.04)",
-                color: "rgba(255,255,255,0.65)", fontSize: 13, fontWeight: 600,
+                color: "var(--color-text-2)", fontSize: 13, fontWeight: 600,
               }}
             >
               {r}
@@ -404,7 +348,7 @@ function ClosingCTA({ onSignUp }) {
   return (
     <section style={{
       padding: "96px 20px",
-      background: "radial-gradient(ellipse 80% 50% at 50% 50%, rgba(37,99,235,0.15) 0%, transparent 70%), rgba(2,6,23,1)",
+      background: "radial-gradient(ellipse 80% 50% at 50% 50%, rgba(37,99,235,0.15) 0%, transparent 70%), var(--color-bg)",
       borderTop: "1px solid rgba(255,255,255,0.07)",
       textAlign: "center",
     }}>
@@ -417,14 +361,14 @@ function ClosingCTA({ onSignUp }) {
         }}>
           Your crew is already planning their season.
         </h2>
-        <p style={{ margin: "0 0 36px", fontSize: 17, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
+        <p style={{ margin: "0 0 36px", fontSize: 17, color: "var(--color-text-2)", lineHeight: 1.6 }}>
           Catch up.
         </p>
         <button
           onClick={onSignUp}
           style={{
             padding: "16px 36px", borderRadius: 14, border: "none",
-            background: "linear-gradient(135deg,#2563eb,#0891b2)",
+            background: "var(--gradient-primary)",
             color: "white", fontWeight: 900, fontSize: 17, cursor: "pointer",
             boxShadow: "0 6px 30px rgba(37,99,235,0.5)",
             letterSpacing: -0.3,
@@ -432,7 +376,7 @@ function ClosingCTA({ onSignUp }) {
         >
           Start your season →
         </button>
-        <div style={{ marginTop: 14, fontSize: 13, color: "rgba(255,255,255,0.3)" }}>
+        <div style={{ marginTop: 14, fontSize: 13, color: "var(--color-text-3)" }}>
           Free to start. No credit card required.
         </div>
       </div>
@@ -447,23 +391,23 @@ function Footer({ onBrowse }) {
     <footer style={{
       borderTop: "1px solid rgba(255,255,255,0.07)",
       padding: "32px 20px",
-      background: "rgba(2,6,23,1)",
+      background: "var(--color-bg)",
     }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 24, height: 24, borderRadius: 6, background: "linear-gradient(135deg,#2563eb,#0891b2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>❄️</div>
-          <span style={{ fontSize: 14, fontWeight: 900, color: "rgba(255,255,255,0.7)" }}>PowderDays</span>
+          <div style={{ width: 24, height: 24, borderRadius: 6, background: "var(--gradient-primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>❄️</div>
+          <span style={{ fontSize: 14, fontWeight: 900, color: "var(--color-text-2)" }}>PowderDays</span>
         </div>
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
           {[
             { label: "Live Conditions", action: onBrowse },
           ].map(({ label, action }) => (
-            <button key={label} onClick={action} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.35)", fontSize: 13, cursor: "pointer", padding: 0, fontWeight: 600 }}>
+            <button key={label} onClick={action} style={{ background: "none", border: "none", color: "var(--color-text-3)", fontSize: 13, cursor: "pointer", padding: 0, fontWeight: 600 }}>
               {label}
             </button>
           ))}
         </div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 600 }}>
+        <div style={{ fontSize: 12, color: "var(--color-text-3)", fontWeight: 600 }}>
           Made for skiers by skiers · Colorado
         </div>
       </div>
@@ -487,24 +431,24 @@ export default function LandingPage({ onSignIn, onSignUp, onBrowse }) {
   }
 
   return (
-    <div style={{ background: "rgba(2,6,23,1)", color: "white", minHeight: "100vh", overflowX: "hidden" }}>
+    <div style={{ background: "var(--color-bg)", color: "white", minHeight: "100vh", overflowX: "hidden" }}>
       {/* Mobile sign-in bar at top (always visible on small screens) */}
       <div style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 200,
         display: "none", // overridden by CSS below for mobile
         padding: "10px 16px",
-        background: "rgba(2,6,23,0.97)",
+        background: "var(--color-nav-bg)",
         borderBottom: "1px solid rgba(255,255,255,0.07)",
         justifyContent: "space-between", alignItems: "center",
         backdropFilter: "blur(12px)",
       }} className="mobile-bar">
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ width: 24, height: 24, borderRadius: 6, background: "linear-gradient(135deg,#2563eb,#0891b2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>❄️</div>
+          <div style={{ width: 24, height: 24, borderRadius: 6, background: "var(--gradient-primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>❄️</div>
           <span style={{ fontSize: 15, fontWeight: 900, color: "white" }}>PowderDays</span>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={onSignIn} style={{ padding: "7px 14px", borderRadius: 9, border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "rgba(255,255,255,0.8)", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Sign In</button>
-          <button onClick={onSignUp} style={{ padding: "7px 14px", borderRadius: 9, border: "none", background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>Start →</button>
+          <button onClick={onSignIn} style={{ padding: "7px 14px", borderRadius: 9, border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "var(--color-text-1)", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Sign In</button>
+          <button onClick={onSignUp} style={{ padding: "7px 14px", borderRadius: 9, border: "none", background: "var(--gradient-primary)", color: "white", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>Start →</button>
         </div>
       </div>
 
@@ -522,7 +466,7 @@ export default function LandingPage({ onSignIn, onSignUp, onBrowse }) {
       <nav className="desktop-nav" style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
         padding: "0 20px",
-        background: scrolled ? "rgba(2,6,23,0.95)" : "transparent",
+        background: scrolled ? "var(--color-nav-bg)" : "transparent",
         backdropFilter: scrolled ? "blur(16px)" : "none",
         borderBottom: scrolled ? "1px solid rgba(255,255,255,0.07)" : "none",
         transition: "all 0.25s",
@@ -530,7 +474,7 @@ export default function LandingPage({ onSignIn, onSignUp, onBrowse }) {
       }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#2563eb,#0891b2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>❄️</div>
+            <div style={{ width: 30, height: 30, borderRadius: 8, background: "var(--gradient-primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>❄️</div>
             <span style={{ fontSize: 17, fontWeight: 900, color: "white", letterSpacing: -0.3 }}>PowderDays</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
