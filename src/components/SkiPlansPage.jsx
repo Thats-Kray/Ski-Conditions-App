@@ -3,8 +3,6 @@ import { getAllVisibleTrips, getCurrentUser, getMySkiPlans } from "../lib/social
 import TripCard from "./TripCard"
 import CreateTripModal from "./CreateTripModal"
 import TripDetailModal from "./TripDetailModal"
-import SkiCheckInForm from "./SkiCheckInForm"
-import TodaysCrew from "./TodaysCrew"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { formatDate } from "../lib/format"
 import Avatar from "./ui/Avatar"
@@ -311,7 +309,6 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
 
   const SUB_TABS = [
     { key: "trips",    label: "🎿 Trips" },
-    { key: "today",    label: "📍 Today" },
     { key: "calendar", label: "📅 Calendar" },
   ]
 
@@ -443,25 +440,6 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
             </div>
           )}
         </>
-      )}
-
-      {/* ── Today tab ── */}
-      {subTab === "today" && (
-        <div style={{ display: "grid", gap: 20 }}>
-          {currentUser ? (
-            <SkiCheckInForm resorts={resorts} />
-          ) : (
-            <div style={{ borderRadius: 20, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", padding: "28px 24px", display: "grid", gap: 14 }}>
-              <div style={{ fontSize: 17, fontWeight: 900, color: "white" }}>Log in to post your plan</div>
-              <div style={{ fontSize: 14, color: "rgba(255,255,255,0.55)" }}>You can still browse Today's Crew below.</div>
-              <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={() => onRequireLogin?.("login")} style={{ background: "linear-gradient(135deg, #2563eb, #0891b2)", color: "white", border: "none", borderRadius: 10, padding: "11px 18px", fontWeight: 800, cursor: "pointer", fontSize: 13 }}>Log In</button>
-                <button onClick={() => onRequireLogin?.("signup")} style={{ background: "rgba(255,255,255,0.06)", color: "white", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "11px 18px", fontWeight: 800, cursor: "pointer", fontSize: 13 }}>Sign Up</button>
-              </div>
-            </div>
-          )}
-          <TodaysCrew />
-        </div>
       )}
 
       {/* ── Calendar tab ── */}

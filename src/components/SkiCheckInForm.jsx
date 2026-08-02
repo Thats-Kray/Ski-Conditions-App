@@ -7,7 +7,7 @@ function formatPlanTime(isoString) {
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
 }
 
-export default function SkiCheckInForm({ resorts }) {
+export default function SkiCheckInForm({ resorts, onSaved }) {
   const [user, setUser] = useState(null)
   const [resortKey, setResortKey] = useState("")
   const [eta, setEta] = useState("")
@@ -90,6 +90,7 @@ export default function SkiCheckInForm({ resorts }) {
       setHasPlan(true)
       setIsEditing(false)
       setMessage("Your ski plan for today has been saved.")
+      onSaved?.()
     } catch (err) {
       setMessage(err.message || "Something went wrong.")
     } finally {
