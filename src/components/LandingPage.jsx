@@ -10,53 +10,7 @@ const RESORTS = [
   "Keystone", "Eldora", "Aspen Snowmass", "Beaver Creek",
 ]
 
-// ── Nav ───────────────────────────────────────────────────────────────────────
-
-function Nav({ scrolled, onSignIn, onSignUp, onBrowse, scrollTo }) {
-  const [menuOpen, setMenuOpen] = useState(false)
-
-  return (
-    <nav style={{
-      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-      padding: "0 20px",
-      background: scrolled ? "var(--color-nav-bg)" : "transparent",
-      backdropFilter: scrolled ? "blur(16px)" : "none",
-      borderBottom: scrolled ? "1px solid rgba(255,255,255,0.07)" : "none",
-      transition: "background 0.25s, backdrop-filter 0.25s, border 0.25s",
-    }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-        {/* Wordmark */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: "var(--gradient-primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>❄️</div>
-          <span style={{ fontSize: 17, fontWeight: 900, color: "white", letterSpacing: -0.3 }}>PowderDays</span>
-        </div>
-
-        {/* Desktop nav */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, "@media(max-width:640px)": { display: "none" } }}>
-          <button onClick={() => scrollTo("features")} style={navLink}>Features</button>
-          <button onClick={() => scrollTo("how-it-works")} style={navLink}>How It Works</button>
-          <button onClick={onBrowse} style={navLink}>Live Conditions</button>
-          <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.12)", margin: "0 6px" }} />
-          <button onClick={onSignIn} style={navLinkBold}>Sign In</button>
-          <button onClick={onSignUp} style={navCta}>Start your season</button>
-        </div>
-
-        {/* Mobile: Sign In + hamburger placeholder */}
-        <div style={{ display: "none" }}>
-          <button onClick={onSignIn} style={navLinkBold}>Sign In</button>
-        </div>
-      </div>
-
-      {/* Responsive: two CTA buttons row on small screens below nav */}
-      <style>{`
-        @media(max-width:640px) {
-          .nav-desktop { display: none !important; }
-          .nav-mobile { display: flex !important; }
-        }
-      `}</style>
-    </nav>
-  )
-}
+// ── Nav styles (used by the actual rendered nav bar further down) ─────────────
 
 const navLink = {
   background: "none", border: "none", color: "var(--color-text-2)",
