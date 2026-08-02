@@ -13,6 +13,7 @@ import { resortName, resortEmoji } from "../lib/resorts"
 import { timeAgo, formatDate } from "../lib/format"
 import Avatar from "./ui/Avatar"
 import { SkiPingComposer } from "./SkiPingModal"
+import { useLiveFriendLocations } from "../lib/useLiveFriendLocations"
 import Card from "./ui/Card"
 import Badge, { TIER_COLORS } from "./ui/Badge"
 import ScoreRing from "./ui/ScoreRing"
@@ -265,9 +266,10 @@ function NextTripCard({ currentUser, onTabChange }) {
 
 // ── Card 3: Who's Skiing Today ────────────────────────────────────────────────
 
-function WhosSkiingTodayCard({ onTabChange }) {
+function WhosSkiingTodayCard({ currentUser, onTabChange }) {
   const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(true)
+  const [friendIds, setFriendIds] = useState([])
 
   useEffect(() => {
     let cancelled = false
@@ -279,11 +281,29 @@ function WhosSkiingTodayCard({ onTabChange }) {
     return () => { cancelled = true }
   }, [])
 
+  // Friend IDs feed the live "N friends on mountain now" count (S28-T4).
+  useEffect(() => {
+    if (!currentUser) { setFriendIds([]); return }
+    let cancelled = false
+    getAcceptedFriends()
+      .then((friends) => { if (!cancelled) setFriendIds((friends || []).map((f) => f.id)) })
+      .catch(() => { if (!cancelled) setFriendIds([]) })
+    return () => { cancelled = true }
+  }, [currentUser])
+
+  const liveLocations = useLiveFriendLocations(friendIds)
+  const liveCount = Object.keys(liveLocations).length
+
   return (
     <Card style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ fontSize: 11, color: "var(--color-text-3)", textTransform: "uppercase", letterSpacing: 0.5 }}>
         Who's Skiing Today
       </div>
+      {liveCount > 0 && (
+        <div style={{ fontSize: 12, color: "var(--color-accent)", fontWeight: 700 }}>
+          📍 {liveCount} friend{liveCount === 1 ? "" : "s"} on the mountain right now
+        </div>
+      )}
       {loading ? (
         <div style={{ fontSize: 13, color: "var(--color-text-3)" }}>Loading…</div>
       ) : plans.length === 0 ? (
@@ -707,7 +727,7 @@ function MobileHomeDashboard({ resorts, currentUser, onTabChange, onStartSession
       <OffseasonBanner />
       <TodaysBestMountainCard resorts={resorts} onTabChange={onTabChange} />
       <NextTripCard currentUser={currentUser} onTabChange={onTabChange} />
-      <WhosSkiingTodayCard onTabChange={onTabChange} />
+      <WhosSkiingTodayCard currentUser={currentUser} onTabChange={onTabChange} />
       <MobileCrewListWidget currentUser={currentUser} onTabChange={onTabChange} />
       <PingCta currentUser={currentUser} />
     </div>
@@ -742,7 +762,7 @@ export default function HomeDashboard({ resorts, currentUser, onTabChange, onSta
       {/* 3-card feed */}
       <TodaysBestMountainCard resorts={resorts} onTabChange={onTabChange} />
       <NextTripCard currentUser={currentUser} onTabChange={onTabChange} />
-      <WhosSkiingTodayCard onTabChange={onTabChange} />
+      <WhosSkiingTodayCard currentUser={currentUser} onTabChange={onTabChange} />
 
       {/* Ping CTA */}
       <PingCta currentUser={currentUser} />
