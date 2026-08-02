@@ -58,6 +58,34 @@
 
   --transition-fast:     0.12s ease;
   --transition-base:     0.2s ease;
+
+  /* Typography scale */
+  --font-size-display: clamp(28px, 6vw, 44px);  /* hero numbers, big stat tiles */
+  --font-size-h1: clamp(22px, 5vw, 40px);        /* page titles */
+  --font-size-h2: clamp(18px, 4vw, 28px);        /* section headers */
+  --font-size-h3: 18px;                          /* card titles */
+  --font-size-body: 15px;                        /* default body text */
+  --font-size-label: 13px;                       /* form labels, secondary text */
+  --font-size-caption: 11px;                     /* timestamps, fine print */
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 600;
+  --font-weight-bold: 800;
+  --font-weight-black: 900;
+
+  --line-height-tight: 1.2;
+  --line-height-base: 1.5;
+
+  /* Spacing scale — 4px base unit */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
 }
 
 html {
@@ -97,8 +125,8 @@ body {
 /* ── Typography ────────────────────────────────────────────────── */
 h1, h2, h3 { line-height: 1.1; }
 
-h1 { font-size: clamp(22px, 5vw, 40px); }
-h2 { font-size: clamp(18px, 4vw, 28px); }
+h1 { font-size: var(--font-size-h1); }
+h2 { font-size: var(--font-size-h2); }
 
 /* ── Links ─────────────────────────────────────────────────────── */
 a {
@@ -386,3 +414,22 @@ input, textarea, select {
 
 /* Weekend planner horizontal scroll – hide scrollbar */
 .weekend-scroll::-webkit-scrollbar { display: none; }
+
+/* Card background textures */
+.texture-snow-noise {
+  background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+
+.texture-mountain-silhouette {
+  background-image: linear-gradient(
+    170deg,
+    transparent 0%,
+    transparent 60%,
+    rgba(255,255,255,0.03) 60%,
+    rgba(255,255,255,0.03) 62%,
+    transparent 62%
+  );
+  background-repeat: no-repeat;
+  background-position: bottom;
+}
