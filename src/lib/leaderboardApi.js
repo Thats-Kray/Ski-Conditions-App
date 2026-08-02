@@ -202,6 +202,11 @@ async function fetchLeaderboard(startYear, mode) {
     verticalFt:  Number(row.vertical_ft),
     milesSki:    parseFloat(Number(row.miles_ski).toFixed(1)),
     topResort:   row.top_resort,
+    topSpeed:       row.top_speed_mph ?? null,
+    longestRun:     row.longest_run_ft ?? null,
+    totalRuns:      Number(row.total_runs),
+    totalLifts:     Number(row.total_lifts),
+    timeOnMountain: Number(row.time_on_mountain_min),
   }))
 }
 
@@ -240,6 +245,7 @@ export async function getLeaderboard(startYear) {
         id: friend.id, full_name: friend.full_name, username: friend.username,
         avatar_url: friend.avatar_url, skill_level: friend.skill_level,
         days: 0, resorts: 0, powder_days: 0, vertical_ft: 0, miles_ski: 0, top_resort: null,
+        top_speed_mph: null, longest_run_ft: null, total_runs: 0, total_lifts: 0, time_on_mountain_min: 0,
       })
     }
   }
@@ -257,6 +263,11 @@ export async function getLeaderboard(startYear) {
     verticalFt:  Number(row.vertical_ft || 0),
     milesSki:    parseFloat(Number(row.miles_ski || 0).toFixed(1)),
     topResort:   row.top_resort,
+    topSpeed:       row.top_speed_mph ?? null,
+    longestRun:     row.longest_run_ft ?? null,
+    totalRuns:      Number(row.total_runs || 0),
+    totalLifts:     Number(row.total_lifts || 0),
+    timeOnMountain: Number(row.time_on_mountain_min || 0),
   }))
 }
 
