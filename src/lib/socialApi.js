@@ -1137,6 +1137,10 @@ export async function createTrip({ resort_key, ski_date, title, description, mee
   // Auto-log a ski day for the host if the trip date is today or already passed
   if (data) autoLogSessionForTrip(user.id, resort_key, ski_date, data.id)
 
+  if (data) {
+    logActivity("trip_created", { subjectId: data.id, subjectType: "ski_trips", metadata: { resort_key: data.resort_key, ski_date: data.ski_date } })
+  }
+
   return data
 }
 
@@ -1258,6 +1262,10 @@ export async function rsvpToTrip(tripId, status) {
     const { data: trip } = await supabase
       .from("ski_trips").select("resort_key, ski_date").eq("id", tripId).single()
     if (trip) autoLogSessionForTrip(user.id, trip.resort_key, trip.ski_date, tripId)
+  }
+
+  if (status === "going") {
+    logActivity("trip_rsvp", { subjectId: tripId, subjectType: "ski_trips", metadata: { status } })
   }
 
   return data
@@ -2860,4 +2868,63 @@ export async function markDMsRead(partnerId) {
     .eq("recipient_id", user.id)
     .eq("sender_id", partnerId)
     .is("read_at", null)
+}
+
+// --- Activity feed ---
+
+export async function logActivity(type, { subjectId = null, subjectType = null, metadata = null } = {}) {
+  try {
+    const user = await getCurrentUser()
+    const { error } = await supabase
+      .from("activity_feed")
+      .insert({ actor_id: user.id, type, subject_id: subjectId, subject_type: subjectType, metadata })
+    if (error) throw error
+  } catch (e) {
+    console.warn("logActivity failed", e) // non-blocking — never let a feed-logging failure break the user's real action
+  }
+}
+
+export async function getActivityFeed(limit = 30) {
+  const { data, error } = await supabase
+    .from("activity_feed")
+    .select("*, profiles:actor_id(id, full_name, username, avatar_url)")
+    .order("created_at", { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return data || []
+}
+
+export async function getActivityReactions(activityIds) {
+  if (!activityIds?.length) return []
+  const { data, error } = await supabase
+    .from("activity_feed_reactions")
+    .select("activity_id, user_id, emoji")
+    .in("activity_id", activityIds)
+  if (error) throw error
+  return data || []
+}
+
+export async function addActivityReaction(activityId, emoji) {
+  const user = await getCurrentUser()
+  const { data: existing, error: findErr } = await supabase
+    .from("activity_feed_reactions")
+    .select("id, emoji")
+    .eq("activity_id", activityId)
+    .eq("user_id", user.id)
+    .maybeSingle()
+  if (findErr) throw findErr
+
+  if (existing?.emoji === emoji) {
+    const { error } = await supabase.from("activity_feed_reactions").delete().eq("id", existing.id)
+    if (error) throw error
+    return null
+  }
+
+  const { data, error } = await supabase
+    .from("activity_feed_reactions")
+    .upsert({ activity_id: activityId, user_id: user.id, emoji }, { onConflict: "activity_id,user_id" })
+    .select()
+    .single()
+  if (error) throw error
+  return data
 }

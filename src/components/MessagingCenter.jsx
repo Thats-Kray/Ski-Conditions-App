@@ -16,6 +16,7 @@ import {
 } from "../lib/socialApi"
 import { CrewChatView } from "./CrewGroupChat"
 import FriendsPage from "./FriendsPage"
+import ActivityFeed from "./ActivityFeed"
 import TripChatView, { tripDisplayName } from "./TripChatView"
 import DirectMessageView from "./DirectMessageView"
 import { timeAgo } from "../lib/format"
@@ -610,6 +611,7 @@ export default function MessagingCenter() {
             {[
               { key: "chats",  label: "Chats",   badge: 0 },
               { key: "people", label: "Friends",  badge: pendingFriendCount },
+              { key: "activity", label: "Activity", badge: 0 },
             ].map(({ key, label, badge }) => (
               <button
                 key={key}
@@ -850,6 +852,8 @@ export default function MessagingCenter() {
                 )}
               </div>
             )}
+
+            {panel === "activity" && <ActivityFeed />}
           </div>
         </div>
       )}
