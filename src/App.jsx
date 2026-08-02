@@ -11,6 +11,8 @@ import TripDetailModal from "./components/TripDetailModal"
 import { useNotificationCount } from "./components/NotificationBell"
 import LandingPage from "./components/LandingPage"
 import HomeDashboard from "./components/HomeDashboard"
+import ActiveSessionBar from "./components/ActiveSessionBar"
+import SessionRecapModal from "./components/SessionRecapModal"
 import Badge, { TIER_COLORS } from "./components/ui/Badge"
 import ScoreRing from "./components/ui/ScoreRing"
 import {
@@ -23,6 +25,8 @@ import {
   getTripDetail,
   logOut,
 } from "./lib/socialApi"
+import { flushSessionToSupabase, logSkiDay } from "./lib/leaderboardApi"
+import { useGpsTracker } from "./lib/useGpsTracker"
 import Avatar from "./components/ui/Avatar"
 
 import { supabase } from "./lib/supabase"
@@ -837,8 +841,41 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false)
   const [browseModeOverride, setBrowseModeOverride] = useState(false)
 
+  const [activeSession, setActiveSession] = useState(null)
+  // activeSession shape: { id: string, resortName: string, startedAt: number } | null
+
+  const [recapData, setRecapData] = useState(null)
+  // recapData shape: { session, runs } | null — returned by flushSessionToSupabase
+
+  const tracker = useGpsTracker()
+
   const planSectionRef = useRef(null)
   const crewSectionRef = useRef(null)
+
+  async function handleSessionStart(resortName) {
+    const today = new Date().toISOString().slice(0, 10)
+    // Create the ski_sessions row before starting GPS (we need the ID)
+    const session = await logSkiDay({ resortName, sessionDate: today })
+    tracker.startTracking()
+    setActiveSession({ id: session.id, resortName, startedAt: Date.now() })
+  }
+
+  async function handleSessionEnd(finalSegments) {
+    if (!activeSession) return
+    try {
+      const result = await flushSessionToSupabase({
+        sessionId:    activeSession.id,
+        rawSegments:  finalSegments,
+        startedAt:    new Date(activeSession.startedAt).toISOString(),
+        endedAt:      new Date().toISOString(),
+      })
+      setRecapData(result)
+    } catch (err) {
+      console.error("Session flush failed:", err)
+      // Still clear the active session even on error
+    }
+    setActiveSession(null)
+  }
 
   async function refresh() {
     setLoading(true)
@@ -1418,6 +1455,24 @@ export default function App() {
         </div>
       )}
 
+      {activeSession && (
+        <ActiveSessionBar
+          activeSession={activeSession}
+          tracker={tracker}
+          onSessionEnd={handleSessionEnd}
+        />
+      )}
+
+      {recapData && (
+        <SessionRecapModal
+          session={recapData.session}
+          runs={recapData.runs}
+          onClose={() => setRecapData(null)}
+          stravaConnected={false}  // wired in Sprint 5
+          onPostToStrava={() => {}}
+        />
+      )}
+
       <TopNav
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -1498,6 +1553,8 @@ export default function App() {
             resorts={rows}
             currentUser={currentUser}
             onTabChange={setActiveTab}
+            onStartSession={handleSessionStart}
+            sessionActive={!!activeSession}
           />
         )}
 
