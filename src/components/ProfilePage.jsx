@@ -483,6 +483,23 @@ function EditProfileModal({ profile, onSaved, onClose }) {
   )
 }
 
+function MilestoneModal({ milestone, onShare, onClose }) {
+  if (!milestone) return null
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 700 }}>
+      <Card style={{ textAlign: "center", padding: 32, maxWidth: 340 }}>
+        <div style={{ fontSize: 48 }}>{milestone.icon}</div>
+        <div style={{ fontSize: 22, fontWeight: 900, marginTop: 12 }}>{milestone.label}</div>
+        <div style={{ fontSize: 14, color: "var(--color-text-2)", marginTop: 6 }}>Milestone unlocked! 🎉</div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 20 }}>
+          <Button onClick={onShare}>Share</Button>
+          <Button variant="secondary" onClick={onClose}>Close</Button>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function ProfilePage({ onLogOut, onTabChange }) {
@@ -876,6 +893,14 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
           stats={seasonStats}
           season={season}
           onClose={() => setShowShare(false)}
+        />
+      )}
+
+      {milestoneQueue[0] && (
+        <MilestoneModal
+          milestone={milestoneQueue[0]}
+          onShare={() => { setShowShare(true); dismissMilestone() }}
+          onClose={dismissMilestone}
         />
       )}
     </div>
