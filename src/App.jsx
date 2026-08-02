@@ -14,6 +14,7 @@ import HomeDashboard from "./components/HomeDashboard"
 import {
   getCurrentUser,
   getMyProfile,
+  getResortActivityCounts,
   getResortSkierCounts,
   getResortSkierDetails,
   getTripDetail,
@@ -372,7 +373,7 @@ function scoreGradient(score) {
   return "linear-gradient(135deg, #7f1d1d, #451a03)"                    // Poor
 }
 
-function ResortCard({ r, skierCounts, skierDetails }) {
+function ResortCard({ r, skierCounts, skierDetails, activityCount = 0 }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -436,6 +437,13 @@ function ResortCard({ r, skierCounts, skierDetails }) {
             </div>
           ))}
         </div>
+
+        {/* Community activity signal — aggregate across all users, distinct from any friends-only badge */}
+        {activityCount > 0 && (
+          <div style={{ fontSize: 12, color: "var(--color-text-3)", display: "flex", alignItems: "center", gap: 4 }}>
+            ⛷️ {activityCount} user{activityCount === 1 ? "" : "s"} skied here this week
+          </div>
+        )}
 
         {/* Forecast */}
         <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "10px 12px", fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.5 }}>
@@ -778,6 +786,7 @@ export default function App() {
   const [live, setLive] = useState({})
   const [skierCounts, setSkierCounts] = useState({})
   const [skierDetails, setSkierDetails] = useState({})
+  const [resortActivityCounts, setResortActivityCounts] = useState({}) // { [resort_name]: count }
   const [currentUser, setCurrentUser] = useState(null)
   const [currentProfile, setCurrentProfile] = useState(null)
   const notifCount = useNotificationCount(currentUser)
@@ -1010,6 +1019,19 @@ export default function App() {
       clearInterval(t)
       window.removeEventListener("focus", handleFocus)
     }
+  }, [])
+
+  // Community activity signal — aggregate ski_sessions across all users, not friends-scoped
+  useEffect(() => {
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    getResortActivityCounts(weekAgo.toISOString().slice(0, 10))
+      .then((rows) => {
+        const map = {}
+        for (const row of rows) map[row.resort_name] = row.session_count
+        setResortActivityCounts(map)
+      })
+      .catch(() => setResortActivityCounts({}))
   }, [])
 
   useEffect(() => {
@@ -1611,7 +1633,7 @@ export default function App() {
 
                 <main className="resort-grid">
                   {rows.map((r) => (
-                    <ResortCard key={r.name} r={r} skierCounts={skierCounts} skierDetails={skierDetails} />
+                    <ResortCard key={r.name} r={r} skierCounts={skierCounts} skierDetails={skierDetails} activityCount={resortActivityCounts[r.resortKey] || 0} />
                   ))}
                 </main>
               </>
