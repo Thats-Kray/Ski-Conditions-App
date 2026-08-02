@@ -7,12 +7,13 @@ import {
   upsertMyProfile,
   uploadProfilePhoto,
 } from "../lib/socialApi"
-import { getMySessions, getCurrentSeason } from "../lib/leaderboardApi"
+import { getMySessions, getCurrentSeason, getAllTimeStats } from "../lib/leaderboardApi"
 import ShareStatCard from "./ShareStatCard"
 import StravaConnect from "./StravaConnect"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { fmt } from "../lib/format"
 import Avatar from "./ui/Avatar"
+import SnowStat from "./ui/SnowStat"
 
 const SKILL_OPTIONS = [
   { key: "green",        label: "Green",        color: "#22c55e" },
@@ -43,12 +44,21 @@ function computeStats(sessions) {
   }
   const topResort = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || null
 
-  return { days, vertical, miles: parseFloat(miles.toFixed(1)), powderDays, resorts, topResort }
+  const totalRuns       = sessions.reduce((acc, s) => acc + (s.runs_logged || 0), 0)
+  const topSpeed         = sessions.reduce((max, s) => (s.top_speed_mph != null && (max == null || s.top_speed_mph > max) ? s.top_speed_mph : max), null)
+  const timeOnMountain   = sessions.reduce((acc, s) => acc + (s.time_on_mountain_min || 0), 0)
+
+  return { days, vertical, miles: parseFloat(miles.toFixed(1)), powderDays, resorts, topResort, totalRuns, topSpeed, timeOnMountain }
+}
+
+function formatMinutes(mins) {
+  if (!mins) return "—"
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`
 }
 
 // ── Season Stats Card ─────────────────────────────────────────────────────────
 
-function SeasonStatsCard({ stats, season }) {
+function SeasonStatsCard({ stats, priorStats, season, viewMode = "season" }) {
   const statItems = [
     { label: "Days on Mountain", value: stats.days,                  emoji: "⛷️" },
     { label: "Vertical Feet",    value: fmt(stats.vertical) + " ft", emoji: "📏" },
@@ -66,7 +76,7 @@ function SeasonStatsCard({ stats, season }) {
       {/* Header */}
       <div style={{ padding: "14px 18px 10px" }}>
         <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: 0.9 }}>
-          {season.label} Season
+          {viewMode === "allTime" ? "All-Time" : `${season.label} Season`}
         </div>
       </div>
 
@@ -86,6 +96,24 @@ function SeasonStatsCard({ stats, season }) {
           </div>
         ))}
       </div>
+
+      {/* New stat tiles — Total Runs / Top Speed / Time on Mountain */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, padding: "12px 14px 0" }}>
+        <SnowStat icon="🎿" label="Total Runs" value={stats.totalRuns} />
+        <SnowStat icon="⚡" label="Top Speed" value={stats.topSpeed ?? "—"} unit={stats.topSpeed != null ? "mph" : undefined} />
+        <SnowStat icon="⏱️" label="Time on Mountain" value={formatMinutes(stats.timeOnMountain)} />
+      </div>
+
+      {/* Season-over-season delta row */}
+      {priorStats && (
+        <div style={{ fontSize: 13, color: "var(--color-text-2)", marginTop: 8, padding: "0 14px" }}>
+          {stats.days === priorStats.days
+            ? "Same days on mountain as last season"
+            : stats.days > priorStats.days
+              ? `↑ ${stats.days - priorStats.days} more day${stats.days - priorStats.days === 1 ? "" : "s"} than last season`
+              : `↓ ${priorStats.days - stats.days} fewer day${priorStats.days - stats.days === 1 ? "" : "s"} than last season`}
+        </div>
+      )}
 
       {/* Bottom: top resort + miles */}
       {(stats.topResort || stats.miles > 0) && (
@@ -116,6 +144,27 @@ function SeasonStatsCard({ stats, season }) {
           No days logged yet — get out there! ⛷️
         </div>
       )}
+    </div>
+  )
+}
+
+function StatsViewToggle({ viewMode, onChange }) {
+  return (
+    <div style={{ display: "flex", gap: 4 }}>
+      {["season", "allTime"].map((mode) => (
+        <button
+          key={mode}
+          onClick={() => onChange(mode)}
+          style={{
+            padding: "6px 14px", borderRadius: "var(--radius-pill)", border: "none", cursor: "pointer",
+            background: viewMode === mode ? "var(--color-accent)" : "rgba(255,255,255,0.06)",
+            color: viewMode === mode ? "var(--color-bg)" : "var(--color-text-2)",
+            fontWeight: 700, fontSize: 13,
+          }}
+        >
+          {mode === "season" ? "This Season" : "All-Time"}
+        </button>
+      ))}
     </div>
   )
 }
@@ -356,10 +405,14 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   const [loading, setLoading]         = useState(true)
   const [showEdit, setShowEdit]       = useState(false)
   const [seasonStats, setSeasonStats] = useState(null)
+  const [priorStats, setPriorStats]   = useState(null)
   const [recentSessions, setRecentSessions] = useState([])
   const [showShare, setShowShare]     = useState(false)
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false)
   const [photoUploading, setPhotoUploading] = useState(false)
+  const [viewMode, setViewMode]       = useState("season")
+  const [allTimeStats, setAllTimeStats] = useState(null)
+  const [userId, setUserId]           = useState(null)
   const fileInputRef = useRef(null)
 
   const season = getCurrentSeason()
@@ -367,14 +420,17 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [user, prof, friendData, tripData, sessions] = await Promise.all([
+      const { startYear } = getCurrentSeason()
+      const [user, prof, friendData, tripData, sessions, priorSessions] = await Promise.all([
         getCurrentUser(),
         getMyProfile(),
         getAcceptedFriends().catch(() => []),
         getAllVisibleTrips().catch(() => []),
-        getMySessions(getCurrentSeason().startYear).catch(() => []),
+        getMySessions(startYear).catch(() => []),
+        getMySessions(startYear - 1).catch(() => []),
       ])
       setProfile(prof)
+      setUserId(user?.id || null)
       setFriends(Array.isArray(friendData) ? friendData : [])
       const { mine = [], rsvpd = [] } = tripData || {}
       const seen = new Set()
@@ -387,12 +443,24 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
         setSeasonStats(computeStats(sessions))
         setRecentSessions(sessions)
       }
+      if (Array.isArray(priorSessions)) {
+        setPriorStats(computeStats(priorSessions))
+      }
     } catch {
       // parent handles auth
     } finally {
       setLoading(false)
     }
   }, [])
+
+  function handleViewModeChange(mode) {
+    setViewMode(mode)
+    if (mode === "allTime" && allTimeStats == null && userId) {
+      getAllTimeStats(userId)
+        .then((sessions) => setAllTimeStats(computeStats(sessions)))
+        .catch(() => {})
+    }
+  }
 
   useEffect(() => { load() }, [load])
 
@@ -606,7 +674,23 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
 
       {/* ── Season Stats ── */}
       {seasonStats && (
-        <SeasonStatsCard stats={seasonStats} season={season} />
+        <>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <StatsViewToggle viewMode={viewMode} onChange={handleViewModeChange} />
+          </div>
+          {viewMode === "allTime" && allTimeStats == null ? (
+            <div style={{ textAlign: "center", padding: "24px", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
+              Loading all-time stats…
+            </div>
+          ) : (
+            <SeasonStatsCard
+              stats={viewMode === "allTime" ? allTimeStats : seasonStats}
+              priorStats={viewMode === "season" ? priorStats : null}
+              season={season}
+              viewMode={viewMode}
+            />
+          )}
+        </>
       )}
 
       {/* ── Recent Sessions feed ── */}
