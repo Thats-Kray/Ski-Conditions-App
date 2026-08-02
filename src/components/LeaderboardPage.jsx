@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { getLeaderboard, getPublicLeaderboard, getMySessions, logSkiDay, updateSessionStats, deleteSkiDay, getCurrentSeason, getLeaderboardReactions, addLeaderboardReaction } from "../lib/leaderboardApi"
 import { logActivityOnce } from "../lib/socialApi"
 import Avatar from "./ui/Avatar"
@@ -276,7 +276,7 @@ export default function LeaderboardPage() {
   const season = getCurrentSeason()
   const [boardMode, setBoardMode] = useState("friends")
   const [category, setCategory]   = useState("days")
-  const [entries, setEntries]     = useState([])
+  const [board, setBoard]         = useState([]) // unsorted, as fetched
   const [mySessions, setMySessions] = useState([])
   const [loading, setLoading]     = useState(true)
   const [showLog, setShowLog]     = useState(false)
@@ -287,29 +287,37 @@ export default function LeaderboardPage() {
     setLoading(true)
     try {
       const fetchBoard = boardMode === "public" ? getPublicLeaderboard : getLeaderboard
-      const [board, sessions] = await Promise.all([
+      const [rows, sessions] = await Promise.all([
         fetchBoard(season.startYear),
         getMySessions(season.startYear),
       ])
       setMySessions(sessions)
-
-      const cat = CATEGORIES.find((c) => c.key === category)
-      const sorted = [...board].sort((a, b) => {
-        const av = cat.stat(a), bv = cat.stat(b)
-        if (av == null && bv == null) return 0
-        if (av == null) return 1
-        if (bv == null) return -1
-        return bv - av // descending — highest first
-      })
-      setEntries(sorted)
+      setBoard(rows)
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }, [season.startYear, category, boardMode])
+    // NOTE: `category` is deliberately absent. It only decides the sort order of
+    // rows we already have, so including it here made every tab click refire the
+    // leaderboard RPC *and* getMySessions (3 queries + a background upsert),
+    // flashing "Loading…" on all 8 tabs. The sort now lives in a useMemo below.
+  }, [season.startYear, boardMode])
 
   useEffect(() => { load() }, [load])
+
+  // Switching tabs is a pure client-side re-sort — no network round-trip.
+  const entries = useMemo(() => {
+    const cat = CATEGORIES.find((c) => c.key === category)
+    if (!cat) return board
+    return [...board].sort((a, b) => {
+      const av = cat.stat(a), bv = cat.stat(b)
+      if (av == null && bv == null) return 0
+      if (av == null) return 1
+      if (bv == null) return -1
+      return bv - av // descending — highest first
+    })
+  }, [board, category])
 
   const me = entries.find((e) => e.isMe)
   const myRank = entries.indexOf(me) + 1
@@ -319,6 +327,10 @@ export default function LeaderboardPage() {
   useEffect(() => {
     if (!entries.length) return
     let cancelled = false
+    // Drop the previous tab's badges up front. They're keyed by user, not by
+    // stat, so leaving them up would render Top Speed's 🔥 against Vertical's
+    // rows for the length of the fetch.
+    setReactionsByUser({})
     getLeaderboardReactions(entries.map((e) => e.id), category, String(season.startYear))
       .then((rows) => {
         if (cancelled) return
