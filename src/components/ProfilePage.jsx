@@ -11,6 +11,7 @@ import { getMySessions, getCurrentSeason, getAllTimeStats, updateSessionStats } 
 import ShareStatCard from "./ShareStatCard"
 import StravaConnect from "./StravaConnect"
 import SessionStatsForm from "./SessionStatsForm"
+import SeasonCalendar from "./SeasonCalendar"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { fmt } from "../lib/format"
 import Avatar from "./ui/Avatar"
@@ -170,13 +171,34 @@ function StatsViewToggle({ viewMode, onChange }) {
   )
 }
 
+function HistoryViewToggle({ viewMode, onChange }) {
+  return (
+    <div style={{ display: "flex", gap: 4 }}>
+      {["list", "calendar"].map((mode) => (
+        <button
+          key={mode}
+          onClick={() => onChange(mode)}
+          style={{
+            padding: "6px 14px", borderRadius: "var(--radius-pill)", border: "none", cursor: "pointer",
+            background: viewMode === mode ? "var(--color-accent)" : "rgba(255,255,255,0.06)",
+            color: viewMode === mode ? "var(--color-bg)" : "var(--color-text-2)",
+            fontWeight: 700, fontSize: 13,
+          }}
+        >
+          {mode === "list" ? "List" : "Calendar"}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // ── Recent Sessions Feed ──────────────────────────────────────────────────────
 
 function hasStats(session) {
   return session.runs_logged != null || session.vertical_feet != null || session.miles_skied != null || session.top_speed_mph != null
 }
 
-function RecentSessionsFeed({ sessions, onRefresh }) {
+function RecentSessionsFeed({ sessions, limit = 5, onRefresh }) {
   const [editingSessionId, setEditingSessionId] = useState(null)
   const [savingStatsFor, setSavingStatsFor]       = useState(null)
 
@@ -189,14 +211,15 @@ function RecentSessionsFeed({ sessions, onRefresh }) {
   }
 
   const editingSession = sessions.find((s) => s.id === editingSessionId)
+  const shown = Number.isFinite(limit) ? sessions.slice(0, limit) : sessions
 
   return (
     <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden" }}>
       <div style={{ padding: "12px 16px 10px", fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>
-        Recent Sessions
+        {Number.isFinite(limit) ? "Recent Sessions" : "Session History"}
       </div>
       <div style={{ display: "flex", flexDirection: "column" }}>
-        {sessions.slice(0, 5).map((s, i) => {
+        {shown.map((s, i) => {
           const date = new Date(s.session_date + "T12:00:00")
           const dateLabel = date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
           const emoji = resortEmoji(s.resort_key || s.resort_name)
@@ -464,6 +487,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false)
   const [photoUploading, setPhotoUploading] = useState(false)
   const [viewMode, setViewMode]       = useState("season")
+  const [historyView, setHistoryView] = useState("list")
   const [allTimeStats, setAllTimeStats] = useState(null)
   const [userId, setUserId]           = useState(null)
   const fileInputRef = useRef(null)
@@ -746,8 +770,15 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
         </>
       )}
 
-      {/* ── Recent Sessions feed ── */}
-      <RecentSessionsFeed sessions={recentSessions} onRefresh={load} />
+      {/* ── Session History (List / Calendar) ── */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <HistoryViewToggle viewMode={historyView} onChange={setHistoryView} />
+      </div>
+      {historyView === "list" ? (
+        <RecentSessionsFeed sessions={recentSessions} limit={Infinity} onRefresh={load} />
+      ) : (
+        <SeasonCalendar sessions={recentSessions} startYear={season.startYear} />
+      )}
 
       {/* ── Season Passes ── */}
       {profile?.ski_passes?.length > 0 && (
