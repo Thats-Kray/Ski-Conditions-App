@@ -2,11 +2,14 @@ import express from "express"
 import cors from "cors"
 import fetch from "node-fetch"
 import * as cheerio from "cheerio"
+import stravaRouter from "./routes/strava.js"
 
 const app = express()
 app.use(cors({
   origin: process.env.ALLOWED_ORIGIN ? process.env.ALLOWED_ORIGIN.split(",") : "*",
 }))
+app.use(express.json())
+app.use(stravaRouter)
 
 const PORT = process.env.PORT || 8787
 const cache = new Map()
@@ -210,85 +213,6 @@ function classifyDriveRiskFromAlerts(alerts) {
 const NWS_HEADERS = {
   "User-Agent": "ski-dashboard (contact@example.com)",
   Accept: "application/geo+json",
-}
-
-// ── Mountain Conditions (lifts, runs, snow depth) ────────────────────────────
-
-// Vail Resorts CMS — all 5 Colorado Epic resorts share the same API path
-const VAIL_RESORT_DOMAINS = {
-  vail:         "www.vail.com",
-  beavercreek:  "www.beavercreek.com",
-  breckenridge: "www.breckenridge.com",
-  keystone:     "www.keystoneresort.com",
-  crestedbutte: "www.skicb.com",
-}
-
-// mtnpowder.com — Ikon Colorado resorts + Telluride (Epic, independent operator)
-// TODO: Verify these resort IDs during the 2026/27 season (opens ~November 2026)
-// Test each: https://mtnpowder.com/feed?resortId=X  →  check "Name" field matches
-const MTNPOWDER_IDS = {
-  telluride:      42,
-  winterpark:     48,
-  coppermountain: 12,
-  arapahoebasin:   3,
-  steamboat:      40,
-  eldora:         19,
-  aspensnowmass:   5,
-}
-
-async function fetchVailConditions(domain) {
-  const url = `https://${domain}/api/resort-data/mountain/v2/conditions/`
-  const data = await cached(url, async () => {
-    const r = await fetch(url, {
-      headers: { "User-Agent": "ski-dashboard (contact@example.com)", Accept: "application/json" },
-    })
-    if (!r.ok) throw new Error(`Vail Resorts conditions error ${r.status}`)
-    return r.json()
-  }, CONDITIONS_TTL)
-
-  const lifts   = data?.Lifts
-  const terrain = data?.Terrain
-  const snow    = data?.SnowReport
-
-  return {
-    isOpen:       data?.MountainStatus === "Open",
-    liftsOpen:    lifts?.Open        ?? null,
-    liftsTotal:   lifts?.Total       ?? null,
-    runsOpen:     terrain?.Open      ?? null,
-    runsTotal:    terrain?.Total     ?? null,
-    baseDepth:    snow?.BaseDepth    ?? null,
-    summitDepth:  snow?.SummitDepth  ?? null,
-    snowLast24in: snow?.NewSnow24Hrs ?? null,
-    snowLast48in: snow?.NewSnow48Hrs ?? null,
-    source:       "vailresorts",
-  }
-}
-
-async function fetchMtnPowderConditions(resortId) {
-  const url = `https://mtnpowder.com/feed?resortId=${resortId}`
-  const data = await cached(url, async () => {
-    const r = await fetch(url, {
-      headers: { "User-Agent": "ski-dashboard (contact@example.com)" },
-    })
-    if (!r.ok) throw new Error(`mtnpowder error ${r.status}`)
-    return r.json()
-  }, CONDITIONS_TTL)
-
-  const sr = data?.SnowReport
-  if (!sr) return null
-
-  return {
-    isOpen:       data?.OperatingStatus === "Open",
-    liftsOpen:    sr.TotalOpenLifts  ?? null,
-    liftsTotal:   sr.TotalLifts      ?? null,
-    runsOpen:     sr.TotalOpenTrails ?? null,
-    runsTotal:    sr.TotalTrails     ?? null,
-    baseDepth:    sr.BaseIn          ?? null,
-    summitDepth:  sr.SummitIn        ?? null,
-    snowLast24in: sr.Last24HoursIn   ?? null,
-    snowLast48in: sr.Last48HoursIn   ?? null,
-    source:       "mtnpowder",
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -506,31 +430,6 @@ app.get("/api/drive-risk", async (req, res) => {
       sourceUrl: config.url,
       fetchedAt: new Date().toISOString(),
     })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
-app.get("/api/resort-conditions", async (req, res) => {
-  const resortParam = req.query.resort
-  const resortKey   = normalizeResortKey(resortParam)
-
-  if (!resortParam) {
-    return res.status(400).json({ error: "resort parameter is required" })
-  }
-
-  try {
-    let conditions = null
-
-    if (VAIL_RESORT_DOMAINS[resortKey]) {
-      conditions = await fetchVailConditions(VAIL_RESORT_DOMAINS[resortKey])
-    } else if (MTNPOWDER_IDS[resortKey] != null) {
-      conditions = await fetchMtnPowderConditions(MTNPOWDER_IDS[resortKey])
-    } else {
-      return res.status(404).json({ error: `No conditions source configured for "${resortParam}"` })
-    }
-
-    res.json({ resort: resortKey, ...(conditions || {}), fetchedAt: new Date().toISOString() })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

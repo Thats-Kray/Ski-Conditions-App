@@ -166,7 +166,7 @@ Each task is self-contained. Work top to bottom. Check off tasks as we complete 
 
 ---
 
-## TASK 11 — Cut or complete incomplete features
+## ~~TASK 11 — Cut or complete incomplete features~~ ✅ COMPLETE
 
 **Why:** Half-built features confuse users ("is this broken?") and add dead weight to the codebase. Each item below is either cut or gets a minimal completion pass.
 
@@ -193,7 +193,7 @@ Each task is self-contained. Work top to bottom. Check off tasks as we complete 
 
 ---
 
-## TASK 12 — Consolidate notification bell into tab badge
+## ~~TASK 12 — Consolidate notification bell into tab badge~~ ✅ COMPLETE
 
 **Why:** The notification bell floating in the nav creates two notification surfaces: the bell dropdown AND unread indicators on the Friends/Social tab. This is redundant and visually clutters the navigation.
 

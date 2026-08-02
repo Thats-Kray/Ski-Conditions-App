@@ -838,6 +838,10 @@ CREATE POLICY "Users manage own comments" ON trip_comments FOR ALL USING (auth.u
 
 ## 14. Roadmap
 
+> **Active build tracking is in [`ROADMAP.md`](ROADMAP.md).**
+> That file contains the full task-by-task breakdown with checkboxes, file targets, and progress tracking.
+> The phases below represent the high-level intent; `ROADMAP.md` is the source of truth for what's next.
+
 ### Phase 4 — Data & Scoring Improvements
 - **OpenSnow API integration:** Replace OnTheSnow scraping with OpenSnow's structured API for more reliable and richer snow data (snowfall totals, snowpack, 7-day forecast)
 - **Vibe Score:** A second per-resort score blending social signal (how many users checked in last week, RSVP volume for upcoming trips) with crowd estimate and "morning energy" sentiment from comments. This complements the objective Powder Score with a social/experiential dimension

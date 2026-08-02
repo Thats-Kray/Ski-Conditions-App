@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowderDays · Theme 5: Base Lodge</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  background: #0c0704;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px 64px;
+  gap: 40px;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 30% 20%, rgba(249,115,22,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 80% 70%, rgba(251,191,36,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 50% at 50% 100%, rgba(234,88,12,0.06) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+
+.page-header { text-align: center; position: relative; z-index: 1; }
+.theme-tag {
+  display: inline-block;
+  background: rgba(249,115,22,0.12);
+  border: 1px solid rgba(249,115,22,0.3);
+  color: #f97316;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 4px 12px; border-radius: 20px; margin-bottom: 12px;
+}
+.page-header h1 {
+  font-size: 32px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px;
+  background: linear-gradient(135deg, #fb923c, #f59e0b);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.page-header p { font-size: 15px; color: #44260a; max-width: 440px; line-height: 1.6; }
+
+.phone {
+  position: relative; z-index: 1;
+  width: 390px; height: 820px;
+  border-radius: 50px; overflow: hidden;
+  border: 1px solid rgba(249,115,22,0.15);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.8),
+    0 60px 120px rgba(0,0,0,0.95),
+    0 0 80px rgba(249,115,22,0.06);
+  background: #0f0905;
+  display: flex; flex-direction: column;
+}
+
+.app-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 35% at 50% 0%, rgba(249,115,22,0.12) 0%, transparent 100%),
+    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(234,88,12,0.07) 0%, transparent 100%),
+    radial-gradient(ellipse 40% 30% at 0% 60%, rgba(251,191,36,0.04) 0%, transparent 100%),
+    linear-gradient(180deg, #0f0905 0%, #140b06 100%);
+  pointer-events: none;
+}
+
+/* Ember particles */
+.embers {
+  position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden;
+}
+.ember {
+  position: absolute;
+  width: 2px; height: 2px;
+  border-radius: 50%;
+  background: rgba(249,115,22,0.6);
+  animation: rise linear infinite;
+  filter: blur(0.5px);
+}
+@keyframes rise {
+  from { transform: translateY(820px) translateX(0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 0.6; }
+  to { transform: translateY(-20px) translateX(20px); opacity: 0; }
+}
+
+.status-bar {
+  position: relative; z-index: 3;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 28px 0; font-size: 12px; font-weight: 600; color: #f97316; opacity: 0.6;
+}
+
+.topbar {
+  position: relative; z-index: 3;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 20px 12px;
+  border-bottom: 1px solid rgba(249,115,22,0.1);
+  background: linear-gradient(180deg, rgba(249,115,22,0.05) 0%, transparent 100%);
+}
+.logo {
+  font-size: 20px; font-weight: 800; letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #fb923c, #f59e0b);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.logo-sub { font-size: 10px; color: rgba(249,115,22,0.4); letter-spacing: 0.08em; font-weight: 500; -webkit-text-fill-color: rgba(249,115,22,0.4); margin-top: 1px; }
+.user-av {
+  width: 34px; height: 34px; border-radius: 12px;
+  background: linear-gradient(135deg, #c2410c, #f97316);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; color: #fff7ed;
+  box-shadow: 0 4px 12px rgba(249,115,22,0.25);
+}
+
+.scroll {
+  position: relative; z-index: 3; flex: 1; overflow: hidden;
+  padding: 14px 16px 8px; display: flex; flex-direction: column; gap: 10px;
+}
+
+.checkin-cta {
+  background: rgba(249,115,22,0.1);
+  border: 1px solid rgba(249,115,22,0.22);
+  border-radius: 14px; padding: 11px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; color: #fb923c; font-weight: 600;
+}
+
+.card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(249,115,22,0.1);
+  border-radius: 22px; overflow: hidden;
+  /* Subtle warm glow on left edge */
+  box-shadow: inset 3px 0 0 rgba(249,115,22,0.15);
+}
+.card-inner { padding: 14px 16px; }
+.card-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: rgba(249,115,22,0.45); margin-bottom: 10px;
+}
+
+.resort-photo {
+  height: 130px;
+  background: linear-gradient(180deg, #1a0c05 0%, #2d1408 35%, #1a0a05 65%, #0f0704 100%);
+  position: relative; display: flex; align-items: flex-end;
+  justify-content: space-between; padding: 12px 14px;
+}
+/* Warm horizon glow */
+.resort-photo::before {
+  content: '';
+  position: absolute; bottom: 30px; left: 0; right: 0; height: 20px;
+  background: linear-gradient(90deg, transparent, rgba(249,115,22,0.2), rgba(251,191,36,0.15), transparent);
+  filter: blur(6px);
+}
+.resort-photo::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 55px;
+  background: linear-gradient(180deg, transparent, rgba(10,5,2,0.9));
+  clip-path: polygon(0% 100%, 0% 55%, 10% 42%, 20% 50%, 32% 22%, 42% 38%, 52% 14%, 60% 30%, 68% 20%, 78% 36%, 88% 22%, 96% 38%, 100% 28%, 100% 100%);
+}
+.resort-name-wrap { position: relative; z-index: 1; }
+.resort-name-main { font-size: 18px; font-weight: 800; color: #fff7ed; letter-spacing: -0.01em; }
+.resort-pass { font-size: 10px; color: rgba(255,247,237,0.4); margin-top: 1px; }
+
+.score-badge {
+  position: relative; z-index: 1;
+  background: linear-gradient(135deg, #ea580c, #f97316);
+  border-radius: 14px; padding: 6px 12px; text-align: center;
+  box-shadow: 0 0 24px rgba(249,115,22,0.4), 0 4px 12px rgba(249,115,22,0.2);
+}
+.score-num { font-size: 22px; font-weight: 900; color: #fff7ed; line-height: 1; }
+.score-tier { font-size: 9px; font-weight: 700; color: rgba(255,247,237,0.75); letter-spacing: 0.1em; text-transform: uppercase; }
+
+.resort-stats { display: grid; grid-template-columns: repeat(4, 1fr); }
+.stat { padding: 10px 4px; text-align: center; border-right: 1px solid rgba(249,115,22,0.07); }
+.stat:last-child { border-right: none; }
+.stat-val { display: block; font-size: 14px; font-weight: 700; color: #fff7ed; }
+.stat-lbl { display: block; font-size: 9px; color: rgba(249,115,22,0.4); margin-top: 2px; font-weight: 600; }
+.view-all { padding: 9px 16px; font-size: 11px; color: #f97316; font-weight: 700; border-top: 1px solid rgba(249,115,22,0.07); text-align: right; }
+
+.trip-inner { padding: 14px 16px; }
+.trip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.trip-resort { font-size: 16px; font-weight: 800; color: #fff7ed; }
+.trip-date { font-size: 11px; color: rgba(249,115,22,0.4); font-weight: 600; margin-top: 2px; }
+.trip-countdown {
+  background: rgba(249,115,22,0.12);
+  border: 1px solid rgba(249,115,22,0.25);
+  border-radius: 10px; padding: 3px 10px;
+  font-size: 11px; font-weight: 800; color: #f97316;
+}
+.trip-foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.avatars { display: flex; }
+.av-sm {
+  width: 24px; height: 24px; border-radius: 8px;
+  border: 1.5px solid rgba(249,115,22,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 700; color: #fed7aa;
+  margin-left: -5px;
+  background: rgba(249,115,22,0.12);
+}
+.av-sm:first-child { margin-left: 0; }
+.going-count { font-size: 12px; color: rgba(249,115,22,0.4); font-weight: 600; }
+
+.crew-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid rgba(249,115,22,0.06); }
+.crew-row:last-child { border-bottom: none; }
+.crew-av {
+  width: 32px; height: 32px; border-radius: 10px;
+  background: rgba(249,115,22,0.12);
+  border: 1px solid rgba(249,115,22,0.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: #fb923c; flex-shrink: 0;
+}
+.crew-info-name { font-size: 13px; font-weight: 700; color: #fff7ed; }
+.crew-info-status { font-size: 11px; color: rgba(249,115,22,0.4); margin-top: 1px; }
+.crew-status-dot { margin-left: auto; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+.status-arrived { background: rgba(34,197,94,0.1); color: #4ade80; }
+.status-driving { background: rgba(249,115,22,0.12); color: #fb923c; }
+.status-planning { background: rgba(148,163,184,0.06); color: #44260a; }
+
+.bottomnav {
+  position: relative; z-index: 3;
+  display: flex;
+  border-top: 1px solid rgba(249,115,22,0.1);
+  background: rgba(15,9,5,0.98);
+  padding: 10px 0 20px;
+}
+.tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; font-weight: 600; color: rgba(249,115,22,0.25); padding: 4px 0; }
+.tab.active { color: #f97316; }
+.tab-icon { font-size: 18px; line-height: 1; }
+.tab.active .tab-icon { filter: drop-shadow(0 0 6px rgba(249,115,22,0.5)); }
+
+.palette { position: relative; z-index: 1; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.swatch { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.swatch-color { width: 52px; height: 52px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+.swatch-hex { font-size: 10px; font-weight: 600; color: rgba(249,115,22,0.4); font-family: monospace; }
+.swatch-name { font-size: 10px; color: #3d1a05; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="theme-tag">Theme 05 of 05</div>
+  <h1>Base Lodge</h1>
+  <p>After the run — warm dark wood, ember glow, orange light through frosted windows. The crew energy after a great day on the mountain. Warm, social, alive.</p>
+</div>
+
+<div class="phone">
+  <div class="app-bg"></div>
+  <div class="embers">
+    <div class="ember" style="left:25%;animation-duration:10s;animation-delay:0s;"></div>
+    <div class="ember" style="left:50%;animation-duration:14s;animation-delay:3s;width:3px;height:3px;"></div>
+    <div class="ember" style="left:70%;animation-duration:11s;animation-delay:6s;"></div>
+    <div class="ember" style="left:40%;animation-duration:16s;animation-delay:9s;width:1px;height:1px;"></div>
+  </div>
+
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>▲▲▲ 100%</span>
+  </div>
+
+  <div class="topbar">
+    <div>
+      <div class="logo">PowderDays 🔥</div>
+      <div class="logo-sub">Colorado · 2025–26</div>
+    </div>
+    <div class="user-av">KR</div>
+  </div>
+
+  <div class="scroll">
+
+    <div class="checkin-cta">
+      <span>⛷️ Check in at Breckenridge today</span>
+      <span style="color:rgba(249,115,22,0.4)">›</span>
+    </div>
+
+    <div class="card">
+      <div class="resort-photo">
+        <div class="resort-name-wrap">
+          <div class="resort-name-main">Breckenridge</div>
+          <div class="resort-pass">Summit Co · Epic Pass</div>
+        </div>
+        <div class="score-badge">
+          <div class="score-num">87</div>
+          <div class="score-tier">Elite</div>
+        </div>
+      </div>
+      <div class="resort-stats">
+        <div class="stat"><span class="stat-val">12"</span><span class="stat-lbl">New 24h</span></div>
+        <div class="stat"><span class="stat-val">84"</span><span class="stat-lbl">Base</span></div>
+        <div class="stat"><span class="stat-val">24°</span><span class="stat-lbl">Temp</span></div>
+        <div class="stat"><span class="stat-val" style="color:#4ade80;">Low</span><span class="stat-lbl">Drive Risk</span></div>
+      </div>
+      <div class="view-all">View all 12 resorts →</div>
+    </div>
+
+    <div class="card">
+      <div class="trip-inner">
+        <div class="card-label">Your next trip</div>
+        <div class="trip-header">
+          <div>
+            <div class="trip-resort">🎿 Steamboat Springs</div>
+            <div class="trip-date">Dec 28–30 · 3 days out</div>
+          </div>
+          <div class="trip-countdown">12 days</div>
+        </div>
+        <div class="trip-foot">
+          <div class="avatars">
+            <div class="av-sm">JC</div>
+            <div class="av-sm">SM</div>
+            <div class="av-sm">LR</div>
+            <div class="av-sm" style="color:rgba(249,115,22,0.35)">+1</div>
+          </div>
+          <span class="going-count">4 going · 2 maybe</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-inner">
+        <div class="card-label">Who's skiing today</div>
+        <div class="crew-row">
+          <div class="crew-av">JC</div>
+          <div><div class="crew-info-name">Jake C.</div><div class="crew-info-status">Vail</div></div>
+          <div class="crew-status-dot status-arrived">Arrived ✓</div>
+        </div>
+        <div class="crew-row">
+          <div class="crew-av">SM</div>
+          <div><div class="crew-info-name">Sarah M.</div><div class="crew-info-status">Breckenridge</div></div>
+          <div class="crew-status-dot status-driving">Driving 🚗</div>
+        </div>
+        <div class="crew-row">
+          <div class="crew-av">LR</div>
+          <div><div class="crew-info-name">Lily R.</div><div class="crew-info-status">Keystone</div></div>
+          <div class="crew-status-dot status-planning">Planning</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottomnav">
+    <div class="tab active"><div class="tab-icon">🏔️</div><span>Snow</span></div>
+    <div class="tab"><div class="tab-icon">📅</div><span>Plans</span></div>
+    <div class="tab"><div class="tab-icon">💬</div><span>Social</span></div>
+    <div class="tab"><div class="tab-icon">🏆</div><span>Board</span></div>
+    <div class="tab"><div class="tab-icon">👤</div><span>Profile</span></div>
+  </div>
+</div>
+
+<div class="palette">
+  <div class="swatch">
+    <div class="swatch-color" style="background:#0f0905;"></div>
+    <div class="swatch-hex">#0F0905</div>
+    <div class="swatch-name">Deep BG</div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#1c1208;"></div>
+    <div class="swatch-hex">#1C1208</div>
+    <div class="swatch-name">Card BG</div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#f97316;"></div>
+    <div class="swatch-hex">#F97316</div>
+    <div class="swatch-name">Ember Orange</div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#f59e0b;"></div>
+    <div class="swatch-hex">#F59E0B</div>
+    <div class="swatch-name">Amber</div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#fff7ed;border-color:rgba(249,115,22,0.15);"></div>
+    <div class="swatch-hex">#FFF7ED</div>
+    <div class="swatch-name">Warm White</div>
+  </div>
+</div>
+
+</body>
+</html>

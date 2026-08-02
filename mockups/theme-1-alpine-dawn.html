@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowderDays · Theme 1: Alpine Dawn</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  background: #020510;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px 64px;
+  gap: 40px;
+}
+
+/* Stars */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 15% 12%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 32% 8%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 54% 5%, rgba(255,255,255,0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 71% 15%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 88% 7%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 6% 35%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 42% 28%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 93% 42%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 24% 62%, rgba(255,255,255,0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 78% 55%, rgba(255,255,255,0.4) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.page-header {
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+.theme-tag {
+  display: inline-block;
+  background: rgba(245,158,11,0.15);
+  border: 1px solid rgba(245,158,11,0.35);
+  color: #f59e0b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 12px;
+}
+.page-header h1 {
+  font-size: 32px;
+  font-weight: 800;
+  color: #f8fafc;
+  letter-spacing: -0.02em;
+  margin-bottom: 10px;
+}
+.page-header p {
+  font-size: 15px;
+  color: #64748b;
+  max-width: 440px;
+  line-height: 1.6;
+}
+
+/* Phone frame */
+.phone {
+  position: relative;
+  z-index: 1;
+  width: 390px;
+  height: 820px;
+  border-radius: 50px;
+  overflow: hidden;
+  border: 1.5px solid rgba(245,158,11,0.2);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.8),
+    0 60px 120px rgba(0,0,0,0.9),
+    0 0 80px rgba(245,158,11,0.06);
+  background: #030a18;
+  display: flex;
+  flex-direction: column;
+}
+
+/* App background */
+.app-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 30% at 50% 0%, rgba(245,158,11,0.08) 0%, transparent 100%),
+    radial-gradient(ellipse 80% 50% at 80% 100%, rgba(59,130,246,0.05) 0%, transparent 100%),
+    linear-gradient(180deg, #030a18 0%, #040d20 100%);
+  pointer-events: none;
+}
+
+/* Status bar */
+.status-bar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 28px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+/* Top bar */
+.topbar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px 10px;
+  border-bottom: 1px solid rgba(245,158,11,0.08);
+}
+.logo {
+  font-size: 19px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #f59e0b, #fcd34d);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+}
+.logo span { color: #94a3b8; font-size: 11px; font-weight: 500; display: block; -webkit-text-fill-color: #94a3b8; }
+.user-av {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #030a18;
+}
+
+/* Scroll content */
+.scroll {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  overflow: hidden;
+  padding: 14px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Check-in CTA */
+.checkin-cta {
+  background: rgba(245,158,11,0.1);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 12px;
+  padding: 11px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #fbbf24;
+  font-weight: 500;
+}
+.checkin-cta .arrow { color: rgba(245,158,11,0.6); font-size: 14px; }
+
+/* Cards */
+.card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(245,158,11,0.1);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.card-inner { padding: 14px 16px; }
+.card-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 10px;
+}
+
+/* Mountain card */
+.resort-photo {
+  height: 130px;
+  background: linear-gradient(180deg, #0d2040 0%, #1a3a6e 35%, #0d2035 65%, #06111e 100%);
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+.resort-photo::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 50px;
+  background: linear-gradient(0deg, rgba(20,30,48,0.95), transparent);
+}
+/* Mountain silhouette */
+.resort-photo::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0; height: 55px;
+  background: linear-gradient(180deg, transparent 0%, rgba(6,11,22,0.7) 100%);
+  clip-path: polygon(0% 100%, 0% 60%, 8% 50%, 18% 55%, 28% 30%, 38% 45%, 48% 20%, 55% 35%, 62% 25%, 72% 40%, 82% 28%, 92% 42%, 100% 35%, 100% 100%);
+}
+.resort-name-wrap { position: relative; z-index: 1; }
+.resort-name-main { font-size: 18px; font-weight: 800; color: #f8fafc; letter-spacing: -0.01em; }
+.resort-pass { font-size: 10px; color: rgba(248,250,252,0.55); font-weight: 500; margin-top: 1px; }
+.score-badge {
+  position: relative; z-index: 1;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border-radius: 12px;
+  padding: 6px 12px;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(245,158,11,0.4);
+}
+.score-num { font-size: 22px; font-weight: 900; color: #030a18; line-height: 1; }
+.score-tier { font-size: 9px; font-weight: 700; color: rgba(3,10,24,0.7); letter-spacing: 0.08em; text-transform: uppercase; }
+
+.resort-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  border-top: 1px solid rgba(245,158,11,0.08);
+}
+.stat {
+  padding: 10px 4px;
+  text-align: center;
+  border-right: 1px solid rgba(245,158,11,0.06);
+}
+.stat:last-child { border-right: none; }
+.stat-val { display: block; font-size: 14px; font-weight: 700; color: #f1f5f9; }
+.stat-lbl { display: block; font-size: 9px; color: #64748b; margin-top: 2px; font-weight: 500; }
+.view-all {
+  padding: 9px 16px;
+  font-size: 11px;
+  color: #f59e0b;
+  font-weight: 600;
+  border-top: 1px solid rgba(245,158,11,0.08);
+  text-align: right;
+}
+
+/* Trip card */
+.trip-inner { padding: 14px 16px; }
+.trip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.trip-resort { font-size: 16px; font-weight: 700; color: #f1f5f9; }
+.trip-date { font-size: 11px; color: #64748b; font-weight: 500; margin-top: 2px; }
+.trip-countdown {
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #f59e0b;
+}
+.trip-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.avatars { display: flex; }
+.av-sm {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2px solid #030a18;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 700; color: white;
+  margin-left: -6px;
+}
+.av-sm:first-child { margin-left: 0; }
+.going-count { font-size: 12px; color: #94a3b8; font-weight: 500; }
+
+/* Crew card */
+.crew-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.crew-row:last-child { border-bottom: none; }
+.crew-av {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e3a5f, #2d5a9e);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: #93c5fd;
+  flex-shrink: 0;
+}
+.crew-info-name { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+.crew-info-status { font-size: 11px; color: #475569; margin-top: 1px; }
+.crew-status-dot {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.status-arrived { background: rgba(16,185,129,0.12); color: #34d399; }
+.status-driving { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.status-planning { background: rgba(148,163,184,0.08); color: #64748b; }
+
+/* Bottom nav */
+.bottomnav {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  border-top: 1px solid rgba(245,158,11,0.1);
+  background: rgba(3,10,24,0.95);
+  padding: 10px 0 20px;
+}
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 500;
+  color: #475569;
+  padding: 4px 0;
+  cursor: pointer;
+}
+.tab.active { color: #f59e0b; }
+.tab-icon { font-size: 18px; line-height: 1; }
+.tab.active .tab-icon { filter: drop-shadow(0 0 4px rgba(245,158,11,0.5)); }
+
+/* Palette */
+.palette {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.swatch-color {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+.swatch-hex { font-size: 10px; font-weight: 600; color: #475569; font-family: monospace; }
+.swatch-name { font-size: 10px; color: #334155; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="theme-tag">Theme 01 of 05</div>
+  <h1>Alpine Dawn</h1>
+  <p>Pre-dawn mountain energy. Deep midnight navy skies with warm amber-gold accents — the moment right before first chair when the peaks glow.</p>
+</div>
+
+<div class="phone">
+  <div class="app-bg"></div>
+
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>▲▲▲ 100%</span>
+  </div>
+
+  <div class="topbar">
+    <div>
+      <div class="logo">PowderDays ⛷️</div>
+      <div style="font-size:10px;color:#475569;margin-top:2px;">Colorado · 2025–26</div>
+    </div>
+    <div class="user-av">KR</div>
+  </div>
+
+  <div class="scroll">
+
+    <div class="checkin-cta">
+      <span>⛷️ Check in at Breckenridge today</span>
+      <span class="arrow">›</span>
+    </div>
+
+    <!-- Card 1: Best Mountain -->
+    <div class="card">
+      <div class="resort-photo">
+        <div class="resort-name-wrap">
+          <div class="resort-name-main">Breckenridge</div>
+          <div class="resort-pass">Summit Co · Epic Pass</div>
+        </div>
+        <div class="score-badge">
+          <div class="score-num">87</div>
+          <div class="score-tier">Elite</div>
+        </div>
+      </div>
+      <div class="resort-stats">
+        <div class="stat">
+          <span class="stat-val">12"</span>
+          <span class="stat-lbl">New 24h</span>
+        </div>
+        <div class="stat">
+          <span class="stat-val">84"</span>
+          <span class="stat-lbl">Base</span>
+        </div>
+        <div class="stat">
+          <span class="stat-val">24°</span>
+          <span class="stat-lbl">Temp</span>
+        </div>
+        <div class="stat">
+          <span class="stat-val" style="color:#4ade80;">Low</span>
+          <span class="stat-lbl">Drive Risk</span>
+        </div>
+      </div>
+      <div class="view-all">View all 12 resorts →</div>
+    </div>
+
+    <!-- Card 2: Next Trip -->
+    <div class="card">
+      <div class="trip-inner">
+        <div class="card-label">Your next trip</div>
+        <div class="trip-header">
+          <div>
+            <div class="trip-resort">🎿 Steamboat Springs</div>
+            <div class="trip-date">Dec 28–30 · 3 days out</div>
+          </div>
+          <div class="trip-countdown">12 days</div>
+        </div>
+        <div class="trip-foot">
+          <div class="avatars">
+            <div class="av-sm" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6)">JC</div>
+            <div class="av-sm" style="background:linear-gradient(135deg,#6d28d9,#8b5cf6)">SM</div>
+            <div class="av-sm" style="background:linear-gradient(135deg,#065f46,#059669)">LR</div>
+            <div class="av-sm" style="background:rgba(255,255,255,0.08);color:#64748b">+1</div>
+          </div>
+          <span class="going-count">4 going · 2 maybe</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Who's Skiing -->
+    <div class="card">
+      <div class="card-inner">
+        <div class="card-label">Who's skiing today</div>
+        <div class="crew-row">
+          <div class="crew-av">JC</div>
+          <div>
+            <div class="crew-info-name">Jake C.</div>
+            <div class="crew-info-status">Vail</div>
+          </div>
+          <div class="crew-status-dot status-arrived">Arrived ✓</div>
+        </div>
+        <div class="crew-row">
+          <div class="crew-av">SM</div>
+          <div>
+            <div class="crew-info-name">Sarah M.</div>
+            <div class="crew-info-status">Breckenridge</div>
+          </div>
+          <div class="crew-status-dot status-driving">Driving</div>
+        </div>
+        <div class="crew-row">
+          <div class="crew-av">LR</div>
+          <div>
+            <div class="crew-info-name">Lily R.</div>
+            <div class="crew-info-status">Keystone</div>
+          </div>
+          <div class="crew-status-dot status-planning">Planning</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottomnav">
+    <div class="tab active"><div class="tab-icon">🏔️</div><span>Snow</span></div>
+    <div class="tab"><div class="tab-icon">📅</div><span>Plans</span></div>
+    <div class="tab"><div class="tab-icon">💬</div><span>Social</span></div>
+    <div class="tab"><div class="tab-icon">🏆</div><span>Board</span></div>
+    <div class="tab"><div class="tab-icon">👤</div><span>Profile</span></div>
+  </div>
+</div>
+
+<div class="palette">
+  <div class="swatch">
+    <div class="swatch-color" style="background:#030a18;"></div>
+    <div class="swatch-hex">#030A18</div>
+    <div class="swatch-name">Deep BG</div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#0a1628;"></div>
+    <div class="swatch-hex">#0A1628</div>
+    <div class="swatch-name">Card BG</div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#f59e0b;"></div>
+    <div class="swatch-hex">#F59E0B</div>
+    <div class="swatch-name">Amber Gold</div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#3b82f6;"></div>
+    <div class="swatch-hex">#3B82F6</div>
+    <div class="swatch-name">Sky Blue</div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#f8fafc;border-color:rgba(255,255,255,0.15);"></div>
+    <div class="swatch-hex">#F8FAFC</div>
+    <div class="swatch-name">Text</div>
+  </div>
+</div>
+
+</body>
+</html>

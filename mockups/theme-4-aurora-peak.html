@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowderDays · Theme 4: Aurora Peak</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  background: #050310;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px 64px;
+  gap: 40px;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(168,85,247,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 40% at 80% 70%, rgba(6,214,160,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 50% 50%, rgba(99,102,241,0.05) 0%, transparent 60%),
+    radial-gradient(1.5px 1.5px at 12% 8%, rgba(216,180,254,0.8) 0%, transparent 100%),
+    radial-gradient(2px 2px at 38% 5%, rgba(196,167,231,0.9) 0%, transparent 100%),
+    radial-gradient(1px 1px at 67% 12%, rgba(216,180,254,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 84% 4%, rgba(165,243,252,0.7) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 5% 52%, rgba(216,180,254,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 38%, rgba(167,243,208,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 93% 55%, rgba(216,180,254,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 28% 75%, rgba(165,243,252,0.3) 0%, transparent 100%);
+  pointer-events: none; z-index: 0;
+}
+
+.page-header { text-align: center; position: relative; z-index: 1; }
+.theme-tag {
+  display: inline-block;
+  background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(6,214,160,0.1));
+  border: 1px solid rgba(168,85,247,0.3);
+  color: #c084fc;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 4px 12px; border-radius: 20px; margin-bottom: 12px;
+}
+.page-header h1 {
+  font-size: 32px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px;
+  background: linear-gradient(135deg, #e879f9, #a855f7, #06d6a0);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.page-header p { font-size: 15px; color: #4a3f6b; max-width: 440px; line-height: 1.6; }
+
+.phone {
+  position: relative; z-index: 1;
+  width: 390px; height: 820px;
+  border-radius: 50px; overflow: hidden;
+  border: 1px solid rgba(168,85,247,0.2);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.8),
+    0 60px 120px rgba(0,0,0,0.95),
+    0 0 80px rgba(168,85,247,0.08),
+    0 0 160px rgba(6,214,160,0.04);
+  background: #07051a;
+  display: flex; flex-direction: column;
+}
+
+.app-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 100% 40% at 50% 0%, rgba(168,85,247,0.18) 0%, transparent 100%),
+    radial-gradient(ellipse 80% 60% at 0% 100%, rgba(6,214,160,0.07) 0%, transparent 100%),
+    radial-gradient(ellipse 60% 40% at 100% 50%, rgba(99,102,241,0.08) 0%, transparent 100%),
+    linear-gradient(180deg, #07051a 0%, #090620 100%);
+  pointer-events: none;
+}
+
+/* Aurora band */
+.aurora {
+  position: absolute;
+  top: 40px; left: -20%; right: -20%;
+  height: 120px;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(168,85,247,0.12) 20%,
+    rgba(99,102,241,0.15) 40%,
+    rgba(6,214,160,0.1) 60%,
+    rgba(165,243,252,0.05) 80%,
+    transparent 100%);
+  filter: blur(20px);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  animation: auroraShift 6s ease-in-out infinite alternate;
+}
+@keyframes auroraShift {
+  from { transform: scaleX(1) translateY(0px); opacity: 0.7; }
+  to { transform: scaleX(1.1) translateY(10px); opacity: 1; }
+}
+
+.status-bar {
+  position: relative; z-index: 4;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 28px 0; font-size: 12px; font-weight: 600; color: #c084fc; opacity: 0.7;
+}
+
+.topbar {
+  position: relative; z-index: 4;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 20px 12px;
+  border-bottom: 1px solid rgba(168,85,247,0.1);
+}
+.logo {
+  font-size: 19px; font-weight: 800; letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #e879f9 0%, #a855f7 50%, #06d6a0 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.logo-sub { font-size: 10px; color: rgba(192,132,252,0.45); letter-spacing: 0.1em; font-weight: 500; -webkit-text-fill-color: rgba(192,132,252,0.45); margin-top: 1px; }
+.user-av {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  border: 1px solid rgba(168,85,247,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #faf5ff;
+  box-shadow: 0 0 12px rgba(168,85,247,0.3);
+}
+
+.scroll {
+  position: relative; z-index: 4; flex: 1; overflow: hidden;
+  padding: 14px 16px 8px; display: flex; flex-direction: column; gap: 10px;
+}
+
+.checkin-cta {
+  background: linear-gradient(135deg, rgba(168,85,247,0.1), rgba(6,214,160,0.06));
+  border: 1px solid rgba(168,85,247,0.2);
+  border-radius: 14px; padding: 11px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; color: #c084fc; font-weight: 500;
+}
+
+/* Aurora-bordered cards */
+.card {
+  position: relative;
+  border-radius: 18px; overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 18px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(168,85,247,0.35) 0%, rgba(99,102,241,0.2) 50%, rgba(6,214,160,0.25) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.card-inner-bg {
+  background: rgba(13,10,35,0.9);
+  border-radius: 17px;
+  overflow: hidden;
+}
+.card-inner { padding: 14px 16px; }
+.card-label {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  background: linear-gradient(90deg, #c084fc, #06d6a0);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  margin-bottom: 10px; opacity: 0.7;
+}
+
+.resort-photo {
+  height: 130px;
+  background: linear-gradient(180deg, #15063a 0%, #1e0a50 35%, #10053a 65%, #070320 100%);
+  position: relative; display: flex; align-items: flex-end;
+  justify-content: space-between; padding: 12px 14px;
+}
+/* Aurora in resort photo */
+.resort-photo::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 60px;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(168,85,247,0.2) 30%,
+    rgba(6,214,160,0.15) 60%,
+    transparent 100%);
+  filter: blur(8px);
+}
+.resort-photo::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 55px;
+  background: linear-gradient(180deg, transparent, rgba(7,3,32,0.9));
+  clip-path: polygon(0% 100%, 0% 55%, 10% 42%, 20% 50%, 32% 22%, 42% 38%, 52% 14%, 60% 30%, 68% 20%, 78% 36%, 88% 22%, 96% 38%, 100% 28%, 100% 100%);
+}
+.resort-name-wrap { position: relative; z-index: 1; }
+.resort-name-main { font-size: 18px; font-weight: 700; color: #faf5ff; letter-spacing: -0.01em; }
+.resort-pass { font-size: 10px; color: rgba(216,180,254,0.45); margin-top: 1px; font-weight: 500; }
+
+.score-badge {
+  position: relative; z-index: 1;
+  background: linear-gradient(135deg, rgba(168,85,247,0.25), rgba(6,214,160,0.15));
+  border: 1px solid rgba(168,85,247,0.4);
+  border-radius: 12px; padding: 6px 12px; text-align: center;
+  box-shadow: 0 0 20px rgba(168,85,247,0.3), 0 0 40px rgba(168,85,247,0.1);
+}
+.score-num {
+  font-size: 22px; font-weight: 800; line-height: 1; letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #e879f9, #a855f7, #06d6a0);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.score-tier { font-size: 9px; font-weight: 700; color: rgba(192,132,252,0.7); letter-spacing: 0.1em; text-transform: uppercase; }
+
+.resort-stats { display: grid; grid-template-columns: repeat(4, 1fr); }
+.stat { padding: 10px 4px; text-align: center; border-right: 1px solid rgba(168,85,247,0.07); }
+.stat:last-child { border-right: none; }
+.stat-val { display: block; font-size: 14px; font-weight: 700; color: #faf5ff; }
+.stat-lbl { display: block; font-size: 9px; color: rgba(192,132,252,0.4); margin-top: 2px; font-weight: 500; }
+.view-all { padding: 9px 16px; font-size: 11px; color: rgba(168,85,247,0.6); border-top: 1px solid rgba(168,85,247,0.07); text-align: right; }
+
+.trip-inner { padding: 14px 16px; }
+.trip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.trip-resort { font-size: 16px; font-weight: 700; color: #faf5ff; }
+.trip-date { font-size: 11px; color: rgba(192,132,252,0.45); margin-top: 2px; }
+.trip-countdown {
+  background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(6,214,160,0.1));
+  border: 1px solid rgba(168,85,247,0.25);
+  border-radius: 8px; padding: 3px 10px;
+  font-size: 11px; font-weight: 700;
+  background-clip: text; -webkit-background-clip: text;
+  color: #c084fc;
+}
+.trip-foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.avatars { display: flex; }
+.av-sm {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 1.5px solid rgba(168,85,247,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 700; color: #e9d5ff;
+  margin-left: -6px;
+  background: rgba(168,85,247,0.12);
+}
+.av-sm:first-child { margin-left: 0; }
+.going-count { font-size: 12px; color: rgba(192,132,252,0.4); font-weight: 500; }
+
+.crew-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid rgba(168,85,247,0.06); }
+.crew-row:last-child { border-bottom: none; }
+.crew-av {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, rgba(168,85,247,0.2), rgba(6,214,160,0.1));
+  border: 1px solid rgba(168,85,247,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: #c084fc; flex-shrink: 0;
+}
+.crew-info-name { font-size: 13px; font-weight: 600; color: #faf5ff; }
+.crew-info-status { font-size: 11px; color: rgba(192,132,252,0.4); margin-top: 1px; }
+.crew-status-dot { margin-left: auto; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
+.status-arrived { background: rgba(6,214,160,0.12); color: #06d6a0; }
+.status-driving { background: rgba(168,85,247,0.12); color: #c084fc; }
+.status-planning { background: rgba(148,163,184,0.06); color: #4a3f6b; }
+
+.bottomnav {
+  position: relative; z-index: 4;
+  display: flex;
+  border-top: 1px solid rgba(168,85,247,0.1);
+  background: rgba(7,5,26,0.97);
+  padding: 10px 0 20px;
+}
+.tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; font-weight: 500; color: rgba(168,85,247,0.25); padding: 4px 0; }
+.tab.active { color: #c084fc; }
+.tab-icon { font-size: 18px; line-height: 1; }
+.tab.active .tab-icon { filter: drop-shadow(0 0 6px rgba(168,85,247,0.6)); }
+
+.palette { position: relative; z-index: 1; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.swatch { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.swatch-color { width: 52px; height: 52px; border-radius: 14px; border: 1px solid rgba(168,85,247,0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+.swatch-hex { font-size: 10px; font-weight: 600; color: rgba(168,85,247,0.4); font-family: monospace; }
+.swatch-name { font-size: 10px; color: #2d1f4a; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="theme-tag">Theme 04 of 05</div>
+  <h1>Aurora Peak</h1>
+  <p>Deep violet skies, aurora gradients, star-dusted backgrounds — the feeling of standing on a summit at dusk watching the lights come out. Premium and magical.</p>
+</div>
+
+<div class="phone">
+  <div class="app-bg"></div>
+  <div class="aurora"></div>
+
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>▲▲▲ 100%</span>
+  </div>
+
+  <div class="topbar">
+    <div>
+      <div class="logo">PowderDays ✦</div>
+      <div class="logo-sub">COLORADO · 2025–26</div>
+    </div>
+    <div class="user-av">KR</div>
+  </div>
+
+  <div class="scroll">
+
+    <div class="checkin-cta">
+      <span>✦ Check in at Breckenridge today</span>
+      <span style="color:rgba(168,85,247,0.4)">›</span>
+    </div>
+
+    <div class="card">
+      <div class="card-inner-bg">
+        <div class="resort-photo">
+          <div class="resort-name-wrap">
+            <div class="resort-name-main">Breckenridge</div>
+            <div class="resort-pass">Summit Co · Epic Pass</div>
+          </div>
+          <div class="score-badge">
+            <div class="score-num">87</div>
+            <div class="score-tier">Elite</div>
+          </div>
+        </div>
+        <div class="resort-stats">
+          <div class="stat"><span class="stat-val">12"</span><span class="stat-lbl">New 24h</span></div>
+          <div class="stat"><span class="stat-val">84"</span><span class="stat-lbl">Base</span></div>
+          <div class="stat"><span class="stat-val">24°</span><span class="stat-lbl">Temp</span></div>
+          <div class="stat"><span class="stat-val" style="color:#06d6a0;">Low</span><span class="stat-lbl">Drive Risk</span></div>
+        </div>
+        <div class="view-all">View all 12 resorts →</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-inner-bg">
+        <div class="trip-inner">
+          <div class="card-label">Your next trip</div>
+          <div class="trip-header">
+            <div>
+              <div class="trip-resort">🎿 Steamboat Springs</div>
+              <div class="trip-date">Dec 28–30 · 3 days out</div>
+            </div>
+            <div class="trip-countdown">12 days</div>
+          </div>
+          <div class="trip-foot">
+            <div class="avatars">
+              <div class="av-sm">JC</div>
+              <div class="av-sm">SM</div>
+              <div class="av-sm">LR</div>
+              <div class="av-sm" style="color:rgba(168,85,247,0.35)">+1</div>
+            </div>
+            <span class="going-count">4 going · 2 maybe</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-inner-bg">
+        <div class="card-inner">
+          <div class="card-label">Who's skiing today</div>
+          <div class="crew-row">
+            <div class="crew-av">JC</div>
+            <div><div class="crew-info-name">Jake C.</div><div class="crew-info-status">Vail</div></div>
+            <div class="crew-status-dot status-arrived">Arrived ✓</div>
+          </div>
+          <div class="crew-row">
+            <div class="crew-av">SM</div>
+            <div><div class="crew-info-name">Sarah M.</div><div class="crew-info-status">Breckenridge</div></div>
+            <div class="crew-status-dot status-driving">Driving</div>
+          </div>
+          <div class="crew-row">
+            <div class="crew-av">LR</div>
+            <div><div class="crew-info-name">Lily R.</div><div class="crew-info-status">Keystone</div></div>
+            <div class="crew-status-dot status-planning">Planning</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottomnav">
+    <div class="tab active"><div class="tab-icon">🏔️</div><span>Snow</span></div>
+    <div class="tab"><div class="tab-icon">📅</div><span>Plans</span></div>
+    <div class="tab"><div class="tab-icon">💬</div><span>Social</span></div>
+    <div class="tab"><div class="tab-icon">🏆</div><span>Board</span></div>
+    <div class="tab"><div class="tab-icon">👤</div><span>Profile</span></div>
+  </div>
+</div>
+
+<div class="palette">
+  <div class="swatch">
+    <div class="swatch-color" style="background:#07051a;"></div>
+    <div class="swatch-hex">#07051A</div>
+    <div class="swatch-name">Deep BG</div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#0d0a23;"></div>
+    <div class="swatch-hex">#0D0A23</div>
+    <div class="swatch-name">Card BG</div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#a855f7;"></div>
+    <div class="swatch-hex">#A855F7</div>
+    <div class="swatch-name">Violet</div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#06d6a0;"></div>
+    <div class="swatch-hex">#06D6A0</div>
+    <div class="swatch-name">Aurora Teal</div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#faf5ff;border-color:rgba(168,85,247,0.2);"></div>
+    <div class="swatch-hex">#FAF5FF</div>
+    <div class="swatch-name">Text</div>
+  </div>
+</div>
+
+</body>
+</html>
