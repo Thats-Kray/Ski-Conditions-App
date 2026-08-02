@@ -58,7 +58,7 @@ function formatMinutes(mins) {
 
 // ── Season Stats Card ─────────────────────────────────────────────────────────
 
-function SeasonStatsCard({ stats, priorStats, season }) {
+function SeasonStatsCard({ stats, priorStats, season, viewMode = "season" }) {
   const statItems = [
     { label: "Days on Mountain", value: stats.days,                  emoji: "⛷️" },
     { label: "Vertical Feet",    value: fmt(stats.vertical) + " ft", emoji: "📏" },
@@ -76,7 +76,7 @@ function SeasonStatsCard({ stats, priorStats, season }) {
       {/* Header */}
       <div style={{ padding: "14px 18px 10px" }}>
         <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: 0.9 }}>
-          {season.label} Season
+          {viewMode === "allTime" ? "All-Time" : `${season.label} Season`}
         </div>
       </div>
 
@@ -144,6 +144,27 @@ function SeasonStatsCard({ stats, priorStats, season }) {
           No days logged yet — get out there! ⛷️
         </div>
       )}
+    </div>
+  )
+}
+
+function StatsViewToggle({ viewMode, onChange }) {
+  return (
+    <div style={{ display: "flex", gap: 4 }}>
+      {["season", "allTime"].map((mode) => (
+        <button
+          key={mode}
+          onClick={() => onChange(mode)}
+          style={{
+            padding: "6px 14px", borderRadius: "var(--radius-pill)", border: "none", cursor: "pointer",
+            background: viewMode === mode ? "var(--color-accent)" : "rgba(255,255,255,0.06)",
+            color: viewMode === mode ? "var(--color-bg)" : "var(--color-text-2)",
+            fontWeight: 700, fontSize: 13,
+          }}
+        >
+          {mode === "season" ? "This Season" : "All-Time"}
+        </button>
+      ))}
     </div>
   )
 }
@@ -384,10 +405,14 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   const [loading, setLoading]         = useState(true)
   const [showEdit, setShowEdit]       = useState(false)
   const [seasonStats, setSeasonStats] = useState(null)
+  const [priorStats, setPriorStats]   = useState(null)
   const [recentSessions, setRecentSessions] = useState([])
   const [showShare, setShowShare]     = useState(false)
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false)
   const [photoUploading, setPhotoUploading] = useState(false)
+  const [viewMode, setViewMode]       = useState("season")
+  const [allTimeStats, setAllTimeStats] = useState(null)
+  const [userId, setUserId]           = useState(null)
   const fileInputRef = useRef(null)
 
   const season = getCurrentSeason()
@@ -395,14 +420,17 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [user, prof, friendData, tripData, sessions] = await Promise.all([
+      const { startYear } = getCurrentSeason()
+      const [user, prof, friendData, tripData, sessions, priorSessions] = await Promise.all([
         getCurrentUser(),
         getMyProfile(),
         getAcceptedFriends().catch(() => []),
         getAllVisibleTrips().catch(() => []),
-        getMySessions(getCurrentSeason().startYear).catch(() => []),
+        getMySessions(startYear).catch(() => []),
+        getMySessions(startYear - 1).catch(() => []),
       ])
       setProfile(prof)
+      setUserId(user?.id || null)
       setFriends(Array.isArray(friendData) ? friendData : [])
       const { mine = [], rsvpd = [] } = tripData || {}
       const seen = new Set()
@@ -415,12 +443,24 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
         setSeasonStats(computeStats(sessions))
         setRecentSessions(sessions)
       }
+      if (Array.isArray(priorSessions)) {
+        setPriorStats(computeStats(priorSessions))
+      }
     } catch {
       // parent handles auth
     } finally {
       setLoading(false)
     }
   }, [])
+
+  function handleViewModeChange(mode) {
+    setViewMode(mode)
+    if (mode === "allTime" && allTimeStats == null && userId) {
+      getAllTimeStats(userId)
+        .then((sessions) => setAllTimeStats(computeStats(sessions)))
+        .catch(() => {})
+    }
+  }
 
   useEffect(() => { load() }, [load])
 
@@ -634,7 +674,23 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
 
       {/* ── Season Stats ── */}
       {seasonStats && (
-        <SeasonStatsCard stats={seasonStats} season={season} />
+        <>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <StatsViewToggle viewMode={viewMode} onChange={handleViewModeChange} />
+          </div>
+          {viewMode === "allTime" && allTimeStats == null ? (
+            <div style={{ textAlign: "center", padding: "24px", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
+              Loading all-time stats…
+            </div>
+          ) : (
+            <SeasonStatsCard
+              stats={viewMode === "allTime" ? allTimeStats : seasonStats}
+              priorStats={viewMode === "season" ? priorStats : null}
+              season={season}
+              viewMode={viewMode}
+            />
+          )}
+        </>
       )}
 
       {/* ── Recent Sessions feed ── */}
