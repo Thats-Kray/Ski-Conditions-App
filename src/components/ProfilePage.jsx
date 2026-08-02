@@ -176,7 +176,7 @@ function hasStats(session) {
   return session.runs_logged != null || session.vertical_feet != null || session.miles_skied != null || session.top_speed_mph != null
 }
 
-function RecentSessionsFeed({ sessions, onRefresh }) {
+function RecentSessionsFeed({ sessions, limit = 5, onRefresh }) {
   const [editingSessionId, setEditingSessionId] = useState(null)
   const [savingStatsFor, setSavingStatsFor]       = useState(null)
 
@@ -189,14 +189,15 @@ function RecentSessionsFeed({ sessions, onRefresh }) {
   }
 
   const editingSession = sessions.find((s) => s.id === editingSessionId)
+  const shown = Number.isFinite(limit) ? sessions.slice(0, limit) : sessions
 
   return (
     <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden" }}>
       <div style={{ padding: "12px 16px 10px", fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>
-        Recent Sessions
+        {Number.isFinite(limit) ? "Recent Sessions" : "Session History"}
       </div>
       <div style={{ display: "flex", flexDirection: "column" }}>
-        {sessions.slice(0, 5).map((s, i) => {
+        {shown.map((s, i) => {
           const date = new Date(s.session_date + "T12:00:00")
           const dateLabel = date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
           const emoji = resortEmoji(s.resort_key || s.resort_name)
