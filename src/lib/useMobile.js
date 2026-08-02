@@ -15,3 +15,11 @@ export function useMobile(breakpoint = 768) {
 
   return isMobile
 }
+
+export function useIsStandalone() {
+  if (typeof window === "undefined") return false
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true
+  )
+}

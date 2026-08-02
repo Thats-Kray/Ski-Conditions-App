@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react"
-import { useMobile } from "../lib/useMobile"
+import { useMobile, useIsStandalone } from "../lib/useMobile"
 import { supabase } from "../lib/supabase"
 import {
   getMyCrews,
@@ -941,6 +941,86 @@ function PingCta({ currentUser }) {
   )
 }
 
+// ── Add to Home Screen nudge ──────────────────────────────────────────────────
+//
+// Sprint plan says this should key off `sessionActive` (GPS session started),
+// a prop introduced by Sprint 4. This sprint runs independently and in
+// isolation from Sprint 4's changes, so `sessionActive` may not actually be
+// wired up by any parent yet — it's accepted here as an optional prop
+// (defaults to false) so it "just works" once Sprint 4 lands. In the
+// meantime we fall back to the visit-count trigger the plan also describes
+// ("the GPS session has started OR a certain number of visits have passed"),
+// so the nudge is functional on its own rather than permanently dormant.
+const A2HS_DISMISS_KEY = "pd_a2hs_dismissed"
+const A2HS_VISIT_KEY = "pd_a2hs_visit_count"
+const A2HS_VISIT_THRESHOLD = 3
+
+function AddToHomeScreenNudge({ currentUser, sessionActive }) {
+  const isStandalone = useIsStandalone()
+  const [showNudge, setShowNudge] = useState(false)
+
+  useEffect(() => {
+    let visitCount = 0
+    try {
+      visitCount = (parseInt(localStorage.getItem(A2HS_VISIT_KEY), 10) || 0) + 1
+      localStorage.setItem(A2HS_VISIT_KEY, String(visitCount))
+    } catch {
+      // localStorage unavailable — treat as first visit, non-fatal
+    }
+
+    let dismissed = false
+    try {
+      dismissed = localStorage.getItem(A2HS_DISMISS_KEY) === "true"
+    } catch {
+      // ignore
+    }
+
+    if (
+      currentUser &&
+      !isStandalone &&
+      !dismissed &&
+      (sessionActive || visitCount >= A2HS_VISIT_THRESHOLD)
+    ) {
+      setShowNudge(true)
+    }
+  }, [currentUser, isStandalone, sessionActive])
+
+  function dismissNudge() {
+    try { localStorage.setItem(A2HS_DISMISS_KEY, "true") } catch {}
+    setShowNudge(false)
+  }
+
+  if (!showNudge) return null
+
+  return (
+    <div style={{
+      background: "rgba(56,189,248,0.08)",
+      border: "1px solid rgba(56,189,248,0.2)",
+      borderRadius: 14,
+      padding: "10px 14px",
+      marginBottom: 12,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+      fontSize: 13,
+    }}>
+      <span style={{ color: "rgba(255,255,255,0.8)" }}>
+        📲 Add to Home Screen for better GPS tracking
+      </span>
+      <button
+        onClick={dismissNudge}
+        style={{
+          background: "none", border: "none", color: "rgba(255,255,255,0.4)",
+          fontSize: 12, cursor: "pointer", fontWeight: 700, flexShrink: 0,
+        }}
+      >
+        Dismiss
+      </button>
+    </div>
+  )
+}
+
 // ── Offseason launch banner ───────────────────────────────────────────────────
 
 function OffseasonBanner() {
@@ -1022,9 +1102,10 @@ function OffseasonBanner() {
 
 // ── Mobile layout ─────────────────────────────────────────────────────────────
 
-function MobileHomeDashboard({ resorts, currentUser, onTabChange }) {
+function MobileHomeDashboard({ resorts, currentUser, onTabChange, sessionActive }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <AddToHomeScreenNudge currentUser={currentUser} sessionActive={sessionActive} />
       <OffseasonBanner />
       <ConditionsWidget resorts={resorts} onTabChange={onTabChange} />
       <PlansWidget currentUser={currentUser} resorts={resorts} onTabChange={onTabChange} />
@@ -1037,11 +1118,18 @@ function MobileHomeDashboard({ resorts, currentUser, onTabChange }) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-export default function HomeDashboard({ resorts, currentUser, onTabChange }) {
+export default function HomeDashboard({ resorts, currentUser, onTabChange, sessionActive = false }) {
   const isMobile = useMobile()
 
   if (isMobile) {
-    return <MobileHomeDashboard resorts={resorts} currentUser={currentUser} onTabChange={onTabChange} />
+    return (
+      <MobileHomeDashboard
+        resorts={resorts}
+        currentUser={currentUser}
+        onTabChange={onTabChange}
+        sessionActive={sessionActive}
+      />
+    )
   }
 
   return (
