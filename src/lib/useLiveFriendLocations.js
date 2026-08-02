@@ -8,9 +8,17 @@ const STALE_MS = 90 * 1000
  * returns their most recent position, keyed by friend user ID.
  *
  * Uses Supabase Realtime Broadcast (ephemeral pub/sub) rather than
- * `postgres_changes` — nothing is persisted to a DB table, matching the
- * privacy model: location is only ever visible to accepted friends, and
- * there's no row an RLS policy could ever leak.
+ * `postgres_changes` — nothing is persisted to a DB table, so there's no row
+ * that could ever be leaked by a location-history query.
+ *
+ * Broadcast channels are open by default in Supabase, so passing friendIds
+ * here is NOT what enforces "friends only" — that's enforced server-side by
+ * Realtime Authorization: this channel is opened with `private: true`, and
+ * migrations/018_live_location_realtime_authz.sql adds RLS policies on
+ * `realtime.messages` that only let a user read `mountain:live:{ownerId}`
+ * broadcasts if they ARE `ownerId` or an accepted friend of `ownerId` (per
+ * `friend_requests`). Without both pieces, any client holding the anon key
+ * could read any user's live position by guessing/looking up their ID.
  *
  * Subscribing to a friend's channel when they aren't currently broadcasting
  * is harmless and cheap (no events ever arrive on that channel) — this hook
@@ -23,7 +31,7 @@ export function useLiveFriendLocations(friendIds) {
   useEffect(() => {
     const channels = (friendIds || []).map((friendId) =>
       supabase
-        .channel(`mountain:live:${friendId}`)
+        .channel(`mountain:live:${friendId}`, { config: { private: true } })
         .on("broadcast", { event: "position" }, ({ payload }) => {
           setLocations((prev) => ({ ...prev, [friendId]: { ...payload, updatedAt: Date.now() } }))
         })
@@ -34,7 +42,11 @@ export function useLiveFriendLocations(friendIds) {
             return next
           })
         })
-        .subscribe()
+        .subscribe((status, err) => {
+          if (status === "CHANNEL_ERROR") {
+            console.warn(`Live location channel error for friend ${friendId}:`, err)
+          }
+        })
     )
     return () => {
       channels.forEach((ch) => supabase.removeChannel(ch))
