@@ -16,6 +16,8 @@ import { resortName, resortEmoji } from "../lib/resorts"
 import { fmt } from "../lib/format"
 import Avatar from "./ui/Avatar"
 import SnowStat from "./ui/SnowStat"
+import Card from "./ui/Card"
+import Button from "./ui/Button"
 
 const SKILL_OPTIONS = [
   { key: "green",        label: "Green",        color: "#22c55e" },
@@ -51,6 +53,38 @@ function computeStats(sessions) {
   const timeOnMountain   = sessions.reduce((acc, s) => acc + (s.time_on_mountain_min || 0), 0)
 
   return { days, vertical, miles: parseFloat(miles.toFixed(1)), powderDays, resorts, topResort, totalRuns, topSpeed, timeOnMountain }
+}
+
+// ── Season Milestones ─────────────────────────────────────────────────────────
+
+const MILESTONES = [
+  { id: "days_10",      check: (s) => s.days >= 10,      label: "10 Days on the Mountain", icon: "🎿" },
+  { id: "days_25",      check: (s) => s.days >= 25,      label: "25 Days on the Mountain", icon: "🏔️" },
+  { id: "first_powder", check: (s) => s.powderDays >= 1, label: "First Powder Day",         icon: "❄️" },
+  { id: "vertical_50k", check: (s) => s.vertical >= 50000,  label: "50,000 ft Vertical",    icon: "⬇️" },
+  { id: "vertical_100k",check: (s) => s.vertical >= 100000, label: "100,000 ft Vertical",   icon: "🚀" },
+  { id: "runs_100",     check: (s) => s.totalRuns >= 100, label: "100 Runs",                icon: "💯" },
+  { id: "resorts_5",    check: (s) => s.resorts >= 5,     label: "5 Resorts Visited",        icon: "🗺️" },
+]
+
+function getShownMilestones(startYear) {
+  try {
+    const raw = localStorage.getItem(`pd_milestones_shown_${startYear}`)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function markMilestoneShown(startYear, id) {
+  try {
+    const shown = getShownMilestones(startYear)
+    if (!shown.includes(id)) {
+      localStorage.setItem(`pd_milestones_shown_${startYear}`, JSON.stringify([...shown, id]))
+    }
+  } catch {
+    // private browsing / storage disabled — fail silently, matching existing convention
+  }
 }
 
 function formatMinutes(mins) {
@@ -472,6 +506,23 @@ function EditProfileModal({ profile, onSaved, onClose }) {
   )
 }
 
+function MilestoneModal({ milestone, onShare, onClose }) {
+  if (!milestone) return null
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 700 }}>
+      <Card style={{ textAlign: "center", padding: 32, maxWidth: 340 }}>
+        <div style={{ fontSize: 48 }}>{milestone.icon}</div>
+        <div style={{ fontSize: 22, fontWeight: 900, marginTop: 12 }}>{milestone.label}</div>
+        <div style={{ fontSize: 14, color: "var(--color-text-2)", marginTop: 6 }}>Milestone unlocked! 🎉</div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 20 }}>
+          <Button onClick={onShare}>Share</Button>
+          <Button variant="secondary" onClick={onClose}>Close</Button>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function ProfilePage({ onLogOut, onTabChange }) {
@@ -490,6 +541,8 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   const [historyView, setHistoryView] = useState("list")
   const [allTimeStats, setAllTimeStats] = useState(null)
   const [userId, setUserId]           = useState(null)
+  const [milestoneQueue, setMilestoneQueue] = useState([])
+  const [shareFromMilestone, setShareFromMilestone] = useState(false)
   const fileInputRef = useRef(null)
 
   const season = getCurrentSeason()
@@ -517,8 +570,13 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
       }
       setTripCount(count)
       if (Array.isArray(sessions)) {
-        setSeasonStats(computeStats(sessions))
+        const currentStats = computeStats(sessions)
+        setSeasonStats(currentStats)
         setRecentSessions(sessions)
+
+        const shownIds = getShownMilestones(startYear)
+        const newlyCrossed = MILESTONES.filter((m) => m.check(currentStats) && !shownIds.includes(m.id))
+        if (newlyCrossed.length) setMilestoneQueue(newlyCrossed)
       }
       if (Array.isArray(priorSessions)) {
         setPriorStats(computeStats(priorSessions))
@@ -540,6 +598,12 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   }
 
   useEffect(() => { load() }, [load])
+
+  function dismissMilestone() {
+    const current = milestoneQueue[0]
+    if (current) markMilestoneShown(season.startYear, current.id)
+    setMilestoneQueue((q) => q.slice(1))
+  }
 
   async function handlePhotoFileChange(e) {
     const file = e.target.files?.[0]
@@ -860,7 +924,24 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
           profile={{ ...profile, full_name: fullName }}
           stats={seasonStats}
           season={season}
-          onClose={() => setShowShare(false)}
+          onClose={() => {
+            setShowShare(false)
+            // If this share card was opened from the milestone modal's "Share" button,
+            // advance the queue only now — deferring past the ShareStatCard's own
+            // lifetime keeps the next milestone modal from stacking on top of it.
+            if (shareFromMilestone) {
+              setShareFromMilestone(false)
+              dismissMilestone()
+            }
+          }}
+        />
+      )}
+
+      {milestoneQueue[0] && !showShare && (
+        <MilestoneModal
+          milestone={milestoneQueue[0]}
+          onShare={() => { setShareFromMilestone(true); setShowShare(true) }}
+          onClose={dismissMilestone}
         />
       )}
     </div>
