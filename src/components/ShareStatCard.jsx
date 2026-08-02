@@ -116,9 +116,6 @@ function drawAvatar(ctx, name, x, y, size, skillLevel) {
   ctx.fillText(initials, cx, cy)
 }
 
-// Normalize a resort key/name the same way `resortName()`/`resortEmoji()` do,
-// so lookups into RESORT_PHOTOS (which is keyed like "vail", "crestedbutte") are reliable
-// even if the stored value has mixed case or spaces.
 // Loads a remote/static image for canvas drawing. There's no pre-existing async
 // image-loading helper elsewhere in the app to mirror (drawAvatar only draws
 // initials, it never loads profile.avatar_url) — this is a standard load-then-draw
