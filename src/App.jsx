@@ -1559,6 +1559,7 @@ export default function App() {
         <SessionRecapModal
           session={recapData.session}
           runs={recapData.runs}
+          profile={currentProfile}
           onClose={() => setRecapData(null)}
           stravaConnected={!!currentProfile?.strava_athlete_id}
           onPostToStrava={async (sessionId, resortName, sessionDate) => {

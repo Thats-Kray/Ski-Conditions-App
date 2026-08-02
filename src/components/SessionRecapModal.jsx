@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { runsToGpx, gpxDownload } from "../lib/gpxExport"
+import ShareStatCard from "./ShareStatCard"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -46,12 +47,13 @@ function StatTile({ value, label }) {
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export default function SessionRecapModal({ session, runs, onClose, stravaConnected, onPostToStrava }) {
+export default function SessionRecapModal({ session, runs, profile, onClose, stravaConnected, onPostToStrava }) {
   const [breakdownOpen, setBreakdownOpen] = useState(false)
   const [shareStatus, setShareStatus] = useState(null) // null | "copied" | "shared"
   const [uploadState, setUploadState] = useState("idle") // idle | loading | success | error
   const [stravaUrl, setStravaUrl] = useState(null)
   const [uploadError, setUploadError] = useState(null)
+  const [showShareCard, setShowShareCard] = useState(false)
 
   if (!session) return null
 
@@ -107,6 +109,7 @@ export default function SessionRecapModal({ session, runs, onClose, stravaConnec
   }
 
   return (
+    <>
     <div
       onClick={onClose}
       style={{
@@ -246,6 +249,24 @@ export default function SessionRecapModal({ session, runs, onClose, stravaConnec
             {shareStatus === "copied" ? "Copied ✓" : "📤 Share"}
           </button>
 
+          <button
+            onClick={() => setShowShareCard(true)}
+            style={{
+              flex: 1,
+              minWidth: 100,
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.14)",
+              borderRadius: 14,
+              padding: "12px 14px",
+              color: "white",
+              fontWeight: 800,
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            🖼️ Share Card
+          </button>
+
           {hasGpsData && (
             <button
               onClick={handleDownloadGpx}
@@ -335,5 +356,14 @@ export default function SessionRecapModal({ session, runs, onClose, stravaConnec
         </div>
       </div>
     </div>
+
+    {showShareCard && (
+      <ShareStatCard
+        profile={profile}
+        session={session}
+        onClose={() => setShowShareCard(false)}
+      />
+    )}
+    </>
   )
 }
