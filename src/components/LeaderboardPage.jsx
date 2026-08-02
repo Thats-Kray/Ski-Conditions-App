@@ -14,12 +14,22 @@ const RESORT_NAMES = [
 ]
 
 const CATEGORIES = [
-  { key: "days",       label: "🎿 Days",        stat: (e) => e.days,       unit: "days",    locked: false },
-  { key: "resorts",    label: "🏔️ Resorts",     stat: (e) => e.resorts,    unit: "visited", locked: false },
-  { key: "powderDays", label: "❄️ Powder Days", stat: (e) => e.powderDays, unit: "days",    locked: false },
-  { key: "vertical",   label: "↕️ Vertical",    stat: (e) => e.verticalFt, unit: "ft",      locked: true  },
-  { key: "miles",      label: "🛣️ Miles",       stat: (e) => e.milesSki,   unit: "mi",      locked: true  },
+  { key: "days",           label: "🎿 Days",          stat: (e) => e.days,           unit: "days"  },
+  { key: "powderDays",     label: "❄️ Powder Days",   stat: (e) => e.powderDays,     unit: "days"  },
+  { key: "vertical",       label: "↕️ Vertical",      stat: (e) => e.verticalFt,     unit: "ft"    },
+  { key: "miles",          label: "🛣️ Miles",         stat: (e) => e.milesSki,       unit: "mi"    },
+  { key: "topSpeed",       label: "⚡ Top Speed",     stat: (e) => e.topSpeed,       unit: "mph"   },
+  { key: "longestRun",     label: "📏 Longest Run",   stat: (e) => e.longestRun,     unit: "ft"    },
+  { key: "totalLifts",     label: "🚡 Most Lifts",    stat: (e) => e.totalLifts,     unit: "lifts" },
+  { key: "timeOnMountain", label: "⏱️ Time",          stat: (e) => e.timeOnMountain, unit: ""      },
 ]
+
+// Formats a minute count as "Xh Ym". Returns null (not a display string) for
+// null/undefined input so callers can distinguish "no data" from "0 minutes".
+function formatMinutes(mins) {
+  if (mins == null) return null
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`
+}
 
 const RANK_MEDALS = ["🥇", "🥈", "🥉"]
 
@@ -169,6 +179,12 @@ function LeaderboardRow({ entry, rank, category }) {
   const medal  = rank <= 3 ? RANK_MEDALS[rank - 1] : null
   const isTop  = rank <= 3
 
+  const displayValue = value == null
+    ? "—"
+    : cat.key === "timeOnMountain"
+      ? formatMinutes(value)
+      : value
+
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
@@ -206,9 +222,11 @@ function LeaderboardRow({ entry, rank, category }) {
       {/* Stat */}
       <div style={{ textAlign: "right", flexShrink: 0 }}>
         <div style={{ fontSize: 22, fontWeight: 900, color: isTop ? "#60a5fa" : "white", lineHeight: 1 }}>
-          {cat.locked ? "—" : (value ?? 0)}
+          {displayValue}
         </div>
-        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{cat.unit}</div>
+        {value != null && cat.unit && (
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{cat.unit}</div>
+        )}
       </div>
     </div>
   )
@@ -235,7 +253,13 @@ export default function LeaderboardPage() {
       setMySessions(sessions)
 
       const cat = CATEGORIES.find((c) => c.key === category)
-      const sorted = [...board].sort((a, b) => cat.stat(b) - cat.stat(a))
+      const sorted = [...board].sort((a, b) => {
+        const av = cat.stat(a), bv = cat.stat(b)
+        if (av == null && bv == null) return 0
+        if (av == null) return 1
+        if (bv == null) return -1
+        return bv - av // descending — highest first
+      })
       setEntries(sorted)
     } catch (err) {
       console.error(err)
@@ -336,30 +360,20 @@ export default function LeaderboardPage() {
         {CATEGORIES.map((cat) => (
           <button
             key={cat.key}
-            onClick={() => !cat.locked && setCategory(cat.key)}
+            onClick={() => setCategory(cat.key)}
             style={{
               background: category === cat.key ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)",
               border: category === cat.key ? "1px solid rgba(255,255,255,0.2)" : "1px solid rgba(255,255,255,0.07)",
-              color: cat.locked ? "rgba(255,255,255,0.25)" : (category === cat.key ? "white" : "rgba(255,255,255,0.55)"),
+              color: category === cat.key ? "white" : "rgba(255,255,255,0.55)",
               borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 700,
-              cursor: cat.locked ? "default" : "pointer", whiteSpace: "nowrap", flexShrink: 0,
+              cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
               position: "relative",
             }}
           >
             {cat.label}
-            {cat.locked && <span style={{ fontSize: 10, marginLeft: 4, opacity: 0.6 }}>🔒</span>}
           </button>
         ))}
       </div>
-
-      {/* Strava lock notice */}
-      {CATEGORIES.find((c) => c.key === category)?.locked && (
-        <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "20px", textAlign: "center", marginBottom: 18 }}>
-          <div style={{ fontSize: 24, marginBottom: 8 }}>🎿</div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: "white", marginBottom: 6 }}>Strava integration coming soon</div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>Connect Strava to automatically track vertical feet and miles from every run.</div>
-        </div>
-      )}
 
       {/* Leaderboard */}
       {loading ? (
