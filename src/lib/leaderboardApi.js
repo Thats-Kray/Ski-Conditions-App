@@ -236,6 +236,23 @@ export async function getPublicLeaderboard(startYear) {
   return fetchLeaderboard(startYear, "public")
 }
 
+// ── GPX export (Sprint 5) ───────────────────────────────────────────────────────
+
+/**
+ * Fetch all ski_runs rows for a session, ordered by start time.
+ * Used to build a GPX file for download/Strava upload.
+ */
+export async function getRunsForSession(sessionId) {
+  const { data, error } = await supabase
+    .from("ski_runs")
+    .select("*")
+    .eq("session_id", sessionId)
+    .order("started_at", { ascending: true })
+
+  if (error) throw error
+  return data ?? []
+}
+
 // ── GPS session flush (Sprint 3) ────────────────────────────────────────────────
 
 /**

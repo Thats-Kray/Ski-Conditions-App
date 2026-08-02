@@ -11,6 +11,28 @@ function getSupabase() {
   )
 }
 
+function buildGpxFromRuns(runs, trackName) {
+  const allPoints = (runs || [])
+    .flatMap((run) => run.gps_track ?? [])
+    .sort((a, b) => a.t - b.t)
+
+  if (!allPoints.length) return null
+
+  const trkpts = allPoints
+    .map((pt) => {
+      const ele  = pt.alt != null ? `\n        <ele>${Number(pt.alt).toFixed(1)}</ele>` : ""
+      const time = `\n        <time>${new Date(pt.t).toISOString()}</time>`
+      return `      <trkpt lat="${Number(pt.lat).toFixed(6)}" lon="${Number(pt.lng).toFixed(6)}">${ele}${time}\n      </trkpt>`
+    })
+    .join("\n")
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="PowderDays" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk><name>${trackName.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</name>
+  <trkseg>\n${trkpts}\n  </trkseg></trk>
+</gpx>`
+}
+
 router.get("/api/strava/auth", (req, res) => {
   const { userId } = req.query
 
@@ -185,6 +207,117 @@ router.post("/api/strava/webhook", async (req, res) => {
   } catch (err) {
     console.error("Webhook sync error:", err.message)
     // Don't re-throw — Strava already got its 200
+  }
+})
+
+router.post("/api/strava/upload", async (req, res) => {
+  const { userId, sessionId, activityName, activityDate } = req.body
+
+  if (!userId || !sessionId) {
+    return res.status(400).json({ error: "userId and sessionId are required" })
+  }
+
+  // Check for idempotency — already uploaded?
+  const supabase = getSupabase()
+  const { data: session } = await supabase
+    .from("ski_sessions")
+    .select("strava_activity_id")
+    .eq("id", sessionId)
+    .single()
+
+  if (session?.strava_activity_id) {
+    return res.json({
+      already_uploaded: true,
+      strava_activity_id: session.strava_activity_id,
+      strava_url: `https://www.strava.com/activities/${session.strava_activity_id}`,
+    })
+  }
+
+  try {
+    // Fetch GPS tracks from Supabase
+    const { data: runs, error: runsError } = await supabase
+      .from("ski_runs")
+      .select("gps_track, run_type, started_at")
+      .eq("session_id", sessionId)
+      .order("started_at", { ascending: true })
+
+    if (runsError) return res.status(500).json({ error: runsError.message })
+
+    const gpxString = buildGpxFromRuns(runs, activityName || `Ski Day - ${activityDate || ""}`)
+
+    if (!gpxString) {
+      return res.status(422).json({ error: "No GPS track data available for this session." })
+    }
+
+    // Get a valid Strava access token (auto-refreshes if expired)
+    const accessToken = await getValidStravaToken(userId)
+
+    // Upload GPX to Strava as multipart form
+    const formData = new FormData()
+    formData.append("data_type", "gpx")
+    formData.append("activity_type", "AlpineSki")
+    formData.append("name", activityName || `Ski Day - ${activityDate || ""}`)
+    formData.append("file", new Blob([gpxString], { type: "application/gpx+xml" }), "session.gpx")
+
+    const uploadRes = await fetch("https://www.strava.com/api/v3/uploads", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: formData,
+    })
+
+    if (!uploadRes.ok) {
+      const body = await uploadRes.text()
+      return res.status(502).json({ error: `Strava upload failed: ${uploadRes.status} ${body}` })
+    }
+
+    const upload = await uploadRes.json()
+
+    if (upload.error) {
+      return res.status(422).json({ error: `Strava rejected upload: ${upload.error}` })
+    }
+
+    // Poll until Strava processes the activity (usually 5–30 seconds)
+    let stravaActivityId = null
+    let attempts = 0
+    const maxAttempts = 12 // 12 × 5s = 60s max wait
+
+    while (attempts < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, 5_000))
+      attempts++
+
+      const pollRes = await fetch(`https://www.strava.com/api/v3/uploads/${upload.id}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      const poll = await pollRes.json()
+
+      if (poll.error) {
+        return res.status(422).json({ error: `Strava processing error: ${poll.error}` })
+      }
+
+      if (poll.activity_id) {
+        stravaActivityId = poll.activity_id
+        break
+      }
+    }
+
+    if (!stravaActivityId) {
+      return res.status(504).json({ error: "Strava processing timed out. Check Strava app in a few minutes." })
+    }
+
+    // Save strava_activity_id back to ski_sessions
+    await supabase
+      .from("ski_sessions")
+      .update({ strava_activity_id: stravaActivityId })
+      .eq("id", sessionId)
+
+    res.json({
+      strava_activity_id: stravaActivityId,
+      strava_url: `https://www.strava.com/activities/${stravaActivityId}`,
+    })
+  } catch (err) {
+    console.error("Strava upload error:", err)
+    res.status(500).json({ error: err.message })
   }
 })
 
