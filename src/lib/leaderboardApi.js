@@ -148,6 +148,21 @@ export async function getMySessions(startYear) {
     .sort((a, b) => (b.session_date || "").localeCompare(a.session_date || ""))
 }
 
+// ── All-time stats ─────────────────────────────────────────────────────────────
+
+// Returns raw ski_sessions rows for the user across all seasons, unfiltered by
+// date. Intentionally does NOT merge in trip-RSVP-derived synthetic sessions
+// the way getMySessions() does per-season — all-time is a simple/fast raw-table
+// read by design (documented trade-off, see sprint-14 "Out of Scope").
+export async function getAllTimeStats(userId) {
+  const { data, error } = await supabase
+    .from("ski_sessions")
+    .select("*")
+    .eq("user_id", userId)
+  if (error) throw error
+  return data || []
+}
+
 // ── Leaderboard (via SECURITY DEFINER RPC — bypasses RLS) ────────────────────
 
 async function fetchLeaderboard(startYear, mode) {

@@ -7,12 +7,13 @@ import {
   upsertMyProfile,
   uploadProfilePhoto,
 } from "../lib/socialApi"
-import { getMySessions, getCurrentSeason } from "../lib/leaderboardApi"
+import { getMySessions, getCurrentSeason, getAllTimeStats } from "../lib/leaderboardApi"
 import ShareStatCard from "./ShareStatCard"
 import StravaConnect from "./StravaConnect"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { fmt } from "../lib/format"
 import Avatar from "./ui/Avatar"
+import SnowStat from "./ui/SnowStat"
 
 const SKILL_OPTIONS = [
   { key: "green",        label: "Green",        color: "#22c55e" },
@@ -43,12 +44,21 @@ function computeStats(sessions) {
   }
   const topResort = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || null
 
-  return { days, vertical, miles: parseFloat(miles.toFixed(1)), powderDays, resorts, topResort }
+  const totalRuns       = sessions.reduce((acc, s) => acc + (s.runs_logged || 0), 0)
+  const topSpeed         = sessions.reduce((max, s) => (s.top_speed_mph != null && (max == null || s.top_speed_mph > max) ? s.top_speed_mph : max), null)
+  const timeOnMountain   = sessions.reduce((acc, s) => acc + (s.time_on_mountain_min || 0), 0)
+
+  return { days, vertical, miles: parseFloat(miles.toFixed(1)), powderDays, resorts, topResort, totalRuns, topSpeed, timeOnMountain }
+}
+
+function formatMinutes(mins) {
+  if (!mins) return "—"
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`
 }
 
 // ── Season Stats Card ─────────────────────────────────────────────────────────
 
-function SeasonStatsCard({ stats, season }) {
+function SeasonStatsCard({ stats, priorStats, season }) {
   const statItems = [
     { label: "Days on Mountain", value: stats.days,                  emoji: "⛷️" },
     { label: "Vertical Feet",    value: fmt(stats.vertical) + " ft", emoji: "📏" },
@@ -86,6 +96,24 @@ function SeasonStatsCard({ stats, season }) {
           </div>
         ))}
       </div>
+
+      {/* New stat tiles — Total Runs / Top Speed / Time on Mountain */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, padding: "12px 14px 0" }}>
+        <SnowStat icon="🎿" label="Total Runs" value={stats.totalRuns} />
+        <SnowStat icon="⚡" label="Top Speed" value={stats.topSpeed ?? "—"} unit={stats.topSpeed != null ? "mph" : undefined} />
+        <SnowStat icon="⏱️" label="Time on Mountain" value={formatMinutes(stats.timeOnMountain)} />
+      </div>
+
+      {/* Season-over-season delta row */}
+      {priorStats && (
+        <div style={{ fontSize: 13, color: "var(--color-text-2)", marginTop: 8, padding: "0 14px" }}>
+          {stats.days === priorStats.days
+            ? "Same days on mountain as last season"
+            : stats.days > priorStats.days
+              ? `↑ ${stats.days - priorStats.days} more day${stats.days - priorStats.days === 1 ? "" : "s"} than last season`
+              : `↓ ${priorStats.days - stats.days} fewer day${priorStats.days - stats.days === 1 ? "" : "s"} than last season`}
+        </div>
+      )}
 
       {/* Bottom: top resort + miles */}
       {(stats.topResort || stats.miles > 0) && (
