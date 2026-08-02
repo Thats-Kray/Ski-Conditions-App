@@ -3,6 +3,8 @@ import cors from "cors"
 import fetch from "node-fetch"
 import * as cheerio from "cheerio"
 import stravaRouter from "./routes/strava.js"
+import { computePowderScore } from "./powderScore.js"
+import { registerWeeklyBriefingCron } from "./cron.js"
 
 const app = express()
 app.use(cors({
@@ -271,17 +273,95 @@ const COTRIP_ROUTE_CONFIG = {
   },
 }
 
+// ── Callable NWS helpers (used by both the HTTP routes below and the cron job) ──
+
+export async function getNwsPoint(lat, lon) {
+  const url = `https://api.weather.gov/points/${lat},${lon}`
+  return cached(url, async () => {
+    const r = await fetch(url, { headers: NWS_HEADERS })
+    if (!r.ok) throw new Error(`NWS points error ${r.status}`)
+    return r.json()
+  })
+}
+
+export async function getNwsForecast(url) {
+  return cached(url, async () => {
+    const r = await fetch(url, { headers: NWS_HEADERS })
+    if (!r.ok) throw new Error(`NWS forecast error ${r.status}`)
+    return r.json()
+  })
+}
+
+// Returns the snowfall-amount grid data for a point, including snowPrev48in —
+// which the original /api/nws/snow route never computed (it only ever called
+// sumSnowPreviousInches with hoursBack=24). computePowderScore() needs the 48h
+// lookback too, and sumSnowPreviousInches already supports an arbitrary window,
+// so this extraction adds that field rather than silently defaulting it to 0.
+export async function getNwsSnow(lat, lon) {
+  const point = await getNwsPoint(lat, lon)
+
+  const gridUrl = point?.properties?.forecastGridData
+  if (!gridUrl) throw new Error("Missing forecastGridData URL for this point.")
+
+  const grid = await cached(gridUrl, async () => {
+    const r = await fetch(gridUrl, { headers: NWS_HEADERS })
+    if (!r.ok) throw new Error(`NWS grid error ${r.status}`)
+    return r.json()
+  })
+
+  const snowfallSeries = grid?.properties?.snowfallAmount
+  const values = snowfallSeries?.values
+  const unitCode = snowfallSeries?.uom || null
+
+  const prev24 = sumSnowPreviousInches(values, 24)
+  const prev48 = sumSnowPreviousInches(values, 48)
+  const next24 = sumSnowInches(values, 24)
+  const next48 = sumSnowInches(values, 48)
+
+  return {
+    lat,
+    lon,
+    snowPrev24in: prev24.totalIn,
+    snowPrev48in: prev48.totalIn,
+    snow24in: next24.totalIn,
+    snow48in: next48.totalIn,
+    unitCode,
+    updated: grid?.properties?.updateTime || null,
+  }
+}
+
+// Mirrors src/App.jsx's fetchNwsNowish() — point → hourly (temp/wind) + daily
+// (forecast text) — but as a server-side callable used only by the cron job's
+// briefing composition (the existing HTTP routes don't need this combined shape).
+export async function getNwsNowish(lat, lon) {
+  const point = await getNwsPoint(lat, lon)
+
+  const hourlyUrl = point?.properties?.forecastHourly
+  const forecastUrl = point?.properties?.forecast
+  if (!hourlyUrl || !forecastUrl) throw new Error("Missing NWS forecast URLs for this point.")
+
+  const [hourly, daily] = await Promise.all([
+    getNwsForecast(hourlyUrl),
+    getNwsForecast(forecastUrl),
+  ])
+
+  const h0 = hourly?.properties?.periods?.[0]
+  const d0 = daily?.properties?.periods?.[0]
+
+  return {
+    tempF: h0?.temperature ?? null,
+    windMph: parseInt((h0?.windSpeed || "0").match(/\d+/)?.[0] || "0", 10),
+    shortForecast: d0?.shortForecast || h0?.shortForecast || "",
+    detailedForecast: d0?.detailedForecast || "",
+    updated: hourly?.properties?.updated || null,
+  }
+}
+
 app.get("/api/nws/point", async (req, res) => {
   const { lat, lon } = req.query
-  const url = `https://api.weather.gov/points/${lat},${lon}`
 
   try {
-    const data = await cached(url, async () => {
-      const r = await fetch(url, { headers: NWS_HEADERS })
-      if (!r.ok) throw new Error(`NWS points error ${r.status}`)
-      return r.json()
-    })
-
+    const data = await getNwsPoint(lat, lon)
     res.json(data)
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -292,12 +372,7 @@ app.get("/api/nws/forecast", async (req, res) => {
   const { url } = req.query
 
   try {
-    const data = await cached(url, async () => {
-      const r = await fetch(url, { headers: NWS_HEADERS })
-      if (!r.ok) throw new Error(`NWS forecast error ${r.status}`)
-      return r.json()
-    })
-
+    const data = await getNwsForecast(url)
     res.json(data)
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -311,39 +386,8 @@ app.get("/api/nws/snow", async (req, res) => {
   }
 
   try {
-    const pointUrl = `https://api.weather.gov/points/${lat},${lon}`
-    const point = await cached(pointUrl, async () => {
-      const r = await fetch(pointUrl, { headers: NWS_HEADERS })
-      if (!r.ok) throw new Error(`NWS points error ${r.status}`)
-      return r.json()
-    })
-
-    const gridUrl = point?.properties?.forecastGridData
-    if (!gridUrl) throw new Error("Missing forecastGridData URL for this point.")
-
-    const grid = await cached(gridUrl, async () => {
-      const r = await fetch(gridUrl, { headers: NWS_HEADERS })
-      if (!r.ok) throw new Error(`NWS grid error ${r.status}`)
-      return r.json()
-    })
-
-    const snowfallSeries = grid?.properties?.snowfallAmount
-    const values = snowfallSeries?.values
-    const unitCode = snowfallSeries?.uom || null
-
-    const prev24 = sumSnowPreviousInches(values, 24)
-    const next24 = sumSnowInches(values, 24)
-    const next48 = sumSnowInches(values, 48)
-
-    res.json({
-      lat,
-      lon,
-      snowPrev24in: prev24.totalIn,
-      snow24in: next24.totalIn,
-      snow48in: next48.totalIn,
-      unitCode,
-      updated: grid?.properties?.updateTime || null,
-    })
+    const data = await getNwsSnow(lat, lon)
+    res.json(data)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -391,47 +435,55 @@ app.get("/api/cotrip", async (_req, res) => {
   }
 })
 
+export async function getDriveRisk(resortParam) {
+  const resortKey = normalizeResortKey(resortParam)
+
+  const config = COTRIP_ROUTE_CONFIG[resortKey]
+  if (!config) {
+    const err = new Error(`Unknown resort "${resortParam}"`)
+    err.status = 404
+    throw err
+  }
+
+  const html = await cached(config.url, async () => {
+    const r = await fetch(config.url, {
+      headers: {
+        "User-Agent": "ski-dashboard (contact@example.com)",
+        Accept: "text/html,application/xhtml+xml",
+      },
+    })
+    if (!r.ok) throw new Error(`COtrip route page error ${r.status}`)
+    return r.text()
+  })
+
+  const $ = cheerio.load(html)
+  const text = $("body").text()
+  const alerts = extractCotTripAlerts(text)
+  const { risk, penalty } = classifyDriveRiskFromAlerts(alerts)
+
+  return {
+    resort: resortKey,
+    risk,
+    penalty,
+    alertCount: alerts.length,
+    alerts: alerts.slice(0, 8),
+    sourceUrl: config.url,
+    fetchedAt: new Date().toISOString(),
+  }
+}
+
 app.get("/api/drive-risk", async (req, res) => {
   const resortParam = req.query.resort
-  const resortKey = normalizeResortKey(resortParam)
 
   if (!resortParam) {
     return res.status(400).json({ error: "resort parameter is required" })
   }
 
-  const config = COTRIP_ROUTE_CONFIG[resortKey]
-  if (!config) {
-    return res.status(404).json({ error: `Unknown resort "${resortParam}"` })
-  }
-
   try {
-    const html = await cached(config.url, async () => {
-      const r = await fetch(config.url, {
-        headers: {
-          "User-Agent": "ski-dashboard (contact@example.com)",
-          Accept: "text/html,application/xhtml+xml",
-        },
-      })
-      if (!r.ok) throw new Error(`COtrip route page error ${r.status}`)
-      return r.text()
-    })
-
-    const $ = cheerio.load(html)
-    const text = $("body").text()
-    const alerts = extractCotTripAlerts(text)
-    const { risk, penalty } = classifyDriveRiskFromAlerts(alerts)
-
-    res.json({
-      resort: resortKey,
-      risk,
-      penalty,
-      alertCount: alerts.length,
-      alerts: alerts.slice(0, 8),
-      sourceUrl: config.url,
-      fetchedAt: new Date().toISOString(),
-    })
+    const data = await getDriveRisk(resortParam)
+    res.json(data)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(err.status || 500).json({ error: err.message })
   }
 })
 
@@ -593,40 +645,129 @@ async function fetchHtmlConditions(url) {
   }
 }
 
+export async function getResortConditions(resortParam) {
+  const resortKey = normalizeResortKey(resortParam)
+
+  let conditions = null
+
+  if (VAIL_RESORT_DOMAINS[resortKey]) {
+    conditions = await fetchVailResortsConditions(VAIL_RESORT_DOMAINS[resortKey])
+  } else if (IKON_RESORT_REPORT_URLS[resortKey]) {
+    conditions = await fetchHtmlConditions(IKON_RESORT_REPORT_URLS[resortKey])
+  }
+
+  return {
+    resort: resortKey,
+    fetchedAt: new Date().toISOString(),
+    isOpen:      conditions?.isOpen      ?? null,
+    liftsOpen:   conditions?.liftsOpen   ?? null,
+    liftsTotal:  conditions?.liftsTotal  ?? null,
+    runsOpen:    conditions?.runsOpen    ?? null,
+    runsTotal:   conditions?.runsTotal   ?? null,
+    baseDepth:   conditions?.baseDepth   ?? null,
+    summitDepth: conditions?.summitDepth ?? null,
+    snowLast24in: conditions?.snowLast24in ?? null,
+    source:      conditions?.source      ?? null,
+  }
+}
+
 app.get("/api/resort-conditions", async (req, res) => {
   const resortParam = req.query.resort
-  const resortKey = normalizeResortKey(resortParam)
 
   if (!resortParam) {
     return res.status(400).json({ error: "resort parameter is required" })
   }
 
   try {
-    let conditions = null
-
-    if (VAIL_RESORT_DOMAINS[resortKey]) {
-      conditions = await fetchVailResortsConditions(VAIL_RESORT_DOMAINS[resortKey])
-    } else if (IKON_RESORT_REPORT_URLS[resortKey]) {
-      conditions = await fetchHtmlConditions(IKON_RESORT_REPORT_URLS[resortKey])
-    }
-
-    res.json({
-      resort: resortKey,
-      fetchedAt: new Date().toISOString(),
-      isOpen:      conditions?.isOpen      ?? null,
-      liftsOpen:   conditions?.liftsOpen   ?? null,
-      liftsTotal:  conditions?.liftsTotal  ?? null,
-      runsOpen:    conditions?.runsOpen    ?? null,
-      runsTotal:   conditions?.runsTotal   ?? null,
-      baseDepth:   conditions?.baseDepth   ?? null,
-      summitDepth: conditions?.summitDepth ?? null,
-      snowLast24in: conditions?.snowLast24in ?? null,
-      source:      conditions?.source      ?? null,
-    })
+    const data = await getResortConditions(resortParam)
+    res.json(data)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
 })
+
+// ── Aggregate conditions + Powder Score, for the cron job (no HTTP round-trip) ──
+
+// Loops RESORT_COORDS, calls the per-resort conditions/NWS/drive-risk functions
+// above, and runs each result through computePowderScore(). Wrapped in cached()
+// (default 5-minute TTL) so a manual test run and the real cron tick within the
+// same window don't re-scrape/re-fetch everything twice — the per-source fetches
+// underneath are already individually cached too, but this keeps the aggregate
+// itself cheap to call repeatedly.
+export async function getAllResortConditions() {
+  return cached("all-resort-conditions", async () => {
+    return Promise.all(
+      Object.entries(RESORT_COORDS).map(async ([resortKey, { name, lat, lon }]) => {
+        try {
+          const [conditions, snow, driveRisk, nowish] = await Promise.all([
+            getResortConditions(resortKey),
+            getNwsSnow(lat, lon).catch(() => null),
+            getDriveRisk(resortKey).catch(() => null),
+            getNwsNowish(lat, lon).catch(() => null),
+          ])
+
+          const isOpen = conditions.isOpen ?? false
+
+          const { powderScore, powderTier } = computePowderScore({
+            isOpen,
+            snowPrev24in: snow?.snowPrev24in ?? 0,
+            snowPrev48in: snow?.snowPrev48in ?? 0,
+            snow24in: snow?.snow24in ?? 0,
+            snow48in: snow?.snow48in ?? 0,
+            tempF: nowish?.tempF,
+            windMph: nowish?.windMph ?? 0,
+            runsOpen: conditions.runsOpen ?? 0,
+            runsTotal: conditions.runsTotal ?? 0,
+            liftsOpen: conditions.liftsOpen ?? 0,
+            liftsTotal: conditions.liftsTotal ?? 0,
+            baseDepth: conditions.baseDepth ?? 0,
+            forecastText: nowish?.shortForecast || nowish?.detailedForecast || "",
+            driveRisk: driveRisk?.risk ?? "Low",
+          })
+
+          return {
+            resortKey,
+            name,
+            isOpen,
+            powderScore,
+            powderTier,
+            liftsOpen: conditions.liftsOpen,
+            liftsTotal: conditions.liftsTotal,
+            runsOpen: conditions.runsOpen,
+            runsTotal: conditions.runsTotal,
+            baseDepth: conditions.baseDepth,
+            summitDepth: conditions.summitDepth,
+            snowLast24in: conditions.snowLast24in,
+            snowPrev24in: snow?.snowPrev24in ?? null,
+            snowPrev48in: snow?.snowPrev48in ?? null,
+            snow24in: snow?.snow24in ?? null,
+            snow48in: snow?.snow48in ?? null,
+            tempF: nowish?.tempF ?? null,
+            windMph: nowish?.windMph ?? null,
+            forecastText: nowish?.shortForecast || nowish?.detailedForecast || null,
+            driveRisk: driveRisk?.risk ?? null,
+            drivePenalty: driveRisk?.penalty ?? null,
+            source: conditions.source,
+            fetchedAt: conditions.fetchedAt,
+          }
+        } catch (err) {
+          // One resort's total failure shouldn't take down the whole briefing —
+          // treat it as unscoreable/closed rather than throwing.
+          return {
+            resortKey,
+            name,
+            isOpen: false,
+            powderScore: null,
+            powderTier: "Closed",
+            error: err.message,
+          }
+        }
+      })
+    )
+  })
+}
+
+registerWeeklyBriefingCron()
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`)
