@@ -2,6 +2,11 @@
 -- Run in Supabase SQL Editor. Depends on migrations/010_ski_runs.sql having been run first
 -- (adds runs_logged, lifts_ridden, longest_run_ft, time_on_mountain_min to ski_sessions).
 
+-- Postgres does not allow CREATE OR REPLACE FUNCTION to change a function's
+-- RETURNS TABLE column list (11 columns -> 16 columns here), so the existing
+-- function must be dropped first.
+drop function if exists public.get_leaderboard(int, text);
+
 create or replace function public.get_leaderboard(
   p_start_year int,
   p_mode       text default 'friends'
