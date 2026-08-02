@@ -3,6 +3,7 @@ import { Resend } from "resend"
 import { createClient } from "@supabase/supabase-js"
 import { getAllResortConditions } from "./index.js"
 import { renderPowderBriefingEmail } from "./emailTemplates.js"
+import { signAlertToken } from "./alertTokens.js"
 
 function getSupabase() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -54,11 +55,14 @@ export async function sendWeeklyBriefing() {
     const email = emailById.get(sub.id)
     if (!email) { failed++; continue }
     try {
+      const unsubscribeToken = signAlertToken(sub.id, "unsubscribe")
+      const unsubscribeUrl = `${process.env.BACKEND_URL}/api/unsubscribe?token=${unsubscribeToken}`
+      const personalizedHtml = html.replace("{{UNSUBSCRIBE_URL}}", unsubscribeUrl)
       await resend.emails.send({
         from: process.env.FROM_EMAIL,
         to: email,
         subject: `❄️ This week's best bet: ${briefing.bestBet.name}`,
-        html,
+        html: personalizedHtml,
       })
       sent++
     } catch (e) {
