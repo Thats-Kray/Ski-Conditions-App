@@ -10,3 +10,21 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
+
+/**
+ * Auth headers for calls to our own backend (server/routes/*), which verifies
+ * the Supabase JWT rather than trusting a userId in the request body.
+ * Throws when signed out so callers surface a real error instead of firing an
+ * unauthenticated request that comes back as an opaque 401.
+ */
+export async function authHeaders() {
+  const { data } = await supabase.auth.getSession()
+  const token = data?.session?.access_token
+
+  if (!token) throw new Error("You must be signed in to do that.")
+
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  }
+}

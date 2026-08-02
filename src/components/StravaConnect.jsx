@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { supabase } from "../lib/supabase"
+import { supabase, authHeaders } from "../lib/supabase"
 
 // Matches the API_BASE fallback pattern used elsewhere in the app
 // (src/App.jsx, src/components/TripDetailModal.jsx).
@@ -59,10 +59,11 @@ export default function StravaConnect({ userId }) {
     setSyncing(true)
     setSyncResult(null)
     try {
+      // The server derives the user from the bearer token — no userId in body.
       const res = await fetch(`${API_BASE}/api/strava/sync`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
+        headers: await authHeaders(),
+        body: JSON.stringify({}),
       })
       const result = await res.json()
       setSyncResult(result)
@@ -78,8 +79,8 @@ export default function StravaConnect({ userId }) {
     try {
       const res = await fetch(`${API_BASE}/api/strava/disconnect`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
+        headers: await authHeaders(),
+        body: JSON.stringify({}),
       })
       if (res.ok) {
         setIsConnected(false)

@@ -11,6 +11,33 @@ function getSupabase() {
   )
 }
 
+// Verifies the caller's Supabase JWT and pins req.userId to the *authenticated*
+// user. Every route below uses req.userId — never req.body.userId, which is
+// attacker-controlled and, against a service-role client that bypasses RLS,
+// amounts to "act as any user you can name".
+async function requireAuth(req, res, next) {
+  const header = req.get("authorization") || ""
+  const token  = header.startsWith("Bearer ") ? header.slice(7).trim() : null
+
+  if (!token) {
+    return res.status(401).json({ error: "Missing Authorization bearer token" })
+  }
+
+  try {
+    const { data, error } = await getSupabase().auth.getUser(token)
+
+    if (error || !data?.user) {
+      return res.status(401).json({ error: "Invalid or expired session" })
+    }
+
+    req.userId = data.user.id
+    next()
+  } catch (err) {
+    console.error("Auth verification error:", err.message)
+    res.status(401).json({ error: "Could not verify session" })
+  }
+}
+
 function buildGpxFromRuns(runs, trackName) {
   const allPoints = (runs || [])
     .flatMap((run) => run.gps_track ?? [])
@@ -110,10 +137,8 @@ router.get("/api/strava/callback", async (req, res) => {
   }
 })
 
-router.post("/api/strava/disconnect", async (req, res) => {
-  const { userId } = req.body
-
-  if (!userId) return res.status(400).json({ error: "userId is required" })
+router.post("/api/strava/disconnect", requireAuth, async (req, res) => {
+  const userId = req.userId
 
   try {
     const supabase = getSupabase()
@@ -150,9 +175,8 @@ router.post("/api/strava/disconnect", async (req, res) => {
   }
 })
 
-router.post("/api/strava/sync", async (req, res) => {
-  const { userId } = req.body
-  if (!userId) return res.status(400).json({ error: "userId is required" })
+router.post("/api/strava/sync", requireAuth, async (req, res) => {
+  const userId = req.userId
 
   try {
     const result = await syncUserActivities(userId)
@@ -210,20 +234,28 @@ router.post("/api/strava/webhook", async (req, res) => {
   }
 })
 
-router.post("/api/strava/upload", async (req, res) => {
-  const { userId, sessionId, activityName, activityDate } = req.body
+router.post("/api/strava/upload", requireAuth, async (req, res) => {
+  const { sessionId, activityName, activityDate } = req.body
+  const userId = req.userId
 
-  if (!userId || !sessionId) {
-    return res.status(400).json({ error: "userId and sessionId are required" })
+  if (!sessionId) {
+    return res.status(400).json({ error: "sessionId is required" })
   }
 
-  // Check for idempotency — already uploaded?
+  // Ownership check + idempotency in one read. Scoping by user_id as well as id
+  // is what stops a caller from uploading someone else's raw GPS track (and so
+  // their home address / location history) to their own Strava account.
   const supabase = getSupabase()
   const { data: session } = await supabase
     .from("ski_sessions")
     .select("strava_activity_id")
     .eq("id", sessionId)
-    .single()
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  if (!session) {
+    return res.status(404).json({ error: "Session not found" })
+  }
 
   if (session?.strava_activity_id) {
     return res.json({
@@ -234,7 +266,8 @@ router.post("/api/strava/upload", async (req, res) => {
   }
 
   try {
-    // Fetch GPS tracks from Supabase
+    // Fetch GPS tracks from Supabase. Safe to scope by session_id alone —
+    // the session's ownership was verified against req.userId above.
     const { data: runs, error: runsError } = await supabase
       .from("ski_runs")
       .select("gps_track, run_type, started_at")
@@ -310,6 +343,7 @@ router.post("/api/strava/upload", async (req, res) => {
       .from("ski_sessions")
       .update({ strava_activity_id: stravaActivityId })
       .eq("id", sessionId)
+      .eq("user_id", userId)
 
     res.json({
       strava_activity_id: stravaActivityId,

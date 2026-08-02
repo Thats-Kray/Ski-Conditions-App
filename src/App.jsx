@@ -31,7 +31,7 @@ import { flushSessionToSupabase, logSkiDay } from "./lib/leaderboardApi"
 import { useGpsTracker } from "./lib/useGpsTracker"
 import Avatar from "./components/ui/Avatar"
 
-import { supabase } from "./lib/supabase"
+import { supabase, authHeaders } from "./lib/supabase"
 
 const RESORTS = [
   // Epic
@@ -1563,11 +1563,12 @@ export default function App() {
           onClose={() => setRecapData(null)}
           stravaConnected={!!currentProfile?.strava_athlete_id}
           onPostToStrava={async (sessionId, resortName, sessionDate) => {
+            // userId comes from the verified bearer token server-side; sending
+            // it in the body would just be an ignored (and spoofable) hint.
             const res = await fetch(`${API_BASE}/api/strava/upload`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: await authHeaders(),
               body: JSON.stringify({
-                userId:       currentUser.id,
                 sessionId,
                 activityName: `${resortName} - ${sessionDate}`,
                 activityDate: sessionDate,
