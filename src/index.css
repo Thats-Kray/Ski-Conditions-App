@@ -209,6 +209,15 @@ input, textarea, select {
   }
 }
 
+/* Extra bottom clearance for a page's last section, so it isn't covered
+   by the fixed mobile bottom nav even if the scroll container's own
+   padding-bottom doesn't fully account for it. No-op on desktop. */
+@media (max-width: 767px) {
+  .mobile-bottom-clearance {
+    margin-bottom: calc(72px + var(--safe-bottom));
+  }
+}
+
 /* ── Resort card grid ───────────────────────────────────────────── */
 .resort-grid {
   display: grid;

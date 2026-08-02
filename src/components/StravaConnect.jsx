@@ -66,7 +66,19 @@ export default function StravaConnect({ userId }) {
       })
 
       if (!res.ok) {
-        setToast({ type: "error", message: "You must be signed in to connect Strava." })
+        let message = `Could not connect to Strava (${res.status}). Please try again.`
+        if (res.status === 401) {
+          message = "You must be signed in to connect Strava."
+        } else {
+          try {
+            const body = await res.json()
+            if (body?.error) message = `Strava connection failed: ${body.error}`
+          } catch {
+            // Response wasn't JSON (e.g. the backend doesn't have this route
+            // deployed yet, or a proxy/500 page) — keep the status-based message.
+          }
+        }
+        setToast({ type: "error", message })
         return
       }
 

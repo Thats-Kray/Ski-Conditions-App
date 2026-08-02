@@ -98,16 +98,26 @@ function buildGpxFromRuns(runs, trackName) {
 // header; the only thing that ends up in a URL is the short-lived signed
 // state below, which Strava needs regardless.
 router.post("/api/strava/auth-url", requireAuth, (req, res) => {
-  const params = new URLSearchParams({
-    client_id:       process.env.STRAVA_CLIENT_ID,
-    redirect_uri:    process.env.STRAVA_REDIRECT_URI,
-    response_type:   "code",
-    approval_prompt: "auto",
-    scope:           "activity:read_all",
-    state:           signStravaState(req.userId),
-  })
+  try {
+    if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is not configured")
+    if (!process.env.STRAVA_CLIENT_ID || !process.env.STRAVA_REDIRECT_URI) {
+      throw new Error("Strava OAuth env vars are not configured")
+    }
 
-  res.json({ url: `https://www.strava.com/oauth/authorize?${params}` })
+    const params = new URLSearchParams({
+      client_id:       process.env.STRAVA_CLIENT_ID,
+      redirect_uri:    process.env.STRAVA_REDIRECT_URI,
+      response_type:   "code",
+      approval_prompt: "auto",
+      scope:           "activity:read_all",
+      state:           signStravaState(req.userId),
+    })
+
+    res.json({ url: `https://www.strava.com/oauth/authorize?${params}` })
+  } catch (err) {
+    console.error("Strava auth-url error:", err.message)
+    res.status(500).json({ error: "server_error" })
+  }
 })
 
 router.get("/api/strava/callback", async (req, res) => {

@@ -918,7 +918,9 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
       )}
 
       {/* ── Connected Apps ── */}
-      <div>
+      {/* Last section on the page — extra bottom clearance (mobile only)
+          so it isn't covered by the fixed mobile bottom nav bar. */}
+      <div className="mobile-bottom-clearance">
         <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
           Connected Apps
         </div>
