@@ -51,21 +51,30 @@ export default function StravaConnect({ userId }) {
     }
   }, [userId])
 
-  // OAuth kickoff is a full page navigation, so it can't send an Authorization
-  // header the way the fetch() calls below do. We pass the Supabase access token
-  // as a query param instead; the server verifies it and derives the user id
-  // from it, then signs that id into the OAuth `state`. Passing a raw userId
-  // here would let anyone bind a Strava account to a profile they don't own.
+  // OAuth kickoff is ultimately a full-page navigation to Strava, but we fetch
+  // the authorize URL first via an authenticated POST (bearer header, same as
+  // the other calls below) rather than putting the access token in a query
+  // string for a top-level navigation — the token never leaves a header this
+  // way. The server verifies it, derives the user id, and signs that id into
+  // the short-lived OAuth `state` that actually ends up in the URL.
   async function handleConnect() {
-    const { data } = await supabase.auth.getSession()
-    const accessToken = data?.session?.access_token
+    try {
+      const res = await fetch(`${API_BASE}/api/strava/auth-url`, {
+        method: "POST",
+        headers: await authHeaders(),
+        body: JSON.stringify({}),
+      })
 
-    if (!accessToken) {
-      setToast({ type: "error", message: "You must be signed in to connect Strava." })
-      return
+      if (!res.ok) {
+        setToast({ type: "error", message: "You must be signed in to connect Strava." })
+        return
+      }
+
+      const { url } = await res.json()
+      window.location.href = url
+    } catch {
+      setToast({ type: "error", message: "Could not start Strava connection. Try again." })
     }
-
-    window.location.href = `${API_BASE}/api/strava/auth?token=${encodeURIComponent(accessToken)}`
   }
 
   async function handleSync() {

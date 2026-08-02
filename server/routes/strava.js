@@ -91,44 +91,23 @@ function buildGpxFromRuns(runs, trackName) {
 </gpx>`
 }
 
-// This route is a top-level browser navigation (a link click, not a fetch), so
-// it can't carry an Authorization header like the routes below. The frontend
-// passes its Supabase access token as ?token= instead; we verify it here and
-// hand Strava a *signed* state derived from the verified user id.
-//
-// Taking a raw ?userId= here would let an attacker craft a link that binds a
-// victim's Strava account to the attacker's PowderDays profile (handing the
-// attacker the victim's Strava data), and equally let an attacker bind their
-// own Strava account onto a victim's profile.
-router.get("/api/strava/auth", async (req, res) => {
-  const frontendUrl = frontendBase()
-  const token = typeof req.query.token === "string" ? req.query.token.trim() : ""
+// Returns the Strava authorize URL as JSON rather than redirecting directly,
+// so the frontend can call this behind requireAuth (a normal fetch() with an
+// Authorization header) instead of putting the Supabase access token in a
+// query string for a top-level navigation. The access token never leaves a
+// header; the only thing that ends up in a URL is the short-lived signed
+// state below, which Strava needs regardless.
+router.post("/api/strava/auth-url", requireAuth, (req, res) => {
+  const params = new URLSearchParams({
+    client_id:       process.env.STRAVA_CLIENT_ID,
+    redirect_uri:    process.env.STRAVA_REDIRECT_URI,
+    response_type:   "code",
+    approval_prompt: "auto",
+    scope:           "activity:read_all",
+    state:           signStravaState(req.userId),
+  })
 
-  if (!token) {
-    return res.redirect(`${frontendUrl}/profile?strava_error=not_authenticated`)
-  }
-
-  try {
-    const { data, error } = await getSupabase().auth.getUser(token)
-
-    if (error || !data?.user) {
-      return res.redirect(`${frontendUrl}/profile?strava_error=not_authenticated`)
-    }
-
-    const params = new URLSearchParams({
-      client_id:       process.env.STRAVA_CLIENT_ID,
-      redirect_uri:    process.env.STRAVA_REDIRECT_URI,
-      response_type:   "code",
-      approval_prompt: "auto",
-      scope:           "activity:read_all",
-      state:           signStravaState(data.user.id),
-    })
-
-    res.redirect(`https://www.strava.com/oauth/authorize?${params}`)
-  } catch (err) {
-    console.error("Strava auth init error:", err.message)
-    res.redirect(`${frontendUrl}/profile?strava_error=server_error`)
-  }
+  res.json({ url: `https://www.strava.com/oauth/authorize?${params}` })
 })
 
 router.get("/api/strava/callback", async (req, res) => {

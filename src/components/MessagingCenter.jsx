@@ -808,7 +808,7 @@ export default function MessagingCenter() {
                 <button
                   onClick={() => setShowPingComposer(true)}
                   style={{
-                    width: "100%", padding: "10px 14px", borderRadius: 12, border: "none",
+                    width: "100%", padding: "10px 14px", borderRadius: 12,
                     background: "linear-gradient(135deg,rgba(59,130,246,0.2),rgba(16,185,129,0.12))",
                     border: "1px solid rgba(59,130,246,0.3)",
                     color: "#93c5fd", fontWeight: 800, fontSize: 13, cursor: "pointer",
