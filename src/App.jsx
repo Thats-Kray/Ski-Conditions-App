@@ -16,6 +16,7 @@ import SessionRecapModal from "./components/SessionRecapModal"
 import Badge, { TIER_COLORS } from "./components/ui/Badge"
 import ScoreRing from "./components/ui/ScoreRing"
 import {
+  getAcceptedFriends,
   getCurrentUser,
   getFriendUpcomingTripsByResort,
   getMyProfile,
@@ -899,6 +900,7 @@ export default function App() {
   const [skierDetails, setSkierDetails] = useState({})
   const [resortActivityCounts, setResortActivityCounts] = useState({}) // { [resort_name]: count }
   const [friendTripsByResort, setFriendTripsByResort] = useState({})
+  const [friendIds, setFriendIds] = useState([]) // accepted friends' user IDs — live map pins (S28)
   const [vibeData, setVibeData] = useState({ checkinCounts: {}, rsvpCounts: {} })
   const [currentUser, setCurrentUser] = useState(null)
   const [currentProfile, setCurrentProfile] = useState(null)
@@ -1212,6 +1214,17 @@ export default function App() {
     getFriendUpcomingTripsByResort()
       .then((map) => { if (!cancelled) setFriendTripsByResort(map) })
       .catch(() => { if (!cancelled) setFriendTripsByResort({}) })
+    return () => { cancelled = true }
+  }, [currentUser])
+
+  // Accepted friends' IDs — feeds useLiveFriendLocations for the map's live
+  // pins (S28-T3) and Home's "N friends on mountain now" count (S28-T4).
+  useEffect(() => {
+    if (!currentUser) { setFriendIds([]); return }
+    let cancelled = false
+    getAcceptedFriends()
+      .then((friends) => { if (!cancelled) setFriendIds((friends || []).map((f) => f.id)) })
+      .catch(() => { if (!cancelled) setFriendIds([]) })
     return () => { cancelled = true }
   }, [currentUser])
 
@@ -1673,6 +1686,7 @@ export default function App() {
                 resorts={rows}
                 skierCounts={skierCounts}
                 skierDetails={skierDetails}
+                friendIds={friendIds}
               />
             )}
 
