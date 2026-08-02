@@ -80,6 +80,46 @@ function sumSnowInches(values, hoursAhead) {
   return { totalIn: Math.round(totalIn * 10) / 10, unitCode }
 }
 
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+// Colorado resorts live in Mountain Time, so bucket calendar days using that
+// zone rather than the server's local/UTC clock — otherwise late-night/early
+// -morning grid values can land in the wrong day bucket.
+function mountainDateKey(date) {
+  return date.toLocaleDateString("en-CA", { timeZone: "America/Denver" })
+}
+
+// Buckets the same snowfall grid `values` used by sumSnowInches/sumSnowPreviousInches
+// into 7 daily totals (today through +6 days), reusing the exact same
+// parseValidTime/toInches conversion so there's no unit drift vs snow24in/snow48in.
+function bucketSnowfallByDay(values) {
+  const now = new Date()
+
+  const days = []
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now.getTime() + i * 24 * 60 * 60 * 1000)
+    days.push({
+      day: DAY_NAMES[d.getDay()],
+      date: mountainDateKey(d),
+      inches: 0,
+    })
+  }
+
+  const indexByDate = new Map(days.map((d, i) => [d.date, i]))
+
+  for (const v of values || []) {
+    if (!v || !v.validTime) continue
+    const { start } = parseValidTime(v.validTime)
+    const key = mountainDateKey(start)
+    const idx = indexByDate.get(key)
+    if (idx == null) continue // outside the 7-day window we care about
+
+    days[idx].inches += toInches(v.value, v.unitCode)
+  }
+
+  return days.map((d) => ({ ...d, inches: Math.round(d.inches * 10) / 10 }))
+}
+
 function sumSnowPreviousInches(values, hoursBack) {
   const now = new Date()
   const startWindow = new Date(now.getTime() - hoursBack * 60 * 60 * 1000)
@@ -410,6 +450,7 @@ app.get("/api/nws/snow", async (req, res) => {
     const prev24 = sumSnowPreviousInches(values, 24)
     const next24 = sumSnowInches(values, 24)
     const next48 = sumSnowInches(values, 48)
+    const dailySnow = bucketSnowfallByDay(values)
 
     res.json({
       lat,
@@ -417,6 +458,7 @@ app.get("/api/nws/snow", async (req, res) => {
       snowPrev24in: prev24.totalIn,
       snow24in: next24.totalIn,
       snow48in: next48.totalIn,
+      dailySnow,
       unitCode,
       updated: grid?.properties?.updateTime || null,
     })
