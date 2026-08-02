@@ -198,9 +198,10 @@ function hasStats(session) {
   return session.runs_logged != null || session.vertical_feet != null || session.miles_skied != null || session.top_speed_mph != null
 }
 
-function RecentSessionsFeed({ sessions, limit = 5, onRefresh }) {
+function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fullName }) {
   const [editingSessionId, setEditingSessionId] = useState(null)
   const [savingStatsFor, setSavingStatsFor]       = useState(null)
+  const [shareSession, setShareSession]           = useState(null)
 
   if (!sessions.length) {
     return (
@@ -248,6 +249,12 @@ function RecentSessionsFeed({ sessions, limit = 5, onRefresh }) {
                   style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, width: 28, height: 28, flexShrink: 0, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}
                 >✏️</button>
               )}
+              <button
+                onClick={() => setShareSession(s)}
+                title="Share this session"
+                aria-label="Share this session"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, width: 28, height: 28, flexShrink: 0, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}
+              >📤</button>
             </div>
           )
         })}
@@ -285,6 +292,14 @@ function RecentSessionsFeed({ sessions, limit = 5, onRefresh }) {
             />
           </div>
         </div>
+      )}
+
+      {shareSession && (
+        <ShareStatCard
+          profile={{ ...profile, full_name: fullName }}
+          session={shareSession}
+          onClose={() => setShareSession(null)}
+        />
       )}
     </div>
   )
@@ -775,7 +790,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
         <HistoryViewToggle viewMode={historyView} onChange={setHistoryView} />
       </div>
       {historyView === "list" ? (
-        <RecentSessionsFeed sessions={recentSessions} limit={Infinity} onRefresh={load} />
+        <RecentSessionsFeed sessions={recentSessions} limit={Infinity} onRefresh={load} profile={profile} fullName={fullName} />
       ) : (
         <SeasonCalendar sessions={recentSessions} startYear={season.startYear} />
       )}
