@@ -500,6 +500,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   const [viewMode, setViewMode]       = useState("season")
   const [allTimeStats, setAllTimeStats] = useState(null)
   const [userId, setUserId]           = useState(null)
+  const [milestoneQueue, setMilestoneQueue] = useState([])
   const fileInputRef = useRef(null)
 
   const season = getCurrentSeason()
@@ -527,8 +528,13 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
       }
       setTripCount(count)
       if (Array.isArray(sessions)) {
-        setSeasonStats(computeStats(sessions))
+        const currentStats = computeStats(sessions)
+        setSeasonStats(currentStats)
         setRecentSessions(sessions)
+
+        const shownIds = getShownMilestones(startYear)
+        const newlyCrossed = MILESTONES.filter((m) => m.check(currentStats) && !shownIds.includes(m.id))
+        if (newlyCrossed.length) setMilestoneQueue(newlyCrossed)
       }
       if (Array.isArray(priorSessions)) {
         setPriorStats(computeStats(priorSessions))
@@ -550,6 +556,12 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   }
 
   useEffect(() => { load() }, [load])
+
+  function dismissMilestone() {
+    const current = milestoneQueue[0]
+    if (current) markMilestoneShown(season.startYear, current.id)
+    setMilestoneQueue((q) => q.slice(1))
+  }
 
   async function handlePhotoFileChange(e) {
     const file = e.target.files?.[0]
