@@ -2090,6 +2090,90 @@ export async function getFriendsUpcomingTrips() {
   return result
 }
 
+export async function getFriendUpcomingTripsByResort() {
+  const user = await getCurrentUser()
+  if (!user) return {}
+
+  const friendIds = await getAcceptedFriendIds(user.id)
+  if (friendIds.size === 0) return {}
+
+  const friendIdArray = [...friendIds]
+  const today = new Date()
+  const todayKey = today.toISOString().slice(0, 10)
+  const weekOut = new Date(today)
+  weekOut.setDate(weekOut.getDate() + 7)
+  const maxDateKey = weekOut.toISOString().slice(0, 10)
+
+  const [friendsTripsRes, friendProfilesRes, rsvpRes] = await Promise.all([
+    // Trips hosted by friends
+    supabase
+      .from("ski_trips")
+      .select("id, resort_key, ski_date, host_id, status")
+      .in("host_id", friendIdArray)
+      .eq("status", "upcoming")
+      .gte("ski_date", todayKey)
+      .lte("ski_date", maxDateKey),
+    // Friend profiles
+    supabase
+      .from("profiles")
+      .select("id, full_name, username, avatar_url")
+      .in("id", friendIdArray),
+    // RSVPs from friends on any upcoming trips
+    supabase
+      .from("trip_rsvps")
+      .select("trip_id, user_id, status")
+      .in("user_id", friendIdArray)
+      .eq("status", "going"),
+  ])
+
+  const friendProfiles = new Map((friendProfilesRes.data || []).map((p) => [p.id, p]))
+  const hostedTrips = friendsTripsRes.data || []
+
+  // Collect trip IDs from RSVPs that aren't already in hosted trips
+  const hostedIds = new Set(hostedTrips.map((t) => t.id))
+  const rsvpdTripIds = [...new Set((rsvpRes.data || []).map((r) => r.trip_id).filter((id) => !hostedIds.has(id)))]
+
+  let rsvpdTrips = []
+  if (rsvpdTripIds.length > 0) {
+    const { data } = await supabase
+      .from("ski_trips")
+      .select("id, resort_key, ski_date, host_id, status")
+      .in("id", rsvpdTripIds)
+      .eq("status", "upcoming")
+      .gte("ski_date", todayKey)
+      .lte("ski_date", maxDateKey)
+    rsvpdTrips = data || []
+  }
+
+  const allTrips = [...hostedTrips, ...rsvpdTrips]
+  const rsvpsByTrip = new Map()
+  for (const r of (rsvpRes.data || [])) {
+    if (!rsvpsByTrip.has(r.trip_id)) rsvpsByTrip.set(r.trip_id, [])
+    rsvpsByTrip.get(r.trip_id).push(r.user_id)
+  }
+
+  const byResort = {}
+  function addFriend(resortKey, profile) {
+    if (!resortKey || !profile) return
+    byResort[resortKey] = byResort[resortKey] || []
+    if (!byResort[resortKey].some((p) => p.id === profile.id)) {
+      byResort[resortKey].push(profile)
+    }
+  }
+
+  for (const trip of allTrips) {
+    const goingFriendIds = new Set(rsvpsByTrip.get(trip.id) || [])
+    // Include host if host is a friend
+    if (friendIds.has(trip.host_id)) goingFriendIds.add(trip.host_id)
+
+    for (const id of goingFriendIds) {
+      addFriend(trip.resort_key, friendProfiles.get(id))
+    }
+  }
+
+  return byResort // { [resort_key]: [profile, profile, ...] }
+}
+
 // ─── Ski Pings ────────────────────────────────────────────────────────────────
 
 export async function createSkiPing({ recipientIds, message, resort_key, ski_date }) {
