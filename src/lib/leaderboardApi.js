@@ -50,6 +50,19 @@ export async function deleteSkiDay(sessionId) {
   if (error) throw error
 }
 
+// ── Update a session's manual stats (runs, vertical, miles, top speed) ────────
+
+export async function updateSessionStats(sessionId, stats) {
+  const { data, error } = await supabase
+    .from("ski_sessions")
+    .update(stats)
+    .eq("id", sessionId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
 // ── Fetch my sessions ─────────────────────────────────────────────────────────
 
 export async function getMySessions(startYear) {
