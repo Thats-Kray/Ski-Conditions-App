@@ -10,6 +10,8 @@ import TripDetailModal from "./components/TripDetailModal"
 import { useNotificationCount } from "./components/NotificationBell"
 import LandingPage from "./components/LandingPage"
 import HomeDashboard from "./components/HomeDashboard"
+import Badge, { TIER_COLORS } from "./components/ui/Badge"
+import ScoreRing from "./components/ui/ScoreRing"
 import {
   getCurrentUser,
   getMyProfile,
@@ -411,12 +413,13 @@ function ResortCard({ r, skierCounts, skierDetails }) {
         </div>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 12, paddingTop: 44 }}>
           <ResortLogo resort={r} />
-          <div style={{ minWidth: 0 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.05 }}>{r.name}</div>
-            <div style={{ marginTop: 5, display: "inline-flex", gap: 8, alignItems: "center", background: "rgba(2,6,23,0.55)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "5px 9px", fontSize: 11, fontWeight: 900, color: tierColor(r.powderTier) }}>
-              Score {r.powderScore ?? "—"} · {r.powderTier || "Unknown"}
+            <div style={{ marginTop: 5 }}>
+              <Badge label={r.powderTier ?? "Closed"} color={TIER_COLORS[r.powderTier] ?? TIER_COLORS.Closed} />
             </div>
           </div>
+          <ScoreRing score={r.powderScore} tier={r.powderTier ?? "Closed"} size={72} strokeWidth={6} />
         </div>
       </div>
 
