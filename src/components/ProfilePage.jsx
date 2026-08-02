@@ -15,6 +15,8 @@ import { resortName, resortEmoji } from "../lib/resorts"
 import { fmt } from "../lib/format"
 import Avatar from "./ui/Avatar"
 import SnowStat from "./ui/SnowStat"
+import Card from "./ui/Card"
+import Button from "./ui/Button"
 
 const SKILL_OPTIONS = [
   { key: "green",        label: "Green",        color: "#22c55e" },
@@ -50,6 +52,38 @@ function computeStats(sessions) {
   const timeOnMountain   = sessions.reduce((acc, s) => acc + (s.time_on_mountain_min || 0), 0)
 
   return { days, vertical, miles: parseFloat(miles.toFixed(1)), powderDays, resorts, topResort, totalRuns, topSpeed, timeOnMountain }
+}
+
+// ── Season Milestones ─────────────────────────────────────────────────────────
+
+const MILESTONES = [
+  { id: "days_10",      check: (s) => s.days >= 10,      label: "10 Days on the Mountain", icon: "🎿" },
+  { id: "days_25",      check: (s) => s.days >= 25,      label: "25 Days on the Mountain", icon: "🏔️" },
+  { id: "first_powder", check: (s) => s.powderDays >= 1, label: "First Powder Day",         icon: "❄️" },
+  { id: "vertical_50k", check: (s) => s.vertical >= 50000,  label: "50,000 ft Vertical",    icon: "⬇️" },
+  { id: "vertical_100k",check: (s) => s.vertical >= 100000, label: "100,000 ft Vertical",   icon: "🚀" },
+  { id: "runs_100",     check: (s) => s.totalRuns >= 100, label: "100 Runs",                icon: "💯" },
+  { id: "resorts_5",    check: (s) => s.resorts >= 5,     label: "5 Resorts Visited",        icon: "🗺️" },
+]
+
+function getShownMilestones(startYear) {
+  try {
+    const raw = localStorage.getItem(`pd_milestones_shown_${startYear}`)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function markMilestoneShown(startYear, id) {
+  try {
+    const shown = getShownMilestones(startYear)
+    if (!shown.includes(id)) {
+      localStorage.setItem(`pd_milestones_shown_${startYear}`, JSON.stringify([...shown, id]))
+    }
+  } catch {
+    // private browsing / storage disabled — fail silently, matching existing convention
+  }
 }
 
 function formatMinutes(mins) {
