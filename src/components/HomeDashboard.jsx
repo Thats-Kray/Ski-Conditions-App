@@ -6,19 +6,25 @@ import {
   getAcceptedFriends,
   getAllVisibleTrips,
   getMyTripConversations,
-  getCurrentUser,
   getDMConversations,
   markDMsRead,
+  getTodaysVisiblePlans,
+  rsvpToTrip,
 } from "../lib/socialApi"
 import DirectMessageView from "./DirectMessageView"
 import { getLeaderboard, getCurrentSeason } from "../lib/leaderboardApi"
 import { CrewChatView } from "./CrewGroupChat"
 import TripDetailModal from "./TripDetailModal"
 import TripChatView, { tripDisplayName } from "./TripChatView"
+import CreateTripModal from "./CreateTripModal"
 import { resortName, resortEmoji } from "../lib/resorts"
-import { timeAgo } from "../lib/format"
+import { timeAgo, formatDate } from "../lib/format"
 import Avatar from "./ui/Avatar"
 import { SkiPingComposer } from "./SkiPingModal"
+import Card from "./ui/Card"
+import Badge, { TIER_COLORS } from "./ui/Badge"
+import ScoreRing from "./ui/ScoreRing"
+import SnowStat from "./ui/SnowStat"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -93,6 +99,248 @@ function EmptyState({ icon, text, sub }) {
       <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>{text}</div>
       {sub && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", lineHeight: 1.5 }}>{sub}</div>}
     </div>
+  )
+}
+
+// ── Card 1: Today's Best Mountain ─────────────────────────────────────────────
+
+function TodaysBestMountainCard({ resorts, onTabChange }) {
+  const best = [...(resorts || [])]
+    .filter((r) => r.isOpen && r.powderScore != null)
+    .sort((a, b) => b.powderScore - a.powderScore)[0]
+
+  if (!best) {
+    return (
+      <Card>
+        <div style={{ fontSize: 13, color: "var(--color-text-2)" }}>
+          No resorts open right now — check back for the season opener.
+        </div>
+      </Card>
+    )
+  }
+
+  return (
+    <Card style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <div style={{ fontSize: 11, color: "var(--color-text-3)", textTransform: "uppercase", letterSpacing: 0.5 }}>
+            Today's Best Mountain
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 900, marginTop: 2 }}>
+            {resortEmoji(best.resortKey)} {resortName(best.resortKey)}
+          </div>
+          <div style={{ marginTop: 6 }}>
+            <Badge label={best.powderTier ?? "Closed"} color={TIER_COLORS[best.powderTier] ?? TIER_COLORS.Closed} />
+          </div>
+        </div>
+        <ScoreRing score={best.powderScore} tier={best.powderTier ?? "Closed"} size={64} strokeWidth={6} />
+      </div>
+      <div style={{ display: "flex", gap: 20 }}>
+        <SnowStat icon="❄️" label="Snow 24h" value={best.snowPrev24in ?? "—"} unit="in" />
+        <SnowStat icon="🚗" label="Drive Risk" value={best.driveRisk ?? "—"} />
+      </div>
+      <button
+        onClick={() => onTabChange("dashboard")}
+        style={{ background: "none", border: "none", color: "var(--color-accent)", fontWeight: 700, fontSize: 13, cursor: "pointer", padding: 0, textAlign: "left" }}
+      >
+        View All Resorts →
+      </button>
+    </Card>
+  )
+}
+
+// ── Card 2: Your Next Trip / pending invite ───────────────────────────────────
+
+function NextTripCard({ currentUser, onTabChange }) {
+  const [loading, setLoading] = useState(true)
+  const [invited, setInvited] = useState([])
+  const [nextTrip, setNextTrip] = useState(null)
+  const [dismissed, setDismissed] = useState(new Set())
+  const [rsvpBusyId, setRsvpBusyId] = useState(null)
+  const [showCreateTrip, setShowCreateTrip] = useState(false)
+
+  useEffect(() => {
+    if (!currentUser) { setLoading(false); return }
+    let cancelled = false
+    getAllVisibleTrips()
+      .then(({ mine = [], rsvpd = [], invited: invitedTrips = [] }) => {
+        if (cancelled) return
+        setInvited(invitedTrips)
+        const upcoming = [...mine, ...rsvpd].sort((a, b) => (a.ski_date || "").localeCompare(b.ski_date || ""))
+        setNextTrip(upcoming[0] || null)
+      })
+      .catch(() => { if (!cancelled) { setInvited([]); setNextTrip(null) } })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [currentUser])
+
+  const pendingInvite = invited.find((t) => !dismissed.has(t.id))
+
+  async function handleRsvp(tripId, status) {
+    setRsvpBusyId(tripId)
+    setDismissed((prev) => new Set([...prev, tripId])) // optimistic
+    try {
+      await rsvpToTrip(tripId, status)
+    } catch (e) {
+      console.warn("RSVP failed:", e)
+      setDismissed((prev) => { const next = new Set(prev); next.delete(tripId); return next }) // rollback
+    } finally {
+      setRsvpBusyId(null)
+    }
+  }
+
+  const cardHeader = (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ fontSize: 11, color: "var(--color-text-3)", textTransform: "uppercase", letterSpacing: 0.5 }}>
+        {pendingInvite ? "Trip Invite" : "Your Next Trip"}
+      </div>
+      <button
+        onClick={() => onTabChange("plans")}
+        style={{ background: "none", border: "none", color: "var(--color-accent)", fontWeight: 700, fontSize: 12, cursor: "pointer", padding: 0 }}
+      >
+        See all trips →
+      </button>
+    </div>
+  )
+
+  if (!currentUser || loading) {
+    return (
+      <Card style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {cardHeader}
+        <div style={{ fontSize: 13, color: "var(--color-text-2)" }}>
+          {!currentUser ? "Sign in to see your plans." : "Loading…"}
+        </div>
+      </Card>
+    )
+  }
+
+  // State A — pending invite
+  if (pendingInvite) {
+    const host = pendingInvite.host_profile
+    return (
+      <Card style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {cardHeader}
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 900 }}>
+            {resortEmoji(pendingInvite.resort_key)} {resortName(pendingInvite.resort_key) || pendingInvite.resort_key}
+          </div>
+          <div style={{ fontSize: 13, color: "var(--color-text-2)", marginTop: 4 }}>
+            {formatDate(pendingInvite.ski_date)}
+            {host && ` · Hosted by ${host.full_name || host.username || "a friend"}`}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={() => handleRsvp(pendingInvite.id, "going")}
+            disabled={rsvpBusyId === pendingInvite.id}
+            style={{
+              flex: 1, background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white",
+              border: "none", borderRadius: 10, padding: "10px 14px", fontWeight: 800, fontSize: 13,
+              cursor: rsvpBusyId === pendingInvite.id ? "not-allowed" : "pointer",
+            }}
+          >
+            Accept
+          </button>
+          <button
+            onClick={() => handleRsvp(pendingInvite.id, "cantgo")}
+            disabled={rsvpBusyId === pendingInvite.id}
+            style={{
+              flex: 1, background: "rgba(255,255,255,0.06)", color: "var(--color-text-1)",
+              border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 14px",
+              fontWeight: 800, fontSize: 13, cursor: rsvpBusyId === pendingInvite.id ? "not-allowed" : "pointer",
+            }}
+          >
+            Decline
+          </button>
+        </div>
+      </Card>
+    )
+  }
+
+  // State B — next upcoming trip
+  if (nextTrip) {
+    const goingCount = (nextTrip.rsvps || []).filter((r) => r.status === "going").length
+    return (
+      <Card style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {cardHeader}
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 900 }}>
+            {resortEmoji(nextTrip.resort_key)} {resortName(nextTrip.resort_key) || nextTrip.resort_key}
+          </div>
+          <div style={{ fontSize: 13, color: "var(--color-text-2)", marginTop: 4 }}>
+            {formatDate(nextTrip.ski_date)} · {goingCount} going
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
+  // State C — no invite, no upcoming trips
+  return (
+    <>
+      <Card style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {cardHeader}
+        <button
+          onClick={() => setShowCreateTrip(true)}
+          style={{ background: "none", border: "none", color: "var(--color-accent)", fontWeight: 700, fontSize: 14, cursor: "pointer", padding: 0, textAlign: "left" }}
+        >
+          Plan a ski day with your crew →
+        </button>
+      </Card>
+      {showCreateTrip && (
+        <CreateTripModal
+          onClose={() => setShowCreateTrip(false)}
+          onCreated={() => setShowCreateTrip(false)}
+        />
+      )}
+    </>
+  )
+}
+
+// ── Card 3: Who's Skiing Today ────────────────────────────────────────────────
+
+function WhosSkiingTodayCard({ onTabChange }) {
+  const [plans, setPlans] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    const today = new Date().toISOString().slice(0, 10)
+    getTodaysVisiblePlans(today)
+      .then((rows) => { if (!cancelled) setPlans(rows || []) })
+      .catch(() => { if (!cancelled) setPlans([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  return (
+    <Card style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ fontSize: 11, color: "var(--color-text-3)", textTransform: "uppercase", letterSpacing: 0.5 }}>
+        Who's Skiing Today
+      </div>
+      {loading ? (
+        <div style={{ fontSize: 13, color: "var(--color-text-3)" }}>Loading…</div>
+      ) : plans.length === 0 ? (
+        <button
+          onClick={() => onTabChange("plans")}
+          style={{ background: "none", border: "none", color: "var(--color-accent)", fontWeight: 700, fontSize: 13, cursor: "pointer", padding: 0, textAlign: "left" }}
+        >
+          Be the first to check in today →
+        </button>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {plans.slice(0, 5).map((p) => (
+            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Avatar profile={p.profiles} size={28} />
+              <div style={{ fontSize: 13 }}>
+                <strong>{p.profiles?.full_name ?? p.profiles?.username ?? "Someone"}</strong>{" "}
+                <span style={{ color: "var(--color-text-3)" }}>· {resortName(p.resort_key)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   )
 }
 
