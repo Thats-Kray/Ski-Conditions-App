@@ -1,5 +1,6 @@
 import { Router } from "express"
 import { createClient } from "@supabase/supabase-js"
+import { syncUserActivities, syncSingleActivity } from "../services/stravaSync.js"
 
 const router = Router()
 
@@ -124,6 +125,66 @@ router.post("/api/strava/disconnect", async (req, res) => {
     res.json({ success: true })
   } catch (err) {
     res.status(500).json({ error: err.message })
+  }
+})
+
+router.post("/api/strava/sync", async (req, res) => {
+  const { userId } = req.body
+  if (!userId) return res.status(400).json({ error: "userId is required" })
+
+  try {
+    const result = await syncUserActivities(userId)
+    res.json(result)
+  } catch (err) {
+    console.error("Strava sync error:", err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// NOTE: Registering the webhook subscription itself is a one-time step done
+// manually after deploy — it is NOT handled by this file. Run once:
+//   POST https://www.strava.com/api/v3/push_subscriptions
+//     client_id, client_secret, callback_url, verify_token
+// (callback_url should point at GET/POST /api/strava/webhook on this server,
+// verify_token must match STRAVA_WEBHOOK_VERIFY_TOKEN below.)
+
+router.get("/api/strava/webhook", (req, res) => {
+  const mode      = req.query["hub.mode"]
+  const token     = req.query["hub.verify_token"]
+  const challenge = req.query["hub.challenge"]
+
+  if (mode === "subscribe" && token === process.env.STRAVA_WEBHOOK_VERIFY_TOKEN) {
+    res.json({ "hub.challenge": challenge })
+  } else {
+    res.status(403).json({ error: "Forbidden" })
+  }
+})
+
+router.post("/api/strava/webhook", async (req, res) => {
+  // Strava expects a 200 immediately — process async
+  res.sendStatus(200)
+
+  const { object_type, aspect_type, object_id, owner_id } = req.body
+
+  // Only handle new activities
+  if (object_type !== "activity" || aspect_type !== "create") return
+
+  try {
+    const supabase = getSupabase()
+
+    // Look up the PowderDays user by their Strava athlete ID
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("strava_athlete_id", owner_id)
+      .single()
+
+    if (!profile) return // User not connected or deauthorized
+
+    await syncSingleActivity(profile.id, object_id)
+  } catch (err) {
+    console.error("Webhook sync error:", err.message)
+    // Don't re-throw — Strava already got its 200
   }
 })
 
