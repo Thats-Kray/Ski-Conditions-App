@@ -80,13 +80,20 @@ function sumSnowInches(values, hoursAhead) {
   return { totalIn: Math.round(totalIn * 10) / 10, unitCode }
 }
 
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-
 // Colorado resorts live in Mountain Time, so bucket calendar days using that
 // zone rather than the server's local/UTC clock — otherwise late-night/early
 // -morning grid values can land in the wrong day bucket.
 function mountainDateKey(date) {
   return date.toLocaleDateString("en-CA", { timeZone: "America/Denver" })
+}
+
+// Short weekday label anchored to the same America/Denver zone as
+// mountainDateKey — using Date#getDay() here would read the server
+// process's local/UTC clock and could desync from the paired `date` key
+// (e.g. after ~5pm Denver, once UTC has already rolled to the next
+// calendar date).
+function mountainDayLabel(date) {
+  return date.toLocaleDateString("en-US", { timeZone: "America/Denver", weekday: "short" })
 }
 
 // Buckets the same snowfall grid `values` used by sumSnowInches/sumSnowPreviousInches
@@ -99,7 +106,7 @@ function bucketSnowfallByDay(values) {
   for (let i = 0; i < 7; i++) {
     const d = new Date(now.getTime() + i * 24 * 60 * 60 * 1000)
     days.push({
-      day: DAY_NAMES[d.getDay()],
+      day: mountainDayLabel(d),
       date: mountainDateKey(d),
       inches: 0,
     })
