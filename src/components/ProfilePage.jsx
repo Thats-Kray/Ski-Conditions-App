@@ -9,6 +9,7 @@ import {
 } from "../lib/socialApi"
 import { getMySessions, getCurrentSeason } from "../lib/leaderboardApi"
 import ShareStatCard from "./ShareStatCard"
+import StravaConnect from "./StravaConnect"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { fmt } from "../lib/format"
 import Avatar from "./ui/Avatar"
@@ -642,6 +643,14 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
           </div>
         </div>
       )}
+
+      {/* ── Connected Apps ── */}
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
+          Connected Apps
+        </div>
+        <StravaConnect userId={profile?.id} />
+      </div>
 
       {/* ── Modals ── */}
       {showEdit && (
