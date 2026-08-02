@@ -30,3 +30,6 @@ dist
 .DS_Store
 .vite
 coverageProject Planning/
+
+# Claude Code session data
+.claude/
