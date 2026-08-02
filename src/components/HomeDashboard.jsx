@@ -297,9 +297,9 @@ function WhosSkiingTodayCard({ onTabChange }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {plans.slice(0, 5).map((p) => (
             <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Avatar profile={p.profiles} size={28} />
+              <Avatar profile={p.profile} size={28} />
               <div style={{ fontSize: 13 }}>
-                <strong>{p.profiles?.full_name ?? p.profiles?.username ?? "Someone"}</strong>{" "}
+                <strong>{p.profile?.full_name ?? p.profile?.username ?? "Someone"}</strong>{" "}
                 <span style={{ color: "var(--color-text-3)" }}>· {resortName(p.resort_key)}</span>
               </div>
             </div>
