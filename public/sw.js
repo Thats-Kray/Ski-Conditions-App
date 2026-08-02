@@ -1,4 +1,4 @@
-const CACHE_NAME = "powderdays-v1"
+const CACHE_NAME = "powderdays-v2"
 
 // Core shell assets — these are the Vite-built files that make the app work offline
 // Note: Vite generates hashed filenames like /assets/index-abc123.js
@@ -42,7 +42,35 @@ self.addEventListener("fetch", (event) => {
     return // let the browser handle it normally
   }
 
-  // For everything else (app shell, static assets), try cache first
+  // Navigations (and the bare index.html) must be network-first. index.html
+  // references build-hashed asset filenames, so a cached copy goes stale the
+  // moment a new build ships — its /assets/index-<hash>.js 404s and the app
+  // white-screens. Falling back to cache only when the network fails keeps the
+  // offline behaviour that made this cache-first in the first place.
+  const isNavigation =
+    event.request.mode === "navigate" ||
+    url.pathname === "/" ||
+    url.pathname === "/index.html"
+
+  if (isNavigation) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (event.request.method === "GET" && response.status === 200) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
+          }
+          return response
+        })
+        .catch(() =>
+          // Offline — serve the last good shell, falling back to "/" for deep links
+          caches.match(event.request).then((cached) => cached || caches.match("/"))
+        )
+    )
+    return
+  }
+
+  // For everything else (static assets), try cache first
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached
