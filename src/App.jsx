@@ -1538,6 +1538,7 @@ export default function App() {
           activeSession={activeSession}
           tracker={tracker}
           onSessionEnd={handleSessionEnd}
+          currentProfile={currentProfile}
         />
       )}
 
