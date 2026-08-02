@@ -275,6 +275,53 @@ export async function getPublicLeaderboard(startYear) {
   return fetchLeaderboard(startYear, "public")
 }
 
+// ── Leaderboard reactions (Sprint 17) ───────────────────────────────────────────
+
+export async function getLeaderboardReactions(targetUserIds, statType, season) {
+  if (!targetUserIds?.length) return []
+  const { data, error } = await supabase
+    .from("leaderboard_reactions")
+    .select("target_user_id, user_id, emoji")
+    .eq("stat_type", statType)
+    .eq("season", season)
+    .in("target_user_id", targetUserIds)
+  if (error) throw error
+  return data || []
+}
+
+export async function addLeaderboardReaction(targetUserId, statType, emoji, season) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("Must be logged in to react.")
+
+  const { data: existing, error: findErr } = await supabase
+    .from("leaderboard_reactions")
+    .select("id, emoji")
+    .eq("user_id", user.id)
+    .eq("target_user_id", targetUserId)
+    .eq("stat_type", statType)
+    .eq("season", season)
+    .maybeSingle()
+  if (findErr) throw findErr
+
+  if (existing?.emoji === emoji) {
+    // toggle off — clicking your own active reaction again removes it
+    const { error } = await supabase.from("leaderboard_reactions").delete().eq("id", existing.id)
+    if (error) throw error
+    return null
+  }
+
+  const { data, error } = await supabase
+    .from("leaderboard_reactions")
+    .upsert(
+      { user_id: user.id, target_user_id: targetUserId, stat_type: statType, emoji, season },
+      { onConflict: "user_id,target_user_id,stat_type,season" }
+    )
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
 // ── GPX export (Sprint 5) ───────────────────────────────────────────────────────
 
 /**

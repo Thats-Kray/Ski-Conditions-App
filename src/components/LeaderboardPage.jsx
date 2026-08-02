@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { getLeaderboard, getPublicLeaderboard, getMySessions, logSkiDay, updateSessionStats, deleteSkiDay, getCurrentSeason } from "../lib/leaderboardApi"
+import { getLeaderboard, getPublicLeaderboard, getMySessions, logSkiDay, updateSessionStats, deleteSkiDay, getCurrentSeason, getLeaderboardReactions, addLeaderboardReaction } from "../lib/leaderboardApi"
 import Avatar from "./ui/Avatar"
 import SessionStatsForm from "./SessionStatsForm"
 
@@ -32,6 +32,7 @@ function formatMinutes(mins) {
 }
 
 const RANK_MEDALS = ["🥇", "🥈", "🥉"]
+const REACTION_EMOJIS = ["🎿", "❄️", "🔥", "👑"]
 
 function LogDayModal({ onClose, onLogged }) {
   const today = new Date().toISOString().split("T")[0]
@@ -173,7 +174,7 @@ function LogDayModal({ onClose, onLogged }) {
   )
 }
 
-function LeaderboardRow({ entry, rank, category }) {
+function LeaderboardRow({ entry, rank, category, reactions, onReact, currentUserId }) {
   const cat    = CATEGORIES.find((c) => c.key === category)
   const value  = cat.stat(entry)
   const medal  = rank <= 3 ? RANK_MEDALS[rank - 1] : null
@@ -187,47 +188,75 @@ function LeaderboardRow({ entry, rank, category }) {
 
   return (
     <div style={{
-      display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+      padding: "12px 14px",
       background: entry.isMe ? "rgba(37,99,235,0.12)" : "rgba(255,255,255,0.03)",
       border: `1px solid ${entry.isMe ? "rgba(37,99,235,0.3)" : "rgba(255,255,255,0.07)"}`,
       borderRadius: 14,
     }}>
-      {/* Rank */}
-      <div style={{ width: 28, textAlign: "center", flexShrink: 0 }}>
-        {medal ? (
-          <span style={{ fontSize: 20 }}>{medal}</span>
-        ) : (
-          <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.35)" }}>{rank}</span>
-        )}
-      </div>
-
-      <Avatar profile={entry} size={36} />
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontWeight: 800, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {entry.full_name || entry.username || "Skier"}
-          </span>
-          {entry.isMe && (
-            <span style={{ fontSize: 10, fontWeight: 900, color: "#60a5fa", background: "rgba(96,165,250,0.15)", borderRadius: 999, padding: "2px 7px", flexShrink: 0 }}>YOU</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {/* Rank */}
+        <div style={{ width: 28, textAlign: "center", flexShrink: 0 }}>
+          {medal ? (
+            <span style={{ fontSize: 20 }}>{medal}</span>
+          ) : (
+            <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.35)" }}>{rank}</span>
           )}
         </div>
-        {entry.topResort && (
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            ⛷️ {entry.topResort}
+
+        <Avatar profile={entry} size={36} />
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontWeight: 800, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {entry.full_name || entry.username || "Skier"}
+            </span>
+            {entry.isMe && (
+              <span style={{ fontSize: 10, fontWeight: 900, color: "#60a5fa", background: "rgba(96,165,250,0.15)", borderRadius: 999, padding: "2px 7px", flexShrink: 0 }}>YOU</span>
+            )}
           </div>
-        )}
+          {entry.topResort && (
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              ⛷️ {entry.topResort}
+            </div>
+          )}
+        </div>
+
+        {/* Stat */}
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div style={{ fontSize: 22, fontWeight: 900, color: isTop ? "#60a5fa" : "white", lineHeight: 1 }}>
+            {displayValue}
+          </div>
+          {value != null && cat.unit && (
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{cat.unit}</div>
+          )}
+        </div>
       </div>
 
-      {/* Stat */}
-      <div style={{ textAlign: "right", flexShrink: 0 }}>
-        <div style={{ fontSize: 22, fontWeight: 900, color: isTop ? "#60a5fa" : "white", lineHeight: 1 }}>
-          {displayValue}
+      {/* Reactions — not shown on the current user's own row */}
+      {!entry.isMe && (
+        <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+          {REACTION_EMOJIS.map((emoji) => {
+            const count = (reactions || []).filter((r) => r.emoji === emoji).length
+            const mine = (reactions || []).some((r) => r.user_id === currentUserId && r.emoji === emoji)
+            return (
+              <button
+                key={emoji}
+                onClick={() => onReact(emoji)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 3, padding: "3px 7px",
+                  borderRadius: 999, border: "none", cursor: "pointer",
+                  background: mine ? "#2563eb" : "rgba(255,255,255,0.06)",
+                  color: mine ? "white" : "rgba(255,255,255,0.55)",
+                  fontSize: 13,
+                }}
+              >
+                {emoji}
+                {count > 0 && <span style={{ fontSize: 11, fontWeight: 700 }}>{count}</span>}
+              </button>
+            )
+          })}
         </div>
-        {value != null && cat.unit && (
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{cat.unit}</div>
-        )}
-      </div>
+      )}
     </div>
   )
 }
@@ -241,6 +270,7 @@ export default function LeaderboardPage() {
   const [loading, setLoading]     = useState(true)
   const [showLog, setShowLog]     = useState(false)
   const [showMySessions, setShowMySessions] = useState(false)
+  const [reactionsByUser, setReactionsByUser] = useState({}) // { [target_user_id]: [{user_id, emoji}] }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -272,6 +302,43 @@ export default function LeaderboardPage() {
 
   const me = entries.find((e) => e.isMe)
   const myRank = entries.indexOf(me) + 1
+
+  // Reactions are scoped per active category tab + season — refetch whenever
+  // either changes so a 🔥 on Top Speed doesn't bleed into the Vertical tab.
+  useEffect(() => {
+    if (!entries.length) return
+    let cancelled = false
+    getLeaderboardReactions(entries.map((e) => e.id), category, String(season.startYear))
+      .then((rows) => {
+        if (cancelled) return
+        const grouped = {}
+        for (const r of rows) {
+          grouped[r.target_user_id] = grouped[r.target_user_id] || []
+          grouped[r.target_user_id].push(r)
+        }
+        setReactionsByUser(grouped)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [entries, category, season.startYear])
+
+  async function handleReact(targetUserId, emoji) {
+    const currentUserId = me?.id
+    setReactionsByUser((prev) => {
+      const existing = prev[targetUserId] || []
+      const mine = existing.find((r) => r.user_id === currentUserId)
+      const withoutMine = existing.filter((r) => r.user_id !== currentUserId)
+      const next = mine?.emoji === emoji ? withoutMine : [...withoutMine, { user_id: currentUserId, emoji }]
+      return { ...prev, [targetUserId]: next }
+    })
+    try {
+      await addLeaderboardReaction(targetUserId, category, emoji, String(season.startYear))
+    } catch {
+      // rollback by refetching this one user's reactions
+      const rows = await getLeaderboardReactions([targetUserId], category, String(season.startYear)).catch(() => [])
+      setReactionsByUser((prev) => ({ ...prev, [targetUserId]: rows }))
+    }
+  }
 
   async function handleDeleteSession(id) {
     await deleteSkiDay(id)
@@ -394,7 +461,15 @@ export default function LeaderboardPage() {
       ) : (
         <div style={{ display: "grid", gap: 8 }}>
           {entries.map((entry, i) => (
-            <LeaderboardRow key={entry.id} entry={entry} rank={i + 1} category={category} />
+            <LeaderboardRow
+              key={entry.id}
+              entry={entry}
+              rank={i + 1}
+              category={category}
+              reactions={reactionsByUser[entry.id] || []}
+              onReact={(emoji) => handleReact(entry.id, emoji)}
+              currentUserId={me?.id}
+            />
           ))}
         </div>
       )}
