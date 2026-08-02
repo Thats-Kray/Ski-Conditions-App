@@ -1,8 +1,14 @@
 import { useState } from "react"
 import { resortName, resortEmoji } from "../lib/resorts"
 
+// Built from local date parts, not toISOString(). The calendar's dates are
+// constructed locally (new Date(startYear, 9, 1) is local midnight), so
+// converting to UTC shifts every cell back a day for anyone east of Greenwich
+// — the whole grid would mismatch session_date, which is a plain date string.
 function dateKey(d) {
-  return d.toISOString().slice(0, 10)
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  const day   = String(d.getDate()).padStart(2, "0")
+  return `${d.getFullYear()}-${month}-${day}`
 }
 
 function buildWeeks(start, end) {
