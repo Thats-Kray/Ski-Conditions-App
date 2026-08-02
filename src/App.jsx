@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import SnowfallBackground from "./components/SnowfallBackground"
 import { useMobile } from "./lib/useMobile"
 import AuthForm from "./components/AuthForm"
@@ -510,9 +510,13 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
             <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.05 }}>{r.name}</div>
             <div style={{ marginTop: 5, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
               <Badge label={r.powderTier ?? "Closed"} color={TIER_COLORS[r.powderTier] ?? TIER_COLORS.Closed} />
-              <span title="Based on check-ins and upcoming trips at this resort">
-                <Badge label={vibe.label} color={vibe.color} size="sm" />
-              </span>
+              {/* A closed resort is quiet by definition — "😶 Quiet" next to
+                  "Closed for Season" is noise, not a signal. */}
+              {r.isOpen && (
+                <span title="Based on check-ins and upcoming trips at this resort">
+                  <Badge label={vibe.label} color={vibe.color} size="sm" />
+                </span>
+              )}
             </div>
           </div>
           <ScoreRing score={r.powderScore} tier={r.powderTier ?? "Closed"} size={72} strokeWidth={6} />
@@ -922,9 +926,6 @@ export default function App() {
 
   const tracker = useGpsTracker()
 
-  const planSectionRef = useRef(null)
-  const crewSectionRef = useRef(null)
-
   async function handleSessionStart(resortName) {
     const today = new Date().toISOString().slice(0, 10)
     // Create the ski_sessions row before starting GPS (we need the ID)
@@ -1319,35 +1320,6 @@ export default function App() {
   const thirdResort = rankedResorts[2]
   const topEpic = rankedEpic[0]
   const topIkon = rankedIkon[0]
-
-  function openFriendsPage() {
-    setActiveTab("friends")
-
-  }
-
-  function openCrewPlan() {
-    setActiveTab("plans")
-
-
-    setTimeout(() => {
-      planSectionRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      })
-    }, 50)
-  }
-
-  function openTodaysCrew() {
-    setActiveTab("plans")
-
-
-    setTimeout(() => {
-      crewSectionRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      })
-    }, 50)
-  }
 
   // Show landing page for unauthenticated users (unless they chose to browse)
   const showLandingPage = authReady && !currentUser && !browseModeOverride && !isRecoveryMode
