@@ -20,6 +20,7 @@ import {
   getResortActivityCounts,
   getResortSkierCounts,
   getResortSkierDetails,
+  getResortVibeData,
   getTripDetail,
   logOut,
 } from "./lib/socialApi"
@@ -368,6 +369,17 @@ function riskColor(risk) {
   return "#ff9d9d"
 }
 
+function computeVibeScore(checkins, rsvps, powderScore) {
+  const raw = checkins * 2 + rsvps * 3 + (powderScore ?? 0) * 0.2
+  return Math.max(0, Math.min(100, raw))
+}
+
+function vibeTier(score) {
+  if (score >= 70) return { label: "🔥 High", color: "#ff9d9d" }
+  if (score >= 40) return { label: "👍 Active", color: "#ffe39a" }
+  return { label: "😶 Quiet", color: "#64748b" }
+}
+
 function scoreGradient(score) {
   if (score == null) return "linear-gradient(135deg, #334155, #1e293b)"
   if (score >= 80) return "linear-gradient(135deg, #0e7490, #38bdf8)"   // Elite
@@ -408,8 +420,13 @@ function FriendsGoingBadge({ friends }) {
   )
 }
 
-function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGoing }) {
+function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGoing, vibeData }) {
   const [expanded, setExpanded] = useState(false)
+
+  const vibeCheckins = vibeData?.checkinCounts?.[r.resortKey] || 0
+  const vibeRsvps = vibeData?.rsvpCounts?.[r.resortKey] || 0
+  const vibeScore = computeVibeScore(vibeCheckins, vibeRsvps, r.powderScore)
+  const vibe = vibeTier(vibeScore)
 
   return (
     <div
@@ -450,8 +467,11 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
           <ResortLogo resort={r} />
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.05 }}>{r.name}</div>
-            <div style={{ marginTop: 5 }}>
+            <div style={{ marginTop: 5, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
               <Badge label={r.powderTier ?? "Closed"} color={TIER_COLORS[r.powderTier] ?? TIER_COLORS.Closed} />
+              <span title="Based on check-ins and upcoming trips at this resort">
+                <Badge label={vibe.label} color={vibe.color} size="sm" />
+              </span>
             </div>
           </div>
           <ScoreRing score={r.powderScore} tier={r.powderTier ?? "Closed"} size={72} strokeWidth={6} />
@@ -826,6 +846,7 @@ export default function App() {
   const [skierDetails, setSkierDetails] = useState({})
   const [resortActivityCounts, setResortActivityCounts] = useState({}) // { [resort_name]: count }
   const [friendTripsByResort, setFriendTripsByResort] = useState({})
+  const [vibeData, setVibeData] = useState({ checkinCounts: {}, rsvpCounts: {} })
   const [currentUser, setCurrentUser] = useState(null)
   const [currentProfile, setCurrentProfile] = useState(null)
   const notifCount = useNotificationCount(currentUser)
@@ -1071,6 +1092,13 @@ export default function App() {
         setResortActivityCounts(map)
       })
       .catch(() => setResortActivityCounts({}))
+  }, [])
+
+  // Vibe Score signal — community-wide check-ins + upcoming RSVPs, not friend-scoped
+  useEffect(() => {
+    getResortVibeData()
+      .then(setVibeData)
+      .catch(() => setVibeData({ checkinCounts: {}, rsvpCounts: {} }))
   }, [])
 
   useEffect(() => {
@@ -1681,7 +1709,7 @@ export default function App() {
 
                 <main className="resort-grid">
                   {rows.map((r) => (
-                    <ResortCard key={r.name} r={r} skierCounts={skierCounts} skierDetails={skierDetails} activityCount={resortActivityCounts[r.resortKey] || 0} friendsGoing={friendTripsByResort[r.resortKey] || []} />
+                    <ResortCard key={r.name} r={r} skierCounts={skierCounts} skierDetails={skierDetails} activityCount={resortActivityCounts[r.resortKey] || 0} friendsGoing={friendTripsByResort[r.resortKey] || []} vibeData={vibeData} />
                   ))}
                 </main>
               </>
