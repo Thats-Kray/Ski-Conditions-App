@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { supabase, authHeaders } from "../lib/supabase"
+import StravaSyncReview from "./StravaSyncReview"
 
 // Matches the API_BASE fallback pattern used elsewhere in the app
 // (src/App.jsx, src/components/TripDetailModal.jsx).
@@ -18,6 +19,9 @@ export default function StravaConnect({ userId }) {
   const [syncing, setSyncing]         = useState(false)
   const [syncResult, setSyncResult]   = useState(null)
   const [toast, setToast]             = useState(null) // { type: 'success'|'error', message }
+  const [showReview, setShowReview]   = useState(false)
+  const [previewData, setPreviewData] = useState(null)
+  const [previewError, setPreviewError] = useState("")
 
   useEffect(() => {
     if (!userId) return
@@ -87,20 +91,28 @@ export default function StravaConnect({ userId }) {
   async function handleSync() {
     setSyncing(true)
     setSyncResult(null)
+    setPreviewError("")
     try {
-      // The server derives the user from the bearer token — no userId in body.
-      const res = await fetch(`${API_BASE}/api/strava/sync`, {
+      const res = await fetch(`${API_BASE}/api/strava/sync-preview`, {
         method: "POST",
         headers: await authHeaders(),
         body: JSON.stringify({}),
       })
       const result = await res.json()
-      setSyncResult(result)
+      if (!res.ok) throw new Error(result?.error || `Could not load activities (${res.status})`)
+      setPreviewData(result)
+      setShowReview(true)
     } catch (err) {
-      setSyncResult({ error: err.message })
+      setPreviewError(err.message || "Could not check Strava for new activities.")
     } finally {
       setSyncing(false)
     }
+  }
+
+  function handleImported(result) {
+    setShowReview(false)
+    setPreviewData(null)
+    setSyncResult(result)
   }
 
   async function handleDisconnect() {
@@ -130,96 +142,112 @@ export default function StravaConnect({ userId }) {
   }
 
   return (
-    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px" }}>
-      {/* Header row */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <StravaIcon />
-          <div style={{ fontSize: 14, fontWeight: 800, color: "white" }}>Strava</div>
+    <>
+      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px" }}>
+        {/* Header row */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <StravaIcon />
+            <div style={{ fontSize: 14, fontWeight: 800, color: "white" }}>Strava</div>
+          </div>
+          {isConnected && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800, color: "#22c55e" }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e" }} />
+              Connected
+            </div>
+          )}
         </div>
-        {isConnected && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800, color: "#22c55e" }}>
-            <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e" }} />
-            Connected
+
+        {/* Toast from OAuth redirect */}
+        {toast && (
+          <div style={{
+            marginBottom: 12, padding: "9px 12px", borderRadius: 10, fontSize: 12, fontWeight: 700,
+            background: toast.type === "success" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
+            border: `1px solid ${toast.type === "success" ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`,
+            color: toast.type === "success" ? "#22c55e" : "#f87171",
+          }}>
+            {toast.message}
           </div>
         )}
+
+        {!isConnected ? (
+          <>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 12 }}>
+              Import your ski activities automatically
+            </div>
+            <button
+              onClick={handleConnect}
+              style={{
+                width: "100%", padding: "11px 0", borderRadius: 12, border: "none",
+                background: "#FC4C02", color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer",
+              }}
+            >
+              Connect Strava →
+            </button>
+          </>
+        ) : (
+          <>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                style={{
+                  flex: 1, padding: "10px 0", borderRadius: 12,
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  background: "var(--color-surface, rgba(255,255,255,0.06))",
+                  color: "white", fontWeight: 800, fontSize: 13,
+                  cursor: syncing ? "default" : "pointer",
+                  opacity: syncing ? 0.6 : 1,
+                }}
+              >
+                {syncing ? "Syncing…" : "Sync Now"}
+              </button>
+              <button
+                onClick={handleDisconnect}
+                style={{
+                  flex: 1, padding: "10px 0", borderRadius: 12,
+                  border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.08)",
+                  color: "#f87171", fontWeight: 800, fontSize: 13, cursor: "pointer",
+                }}
+              >
+                Disconnect
+              </button>
+            </div>
+
+            {previewError && (
+              <div style={{ marginTop: 12, fontSize: 12, fontWeight: 700, color: "#f87171" }}>
+                {previewError}
+              </div>
+            )}
+
+            {syncResult && (
+              <div style={{
+                marginTop: 12, fontSize: 12, fontWeight: 700,
+                color: syncResult.error ? "#f87171" : "rgba(255,255,255,0.6)",
+              }}>
+                {syncResult.error
+                  ? `Import failed: ${syncResult.error}`
+                  : `Imported ${syncResult.synced} session${syncResult.synced === 1 ? "" : "s"}${syncResult.failed?.length ? ` (${syncResult.failed.length} failed)` : ""}`
+                }
+              </div>
+            )}
+
+            {athleteId && (
+              <div style={{ marginTop: 10, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+                Strava athlete #{athleteId}
+              </div>
+            )}
+          </>
+        )}
       </div>
-
-      {/* Toast from OAuth redirect */}
-      {toast && (
-        <div style={{
-          marginBottom: 12, padding: "9px 12px", borderRadius: 10, fontSize: 12, fontWeight: 700,
-          background: toast.type === "success" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
-          border: `1px solid ${toast.type === "success" ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`,
-          color: toast.type === "success" ? "#22c55e" : "#f87171",
-        }}>
-          {toast.message}
-        </div>
+      {showReview && previewData && (
+        <StravaSyncReview
+          activities={previewData.activities}
+          skippedNonSki={previewData.skippedNonSki}
+          onClose={() => { setShowReview(false); setPreviewData(null) }}
+          onImported={handleImported}
+        />
       )}
-
-      {!isConnected ? (
-        <>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 12 }}>
-            Import your ski activities automatically
-          </div>
-          <button
-            onClick={handleConnect}
-            style={{
-              width: "100%", padding: "11px 0", borderRadius: 12, border: "none",
-              background: "#FC4C02", color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer",
-            }}
-          >
-            Connect Strava →
-          </button>
-        </>
-      ) : (
-        <>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              style={{
-                flex: 1, padding: "10px 0", borderRadius: 12,
-                border: "1px solid rgba(255,255,255,0.14)",
-                background: "var(--color-surface, rgba(255,255,255,0.06))",
-                color: "white", fontWeight: 800, fontSize: 13,
-                cursor: syncing ? "default" : "pointer",
-                opacity: syncing ? 0.6 : 1,
-              }}
-            >
-              {syncing ? "Syncing…" : "Sync Now"}
-            </button>
-            <button
-              onClick={handleDisconnect}
-              style={{
-                flex: 1, padding: "10px 0", borderRadius: 12,
-                border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.08)",
-                color: "#f87171", fontWeight: 800, fontSize: 13, cursor: "pointer",
-              }}
-            >
-              Disconnect
-            </button>
-          </div>
-
-          {syncResult && (
-            <div style={{
-              marginTop: 12, fontSize: 12, fontWeight: 700,
-              color: syncResult.error ? "#f87171" : "rgba(255,255,255,0.6)",
-            }}>
-              {syncResult.error
-                ? `Sync failed: ${syncResult.error}`
-                : `Synced ${syncResult.synced} session${syncResult.synced === 1 ? "" : "s"}, ${syncResult.skipped} skipped${syncResult.errors?.length ? ` (${syncResult.errors.length} error${syncResult.errors.length === 1 ? "" : "s"})` : ""}`
-              }
-            </div>
-          )}
-
-          {athleteId && (
-            <div style={{ marginTop: 10, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
-              Strava athlete #{athleteId}
-            </div>
-          )}
-        </>
-      )}
-    </div>
+    </>
   )
 }
