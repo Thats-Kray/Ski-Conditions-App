@@ -52,21 +52,42 @@ function activityToSession(activity, userId) {
   }
 }
 
-/**
- * Syncs all ski/snowboard activities for a user from Strava.
- * Returns { synced, skipped, errors } counts.
- */
-export async function syncUserActivities(userId) {
+// Returns the ski/snowboard activities from this season that AREN'T already
+// in ski_sessions, for the user to review before anything is written. Reads
+// only — no writes happen here.
+function getCurrentSeasonStart() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth() + 1 // 1-12
+  // Mirrors src/lib/leaderboardApi.js's getCurrentSeason(): Oct–Apr counts
+  // as the season starting that October; Jan–Apr counts as the season that
+  // started the previous October.
+  const startYear = month >= 10 ? year : year - 1
+  return new Date(`${startYear}-10-01T00:00:00Z`)
+}
+
+export async function previewSyncableActivities(userId) {
   const accessToken = await getValidStravaToken(userId)
   const supabase = getSupabase()
 
+  const { data: existing, error: existingErr } = await supabase
+    .from("ski_sessions")
+    .select("strava_activity_id")
+    .eq("user_id", userId)
+    .not("strava_activity_id", "is", null)
+
+  if (existingErr) throw new Error(existingErr.message)
+  const alreadyImported = new Set((existing || []).map((r) => r.strava_activity_id))
+
+  const seasonStart = getCurrentSeasonStart()
+  const afterEpoch = Math.floor(seasonStart.getTime() / 1000)
+
   let page = 1
-  let synced = 0
-  let skipped = 0
-  const errors = []
+  const candidates = []
+  let skippedNonSki = 0
 
   while (true) {
-    const url = `https://www.strava.com/api/v3/athlete/activities?per_page=100&page=${page}`
+    const url = `https://www.strava.com/api/v3/athlete/activities?per_page=100&page=${page}&after=${afterEpoch}`
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
@@ -76,34 +97,74 @@ export async function syncUserActivities(userId) {
     }
 
     const activities = await res.json()
-
-    // Empty page = we've fetched everything
     if (!activities.length) break
 
-    const skiActivities = activities.filter(a => SKI_SPORT_TYPES.has(a.sport_type))
-    skipped += activities.length - skiActivities.length
-
-    for (const activity of skiActivities) {
-      const row = activityToSession(activity, userId)
-
-      const { error } = await supabase
-        .from("ski_sessions")
-        .upsert(row, {
-          onConflict: "strava_activity_id",
-          ignoreDuplicates: false,  // update existing rows on re-sync
-        })
-
-      if (error) {
-        errors.push({ activityId: activity.id, message: error.message })
-      } else {
-        synced++
+    for (const activity of activities) {
+      if (!SKI_SPORT_TYPES.has(activity.sport_type)) {
+        skippedNonSki++
+        continue
       }
+      if (alreadyImported.has(activity.id)) continue
+
+      candidates.push({
+        stravaActivityId: activity.id,
+        name:             activity.name || "Strava Activity",
+        date:             activity.start_date.slice(0, 10),
+        verticalFeet:     metersToFeet(activity.total_elevation_gain),
+        milesSkied:       metersToMiles(activity.distance),
+        topSpeedMph:      mpsToMph(activity.max_speed),
+        movingTimeSecs:   activity.moving_time ?? null,
+      })
     }
 
     page++
   }
 
-  return { synced, skipped, errors }
+  return { activities: candidates, skippedNonSki }
+}
+
+// Writes only the activities the caller explicitly selected. Re-fetches each
+// one's full data from Strava by ID rather than trusting any stat values in
+// `selections` — the client only ever contributes stravaActivityId,
+// resortName, and (optionally) notes. This is what keeps a sync-time payload
+// from being able to inject fabricated vertical/speed/etc. numbers.
+export async function commitSyncedActivities(userId, selections) {
+  const accessToken = await getValidStravaToken(userId)
+  const supabase = getSupabase()
+
+  let synced = 0
+  const failed = []
+
+  for (const sel of selections) {
+    try {
+      const res = await fetch(`https://www.strava.com/api/v3/activities/${sel.stravaActivityId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (!res.ok) throw new Error(`Strava activity fetch failed: ${res.status}`)
+
+      const activity = await res.json()
+
+      if (!SKI_SPORT_TYPES.has(activity.sport_type)) {
+        throw new Error(`Not a ski activity: ${activity.sport_type}`)
+      }
+
+      const row = activityToSession(activity, userId)
+      row.resort_name = sel.resortName
+      if (sel.notes) row.notes = sel.notes
+
+      const { error } = await supabase
+        .from("ski_sessions")
+        .upsert(row, { onConflict: "strava_activity_id", ignoreDuplicates: false })
+
+      if (error) throw new Error(error.message)
+      synced++
+    } catch (err) {
+      failed.push({ stravaActivityId: sel.stravaActivityId, message: err.message })
+    }
+  }
+
+  return { synced, failed }
 }
 
 /**

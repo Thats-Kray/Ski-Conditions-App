@@ -1,7 +1,7 @@
 import { Router } from "express"
 import jwt from "jsonwebtoken"
 import { createClient } from "@supabase/supabase-js"
-import { syncUserActivities, syncSingleActivity } from "../services/stravaSync.js"
+import { previewSyncableActivities, commitSyncedActivities, syncSingleActivity } from "../services/stravaSync.js"
 
 const router = Router()
 
@@ -225,14 +225,36 @@ router.post("/api/strava/disconnect", requireAuth, async (req, res) => {
   }
 })
 
-router.post("/api/strava/sync", requireAuth, async (req, res) => {
+router.post("/api/strava/sync-preview", requireAuth, async (req, res) => {
   const userId = req.userId
 
   try {
-    const result = await syncUserActivities(userId)
+    const result = await previewSyncableActivities(userId)
     res.json(result)
   } catch (err) {
-    console.error("Strava sync error:", err.message)
+    console.error("Strava sync-preview error:", err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+router.post("/api/strava/sync-commit", requireAuth, async (req, res) => {
+  const userId = req.userId
+  const activities = Array.isArray(req.body?.activities) ? req.body.activities : []
+
+  if (!activities.length) {
+    return res.status(400).json({ error: "No activities provided" })
+  }
+
+  const invalid = activities.find((a) => !a.stravaActivityId || !a.resortName)
+  if (invalid) {
+    return res.status(400).json({ error: "Each activity needs a stravaActivityId and resortName" })
+  }
+
+  try {
+    const result = await commitSyncedActivities(userId, activities)
+    res.json(result)
+  } catch (err) {
+    console.error("Strava sync-commit error:", err.message)
     res.status(500).json({ error: err.message })
   }
 })
