@@ -132,11 +132,45 @@ export async function commitSyncedActivities(userId, selections) {
   const accessToken = await getValidStravaToken(userId)
   const supabase = getSupabase()
 
+  // The caller's own Strava athlete id, read once up front. Needed because
+  // GET /activities/{id} succeeds for any activity that is public OR owned by
+  // the caller — and `strava_activity_id` is globally unique on ski_sessions,
+  // so upserting someone else's public activity id would rewrite *their* row
+  // to belong to this caller. Same failure mode + error text as
+  // getValidStravaToken in ../routes/strava.js.
+  const { data: profile, error: profileErr } = await supabase
+    .from("profiles")
+    .select("strava_athlete_id")
+    .eq("id", userId)
+    .single()
+
+  if (profileErr || !profile?.strava_athlete_id) {
+    throw new Error("No Strava connection found for this user")
+  }
+
+  const callerAthleteId = String(profile.strava_athlete_id)
+
   let synced = 0
   const failed = []
 
   for (const sel of selections) {
     try {
+      // The preview list already filters out imported activities, but the
+      // commit endpoint takes ids straight from the client, so re-check here.
+      // Without this, a re-submitted id would upsert over the existing row and
+      // silently overwrite stats that are supposed to be locked once set.
+      const { data: alreadyImported, error: existingErr } = await supabase
+        .from("ski_sessions")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("strava_activity_id", sel.stravaActivityId)
+        .maybeSingle()
+
+      if (existingErr) throw new Error(existingErr.message)
+      if (alreadyImported) {
+        throw new Error("Already imported — edit it from your session history instead")
+      }
+
       const res = await fetch(`https://www.strava.com/api/v3/activities/${sel.stravaActivityId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
@@ -149,6 +183,12 @@ export async function commitSyncedActivities(userId, selections) {
         throw new Error(`Not a ski activity: ${activity.sport_type}`)
       }
 
+      // Compared as strings: Strava sends athlete.id as a JSON number, while
+      // the stored profiles.strava_athlete_id can come back as a string.
+      if (String(activity.athlete?.id ?? "") !== callerAthleteId) {
+        throw new Error("Activity does not belong to your Strava account")
+      }
+
       const row = activityToSession(activity, userId)
       row.resort_name = sel.resortName
       if (sel.notes) row.notes = sel.notes
@@ -157,6 +197,13 @@ export async function commitSyncedActivities(userId, selections) {
         .from("ski_sessions")
         .upsert(row, { onConflict: "strava_activity_id", ignoreDuplicates: false })
 
+      // Now that the user picks the real mountain during review, hitting the
+      // separate UNIQUE (user_id, session_date, resort_name) constraint is a
+      // realistic outcome (they already logged that day by hand), so give it a
+      // message that means something instead of a raw Postgres string.
+      if (error?.code === "23505") {
+        throw new Error("You already have a session logged for that date and mountain")
+      }
       if (error) throw new Error(error.message)
       synced++
     } catch (err) {

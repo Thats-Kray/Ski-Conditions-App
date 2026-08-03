@@ -16,14 +16,17 @@ const labelStyle = {
   marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5,
 }
 
-// Same definition as ProfilePage.jsx's own hasStats() — duplicated rather
-// than imported/exported across files for a 3-line check, matching this
-// codebase's existing precedent (formatMinutes has 3 independent copies).
+// `runs_logged` is deliberately NOT part of this check: it has a DEFAULT 0 in
+// the schema, so every inserted row (both logSkiDay() and the Strava import)
+// has a non-null value for it and this predicate would be true for every
+// session that exists — making the first-time-entry branch below dead code.
+// vertical_feet / miles_skied / top_speed_mph are genuinely nullable with no
+// default, so they're the honest signal for "stats have been set".
 function hasStats(session) {
-  return session.runs_logged != null || session.vertical_feet != null || session.miles_skied != null || session.top_speed_mph != null
+  return session.vertical_feet != null || session.miles_skied != null || session.top_speed_mph != null
 }
 
-export default function SessionEditForm({ session, onSave, saving }) {
+export default function SessionEditForm({ session, onSave, saving, error, onError }) {
   const [notes, setNotes]   = useState(session?.notes ?? "")
   const [resort, setResort] = useState(session?.resort_name ?? "")
 
@@ -37,9 +40,21 @@ export default function SessionEditForm({ session, onSave, saving }) {
   const [topSpeed, setTopSpeed] = useState(session?.top_speed_mph ?? "")
 
   function handleSave() {
+    // ResortPicker only reports a name to its parent once a suggestion is
+    // actually clicked — typing clears `value` back to "". So an empty
+    // `resort` here means the field was typed into and never confirmed, and
+    // silently falling back to session.resort_name would throw away what looks
+    // to the user like a finished edit.
+    if (!resort) {
+      onError?.("Pick a mountain from the list to save your change.")
+      return
+    }
+
+    onError?.("")
+
     const fields = {
       notes: notes.trim() || null,
-      resort_name: resort || session?.resort_name,
+      resort_name: resort,
     }
     if (!statsLocked) {
       fields.runs_logged   = runs === "" ? null : Number(runs)
@@ -62,12 +77,14 @@ export default function SessionEditForm({ session, onSave, saving }) {
         />
       </label>
 
-      <label style={labelStyle}>
-        Mountain
-        <div style={{ marginTop: 6 }}>
-          <ResortPicker value={resort} onChange={setResort} />
-        </div>
-      </label>
+      {/* Deliberately NOT wrapped in a <label> (unlike the fields around it,
+          and matching LogDayModal/StravaSyncReview): a click on a suggestion
+          would bubble to the enclosing label, which re-forwards activation to
+          the picker's input and reopens the dropdown the user just closed. */}
+      <div>
+        <div style={labelStyle}>Mountain</div>
+        <ResortPicker value={resort} onChange={setResort} />
+      </div>
 
       {statsLocked && (
         <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px 12px" }}>
@@ -111,6 +128,8 @@ export default function SessionEditForm({ session, onSave, saving }) {
           onChange={(e) => setTopSpeed(e.target.value)}
         />
       </label>
+
+      {error && <div style={{ fontSize: 13, color: "#f87171" }}>{error}</div>}
 
       <button
         type="button"

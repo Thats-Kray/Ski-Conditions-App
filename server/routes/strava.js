@@ -245,9 +245,14 @@ router.post("/api/strava/sync-commit", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "No activities provided" })
   }
 
-  const invalid = activities.find((a) => !a.stravaActivityId || !a.resortName)
+  // The id shape is checked, not just its truthiness — it gets interpolated
+  // into the Strava fetch URL downstream, so a malformed value shouldn't get
+  // that far.
+  const invalid = activities.find(
+    (a) => !a.stravaActivityId || !Number.isInteger(Number(a.stravaActivityId)) || !a.resortName
+  )
   if (invalid) {
-    return res.status(400).json({ error: "Each activity needs a stravaActivityId and resortName" })
+    return res.status(400).json({ error: "Each activity needs a numeric stravaActivityId and a resortName" })
   }
 
   try {

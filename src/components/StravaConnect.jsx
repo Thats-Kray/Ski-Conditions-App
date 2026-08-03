@@ -227,7 +227,11 @@ export default function StravaConnect({ userId }) {
               }}>
                 {syncResult.error
                   ? `Import failed: ${syncResult.error}`
-                  : `Imported ${syncResult.synced} session${syncResult.synced === 1 ? "" : "s"}${syncResult.failed?.length ? ` (${syncResult.failed.length} failed)` : ""}`
+                  : `Imported ${syncResult.synced} session${syncResult.synced === 1 ? "" : "s"}${
+                      syncResult.failed?.length
+                        ? ` (${syncResult.failed.length} failed: ${syncResult.failed.map((f) => f.message).join("; ")})`
+                        : ""
+                    }`
                 }
               </div>
             )}

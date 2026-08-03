@@ -228,13 +228,10 @@ function HistoryViewToggle({ viewMode, onChange }) {
 
 // ── Recent Sessions Feed ──────────────────────────────────────────────────────
 
-function hasStats(session) {
-  return session.runs_logged != null || session.vertical_feet != null || session.miles_skied != null || session.top_speed_mph != null
-}
-
 function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fullName }) {
   const [editingSessionId, setEditingSessionId] = useState(null)
   const [savingStatsFor, setSavingStatsFor]       = useState(null)
+  const [editError, setEditError]                 = useState("")
   const [shareSession, setShareSession]           = useState(null)
 
   if (!sessions.length) {
@@ -278,7 +275,7 @@ function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fullName 
               )}
               {canEdit && (
                 <button
-                  onClick={() => setEditingSessionId(s.id)}
+                  onClick={() => { setEditError(""); setEditingSessionId(s.id) }}
                   title="Edit session"
                   style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, width: 28, height: 28, flexShrink: 0, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}
                 >✏️</button>
@@ -297,7 +294,7 @@ function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fullName 
       {editingSession && (
         <div
           style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
-          onClick={() => setEditingSessionId(null)}
+          onClick={() => { setEditError(""); setEditingSessionId(null) }}
         >
           <div
             style={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 480 }}
@@ -306,21 +303,29 @@ function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fullName 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
               <div style={{ fontSize: 18, fontWeight: 900, color: "white" }}>✏️ Edit Session</div>
               <button
-                onClick={() => setEditingSessionId(null)}
+                onClick={() => { setEditError(""); setEditingSessionId(null) }}
                 style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}
               >✕</button>
             </div>
             <SessionEditForm
               session={editingSession}
               saving={savingStatsFor === editingSession.id}
+              error={editError}
+              onError={setEditError}
               onSave={async (fields) => {
                 setSavingStatsFor(editingSession.id)
+                setEditError("")
                 try {
                   await updateSessionStats(editingSession.id, fields)
                   await onRefresh?.()
+                  // Only close on success — a failure here is a real, expected
+                  // outcome (renaming onto a date+mountain the user already
+                  // has), so keep the modal open with the reason showing.
+                  setEditingSessionId(null)
+                } catch (e) {
+                  setEditError(e.message || "Could not save this session.")
                 } finally {
                   setSavingStatsFor(null)
-                  setEditingSessionId(null)
                 }
               }}
             />
