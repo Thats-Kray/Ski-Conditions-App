@@ -1267,6 +1267,18 @@ export default function App() {
     sessionStorage.setItem("pending_invite_trip", tripId)
   }, [])
 
+  // Deep-link: Strava OAuth redirects back to `/?strava_connected=true` or
+  // `?strava_error=...` (this app has no client-side router, so the backend
+  // redirects to root). Jump straight to Profile so the params are visible
+  // and StravaConnect's own effect can read/clear them and show the toast —
+  // this effect only switches tabs, it doesn't touch the query string itself.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("strava_connected") || params.get("strava_error")) {
+      setActiveTab("profile")
+    }
+  }, [])
+
   // Once we know the auth state, handle the pending invite
   useEffect(() => {
     if (!authReady || !pendingInviteId) return

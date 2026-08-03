@@ -126,11 +126,11 @@ router.get("/api/strava/callback", async (req, res) => {
   const frontendUrl = frontendBase()
 
   if (error) {
-    return res.redirect(`${frontendUrl}/profile?strava_error=access_denied`)
+    return res.redirect(`${frontendUrl}/?strava_error=access_denied`)
   }
 
   if (!code || !state) {
-    return res.redirect(`${frontendUrl}/profile?strava_error=missing_params`)
+    return res.redirect(`${frontendUrl}/?strava_error=missing_params`)
   }
 
   // The only trusted source of identity in this request. Never fall back to a
@@ -140,7 +140,7 @@ router.get("/api/strava/callback", async (req, res) => {
     userId = verifyStravaState(state)
   } catch (err) {
     console.error("Strava callback state rejected:", err.message)
-    return res.redirect(`${frontendUrl}/profile?strava_error=invalid_state`)
+    return res.redirect(`${frontendUrl}/?strava_error=invalid_state`)
   }
 
   try {
@@ -158,7 +158,7 @@ router.get("/api/strava/callback", async (req, res) => {
     if (!tokenRes.ok) {
       const body = await tokenRes.text()
       console.error("Strava token exchange failed:", body)
-      return res.redirect(`${frontendUrl}/profile?strava_error=token_exchange_failed`)
+      return res.redirect(`${frontendUrl}/?strava_error=token_exchange_failed`)
     }
 
     const tokens = await tokenRes.json()
@@ -177,13 +177,13 @@ router.get("/api/strava/callback", async (req, res) => {
 
     if (dbError) {
       console.error("Supabase update failed:", dbError.message)
-      return res.redirect(`${frontendUrl}/profile?strava_error=db_error`)
+      return res.redirect(`${frontendUrl}/?strava_error=db_error`)
     }
 
-    res.redirect(`${frontendUrl}/profile?strava_connected=true`)
+    res.redirect(`${frontendUrl}/?strava_connected=true`)
   } catch (err) {
     console.error("Strava callback error:", err)
-    res.redirect(`${frontendUrl}/profile?strava_error=server_error`)
+    res.redirect(`${frontendUrl}/?strava_error=server_error`)
   }
 })
 
