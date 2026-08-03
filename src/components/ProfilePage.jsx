@@ -10,7 +10,7 @@ import {
 import { getMySessions, getCurrentSeason, getAllTimeStats, updateSessionStats } from "../lib/leaderboardApi"
 import ShareStatCard from "./ShareStatCard"
 import StravaConnect from "./StravaConnect"
-import SessionStatsForm from "./SessionStatsForm"
+import SessionEditForm from "./SessionEditForm"
 import SeasonCalendar from "./SeasonCalendar"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { fmt } from "../lib/format"
@@ -258,7 +258,7 @@ function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fullName 
           const date = new Date(s.session_date + "T12:00:00")
           const dateLabel = date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
           const emoji = resortEmoji(s.resort_key || s.resort_name)
-          const canEditStats = typeof s.id === "string" && !s.id.startsWith("trip-") && !hasStats(s)
+          const canEdit = typeof s.id === "string" && !s.id.startsWith("trip-")
           return (
             <div key={s.id || i} style={{
               display: "flex", alignItems: "center", gap: 10,
@@ -276,10 +276,10 @@ function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fullName 
               {s.vertical_feet > 0 && (
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#60a5fa", flexShrink: 0 }}>+{fmt(s.vertical_feet)} ft</div>
               )}
-              {canEditStats && (
+              {canEdit && (
                 <button
                   onClick={() => setEditingSessionId(s.id)}
-                  title="Add stats"
+                  title="Edit session"
                   style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, width: 28, height: 28, flexShrink: 0, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}
                 >✏️</button>
               )}
@@ -304,19 +304,19 @@ function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fullName 
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: 18, fontWeight: 900, color: "white" }}>📊 Add Your Stats</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "white" }}>✏️ Edit Session</div>
               <button
                 onClick={() => setEditingSessionId(null)}
                 style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}
               >✕</button>
             </div>
-            <SessionStatsForm
-              initial={editingSession}
+            <SessionEditForm
+              session={editingSession}
               saving={savingStatsFor === editingSession.id}
-              onSave={async (stats) => {
+              onSave={async (fields) => {
                 setSavingStatsFor(editingSession.id)
                 try {
-                  await updateSessionStats(editingSession.id, stats)
+                  await updateSessionStats(editingSession.id, fields)
                   await onRefresh?.()
                 } finally {
                   setSavingStatsFor(null)
