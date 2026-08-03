@@ -3,16 +3,7 @@ import { getLeaderboard, getPublicLeaderboard, getMySessions, logSkiDay, updateS
 import { logActivityOnce } from "../lib/socialApi"
 import Avatar from "./ui/Avatar"
 import SessionStatsForm from "./SessionStatsForm"
-
-const RESORT_NAMES = [
-  "Vail", "Beaver Creek", "Breckenridge", "Keystone", "Park City",
-  "Heavenly", "Northstar", "Kirkwood", "Stowe", "Whistler Blackcomb",
-  "Telluride", "Arapahoe Basin", "Winter Park", "Steamboat", "Copper Mountain",
-  "Crested Butte", "Eldora", "Aspen Snowmass", "Snowbird", "Alta",
-  "Park City Mountain", "Mammoth Mountain", "Big Sky", "Jackson Hole",
-  "Taos", "Sun Valley", "Squaw Valley", "Lake Tahoe", "Palisades Tahoe",
-  "Loveland", "Monarch", "Wolf Creek", "Sunlight", "Powderhorn",
-]
+import ResortPicker from "./ui/ResortPicker"
 
 const CATEGORIES = [
   { key: "days",           label: "🎿 Days",          stat: (e) => e.days,           unit: "days"  },
@@ -43,18 +34,12 @@ function LogDayModal({ onClose, onLogged }) {
   const [notes, setNotes]         = useState("")
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState("")
-  const [search, setSearch]       = useState("")
-  const [showDropdown, setShowDropdown] = useState(false)
 
   // Step 2 — optional post-submit "add your stats" step
   const [step, setStep]                 = useState("basic") // "basic" | "stats"
   const [savedSession, setSavedSession] = useState(null)
   const [statsSaving, setStatsSaving]   = useState(false)
   const [statsError, setStatsError]     = useState("")
-
-  const filtered = search.length > 0
-    ? RESORT_NAMES.filter((r) => r.toLowerCase().includes(search.toLowerCase())).slice(0, 8)
-    : []
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -129,27 +114,9 @@ function LogDayModal({ onClose, onLogged }) {
         ) : (
         <form onSubmit={handleSubmit} style={{ display: "grid", gap: 14 }}>
           {/* Resort */}
-          <div style={{ position: "relative" }}>
+          <div>
             <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Resort</label>
-            <input
-              style={inputStyle}
-              placeholder="Search resort..."
-              value={resort || search}
-              onChange={(e) => { setSearch(e.target.value); setResort(""); setShowDropdown(true) }}
-              onFocus={() => setShowDropdown(true)}
-              onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-            />
-            {showDropdown && filtered.length > 0 && (
-              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#1e293b", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, zIndex: 10, overflow: "hidden", marginTop: 4 }}>
-                {filtered.map((r) => (
-                  <div key={r} onMouseDown={() => { setResort(r); setSearch(r); setShowDropdown(false) }}
-                    style={{ padding: "10px 12px", cursor: "pointer", fontSize: 14, color: "white", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}
-                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                  >{r}</div>
-                ))}
-              </div>
-            )}
+            <ResortPicker value={resort} onChange={setResort} />
           </div>
 
           {/* Date */}
