@@ -3016,3 +3016,35 @@ export async function addActivityReaction(activityId, emoji) {
   if (error) throw error
   return data
 }
+
+// ─── Mountain Board (sprint-29) ─────────────────────────────────────────────
+
+export async function getResortCoordinates() {
+  const { data, error } = await supabase.from("resort_coordinates").select("*")
+  if (error) throw error
+  return data || []
+}
+
+export async function getBoardPosts(resortKey, limit = 50) {
+  const { data, error } = await supabase
+    .from("mountain_board_posts")
+    .select("*, profiles:author_id(id, full_name, username, avatar_url)")
+    .eq("resort_key", resortKey)
+    .order("created_at", { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return data || []
+}
+
+export async function createBoardPost({ resortKey, category, content, lat, lng }) {
+  const { data, error } = await supabase.rpc("create_board_post", {
+    p_resort_key: resortKey, p_category: category, p_content: content, p_lat: lat, p_lng: lng,
+  })
+  if (error) throw error
+  return data
+}
+
+export async function reportBoardPost(postId) {
+  const { error } = await supabase.rpc("report_board_post", { p_post_id: postId })
+  if (error) throw error
+}
