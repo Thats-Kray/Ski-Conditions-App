@@ -3026,14 +3026,28 @@ export async function getResortCoordinates() {
 }
 
 export async function getBoardPosts(resortKey, limit = 50) {
+  // No FK exists from mountain_board_posts.author_id to profiles (only
+  // to auth.users), so a PostgREST embedded select here always 400s.
+  // Resolve profiles with a separate query instead, matching this file's
+  // established pattern elsewhere (e.g. getTripDetail's host_profile/profile).
   const { data, error } = await supabase
     .from("mountain_board_posts")
-    .select("*, profiles:author_id(id, full_name, username, avatar_url)")
+    .select("*")
     .eq("resort_key", resortKey)
     .order("created_at", { ascending: false })
     .limit(limit)
   if (error) throw error
-  return data || []
+  const posts = data || []
+  if (!posts.length) return posts
+
+  const authorIds = [...new Set(posts.map((p) => p.author_id))]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .in("id", authorIds)
+
+  const pm = new Map((profiles || []).map((p) => [p.id, p]))
+  return posts.map((p) => ({ ...p, profiles: pm.get(p.author_id) || null }))
 }
 
 export async function createBoardPost({ resortKey, category, content, lat, lng }) {
