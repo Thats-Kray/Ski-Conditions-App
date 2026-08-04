@@ -34,6 +34,7 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
   const [posts, setPosts] = useState([])
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
   const [composerOpen, setComposerOpen] = useState(false)
   const [category, setCategory] = useState("general")
   const [content, setContent] = useState("")
@@ -45,9 +46,10 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setLoadError(null)
     getBoardPosts(resortKey)
       .then((rows) => { if (!cancelled) setPosts(rows) })
-      .catch(() => { if (!cancelled) setPosts([]) })
+      .catch((err) => { if (!cancelled) { setPosts([]); setLoadError(err) } })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [resortKey])
@@ -200,6 +202,10 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
 
       {loading ? (
         <div style={{ padding: 20, fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Loading…</div>
+      ) : loadError ? (
+        <div style={{ padding: 20, fontSize: 13, color: "#f87171" }}>
+          Couldn't load the board. Try again in a bit.
+        </div>
       ) : !visiblePosts.length ? (
         <div style={{ padding: 20, fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
           No posts yet at {displayName(resortKey)}. Be the first.
