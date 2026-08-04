@@ -32,9 +32,9 @@ All 5 mockups remain in `mockups/` for reference.
 - [x] Add `@keyframes snowfall` + `.snowflake` CSS class
 - [x] Created `src/components/SnowfallBackground.jsx` — 16 deterministic particles, fixed-position, pointer-events none
 - [x] Updated `App.jsx` — all accent, background, gradient, and nav colors migrated to Blizzard palette; `SnowfallBackground` wired into app root
-- [ ] Typography scale: heading sizes, body, label, caption
-- [ ] Spacing scale: 4px base unit
-- [ ] Replace remaining hardcoded hex values in other components (`HomeDashboard`, `LeaderboardPage`, `ProfilePage`, etc.) with token references — ongoing as each feature area is touched
+- [x] Typography scale: heading sizes, body, label, caption (`--font-size-display/h1/h2/h3/body` etc. in `src/index.css`)
+- [x] Spacing scale: 4px base unit (`--space-1` … in `src/index.css`)
+- [ ] Replace remaining hardcoded hex values in other components (`HomeDashboard`, `LeaderboardPage`, `ProfilePage`, etc.) with token references — ongoing as each feature area is touched; still ~12–24 raw hex literals per file as of this update
 
 **Files:** `src/index.css`, `src/components/SnowfallBackground.jsx`, `src/App.jsx`
 
@@ -44,12 +44,12 @@ All 5 mockups remain in `mockups/` for reference.
 
 **Plan:** `sprints/sprint-8-ui-component-library.md`
 
-- [ ] `src/components/ui/Card.jsx` — base card with glass/solid variant
-- [ ] `src/components/ui/Badge.jsx` — tier badge (Elite/Very Good/Good/Okay/Poor/Closed)
-- [ ] `src/components/ui/Button.jsx` — primary, secondary, ghost, danger variants
-- [ ] `src/components/ui/ScoreRing.jsx` — circular powder score display
-- [ ] `src/components/ui/SnowStat.jsx` — labeled stat with icon (used on resort cards)
-- [ ] Mountain silhouette / snow texture CSS utility classes for card backgrounds
+- [x] `src/components/ui/Card.jsx` — base card with glass/solid variant
+- [x] `src/components/ui/Badge.jsx` — tier badge (Elite/Very Good/Good/Okay/Poor/Closed)
+- [x] `src/components/ui/Button.jsx` — primary, secondary, ghost, danger variants
+- [x] `src/components/ui/ScoreRing.jsx` — circular powder score display
+- [x] `src/components/ui/SnowStat.jsx` — labeled stat with icon (used on resort cards)
+- [x] Mountain silhouette / snow texture CSS utility classes for card backgrounds (`.texture-mountain-silhouette` in `src/index.css`)
 
 **Files:** `src/components/ui/` directory
 
@@ -59,10 +59,10 @@ All 5 mockups remain in `mockups/` for reference.
 
 **Plan:** `sprints/sprint-9-landing-onboarding-redesign.md`
 
-- [ ] Apply chosen theme to `LandingPage.jsx`
-- [ ] Hero: full-bleed mountain gradient, app name, tagline ("Chase more powder days")
-- [ ] Feature highlights: Conditions · Crew Planning · Session Tracking
-- [ ] Match `OnboardingFlow.jsx` visual style to chosen theme
+- [x] Apply chosen theme to `LandingPage.jsx`
+- [x] Hero: full-bleed mountain gradient, app name, tagline ("Chase more powder days")
+- [x] Feature highlights: Conditions · Crew Planning · Session Tracking
+- [x] Match `OnboardingFlow.jsx` visual style to chosen theme
 
 **Files:** `LandingPage.jsx`, `OnboardingFlow.jsx`
 
@@ -76,12 +76,12 @@ Remaining tasks from `UX_CLEANUP.md`. These ship first to establish a clean foun
 
 **Plan:** `sprints/sprint-10-home-3-card-feed.md`
 
-- [ ] Remove messaging panel from `HomeDashboard.jsx` (right column on desktop)
-- [ ] Remove leaderboard ticker from `HomeDashboard.jsx`
-- [ ] Drop `getMyCrews`, `getDMConversations`, `getMyTripConversations`, `markDMsRead`, `getLeaderboard` imports if unused after removal
-- [ ] **Card 1 — Today's Best Mountain:** top-scoring resort with powder score, snow totals, drive risk, "View All Resorts →" link to Snow tab
-- [ ] **Card 2 — Your Next Trip / pending invite:** pending invite shown first with Accept/Decline inline; otherwise next upcoming trip with RSVP count; empty state → "Plan a ski day" CTA opens `CreateTripModal`
-- [ ] **Card 3 — Who's Skiing Today:** compact crew list from `TodaysCrew` data; empty state → "Be the first to check in today →" CTA
+- [x] Remove messaging panel from `HomeDashboard.jsx` (right column on desktop)
+- [x] Remove leaderboard ticker from `HomeDashboard.jsx`
+- [x] Drop `getDMConversations`, `getMyTripConversations`, `markDMsRead`, `getLeaderboard` imports (unused after removal) — `getMyCrews` intentionally kept, still used by Card 3's crew list
+- [x] **Card 1 — Today's Best Mountain:** top-scoring resort with powder score, snow totals, drive risk, "View All Resorts →" link to Snow tab
+- [x] **Card 2 — Your Next Trip / pending invite:** pending invite shown first with Accept/Decline inline; otherwise next upcoming trip with RSVP count; empty state → "Plan a ski day" CTA opens `CreateTripModal`
+- [x] **Card 3 — Who's Skiing Today:** compact crew list from `TodaysCrew` data; empty state → "Be the first to check in today →" CTA
 
 **Files:** `HomeDashboard.jsx`
 
@@ -91,12 +91,12 @@ Remaining tasks from `UX_CLEANUP.md`. These ship first to establish a clean foun
 
 **Plan:** `sprints/sprint-11-move-checkin-to-home.md`
 
-- [ ] In `HomeDashboard.jsx`, add "Check In Today" CTA above Card 1 (visible only if user hasn't checked in today — check `daily_plans` for today's date)
-- [ ] Import and render `SkiCheckInForm` in a collapsed/expandable card on Home
-- [ ] In `SkiPlansPage.jsx`, remove "Today" sub-tab: `["trips", "today", "calendar"]` → `["trips", "calendar"]`
-- [ ] Remove the `activeSubTab === "today"` render block from `SkiPlansPage.jsx`
-- [ ] Remove `SkiCheckInForm` and `TodaysCrew` imports from `SkiPlansPage.jsx` if no longer used
-- [ ] Confirm `SkiPlansPage` defaults `activeSubTab` to `"trips"`
+- [x] In `HomeDashboard.jsx`, add "Check In Today" CTA above Card 1 (visible only if user hasn't checked in today — check `daily_plans` for today's date)
+- [x] Import and render `SkiCheckInForm` in a collapsed/expandable card on Home
+- [x] In `SkiPlansPage.jsx`, remove "Today" sub-tab: `["trips", "today", "calendar"]` → `["trips", "calendar"]`
+- [x] Remove the `activeSubTab === "today"` render block from `SkiPlansPage.jsx`
+- [x] Remove `SkiCheckInForm` and `TodaysCrew` imports from `SkiPlansPage.jsx` if no longer used
+- [x] Confirm `SkiPlansPage` defaults `activeSubTab` to `"trips"`
 
 **Files:** `HomeDashboard.jsx`, `SkiPlansPage.jsx`
 
@@ -118,15 +118,15 @@ Verified against current code (checkboxes below were stale — all 4 items are a
 
 Builds the core data layer and UI for tracking a ski day. Everything in Sections 3–5 depends on this.
 
-**Note:** Tasks 2.1 and 2.4 are covered by the existing Strava/GPS-tracking sprint series (`sprints/sprint-3-gps-tracker-hook.md` and `sprints/sprint-4-active-session-ui.md`), which also builds `migrations/010_ski_runs.sql`. Those sprints are written but **not yet executed** as of this update — `sprints/sprint-1-strava-oauth.md` is the only one of the 6 already merged. Tasks 2.2 and 2.3 below (new this update) both depend on sprint-3 having landed first.
+**Note:** Tasks 2.1 and 2.4 are covered by the Strava/GPS-tracking sprint series (`sprints/sprint-3-gps-tracker-hook.md` and `sprints/sprint-4-active-session-ui.md`), which also builds `migrations/010_ski_runs.sql`. All of sprints 1–6 are now merged.
 
 ### TASK 2.1 — Extend `ski_sessions` schema + create `ski_runs` table
 
-- [ ] Create `migrations/010_ski_runs.sql`
-- [ ] Add columns to `ski_sessions`: `runs_logged INT DEFAULT 0`, `lifts_ridden INT DEFAULT 0`, `top_speed_mph DECIMAL(5,1)`, `avg_speed_mph DECIMAL(5,1)`, `time_on_mountain_min INT`, `time_on_lifts_min INT`, `longest_run_ft INT`, `calories_burned INT`, `session_started_at TIMESTAMPTZ`, `session_ended_at TIMESTAMPTZ`
-- [ ] Create `ski_runs` table: `id`, `session_id` (FK → ski_sessions, CASCADE), `run_type` (run | lift | hike), `run_number`, `started_at`, `ended_at`, `vertical_ft`, `distance_mi`, `speed_max_mph`, `speed_avg_mph`, `lift_name`, `gps_track JSONB`
-- [ ] Add RLS policies: authenticated users can read own runs; owner can write
-- [ ] Run migration against Supabase
+- [x] Create `migrations/010_ski_runs.sql`
+- [x] Add columns to `ski_sessions`: `runs_logged INT DEFAULT 0`, `lifts_ridden INT DEFAULT 0`, `top_speed_mph DECIMAL(5,1)`, `avg_speed_mph DECIMAL(5,1)`, `time_on_mountain_min INT`, `time_on_lifts_min INT`, `longest_run_ft INT`, `calories_burned INT`, `session_started_at TIMESTAMPTZ`, `session_ended_at TIMESTAMPTZ`
+- [x] Create `ski_runs` table: `id`, `session_id` (FK → ski_sessions, CASCADE), `run_type` (run | lift | hike), `run_number`, `started_at`, `ended_at`, `vertical_ft`, `distance_mi`, `speed_max_mph`, `speed_avg_mph`, `lift_name`, `gps_track JSONB`
+- [x] Add RLS policies: authenticated users can read own runs; owner can write
+- [x] Run migration against Supabase
 
 **Files:** `migrations/010_ski_runs.sql`
 
@@ -136,13 +136,13 @@ Builds the core data layer and UI for tracking a ski day. Everything in Sections
 
 **Plan:** `sprints/sprint-12-leaderboard-rpc-v2.md` (depends on sprint-3 executed)
 
-- [ ] Create `migrations/011_leaderboard_rpc_v2.sql` — update the RPC to aggregate new columns:
+- [x] Create `migrations/011_leaderboard_rpc_v2.sql` — update the RPC to aggregate new columns:
   - `top_speed_mph` → MAX across sessions
   - `longest_run_ft` → MAX
   - `total_runs` → SUM of `runs_logged`
   - `total_lifts` → SUM of `lifts_ridden`
   - `time_on_mountain_min` → SUM
-- [ ] Update `src/lib/leaderboardApi.js` — add new fields to the mapped return object
+- [x] Update `src/lib/leaderboardApi.js` — add new fields to the mapped return object
 
 **Files:** `migrations/011_leaderboard_rpc_v2.sql`, `src/lib/leaderboardApi.js`
 
@@ -154,11 +154,11 @@ Upgrades existing check-in so users can capture rich session stats after the fac
 
 **Plan:** `sprints/sprint-13-enhanced-log-a-day.md` (depends on sprint-3 executed) — **correction:** the file below was wrong. `SkiCheckInForm.jsx` writes to `daily_plans` (the forward-looking "I'm skiing today" planner) — a different data model entirely. The actual retroactive day-logging UI that calls `logSkiDay()` is `LogDayModal`, defined inside `LeaderboardPage.jsx`. The plan targets the correct file.
 
-- [ ] After basic check-in submission, show an optional "Add your stats" step inline
-- [ ] Fields: Runs skied (number), Vertical feet, Miles, Top speed (mph), Powder day toggle, Notes
-- [ ] "I'll add stats later" skip link — saves the basic check-in immediately
-- [ ] On Profile's session history, show ✏️ edit icon on sessions with no stats yet
-- [ ] Update `updateSessionStats()` helper for the edit-later flow (new — `logSkiDay()` itself is unchanged)
+- [x] After basic check-in submission, show an optional "Add your stats" step inline
+- [x] Fields: Runs skied (number), Vertical feet, Miles, Top speed (mph), Powder day toggle, Notes
+- [x] "I'll add stats later" skip link — saves the basic check-in immediately
+- [x] On Profile's session history, show ✏️ edit icon on sessions with no stats yet
+- [x] Update `updateSessionStats()` helper for the edit-later flow (new — `logSkiDay()` itself is unchanged)
 
 **Files:** `LeaderboardPage.jsx` (`LogDayModal`), new `SessionStatsForm.jsx`, `src/lib/leaderboardApi.js`, `ProfilePage.jsx`
 
@@ -168,13 +168,13 @@ Upgrades existing check-in so users can capture rich session stats after the fac
 
 Live in-day tracking flow — the most differentiated new UI pattern.
 
-- [ ] "Start My Day" button on Home (replaces/expands check-in CTA when conditions suggest user is at a resort)
-- [ ] Creates session record with `session_started_at = NOW()`
-- [ ] Build `ActiveSessionBar.jsx` — persistent floating bar while session is active: `⛷️ Active · 2h 14m · 8 runs`
-- [ ] Tapping bar opens **Session Sheet**: run counter (+ / −), lift counter, vertical estimate input, quick notes
-- [ ] "End My Day" → triggers `SessionRecapModal.jsx`
-- [ ] `SessionRecapModal.jsx`: shows stats summary card + "Share" CTA (hooks into Task 5.1) + "Log to history" confirmation
-- [ ] Wire session bar into `App.jsx` so it persists across tab switches
+- [x] "Start My Day" button on Home (replaces/expands check-in CTA when conditions suggest user is at a resort)
+- [x] Creates session record with `session_started_at = NOW()`
+- [x] Build `ActiveSessionBar.jsx` — persistent floating bar while session is active: `⛷️ Active · 2h 14m · 8 runs`
+- [x] Tapping bar opens **Session Sheet**: run counter (+ / −), lift counter, vertical estimate input, quick notes
+- [x] "End My Day" → triggers `SessionRecapModal.jsx`
+- [x] `SessionRecapModal.jsx`: shows stats summary card + "Share" CTA (hooks into Task 5.1) + "Log to history" confirmation
+- [x] Wire session bar into `App.jsx` so it persists across tab switches
 
 **Files:** `HomeDashboard.jsx`, new `ActiveSessionBar.jsx`, new `SessionRecapModal.jsx`, `src/lib/leaderboardApi.js`, `App.jsx`
 
@@ -186,10 +186,10 @@ Live in-day tracking flow — the most differentiated new UI pattern.
 
 **Plan:** `sprints/sprint-14-season-passport-upgrade.md` (depends on sprint-3 executed)
 
-- [ ] Add new stat tiles to `SeasonStatsCard` in `ProfilePage.jsx`: Total Runs, Top Speed, Time on Mountain
-- [ ] Season-over-season delta row: "↑ 4 more days than last season" (compare current vs. prior `startYear`)
-- [ ] "All-time" toggle: switches stats display between current season and lifetime totals
-- [ ] Add `getAllTimeStats(userId)` function to `leaderboardApi.js`
+- [x] Add new stat tiles to `SeasonStatsCard` in `ProfilePage.jsx`: Total Runs, Top Speed, Time on Mountain
+- [x] Season-over-season delta row: "↑ 4 more days than last season" (compare current vs. prior `startYear`)
+- [x] "All-time" toggle: switches stats display between current season and lifetime totals
+- [x] Add `getAllTimeStats(userId)` function to `leaderboardApi.js`
 
 **Files:** `ProfilePage.jsx`, `src/lib/leaderboardApi.js`
 
@@ -199,10 +199,10 @@ Live in-day tracking flow — the most differentiated new UI pattern.
 
 **Plan:** `sprints/sprint-15-session-history-calendar.md` (depends on sprint-13)
 
-- [ ] Build `SeasonCalendar.jsx` — GitHub-style grid of the ski season (Oct–Apr), each day colored by: no session (dark), session (blue), powder day (teal)
-- [ ] Clicking a day expands an inline detail card: resort emoji, date, vertical, runs, top speed, powder badge
-- [ ] Toggle between Calendar view and List view on Profile's session history section
-- [ ] List view: per-session row with all stats; ✏️ edit icon calls back to Task 2.3 stats form
+- [x] Build `SeasonCalendar.jsx` — GitHub-style grid of the ski season (Oct–Apr), each day colored by: no session (dark), session (blue), powder day (teal)
+- [x] Clicking a day expands an inline detail card: resort emoji, date, vertical, runs, top speed, powder badge
+- [x] Toggle between Calendar view and List view on Profile's session history section
+- [x] List view: per-session row with all stats; ✏️ edit icon calls back to Task 2.3 stats form
 
 **Files:** `ProfilePage.jsx`, new `SeasonCalendar.jsx`
 
@@ -217,10 +217,10 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 **Plan:** `sprints/sprint-16-8-stat-leaderboard.md` (depends on sprint-12) — lands on 8 tabs (drops "resorts" as a separate tab in favor of the 4 new stats; see the plan for reasoning)
 
-- [ ] Add stat tab switcher to `LeaderboardPage.jsx`: `Days | Vertical | Speed | Distance | Time`
-- [ ] Each tab re-sorts the leaderboard rows by that stat with rank numbers
-- [ ] Surface new stats in each leaderboard row (secondary stat below the primary)
-- [ ] Confirm `get_leaderboard` RPC (Task 2.2) returns all new fields
+- [x] Add stat tab switcher to `LeaderboardPage.jsx`: `Days | Vertical | Speed | Distance | Time`
+- [x] Each tab re-sorts the leaderboard rows by that stat with rank numbers
+- [x] Surface new stats in each leaderboard row (secondary stat below the primary)
+- [x] Confirm `get_leaderboard` RPC (Task 2.2) returns all new fields
 
 **Files:** `LeaderboardPage.jsx`, `src/lib/leaderboardApi.js`
 
@@ -230,10 +230,10 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 **Plan:** `sprints/sprint-17-leaderboard-reactions.md` (depends on sprint-16)
 
-- [ ] Create `migrations/012_leaderboard_reactions.sql`: `leaderboard_reactions` table (id, user_id, target_user_id, stat_type, emoji, season, UNIQUE(user_id, target_user_id, stat_type, season))
-- [ ] Add RLS: authenticated users can read all reactions; owner can write own
-- [ ] Reaction bar in each leaderboard row: 🎿 ❄️ 🔥 👑 — one-tap; own reaction highlighted; count shown
-- [ ] Add `addLeaderboardReaction()` and `getLeaderboardReactions()` to `leaderboardApi.js`
+- [x] Create `migrations/012_leaderboard_reactions.sql`: `leaderboard_reactions` table (id, user_id, target_user_id, stat_type, emoji, season, UNIQUE(user_id, target_user_id, stat_type, season))
+- [x] Add RLS: authenticated users can read all reactions; owner can write own
+- [x] Reaction bar in each leaderboard row: 🎿 ❄️ 🔥 👑 — one-tap; own reaction highlighted; count shown
+- [x] Add `addLeaderboardReaction()` and `getLeaderboardReactions()` to `leaderboardApi.js`
 
 **Files:** `LeaderboardPage.jsx`, `migrations/012_leaderboard_reactions.sql`, `src/lib/leaderboardApi.js`
 
@@ -245,11 +245,11 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 **Plan:** `sprints/sprint-18-session-share-card.md` — **correction:** `ShareStatCard.jsx` already renders via native Canvas 2D (not a styled `<div>`) and already exports via `canvas.toDataURL()`, not `html2canvas` (no such dependency exists or is needed). The plan extends the existing Canvas component with a new per-session mode rather than rewriting it.
 
-- [ ] Extend `ShareStatCard.jsx` with a per-session mode: resort hero photo, stat grid, PowderDays logo watermark (season mode, unchanged, already has all of this)
-- [ ] Stats shown: resort name, date, vertical feet, runs, top speed, powder day badge (❄️)
-- [ ] Export via existing Canvas `toDataURL()` → PNG download (no new dependency)
-- [ ] Native share sheet via `navigator.share()` if supported (iOS Safari); fallback to download
-- [ ] Trigger from: `SessionRecapModal.jsx` "Share" button, Profile session history row "Share" icon
+- [x] Extend `ShareStatCard.jsx` with a per-session mode: resort hero photo, stat grid, PowderDays logo watermark (season mode, unchanged, already has all of this)
+- [x] Stats shown: resort name, date, vertical feet, runs, top speed, powder day badge (❄️)
+- [x] Export via existing Canvas `toDataURL()` → PNG download (no new dependency)
+- [x] Native share sheet via `navigator.share()` if supported (iOS Safari); fallback to download
+- [x] Trigger from: `SessionRecapModal.jsx` "Share" button, Profile session history row "Share" icon
 
 **Files:** `ShareStatCard.jsx`, `SessionRecapModal.jsx`, `ProfilePage.jsx`
 
@@ -259,10 +259,10 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 **Plan:** `sprints/sprint-19-season-milestones.md` (depends on sprint-14)
 
-- [ ] Define milestone thresholds: 10 days, 25 days, first powder day, 50k vertical, 100k vertical, 100 runs, 5 resorts
-- [ ] On Profile load, compare previous stats to current — if a milestone is newly crossed, show a modal
-- [ ] Milestone modal: celebratory card with the achievement + "Share" CTA reusing `ShareStatCard.jsx`
-- [ ] Store `last_milestone_shown` in `localStorage` to avoid re-triggering on every load
+- [x] Define milestone thresholds: 10 days, 25 days, first powder day, 50k vertical, 100k vertical, 100 runs, 5 resorts
+- [x] On Profile load, compare previous stats to current — if a milestone is newly crossed, show a modal
+- [x] Milestone modal: celebratory card with the achievement + "Share" CTA reusing `ShareStatCard.jsx`
+- [x] Store `last_milestone_shown` in `localStorage` to avoid re-triggering on every load
 
 **Files:** `ProfilePage.jsx`, `ShareStatCard.jsx`
 
@@ -272,11 +272,11 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 **Plan:** `sprints/sprint-20-activity-feed.md` — **correction:** uses app-level inserts (matching the existing `notifications` table's established pattern), not DB triggers — this codebase has no DB-trigger precedent anywhere, and app-level `logActivity()` calls after each action is lower-risk and functionally equivalent.
 
-- [ ] Create `migrations/013_activity_feed.sql`: `activity_feed` table (id, actor_id FK profiles, type TEXT, subject_id UUID, subject_type TEXT, metadata JSONB, created_at) + `activity_feed_reactions` table
-- [ ] Add app-level `logActivity()` calls (not DB triggers): `logSkiDay()` success → entry; "going" RSVP → entry; trip creation → entry
-- [ ] Add RLS: authenticated users can read feed entries from accepted friends + self
-- [ ] Build `ActivityFeed.jsx` — chronological list of friend activity with avatars, relative timestamps, inline emoji react
-- [ ] Surface feed in Social tab (`MessagingCenter.jsx`), as a new sub-tab alongside Chats and Friends
+- [x] Create `migrations/013_activity_feed.sql`: `activity_feed` table (id, actor_id FK profiles, type TEXT, subject_id UUID, subject_type TEXT, metadata JSONB, created_at) + `activity_feed_reactions` table
+- [x] Add app-level `logActivity()` calls (not DB triggers): `logSkiDay()` success → entry; "going" RSVP → entry; trip creation → entry
+- [x] Add RLS: authenticated users can read feed entries from accepted friends + self
+- [x] Build `ActivityFeed.jsx` — chronological list of friend activity with avatars, relative timestamps, inline emoji react
+- [x] Surface feed in Social tab (`MessagingCenter.jsx`), as a new sub-tab alongside Chats and Friends
 
 **Files:** new `ActivityFeed.jsx`, `MessagingCenter.jsx`, `migrations/013_activity_feed.sql`, `src/lib/socialApi.js`
 
@@ -288,10 +288,10 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 **Plan:** `sprints/sprint-21-friends-going-badge.md`
 
-- [ ] In `App.jsx`, compute `friendTripsByResort` map: upcoming trip RSVPs (next 7 days) grouped by `resort_key` → list of friend profiles going
-- [ ] Pass map down to resort card render
-- [ ] On each resort card: show "N friends going this weekend" with stacked avatars if N > 0
-- [ ] Tapping badge → small popover listing friend names
+- [x] In `App.jsx`, compute `friendTripsByResort` map: upcoming trip RSVPs (next 7 days) grouped by `resort_key` → list of friend profiles going
+- [x] Pass map down to resort card render
+- [x] On each resort card: show "N friends going this weekend" with stacked avatars if N > 0
+- [x] Tapping badge → small popover listing friend names
 
 **Files:** `App.jsx`, `src/lib/socialApi.js` (add `getFriendUpcomingTripsByResort()`)
 
@@ -301,9 +301,9 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 **Plan:** `sprints/sprint-22-community-activity-signal.md`
 
-- [ ] Add Supabase RPC `get_resort_activity_counts(from_date)` → returns `{resort_name, session_count}` for last 7 days
-- [ ] Create `migrations/014_resort_activity_rpc.sql`
-- [ ] On each resort card: show "X users skied here this week" as a secondary badge (only if count > 0)
+- [x] Add Supabase RPC `get_resort_activity_counts(from_date)` → returns `{resort_name, session_count}` for last 7 days
+- [x] Create `migrations/014_resort_activity_rpc.sql`
+- [x] On each resort card: show "X users skied here this week" as a secondary badge (only if count > 0)
 
 **Files:** `App.jsx`, `migrations/014_resort_activity_rpc.sql`
 
@@ -315,10 +315,10 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 **Plan:** `sprints/sprint-23-powder-alert-preference.md`
 
-- [ ] Create `migrations/015_powder_alerts.sql`: add `powder_alerts_enabled BOOLEAN DEFAULT false` and `alert_phone TEXT` to `profiles`
-- [ ] Add toggle to Profile settings: "📧 Weekly powder forecast every Wednesday"
-- [ ] Phone number field (optional, labeled "For future SMS alerts")
-- [ ] Wire to `upsertMyProfile()` in `socialApi.js`
+- [x] Create `migrations/015_powder_alerts.sql`: add `powder_alerts_enabled BOOLEAN DEFAULT false` and `alert_phone TEXT` to `profiles`
+- [x] Add toggle to Profile settings: "📧 Weekly powder forecast every Wednesday"
+- [x] Phone number field (optional, labeled "For future SMS alerts")
+- [x] Wire to `upsertMyProfile()` in `socialApi.js`
 
 **Files:** `ProfilePage.jsx`, `migrations/015_powder_alerts.sql`, `src/lib/socialApi.js`
 
@@ -328,14 +328,14 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 **Plan:** `sprints/sprint-24-wednesday-briefing-cron.md` (depends on sprint-23) — includes a new `server/powderScore.js` porting the PRD's powder-score formula server-side (doesn't exist there today) and a refactor of `server/index.js`'s route handlers into callable functions.
 
-- [ ] Create `server/cron.js` — scheduled to run 7 AM MT every Wednesday (`0 14 * * 3` UTC)
-- [ ] Query Supabase for all profiles with `powder_alerts_enabled = true`
-- [ ] Fetch live powder scores for all open resorts via internal `/api/resort-conditions`
-- [ ] Compose briefing: top 3 resorts with tier + projected snowfall, single "Best Bet" resort with one-line reason, weekend outlook (Fri–Sun)
-- [ ] Send via Resend to each subscriber (batch, with per-email error handling)
-- [ ] Create `server/emailTemplates.js` — HTML email template with branding
-- [ ] Register cron in `server/index.js`
-- [ ] Add `F-REQ-ALERT-003` guard: skip send entirely if zero resorts are open
+- [x] Create `server/cron.js` — scheduled to run 7 AM MT every Wednesday (`0 14 * * 3` UTC)
+- [x] Query Supabase for all profiles with `powder_alerts_enabled = true`
+- [x] Fetch live powder scores for all open resorts via internal `/api/resort-conditions`
+- [x] Compose briefing: top 3 resorts with tier + projected snowfall, single "Best Bet" resort with one-line reason, weekend outlook (Fri–Sun)
+- [x] Send via Resend to each subscriber (batch, with per-email error handling)
+- [x] Create `server/emailTemplates.js` — HTML email template with branding
+- [x] Register cron in `server/index.js`
+- [x] Add `F-REQ-ALERT-003` guard: skip send entirely if zero resorts are open
 
 **Files:** `server/cron.js`, `server/emailTemplates.js`, `server/index.js`
 
@@ -345,10 +345,10 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 **Plan:** `sprints/sprint-25-unsubscribe-flow.md` (depends on sprint-24)
 
-- [ ] Each briefing email includes a signed unsubscribe link: `/api/unsubscribe?token=<signed_jwt>`
-- [ ] Backend: `GET /api/unsubscribe` validates token, sets `powder_alerts_enabled = false` for that user
-- [ ] Returns minimal HTML page: "You've been unsubscribed. Click here to re-enable alerts."
-- [ ] Re-enable link hits `GET /api/resubscribe?token=<signed_jwt>` and sets flag back to `true`
+- [x] Each briefing email includes a signed unsubscribe link: `/api/unsubscribe?token=<signed_jwt>`
+- [x] Backend: `GET /api/unsubscribe` validates token, sets `powder_alerts_enabled = false` for that user
+- [x] Returns minimal HTML page: "You've been unsubscribed. Click here to re-enable alerts."
+- [x] Re-enable link hits `GET /api/resubscribe?token=<signed_jwt>` and sets flag back to `true`
 
 **Files:** `server/index.js`
 
@@ -360,11 +360,11 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 **Plan:** `sprints/sprint-26-7day-forecast-panel.md` — **correction:** numeric snowfall-inches data comes from `/api/nws/snow` (grid data), not `/api/nws/forecast` (text-only periods) — the plan bucket-sums the existing snow-grid data by day rather than parsing forecast text.
 
-- [ ] Confirm NWS 7-day forecast data is accessible from current `/api/nws/forecast` endpoint
-- [ ] On each resort card, add expandable "This Week ▾" row
-- [ ] 7 mini day-bars: day label + snowfall amount (inches); bar height proportional to max expected
-- [ ] Highlight the highest-snowfall day: "Best day: Saturday ❄️ 6–10""
-- [ ] Collapsed by default; expand on tap
+- [x] Confirm NWS 7-day forecast data is accessible (sourced from `/api/nws/snow` grid data, not `/api/nws/forecast` text — see correction above)
+- [x] On each resort card, add expandable "This Week ▾" row
+- [x] 7 mini day-bars: day label + snowfall amount (inches); bar height proportional to max expected
+- [x] Highlight the highest-snowfall day: "Best day: Saturday ❄️ 6–10""
+- [x] Collapsed by default; expand on tap
 
 **Files:** `App.jsx`
 
@@ -374,11 +374,11 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 **Plan:** `sprints/sprint-27-vibe-score.md` — scoped community-wide (all users), not friends-only, to stay distinct from Task 6.1's friends-only badge; see the plan for reasoning.
 
-- [ ] Add `getResortVibeData()` to `socialApi.js`: queries check-ins (last 7 days) + upcoming RSVPs per resort
-- [ ] Compute vibe formula client-side: `(check-ins × 2) + (upcoming RSVPs × 3) + (powder_score × 0.2)`, normalized 0–100
-- [ ] Tier labels: 🔥 High (70+) / 👍 Active (40–69) / 😶 Quiet (<40)
-- [ ] Show as secondary badge on resort card alongside Powder Score
-- [ ] Tooltip on hover/tap: "Based on friend activity and recent check-ins"
+- [x] Add `getResortVibeData()` to `socialApi.js`: queries check-ins (last 7 days) + upcoming RSVPs per resort
+- [x] Compute vibe formula client-side: `(check-ins × 2) + (upcoming RSVPs × 3) + (powder_score × 0.2)`, normalized 0–100
+- [x] Tier labels: 🔥 High (70+) / 👍 Active (40–69) / 😶 Quiet (<40)
+- [x] Show as secondary badge on resort card alongside Powder Score
+- [x] Tooltip on hover/tap: "Based on friend activity and recent check-ins"
 
 **Files:** `App.jsx`, `src/lib/socialApi.js`
 
@@ -388,16 +388,16 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 ### TASK 9.1 — GPS run tracking (browser Geolocation API)
 
-**Plan:** covered by `sprints/sprint-3-gps-tracker-hook.md`, `sprints/sprint-4-active-session-ui.md`, and `sprints/sprint-5-gpx-strava-upload.md` (existing series, not yet executed).
+**Plan:** covered by `sprints/sprint-3-gps-tracker-hook.md`, `sprints/sprint-4-active-session-ui.md`, and `sprints/sprint-5-gpx-strava-upload.md` (existing series — all merged).
 
 *Depends on Task 2.4 (Active Session Mode) being complete.*
 
-- [ ] Create `src/lib/useGpsTracker.js` hook: wraps `navigator.geolocation.watchPosition()`, accumulates position samples
-- [ ] Auto-detect lift vs. run: upward altitude delta + speed ≤ 15 mph = lift; downward + speed ≥ 10 mph = run; else = rest
-- [ ] Each detected segment → creates a `ski_runs` row with GPS track JSONB
-- [ ] Cache GPS points in `sessionStorage` during session (offline resilience); flush to Supabase on end
-- [ ] Display GPS track as polyline on PowderMap after session ends
-- [ ] Gate the feature: show "GPS tracking requires location permission" prompt on session start
+- [x] Create `src/lib/useGpsTracker.js` hook: wraps `navigator.geolocation.watchPosition()`, accumulates position samples
+- [x] Auto-detect lift vs. run: upward altitude delta + speed ≤ 15 mph = lift; downward + speed ≥ 10 mph = run; else = rest
+- [x] Each detected segment → creates a `ski_runs` row with GPS track JSONB
+- [x] Cache GPS points in `sessionStorage` during session (offline resilience); flush to Supabase on end
+- [x] Display GPS track as polyline on PowderMap after session ends
+- [x] Gate the feature: show "GPS tracking requires location permission" prompt on session start
 
 **Files:** new `src/lib/useGpsTracker.js`, `ActiveSessionBar.jsx`, `PowderMap.jsx`
 
@@ -409,14 +409,14 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 *Depends on Task 9.1 (GPS tracking) being complete.*
 
-- [ ] During active session: "Share my location with friends" toggle in Session Sheet
-- [ ] When enabled: broadcast position every 30s via Supabase Realtime channel `mountain:live:{userId}`
-- [ ] PowderMap subscribes to live channels for all accepted friends with active sessions
-- [ ] Render friend location as labeled pin on map: avatar initial + name
-- [ ] Privacy: location only visible to accepted friends; stops broadcasting when session ends or toggle off
-- [ ] Show "N friends on mountain now" count in Who's Skiing Today card on Home
+- [x] During active session: "Share my location with friends" toggle in Session Sheet
+- [x] When enabled: broadcast position every 30s via Supabase Realtime channel `mountain:live:{userId}`
+- [x] PowderMap subscribes to live channels for all accepted friends with active sessions
+- [x] Render friend location as labeled pin on map: avatar initial + name
+- [x] Privacy: location only visible to accepted friends; stops broadcasting when session ends or toggle off
+- [x] Show "N friends on mountain now" count in Who's Skiing Today card on Home
 
-**Files:** `PowderMap.jsx`, new `LiveCrewMap.jsx`, `HomeDashboard.jsx`, `src/lib/useGpsTracker.js`
+**Files:** `PowderMap.jsx`, `HomeDashboard.jsx`, `ActiveSessionBar.jsx`, new `src/lib/useLiveFriendLocations.js` — **note:** shipped as a shared hook (`useLiveFriendLocations.js`) consumed directly by `PowderMap.jsx`/`HomeDashboard.jsx` rather than the standalone `LiveCrewMap.jsx` component this plan originally proposed.
 
 ---
 
@@ -436,58 +436,75 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 ---
 
+## SECTION 11 — Mountain Board
+
+### TASK 11.1 — Location-gated public feed per resort
+
+**Plan:** `sprints/sprint-29-mountain-board.md` — no dependencies, can start immediately.
+
+A public, per-resort message board: any logged-in user can *read* posts for any resort, but can only *post* if their device's current GPS position is within that resort's geofence. Supports free-text posts with a category tag (Safety / Lost & Found / Social / General).
+
+- [x] Create `migrations/020_mountain_board.sql`: `mountain_board_posts`, `mountain_board_reports`, `resort_coordinates` tables — applied to live Supabase project 2026-08-03
+- [x] Add `public.haversine_miles` Postgres function (server-side distance check — never trust a client-computed distance)
+- [x] Add `create_board_post` and `report_board_post` `SECURITY DEFINER` RPCs — all writes go through these, no direct table `INSERT` policy on either table; both explicitly `REVOKE ... FROM PUBLIC` before granting to `authenticated`
+- [x] Build board UI: category tags (Safety / Lost & Found / Social / General), post composer gated on GPS proximity, read view open to all logged-in users — verified working end-to-end 2026-08-04 (see Section 12 below for two production bugs found and fixed along the way)
+
+**Files:** `migrations/020_mountain_board.sql`, new board UI component(s), `src/lib/socialApi.js` (or new `mountainBoardApi.js`)
+
+---
+
+## SECTION 12 — Mountain Page Architecture & Krames Butte Dev Resort
+
+**Not in ROADMAP.md when started** — grew out of a brainstorming session about giving the app owner a permanent, private testing ground for new per-resort features, using the Mountain Board (Section 11) as the first thing to test against it.
+
+**Spec:** `docs/superpowers/specs/2026-08-03-krames-butte-dev-resort-design.md`
+**Plan:** `docs/superpowers/plans/2026-08-03-mountain-page-krames-butte.md` (executed via `superpowers:subagent-driven-development`)
+
+A private, owner-only fake resort ("Krames Butte") that bypasses the Mountain Board's GPS geofence for testing, plus a reusable per-resort "Mountain Page" (Facebook-Page-style cover header + tab bar, driven by a one-array widget registry) that future per-resort features get built and iterated against before being promoted to every real resort via a one-line config change.
+
+- [x] `migrations/021_krames_butte_dev_resort.sql` — Krames Butte resort row, owner-only geofence bypass in `create_board_post`, RLS restricting `kramesbutte` rows to the owner
+- [x] `MountainBoard.jsx` — owner-gated "🧪 Krames Butte (Dev)" chip in the standalone Board tab, plus a `resortKey` locking prop so it can be embedded as a per-resort widget
+- [x] `src/lib/mountainPageWidgets.js` + `MountainPage.jsx` — widget registry and the page shell (cover header, tab bar, feed-first default tab); Mountain Board wired in as the first widget
+- [x] `App.jsx` — Mountain Page navigation state, "🏔️ Mountain Page →" entry point on every resort card, owner-only Krames Butte banner on the Snow tab
+- [x] **Critical bug found by final review, fixed same session:** migration 021's RLS policies referenced `auth.users` directly, which the `authenticated` role can't read — broke Mountain Board reads for *every* resort in production, not just Krames Butte. Fixed via `migrations/022_fix_kramesbutte_rls_auth_users.sql` (moved the check into a `SECURITY DEFINER` helper function), verified with a role-switched query against the live database rather than trusting "migration applied successfully."
+- [x] **Second bug found via live user testing, fixed same session:** `getBoardPosts()` used a PostgREST embedded select (`profiles:author_id(...)`) through a foreign key that never existed (`author_id` only references `auth.users`, never `profiles`) — every board read 400'd since Sprint 29 first shipped, silently swallowed into "no posts yet" until the RLS fix's error-surfacing change made it visible. Fixed in `src/lib/socialApi.js` by resolving posts and profiles as two separate queries, matching this file's own established pattern elsewhere.
+- [x] Verified working end-to-end by the app owner 2026-08-04
+
+**Files:** `migrations/021_krames_butte_dev_resort.sql`, `migrations/022_fix_kramesbutte_rls_auth_users.sql`, `src/components/MountainBoard.jsx`, `src/components/MountainPage.jsx`, `src/lib/mountainPageWidgets.js`, `src/lib/socialApi.js`, `src/App.jsx`
+
+---
+
 ## Progress Summary
 
-Every remaining task (except Section 10, deferred) now has a corresponding execution-ready plan in `sprints/`. See **"Sprint Plan Coverage"** below for the full map, execution order, and how to run them.
+*Last verified against actual code/migrations/git history 2026-08-04 (not just checkbox state — see [[project_2026_08_roadmap_completion]] and [[project_2026_08_04_mountain_page_session]] memory).*
+
+All sprints 1–29 are merged, including Mountain Board (Section 11) and the Mountain Page/Krames Butte architecture (Section 12), both verified working live as of 2026-08-04. Section 10 (theme switching) remains the only fully-deferred section.
 
 | Section | Tasks | Done |
 |---------|-------|------|
-| 0 — Theme & Design System | 4 | 1 |
-| 1 — UX Cleanup | 3 | 1 |
-| 2 — Session Tracking | 4 | 0 |
-| 3 — Season Analytics | 2 | 0 |
-| 4 — Leaderboard | 2 | 0 |
-| 5 — Sharing & Growth | 3 | 0 |
-| 6 — Social Proof | 2 | 0 |
-| 7 — Powder Alerts | 3 | 0 |
-| 8 — Enhanced Conditions | 2 | 0 |
-| 9 — Live Features | 2 | 0 |
-| 10 — Future / Theme Switching | 1 | 0 |
-| **Total** | **28** | **2** |
+| 0 — Theme & Design System | 4 | 4 |
+| 1 — UX Cleanup | 3 | 3 |
+| 2 — Session Tracking | 4 | 4 |
+| 3 — Season Analytics | 2 | 2 |
+| 4 — Leaderboard | 2 | 2 |
+| 5 — Sharing & Growth | 3 | 3 |
+| 6 — Social Proof | 2 | 2 |
+| 7 — Powder Alerts | 3 | 3 |
+| 8 — Enhanced Conditions | 2 | 2 |
+| 9 — Live Features | 2 | 2 |
+| 10 — Future / Theme Switching | 1 | 0 (deferred) |
+| 11 — Mountain Board | 1 | 1 |
+| 12 — Mountain Page & Krames Butte | 1 | 1 |
+| **Total** | **31** | **30** |
+
+One item remains genuinely incomplete within an otherwise-done task: Task 0.2's "replace remaining hardcoded hex values with token references" is explicitly ongoing (still ~12–24 raw hex literals in `HomeDashboard.jsx`, `LeaderboardPage.jsx`, `ProfilePage.jsx` as of this update).
 
 ---
 
 ## Sprint Plan Coverage
 
-Detailed, execution-ready plans for every remaining task live in `sprints/` (one file per plan, self-contained agent briefs — see each file's header for exact file targets, code, and acceptance criteria). Execute with **`superpowers:subagent-driven-development`** (fresh subagent per task, two-stage review) or **`superpowers:executing-plans`** (inline, batch execution with checkpoints).
+Detailed, execution-ready plans live in `sprints/` (one file per plan, self-contained agent briefs — see each file's header for exact file targets, code, and acceptance criteria). Execute with **`superpowers:subagent-driven-development`** (fresh subagent per task, two-stage review) or **`superpowers:executing-plans`** (inline, batch execution with checkpoints).
 
-**Already-existing sprint series (Strava/GPS — sprints 1–6, written previously):** covers Tasks 2.1, 2.4, 9.1 (`sprint-3`, `sprint-4`, `sprint-5`) plus new-to-ROADMAP Strava integration (`sprint-1`, `sprint-2`) and a PWA shell (`sprint-6`). **Only `sprint-1` has been executed so far** — `sprint-2` through `sprint-6` are written but not yet run. Several new sprints below have a hard dependency on `sprint-3` (and in one case `sprint-4`) landing first — check each sprint's "Depends on" line before starting it.
+**Sprints 1–29 are all executed, merged, and verified live** (confirmed against migrations 010–022, on-disk components, and commit history as of 2026-08-04). The Mountain Page/Krames Butte architecture (Section 12) shipped the same session as a follow-on to Sprint 29, via its own spec + plan under `docs/superpowers/` rather than a numbered `sprints/` file.
 
-**Recommended execution order for the new sprints (7–28), respecting dependencies:**
-
-| Order | Sprint | Task | Depends on |
-|---|---|---|---|
-| 1 | `sprint-7-design-tokens.md` | 0.2 | — |
-| 2 | `sprint-8-ui-component-library.md` | 0.3 | sprint-7 |
-| 3 | `sprint-9-landing-onboarding-redesign.md` | 0.4 | sprint-7, sprint-8 |
-| 4 | `sprint-10-home-3-card-feed.md` | 1.1 | sprint-8 |
-| 5 | `sprint-11-move-checkin-to-home.md` | 1.2 | sprint-10 |
-| 6 | `sprint-12-leaderboard-rpc-v2.md` | 2.2 | sprint-3 (existing series) |
-| 7 | `sprint-13-enhanced-log-a-day.md` | 2.3 | sprint-3 |
-| 8 | `sprint-14-season-passport-upgrade.md` | 3.1 | sprint-3, sprint-8 |
-| 9 | `sprint-15-session-history-calendar.md` | 3.2 | sprint-13 |
-| 10 | `sprint-16-8-stat-leaderboard.md` | 4.1 | sprint-12 |
-| 11 | `sprint-17-leaderboard-reactions.md` | 4.2 | sprint-16 |
-| 12 | `sprint-18-session-share-card.md` | 5.1 | sprint-15 |
-| 13 | `sprint-19-season-milestones.md` | 5.2 | sprint-14, sprint-8 |
-| 14 | `sprint-20-activity-feed.md` | 5.3 | — |
-| 15 | `sprint-21-friends-going-badge.md` | 6.1 | — |
-| 16 | `sprint-22-community-activity-signal.md` | 6.2 | — |
-| 17 | `sprint-23-powder-alert-preference.md` | 7.1 | — |
-| 18 | `sprint-24-wednesday-briefing-cron.md` | 7.2 | sprint-23 |
-| 19 | `sprint-25-unsubscribe-flow.md` | 7.3 | sprint-24 |
-| 20 | `sprint-26-7day-forecast-panel.md` | 8.1 | — |
-| 21 | `sprint-27-vibe-score.md` | 8.2 | sprint-8 |
-| 22 | `sprint-28-live-friend-location.md` | 9.2 | sprint-3 **and** sprint-4 (existing series) |
-
-Task 1.3 required no sprint (already fully implemented — see the task's own notes above). Section 10 (theme switching) is explicitly deferred per its own heading and has no sprint.
+Task 1.3 required no sprint (already fully implemented — see the task's own notes above). Section 10 (theme switching) is explicitly deferred per its own heading and has no sprint — **it is the only remaining unstarted work in this file**, alongside the still-ongoing hex-token cleanup noted in Task 0.2.
