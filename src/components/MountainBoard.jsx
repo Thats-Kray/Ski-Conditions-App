@@ -15,8 +15,22 @@ const CATEGORIES = [
   { key: "general",    label: "General",      emoji: "💬" },
 ]
 
-export default function MountainBoard({ defaultResortKey }) {
-  const [resortKey, setResortKey] = useState(defaultResortKey || "vail")
+const OWNER_EMAIL = "raykyle1104@gmail.com"
+const KRAMES_BUTTE_KEY = "kramesbutte"
+
+function displayName(key) {
+  return key === KRAMES_BUTTE_KEY ? "Krames Butte" : (RESORT_NAMES[key] || key)
+}
+
+// `resortKey` prop, when present, "locks" the board to that resort — no
+// resort-switcher chips are shown and the value can't change. This is how
+// MountainPage (see src/lib/mountainPageWidgets.js) embeds this component
+// as a per-resort widget. When absent (the standalone "📋 Board" tab in
+// App.jsx), behavior is unchanged: a free-standing multi-resort switcher
+// defaulting to `defaultResortKey`.
+export default function MountainBoard({ defaultResortKey, currentUserEmail, resortKey: lockedResortKey }) {
+  const [selectedResortKey, setSelectedResortKey] = useState(defaultResortKey || "vail")
+  const resortKey = lockedResortKey || selectedResortKey
   const [posts, setPosts] = useState([])
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [loading, setLoading] = useState(true)
@@ -60,7 +74,9 @@ export default function MountainBoard({ defaultResortKey }) {
         setPostError("Location access is needed to post — check your browser/device location permission.")
       } else if (err?.message?.includes("TOO_FAR")) {
         const miles = err.message.split(":").pop()
-        setPostError(`You're about ${miles} miles from ${RESORT_NAMES[resortKey] || resortKey} — you need to be on the mountain to post here.`)
+        setPostError(`You're about ${miles} miles from ${displayName(resortKey)} — you need to be on the mountain to post here.`)
+      } else if (err?.message?.includes("NOT_AUTHORIZED")) {
+        setPostError("This board is private.")
       } else {
         setPostError("Couldn't post right now. Try again in a bit.")
       }
@@ -80,22 +96,38 @@ export default function MountainBoard({ defaultResortKey }) {
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
-      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
-        {Object.keys(RESORT_NAMES).map((key) => (
-          <button
-            key={key}
-            onClick={() => setResortKey(key)}
-            style={{
-              flexShrink: 0, padding: "8px 14px", borderRadius: 999, fontSize: 12, fontWeight: 800,
-              border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer",
-              background: resortKey === key ? "linear-gradient(135deg,#0284c7,#38bdf8)" : "rgba(255,255,255,0.06)",
-              color: "white",
-            }}
-          >
-            {RESORT_EMOJI[key]} {RESORT_NAMES[key]}
-          </button>
-        ))}
-      </div>
+      {!lockedResortKey && (
+        <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
+          {Object.keys(RESORT_NAMES).map((key) => (
+            <button
+              key={key}
+              onClick={() => setSelectedResortKey(key)}
+              style={{
+                flexShrink: 0, padding: "8px 14px", borderRadius: 999, fontSize: 12, fontWeight: 800,
+                border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer",
+                background: resortKey === key ? "linear-gradient(135deg,#0284c7,#38bdf8)" : "rgba(255,255,255,0.06)",
+                color: "white",
+              }}
+            >
+              {RESORT_EMOJI[key]} {RESORT_NAMES[key]}
+            </button>
+          ))}
+          {currentUserEmail === OWNER_EMAIL && (
+            <button
+              key={KRAMES_BUTTE_KEY}
+              onClick={() => setSelectedResortKey(KRAMES_BUTTE_KEY)}
+              style={{
+                flexShrink: 0, padding: "8px 14px", borderRadius: 999, fontSize: 12, fontWeight: 800,
+                border: "1px dashed rgba(163,230,53,0.5)", cursor: "pointer",
+                background: resortKey === KRAMES_BUTTE_KEY ? "linear-gradient(135deg,#65a30d,#a3e635)" : "rgba(163,230,53,0.08)",
+                color: "white",
+              }}
+            >
+              🧪 Krames Butte (Dev)
+            </button>
+          )}
+        </div>
+      )}
 
       <div style={{ display: "flex", gap: 6 }}>
         {["all", ...CATEGORIES.map((c) => c.key)].map((key) => {
@@ -122,7 +154,7 @@ export default function MountainBoard({ defaultResortKey }) {
           onClick={() => setComposerOpen(true)}
           style={{ padding: "12px 16px", borderRadius: 14, border: "1px solid rgba(56,189,248,0.4)", background: "rgba(56,189,248,0.1)", color: "#38bdf8", fontWeight: 800, cursor: "pointer" }}
         >
-          📍 Post to {RESORT_NAMES[resortKey] || resortKey}
+          📍 Post to {displayName(resortKey)}
         </button>
       ) : (
         <div style={{ display: "grid", gap: 8, padding: 14, borderRadius: 16, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }}>
@@ -170,7 +202,7 @@ export default function MountainBoard({ defaultResortKey }) {
         <div style={{ padding: 20, fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Loading…</div>
       ) : !visiblePosts.length ? (
         <div style={{ padding: 20, fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
-          No posts yet at {RESORT_NAMES[resortKey] || resortKey}. Be the first.
+          No posts yet at {displayName(resortKey)}. Be the first.
         </div>
       ) : (
         <div style={{ display: "grid", gap: 8 }}>
