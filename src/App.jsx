@@ -14,6 +14,7 @@ import HomeDashboard from "./components/HomeDashboard"
 import ActiveSessionBar from "./components/ActiveSessionBar"
 import SessionRecapModal from "./components/SessionRecapModal"
 import MountainBoard from "./components/MountainBoard"
+import MountainPage from "./components/MountainPage"
 import Badge, { TIER_COLORS } from "./components/ui/Badge"
 import ScoreRing from "./components/ui/ScoreRing"
 import {
@@ -161,6 +162,10 @@ const RESORTS = [
     isOpen: false,
   },
 ]
+
+const OWNER_EMAIL = "raykyle1104@gmail.com"
+const KRAMES_BUTTE_KEY = "kramesbutte"
+const KRAMES_BUTTE_RESORT = { resortKey: KRAMES_BUTTE_KEY, name: "Krames Butte", emoji: "🧪", isOpen: null, powderScore: null }
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n))
@@ -462,7 +467,7 @@ function FriendsGoingBadge({ friends }) {
   )
 }
 
-function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGoing, vibeData }) {
+function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGoing, vibeData, onOpenMountainPage }) {
   const [expanded, setExpanded] = useState(false)
   const [weekExpanded, setWeekExpanded] = useState(false)
 
@@ -605,6 +610,14 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
             <SevenDayForecastPanel dailySnow={r.dailySnow} />
           </div>
         )}
+
+        {/* Mountain Page */}
+        <button
+          onClick={() => onOpenMountainPage(r.resortKey)}
+          style={{ display: "grid", placeItems: "center", border: "1px solid rgba(56,189,248,0.3)", color: "#38bdf8", fontWeight: 800, padding: "11px 14px", borderRadius: 14, background: "rgba(56,189,248,0.08)", fontSize: 13, cursor: "pointer" }}
+        >
+          🏔️ Mountain Page →
+        </button>
 
         {/* Directions */}
         <a
@@ -897,6 +910,7 @@ export default function App() {
   const isMobile = useMobile()
   const [activeTab, setActiveTab] = useState("home")
   const [conditionsSubTab, setConditionsSubTab] = useState("conditions")
+  const [mountainPageResortKey, setMountainPageResortKey] = useState(null)
   const [passFilter, setPassFilter] = useState("All")
   const [query, setQuery] = useState("")
   const [sortBy, setSortBy] = useState("Powder Score")
@@ -1328,6 +1342,15 @@ export default function App() {
     return merged
   }, [visibleResorts, sortBy])
 
+  const mountainPageResort = mountainPageResortKey === KRAMES_BUTTE_KEY
+    ? KRAMES_BUTTE_RESORT
+    : rows.find((r) => r.resortKey === mountainPageResortKey) || null
+
+  const handleTabChange = (tab) => {
+    setMountainPageResortKey(null)
+    setActiveTab(tab)
+  }
+
   const rankedResorts = useMemo(
     () =>
       [...rows]
@@ -1597,18 +1620,27 @@ export default function App() {
 
       <TopNav
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         currentProfile={currentProfile}
         notifCount={notifCount}
       />
       <BottomNav
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         currentProfile={currentProfile}
         notifCount={notifCount}
       />
 
       <div className="mobile-scroll-pad" style={{ maxWidth: 1320, margin: "0 auto", padding: isMobile ? "16px 14px 20px" : "30px 20px 48px" }}>
+        {mountainPageResortKey ? (
+          <MountainPage
+            resortKey={mountainPageResortKey}
+            resort={mountainPageResort}
+            currentUserEmail={currentUser?.email}
+            onBack={() => setMountainPageResortKey(null)}
+          />
+        ) : (
+          <>
         <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: activeTab === "dashboard" ? 20 : 16 }}>
           {/* Left: branding */}
           <div>
@@ -1722,7 +1754,7 @@ export default function App() {
             )}
 
             {conditionsSubTab === "board" && (
-              <MountainBoard defaultResortKey={topResort?.resortKey || "vail"} />
+              <MountainBoard defaultResortKey={topResort?.resortKey || "vail"} currentUserEmail={currentUser?.email} />
             )}
 
             {conditionsSubTab === "conditions" && topResort && (
@@ -1798,6 +1830,19 @@ export default function App() {
 
             {conditionsSubTab === "conditions" && (
               <>
+                {currentUser?.email === OWNER_EMAIL && (
+                  <button
+                    onClick={() => setMountainPageResortKey(KRAMES_BUTTE_KEY)}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      width: "100%", padding: "12px 16px", marginBottom: 16, borderRadius: 14,
+                      border: "1px dashed rgba(163,230,53,0.5)", background: "rgba(163,230,53,0.08)",
+                      color: "#a3e635", fontWeight: 800, fontSize: 13, cursor: "pointer",
+                    }}
+                  >
+                    🧪 Krames Butte — Dev Testing Ground →
+                  </button>
+                )}
                 <section
                   className="filter-bar"
                   style={{
@@ -1866,7 +1911,7 @@ export default function App() {
 
                 <main className="resort-grid">
                   {rows.map((r) => (
-                    <ResortCard key={r.name} r={r} skierCounts={skierCounts} skierDetails={skierDetails} activityCount={resortActivityCounts[r.resortKey] || 0} friendsGoing={friendTripsByResort[r.resortKey] || []} vibeData={vibeData} />
+                    <ResortCard key={r.name} r={r} skierCounts={skierCounts} skierDetails={skierDetails} activityCount={resortActivityCounts[r.resortKey] || 0} friendsGoing={friendTripsByResort[r.resortKey] || []} vibeData={vibeData} onOpenMountainPage={setMountainPageResortKey} />
                   ))}
                 </main>
               </>
@@ -1913,6 +1958,8 @@ export default function App() {
             <AuthGate onSignIn={() => openAuthModal("login")} onSignUp={() => openAuthModal("signup")}
               icon="🎿" title="Plan trips with your crew" desc="Sign in to create trips, invite friends, share rides, and track your whole season." />
           )
+        )}
+          </>
         )}
       </div>
     </div>
