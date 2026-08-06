@@ -171,24 +171,30 @@ git commit -m "feat: add getMountainEvents/createMountainEvent API functions"
 ### Task 3: `EventCard` primitive + `EventsWidget` component
 
 **Files:**
+- Create: `src/components/ui/accentColors.js`
 - Create: `src/components/ui/EventCard.jsx`
 - Create: `src/components/EventsWidget.jsx`
 - Modify: `src/lib/mountainPageWidgets.js`
 
 **Interfaces:**
 - Consumes: `getMountainEvents`, `createMountainEvent` from Task 2.
-- Produces: `EventCard({ event, accentColor })` (presentational); `EventsWidget({ resortKey })`. `mountainPageWidgets.js` calls every widget with `{ resortKey, currentUserEmail }` (see the comment at the top of that file) — a widget is allowed to use only the props it needs, it just can't *require* anything beyond those two. `EventsWidget` doesn't need `currentUserEmail` (event creation isn't gated by owner status the way Krames Butte's board-widget visibility is), so it's fine for the component to simply not destructure it.
+- Produces: `accentForIndex(i)` (a tiny standalone helper, not owned by any single card component — Task 6 also consumes it for board post categories, so it does not belong inside `EventCard.jsx`); `EventCard({ event, accentColor })` (presentational); `EventsWidget({ resortKey })`. `mountainPageWidgets.js` calls every widget with `{ resortKey, currentUserEmail }` (see the comment at the top of that file) — a widget is allowed to use only the props it needs, it just can't *require* anything beyond those two. `EventsWidget` doesn't need `currentUserEmail` (event creation isn't gated by owner status the way Krames Butte's board-widget visibility is), so it's fine for the component to simply not destructure it.
 
-- [ ] **Step 1: Write `EventCard`**
+- [ ] **Step 1: Write the shared accent-color helper**
 
-```jsx
-// src/components/ui/EventCard.jsx
-const ACCENTS = ["#fb923c", "#38bdf8", "#2dd4bf"] // cycles per card, matches the mockup's per-event color coding
+```js
+// src/components/ui/accentColors.js
+const ACCENTS = ["#fb923c", "#38bdf8", "#2dd4bf"] // cycles per card
 
 export function accentForIndex(i) {
   return ACCENTS[i % ACCENTS.length]
 }
+```
 
+- [ ] **Step 2: Write `EventCard`**
+
+```jsx
+// src/components/ui/EventCard.jsx
 export default function EventCard({ event, accentColor }) {
   const date = new Date(event.event_date + "T00:00:00")
   const month = date.toLocaleDateString(undefined, { month: "short" }).toUpperCase()
@@ -249,13 +255,14 @@ export default function EventCard({ event, accentColor }) {
 }
 ```
 
-- [ ] **Step 2: Write `EventsWidget`**
+- [ ] **Step 3: Write `EventsWidget`**
 
 ```jsx
 // src/components/EventsWidget.jsx
 import { useEffect, useState } from "react"
 import { getMountainEvents, createMountainEvent } from "../lib/socialApi"
-import EventCard, { accentForIndex } from "./ui/EventCard"
+import EventCard from "./ui/EventCard"
+import { accentForIndex } from "./ui/accentColors"
 
 export default function EventsWidget({ resortKey }) {
   const [events, setEvents] = useState([])
@@ -345,7 +352,7 @@ export default function EventsWidget({ resortKey }) {
 }
 ```
 
-- [ ] **Step 3: Register the widget**
+- [ ] **Step 4: Register the widget**
 
 In `src/lib/mountainPageWidgets.js`:
 
@@ -359,14 +366,14 @@ export const MOUNTAIN_PAGE_WIDGETS = [
 ]
 ```
 
-- [ ] **Step 4: Verify**
+- [ ] **Step 5: Verify**
 
 Run `npm run dev`, log in as the Krames Butte owner account, navigate to the Krames Butte Mountain Page, click the "📅 Events" tab. Confirm: empty state shows "No upcoming events yet", "+ Add Event" opens the composer, creating an event with a title + date shows it in the list with a colored date block, and the "Learn More" link only appears when a link URL was provided. Then check a non-owner account or a different resort's Mountain Page and confirm the Events tab does *not* appear (rollout is Krames-Butte-only).
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add src/components/ui/EventCard.jsx src/components/EventsWidget.jsx src/lib/mountainPageWidgets.js
+git add src/components/ui/accentColors.js src/components/ui/EventCard.jsx src/components/EventsWidget.jsx src/lib/mountainPageWidgets.js
 git commit -m "feat: add Mountain Page Events widget (Krames Butte rollout)"
 ```
 
@@ -537,6 +544,7 @@ git commit -m "refactor: extract HeroPhotoHeader primitive from MountainPage"
 - Modify: `src/components/MountainBoard.jsx:213-232` (the post list render block)
 
 **Interfaces:**
+- Consumes: `accentForIndex` from `src/components/ui/accentColors.js` (Task 3).
 - Produces: `AccentCard({ accentColor, children })` — a card with a colored left border, matching the mockup's `Mountain Bulletin` post cards.
 
 - [ ] **Step 1: Write `AccentCard`**
@@ -562,7 +570,7 @@ export default function AccentCard({ accentColor = "#38bdf8", children }) {
 
 - [ ] **Step 2: Use it for board posts**
 
-In `src/components/MountainBoard.jsx`, add `import AccentCard from "./ui/AccentCard"` and `import { accentForIndex } from "./ui/EventCard"`, then replace the post card block (lines 219-229):
+In `src/components/MountainBoard.jsx`, add `import AccentCard from "./ui/AccentCard"` and `import { accentForIndex } from "./ui/accentColors"` (the shared helper Task 3 created — do not import it from `EventCard.jsx`), then replace the post card block (lines 219-229):
 
 ```jsx
               <AccentCard key={post.id} accentColor={accentForIndex(CATEGORIES.findIndex((c) => c.key === post.category))}>
