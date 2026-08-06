@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { createTrip, addCarpool, getMyProfile } from "../lib/socialApi"
+import { useMobile } from "../lib/useMobile"
 
 const RESORTS = [
   { key: "vail",          name: "Vail",           pass: "Epic", photo: "/resorts/vail.jpg",           accent: "#60a5fa" },
@@ -50,6 +51,7 @@ const labelStyle = {
 }
 
 export default function CreateTripModal({ onClose, onCreated }) {
+  const isMobile = useMobile()
   const [step, setStep] = useState(1)
   const [resortKey, setResortKey] = useState("")
   const [skiDate, setSkiDate] = useState("")
@@ -139,6 +141,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
   return (
     <div
       onClick={onClose}
+      className="modal-sheet-overlay"
       style={{
         position: "fixed",
         inset: 0,
@@ -147,25 +150,30 @@ export default function CreateTripModal({ onClose, onCreated }) {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "flex-start",
-        padding: "20px 16px max(20px, env(safe-area-inset-bottom)) 16px",
+        justifyContent: isMobile ? "flex-end" : "flex-start",
+        padding: isMobile ? 0 : "20px 16px max(20px, env(safe-area-inset-bottom)) 16px",
         zIndex: 300,
-        overflowY: "auto",
+        overflowY: isMobile ? "hidden" : "auto",
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        className="modal-sheet"
         style={{
           width: "100%",
-          maxWidth: step === 1 ? 700 : 560,
+          maxWidth: isMobile ? "100%" : step === 1 ? 700 : 560,
           background: "#0b1424",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: 28,
+          border: isMobile ? "none" : "1px solid rgba(255,255,255,0.1)",
+          borderRadius: isMobile ? "24px 24px 0 0" : 28,
           overflow: "hidden",
           boxShadow: "0 40px 100px rgba(0,0,0,0.75)",
           transition: "max-width 0.3s ease",
+          maxHeight: isMobile ? "94vh" : undefined,
+          overflowY: isMobile ? "auto" : undefined,
         }}
       >
+        {isMobile && <div className="sheet-handle" />}
+
         {/* Modal header */}
         <div
           style={{
