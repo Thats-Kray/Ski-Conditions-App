@@ -3087,7 +3087,7 @@ export async function getMountainEvents(resortKey, limit = 20) {
 }
 
 export async function createMountainEvent({ resortKey, title, description, eventDate, linkUrl }) {
-  const { data: userData } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   const { data, error } = await supabase
     .from("mountain_events")
     .insert({
@@ -3096,7 +3096,7 @@ export async function createMountainEvent({ resortKey, title, description, event
       description: description?.trim() || null,
       event_date: eventDate,
       link_url: linkUrl?.trim() || null,
-      created_by: userData.user.id,
+      created_by: user.id,
     })
     .select()
     .single()
