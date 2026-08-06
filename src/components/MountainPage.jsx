@@ -3,6 +3,7 @@ import { MOUNTAIN_PAGE_WIDGETS } from "../lib/mountainPageWidgets"
 import { RESORT_EMOJI } from "../lib/resorts"
 import Badge, { TIER_COLORS } from "./ui/Badge"
 import ScoreRing from "./ui/ScoreRing"
+import StatStrip from "./ui/StatStrip"
 
 const OWNER_EMAIL = "raykyle1104@gmail.com"
 const KRAMES_BUTTE_KEY = "kramesbutte"
@@ -82,6 +83,16 @@ export default function MountainPage({ resortKey, resort, currentUserEmail, onBa
           )}
         </div>
       </div>
+
+      {resort && (
+        <StatStrip
+          items={[
+            { icon: "❄️", value: resort.snowPrev24in != null ? `${resort.snowPrev24in}"` : "—", label: "Fresh" },
+            { icon: "📏", value: resort.baseDepth != null ? `${resort.baseDepth}"` : "—", label: "Base" },
+            { icon: "🚡", value: resort.liftsOpen != null && resort.liftsTotal != null ? `${resort.liftsOpen}/${resort.liftsTotal}` : "—", label: "Lifts Open" },
+          ]}
+        />
+      )}
 
       <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         {widgets.map((w) => (
