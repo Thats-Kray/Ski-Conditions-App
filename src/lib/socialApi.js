@@ -3062,3 +3062,44 @@ export async function reportBoardPost(postId) {
   const { error } = await supabase.rpc("report_board_post", { p_post_id: postId })
   if (error) throw error
 }
+
+export async function getMountainEvents(resortKey, limit = 20) {
+  // Same no-FK-to-profiles situation as getBoardPosts above — resolve
+  // profiles with a separate query rather than a PostgREST embed.
+  const { data, error } = await supabase
+    .from("mountain_events")
+    .select("*")
+    .eq("resort_key", resortKey)
+    .order("event_date", { ascending: true })
+    .limit(limit)
+  if (error) throw error
+  const events = data || []
+  if (!events.length) return events
+
+  const authorIds = [...new Set(events.map((e) => e.created_by))]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .in("id", authorIds)
+
+  const pm = new Map((profiles || []).map((p) => [p.id, p]))
+  return events.map((e) => ({ ...e, profiles: pm.get(e.created_by) || null }))
+}
+
+export async function createMountainEvent({ resortKey, title, description, eventDate, linkUrl }) {
+  const { data: userData } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from("mountain_events")
+    .insert({
+      resort_key: resortKey,
+      title: title.trim(),
+      description: description?.trim() || null,
+      event_date: eventDate,
+      link_url: linkUrl?.trim() || null,
+      created_by: userData.user.id,
+    })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
