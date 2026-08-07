@@ -474,11 +474,37 @@ A private, owner-only fake resort ("Krames Butte") that bypasses the Mountain Bo
 
 ---
 
+## SECTION 13 — Premium UI Uplift
+
+**Not in ROADMAP.md when started** — grew out of a design review of Stitch-generated mockups (`mockups/Stitch_Premium_Redesigns/`), scoped and executed as its own sprint outside the numbered `sprints/` files, same pattern as Section 12.
+
+**Spec:** `docs/superpowers/specs/2026-08-06-premium-ui-uplift-design.md`
+**Plan:** `docs/superpowers/plans/2026-08-06-premium-ui-uplift.md` (14 tasks, executed via `superpowers:subagent-driven-development` in an isolated worktree)
+
+Visual redesign toward the mockups' premium look across Mountain Page, Crew/Plans, Home, Social Feed, and Profile — six new shared `ui/` primitives (`HeroPhotoHeader`, `StatStrip`, `AccentCard`, `EventCard`, `AvatarStatusRail`, `accentColors.js`) built once and reused across screens, plus a new Mountain Page Events feature.
+
+- [x] Mountain Page: hero/scrim treatment, "Mountain Stats" strip, restyled Bulletin board with per-category accent colors, new Events widget (`migrations/023_mountain_events.sql`, Krames-Butte-only rollout pending live migration apply)
+- [x] Crew/Plans (mobile): "Active Crew" avatar-status rail (resurrected `TodaysCrew.jsx`'s data logic, which had been orphaned since sprints 10/11), restyled trip strip, full-width primary CTA on mobile
+- [x] Home dashboard: "Today's Best Mountain" card enlarged/restyled; "Ready to ski?" hero rebuilt around a real photo + floating glass-panel CTA (follow-on refinement after initial ship — see below)
+- [x] Social Feed: existing text-based activity feed restyled with accent cards (explicitly *not* rebuilt as a photo/route-map feed — that would need new storage/upload infrastructure, out of scope)
+- [x] Profile: season-stat tiles and session-history row spacing restyled
+- [x] Snow tab resort cards: badge/metric-tile visual polish only, zero functional regression (highest-risk task in the plan — verified via diff-only footprint against every existing feature: collapsible details, travel alerts, forecast panel, action buttons)
+- [x] Final whole-branch review caught and fixed 6 real issues before merge, cheapest possible timing since the migration wasn't live yet: `mountain_events` had no DELETE policy (nobody could ever remove a posted event), `link_url` had no scheme validation (stored redirect vector), a 3-color positional cycler was reused as a 4-category semantic color map on the Mountain Board (safety/general collided on the same color), `getMountainEvents` had no upcoming-date filter, plus two minor spacing/null-guard fixes
+- [x] **Follow-up round (same day, post-merge):** live comparison against the Home Page mockup once real browser automation became available (see below) — rebuilt the hero as a photo background with a floating semi-transparent glass CTA panel, gave `ScoreRing` a gradient stroke + optional inside-ring label/tier text, replaced all bottom/top nav emoji with outline SVG icons (`src/components/ui/NavIcons.jsx`)
+- [x] **Process incidents, both recovered with no work lost:** two different implementer subagents (Tasks 4 and 8) had their commits land on `main` instead of the worktree — traced to each subagent's shell tool resetting to a default working directory between separate Bash calls, so an earlier `cd` didn't persist to a later `git commit`. Recovered via `git cherry-pick` onto the worktree branch each time; all later dispatches were given explicit "anchor every git command with `-C <path>` or a single chained `cd && cmd`" instructions, which fully resolved it. During the second recovery, `git reset --hard` was run on `main` without first inspecting uncommitted changes `git status` had just shown — content was almost certainly redundant (confirmed via diff against what was already safely on the worktree branch) but this could not be proven with certainty since the discarded working-tree diff is unrecoverable. See `[[project_2026_08_06_premium_ui_uplift_session]]` for the full account.
+- [x] **New capability unlocked mid-sprint:** real browser automation now works in this sandbox (Playwright + `channel: 'chrome'`, driving the system's installed Chrome instead of downloading an unsupported bundled Chromium) — used to log in with a dedicated test account and visually verify the redesign end-to-end, not just at the code/diff level. See `[[project_browser_automation]]`.
+
+**Files:** `docs/superpowers/plans/2026-08-06-premium-ui-uplift.md`, `migrations/023_mountain_events.sql`, `src/components/ui/{HeroPhotoHeader,StatStrip,AccentCard,EventCard,AvatarStatusRail,accentColors,NavIcons}.jsx`, `src/components/{MountainPage,MountainBoard,EventsWidget,SkiPlansPage,HomeDashboard,ActivityFeed,ProfilePage}.jsx`, `src/App.jsx`, `src/lib/socialApi.js`
+
+**Outstanding:** `migrations/023_mountain_events.sql` has not been applied to the live Supabase project — deliberately left for the app owner rather than having a subagent make production schema changes. The Events tab degrades gracefully (clean error state, not a crash) until it's applied, and is gated to the owner-only Krames Butte resort in the meantime.
+
+---
+
 ## Progress Summary
 
-*Last verified against actual code/migrations/git history 2026-08-04 (not just checkbox state — see [[project_2026_08_roadmap_completion]] and [[project_2026_08_04_mountain_page_session]] memory).*
+*Last verified against actual code/migrations/git history 2026-08-06 (not just checkbox state — see [[project_2026_08_roadmap_completion]], [[project_2026_08_04_mountain_page_session]], and [[project_2026_08_06_premium_ui_uplift_session]] memory).*
 
-All sprints 1–29 are merged, including Mountain Board (Section 11) and the Mountain Page/Krames Butte architecture (Section 12), both verified working live as of 2026-08-04. Section 10 (theme switching) remains the only fully-deferred section.
+All sprints 1–29 are merged, including Mountain Board (Section 11), the Mountain Page/Krames Butte architecture (Section 12), and the Premium UI Uplift redesign (Section 13, includes a same-day Home hero follow-on refinement) — all verified working live as of 2026-08-06. Section 10 (theme switching) remains the only fully-deferred section.
 
 | Section | Tasks | Done |
 |---------|-------|------|
@@ -495,9 +521,10 @@ All sprints 1–29 are merged, including Mountain Board (Section 11) and the Mou
 | 10 — Future / Theme Switching | 1 | 0 (deferred) |
 | 11 — Mountain Board | 1 | 1 |
 | 12 — Mountain Page & Krames Butte | 1 | 1 |
-| **Total** | **31** | **30** |
+| 13 — Premium UI Uplift | 1 | 1 |
+| **Total** | **32** | **31** |
 
-One item remains genuinely incomplete within an otherwise-done task: Task 0.2's "replace remaining hardcoded hex values with token references" is explicitly ongoing (still ~12–24 raw hex literals in `HomeDashboard.jsx`, `LeaderboardPage.jsx`, `ProfilePage.jsx` as of this update).
+One item remains genuinely incomplete within an otherwise-done task: Task 0.2's "replace remaining hardcoded hex values with token references" is explicitly ongoing (still ~12–24 raw hex literals in `HomeDashboard.jsx`, `LeaderboardPage.jsx`, `ProfilePage.jsx` as of this update). Separately, `migrations/023_mountain_events.sql` (Section 13) has not yet been applied to the live Supabase project — see that section's "Outstanding" note.
 
 ---
 
@@ -505,6 +532,6 @@ One item remains genuinely incomplete within an otherwise-done task: Task 0.2's 
 
 Detailed, execution-ready plans live in `sprints/` (one file per plan, self-contained agent briefs — see each file's header for exact file targets, code, and acceptance criteria). Execute with **`superpowers:subagent-driven-development`** (fresh subagent per task, two-stage review) or **`superpowers:executing-plans`** (inline, batch execution with checkpoints).
 
-**Sprints 1–29 are all executed, merged, and verified live** (confirmed against migrations 010–022, on-disk components, and commit history as of 2026-08-04). The Mountain Page/Krames Butte architecture (Section 12) shipped the same session as a follow-on to Sprint 29, via its own spec + plan under `docs/superpowers/` rather than a numbered `sprints/` file.
+**Sprints 1–29 are all executed, merged, and verified live** (confirmed against migrations 010–022, on-disk components, and commit history as of 2026-08-04). The Mountain Page/Krames Butte architecture (Section 12) and the Premium UI Uplift redesign (Section 13) each shipped as their own spec + plan under `docs/superpowers/` rather than a numbered `sprints/` file — Section 13 is the first of these executed via a real isolated git worktree (`superpowers:using-git-worktrees` + `superpowers:subagent-driven-development` together), not just a fresh subagent per task in the main checkout.
 
-Task 1.3 required no sprint (already fully implemented — see the task's own notes above). Section 10 (theme switching) is explicitly deferred per its own heading and has no sprint — **it is the only remaining unstarted work in this file**, alongside the still-ongoing hex-token cleanup noted in Task 0.2.
+Task 1.3 required no sprint (already fully implemented — see the task's own notes above). Section 10 (theme switching) is explicitly deferred per its own heading and has no sprint — **it is the only remaining unstarted work in this file**, alongside the still-ongoing hex-token cleanup noted in Task 0.2 and the pending live migration apply noted in Section 13.
