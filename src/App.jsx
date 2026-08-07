@@ -33,6 +33,15 @@ import {
 import { flushSessionToSupabase, logSkiDay } from "./lib/leaderboardApi"
 import { useGpsTracker } from "./lib/useGpsTracker"
 import Avatar from "./components/ui/Avatar"
+import { HomeIcon, SnowIcon, PlansIcon, SocialIcon, ProfileIcon } from "./components/ui/NavIcons"
+
+const NAV_ICONS = {
+  home: HomeIcon,
+  dashboard: SnowIcon,
+  plans: PlansIcon,
+  friends: SocialIcon,
+  profile: ProfileIcon,
+}
 
 import { supabase, authHeaders } from "./lib/supabase"
 import { normalizeResortKey } from "./lib/resorts"
@@ -735,11 +744,11 @@ function AuthGate({ icon, title, desc, onSignIn, onSignUp }) {
 }
 
 const BOTTOM_TABS = [
-  { key: "home",      icon: "🏠", label: "Home" },
-  { key: "dashboard", icon: "🏔️", label: "Snow" },
-  { key: "plans",     icon: "🎿",  label: "Plans" },
-  { key: "friends",   icon: "💬",  label: "Social" },
-  { key: "profile",   icon: "👤",  label: "Profile" },
+  { key: "home",      label: "Home" },
+  { key: "dashboard", label: "Snow" },
+  { key: "plans",     label: "Plans" },
+  { key: "friends",   label: "Social" },
+  { key: "profile",   label: "Profile" },
 ]
 
 const TOP_TABS = BOTTOM_TABS
@@ -761,10 +770,11 @@ function ProfileAvatar({ profile, size, isActive }) {
 function BottomNav({ activeTab, onTabChange, currentProfile, notifCount }) {
   return (
     <nav className="bottom-nav">
-      {BOTTOM_TABS.map(({ key, icon, label }) => {
+      {BOTTOM_TABS.map(({ key, label }) => {
         const isActive = activeTab === key
         const isProfile = key === "profile"
         const isSocial = key === "friends"
+        const Icon = NAV_ICONS[key]
         return (
           <button
             key={key}
@@ -789,8 +799,8 @@ function BottomNav({ activeTab, onTabChange, currentProfile, notifCount }) {
             {isProfile && currentProfile ? (
               <ProfileAvatar profile={currentProfile} size={26} isActive={isActive} />
             ) : (
-              <span style={{ position: "relative", fontSize: 22, lineHeight: 1, filter: isActive ? "drop-shadow(0 0 6px rgba(96,165,250,0.6))" : "none", transition: "filter 0.15s ease" }}>
-                {icon}
+              <span style={{ position: "relative", lineHeight: 1, display: "flex", filter: isActive ? "drop-shadow(0 0 6px rgba(96,165,250,0.6))" : "none", transition: "filter 0.15s ease" }}>
+                <Icon size={22} />
                 {isSocial && notifCount > 0 && (
                   <span style={{ position: "absolute", top: -4, right: -6, minWidth: 16, height: 16, borderRadius: 999, background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "1.5px solid rgba(4,8,15,1)", lineHeight: 1 }}>
                     {notifCount > 9 ? "9+" : notifCount}
@@ -836,10 +846,11 @@ function TopNav({ activeTab, onTabChange, currentProfile, notifCount }) {
 
         {/* Tabs */}
         <div style={{ display: "flex", gap: 4 }}>
-          {TOP_TABS.map(({ key, icon, label }) => {
+          {TOP_TABS.map(({ key, label }) => {
             const isActive = activeTab === key
             const isProfile = key === "profile"
             const isSocial = key === "friends"
+            const Icon = NAV_ICONS[key]
             return (
               <button
                 key={key}
@@ -858,8 +869,8 @@ function TopNav({ activeTab, onTabChange, currentProfile, notifCount }) {
                 {isProfile && currentProfile ? (
                   <ProfileAvatar profile={currentProfile} size={20} isActive={isActive} />
                 ) : (
-                  <span style={{ position: "relative", fontSize: 16 }}>
-                    {icon}
+                  <span style={{ position: "relative", display: "flex", lineHeight: 1 }}>
+                    <Icon size={16} />
                     {isSocial && notifCount > 0 && (
                       <span style={{ position: "absolute", top: -4, right: -6, minWidth: 14, height: 14, borderRadius: 999, background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white", fontSize: 8, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 2px", border: "1.5px solid rgba(4,8,15,1)", lineHeight: 1 }}>
                         {notifCount > 9 ? "9+" : notifCount}

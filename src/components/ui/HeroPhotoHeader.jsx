@@ -12,15 +12,17 @@ export default function HeroPhotoHeader({ photoPath, title, badges, scoreSlot, c
         border: "1px solid rgba(255,255,255,0.1)",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
-        <div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
-            {badges}
+      {title && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
+              {badges}
+            </div>
+            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, color: "white" }}>{title}</h1>
           </div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, color: "white" }}>{title}</h1>
+          {scoreSlot}
         </div>
-        {scoreSlot}
-      </div>
+      )}
       {children}
     </div>
   )
