@@ -89,24 +89,24 @@ function TodaysBestMountainCard({ resorts, onTabChange }) {
   }
 
   return (
-    <Card style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <div style={{ fontSize: 11, color: "var(--color-text-3)", textTransform: "uppercase", letterSpacing: 0.5 }}>
-            Today's Best Mountain
-          </div>
-          <div style={{ fontSize: 22, fontWeight: 900, marginTop: 2 }}>
+    <Card style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ fontSize: 11, color: "var(--color-text-3)", textTransform: "uppercase", letterSpacing: 0.5 }}>
+        Today's Best Mountain
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <ScoreRing score={best.powderScore} tier={best.powderTier ?? "Closed"} size={96} strokeWidth={8} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 24, fontWeight: 900, lineHeight: 1.1 }}>
             {resortEmoji(best.resortKey)} {resortName(best.resortKey)}
           </div>
-          <div style={{ marginTop: 6 }}>
+          <div style={{ marginTop: 6, marginBottom: 10 }}>
             <Badge label={best.powderTier ?? "Closed"} color={TIER_COLORS[best.powderTier] ?? TIER_COLORS.Closed} />
           </div>
+          <div style={{ display: "flex", gap: 20 }}>
+            <SnowStat icon="❄️" label="Snow 24h" value={best.snowPrev24in ?? "—"} unit="in" />
+            <SnowStat icon="🚗" label="Drive Risk" value={best.driveRisk ?? "—"} />
+          </div>
         </div>
-        <ScoreRing score={best.powderScore} tier={best.powderTier ?? "Closed"} size={64} strokeWidth={6} />
-      </div>
-      <div style={{ display: "flex", gap: 20 }}>
-        <SnowStat icon="❄️" label="Snow 24h" value={best.snowPrev24in ?? "—"} unit="in" />
-        <SnowStat icon="🚗" label="Drive Risk" value={best.driveRisk ?? "—"} />
       </div>
       <button
         onClick={() => onTabChange("dashboard")}
