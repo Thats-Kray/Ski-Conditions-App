@@ -57,8 +57,8 @@ export default function AvatarStatusRail() {
     <>
       <div style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 4 }}>
         {plans.map((plan) => {
-          const name = plan.user_id === user?.id ? "You" : (plan.profiles?.full_name || plan.profiles?.username || "Skier")
-          const avatarUrl = plan.profiles?.avatar_url
+          const name = plan.user_id === user?.id ? "You" : (plan.profile?.full_name || plan.profile?.username || "Skier")
+          const avatarUrl = plan.profile?.avatar_url
           const color = statusColor(plan.status)
           return (
             <button
