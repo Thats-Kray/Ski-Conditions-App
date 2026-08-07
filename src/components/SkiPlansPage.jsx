@@ -6,6 +6,7 @@ import TripDetailModal from "./TripDetailModal"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { formatDate } from "../lib/format"
 import Avatar from "./ui/Avatar"
+import AvatarStatusRail from "./ui/AvatarStatusRail"
 
 /* ── Compact upcoming trip strip ───────────────────────────────────── */
 function UpcomingStrip({ trips, invitedTrips, currentUser, onOpen }) {
@@ -358,6 +359,14 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
           onOpen={setStripTrip}
         />
       )}
+
+      {/* ── Active crew rail ── */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.38)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
+          Active Crew
+        </div>
+        <AvatarStatusRail />
+      </div>
 
       {/* ── Sub-tab selector ── */}
       <div style={{
