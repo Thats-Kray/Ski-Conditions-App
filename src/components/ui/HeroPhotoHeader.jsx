@@ -1,9 +1,9 @@
-export default function HeroPhotoHeader({ photoPath, title, badges, scoreSlot, children }) {
+export default function HeroPhotoHeader({ photoPath, title, badges, scoreSlot, children, rounded = true }) {
   return (
     <div
       style={{
         position: "relative",
-        borderRadius: 24,
+        borderRadius: rounded ? 24 : 0,
         overflow: "hidden",
         padding: 20,
         background: photoPath

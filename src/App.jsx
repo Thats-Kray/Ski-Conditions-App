@@ -33,6 +33,7 @@ import {
 import { flushSessionToSupabase, logSkiDay } from "./lib/leaderboardApi"
 import { useGpsTracker } from "./lib/useGpsTracker"
 import Avatar from "./components/ui/Avatar"
+import HeroBannerStrip from "./components/ui/HeroBannerStrip"
 import { HomeIcon, SnowIcon, PlansIcon, SocialIcon, ProfileIcon } from "./components/ui/NavIcons"
 
 const NAV_ICONS = {
@@ -1652,6 +1653,9 @@ export default function App() {
           />
         ) : (
           <>
+        {activeTab !== "home" && (
+          <HeroBannerStrip photoPath="/hero-mountain.jpg" />
+        )}
         <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: activeTab === "dashboard" ? 20 : 16 }}>
           {/* Left: branding */}
           <div>

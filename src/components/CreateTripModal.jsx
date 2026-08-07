@@ -491,7 +491,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                 Invite Theme{" "}
                 <span style={{ color: "rgba(255,255,255,0.28)", fontWeight: 600 }}>optional</span>
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(64px, 1fr))", gap: 6 }}>
                 {THEMES.map((t) => (
                   <button
                     key={t.key}

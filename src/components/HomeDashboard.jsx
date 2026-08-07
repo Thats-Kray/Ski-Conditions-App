@@ -675,12 +675,18 @@ function StartMyDayCta({ currentUser, sessionActive, resorts, onStartSession }) 
     .sort((a, b) => (b.powderScore ?? -1) - (a.powderScore ?? -1))[0]
 
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div style={{
+      marginBottom: 16,
+      width: "100vw",
+      marginLeft: "calc(50% - 50vw)",
+      marginRight: "calc(50% - 50vw)",
+    }}>
       <HeroPhotoHeader
         photoPath={topResort?.photoPath || HERO_FALLBACK_PHOTO}
         title=""
         badges={[]}
         scoreSlot={null}
+        rounded={false}
       >
         <div style={{
           background: "rgba(30,41,59,0.45)",

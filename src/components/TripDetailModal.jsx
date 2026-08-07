@@ -827,7 +827,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
 
               <div>
                 <div style={{ fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>Theme</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(48px, 1fr))", gap: 6 }}>
                   {Object.entries(THEMES).map(([key, t]) => (
                     <button key={key} type="button" onClick={() => setEditTheme(key)} style={{
                       background: editTheme === key ? `${t.accent}22` : "rgba(255,255,255,0.04)",
