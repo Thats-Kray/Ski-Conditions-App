@@ -3,6 +3,7 @@ import { MOUNTAIN_PAGE_WIDGETS } from "../lib/mountainPageWidgets"
 import { RESORT_EMOJI } from "../lib/resorts"
 import Badge, { TIER_COLORS } from "./ui/Badge"
 import ScoreRing from "./ui/ScoreRing"
+import HeroPhotoHeader from "./ui/HeroPhotoHeader"
 import StatStrip from "./ui/StatStrip"
 
 const OWNER_EMAIL = "raykyle1104@gmail.com"
@@ -42,47 +43,35 @@ export default function MountainPage({ resortKey, resort, currentUserEmail, onBa
         ← Back
       </button>
 
-      <div
-        style={{
-          position: "relative",
-          borderRadius: 24,
-          overflow: "hidden",
-          padding: 20,
-          background: resort?.photoPath
-            ? `linear-gradient(to top, rgba(4,8,15,0.88), rgba(2,6,23,0.3)), url(${resort.photoPath}) center/cover`
-            : "linear-gradient(135deg, #1e293b, #334155)",
-          border: "1px solid rgba(255,255,255,0.1)",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
-          <div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
-              {resortKey === KRAMES_BUTTE_KEY && (
-                <span style={{ fontSize: 11, fontWeight: 900, color: "#a3e635", border: "1px dashed rgba(163,230,53,0.5)", borderRadius: 999, padding: "3px 8px" }}>
-                  🧪 DEV
-                </span>
-              )}
-              {resort?.isOpen === true && (
-                <span style={{ fontSize: 11, fontWeight: 900, color: "#4ade80", border: "1px solid rgba(34,197,94,0.5)", borderRadius: 999, padding: "3px 8px" }}>
-                  Open
-                </span>
-              )}
-              {resort?.isOpen === false && (
-                <span style={{ fontSize: 11, fontWeight: 900, color: "#f87171", border: "1px solid rgba(239,68,68,0.5)", borderRadius: 999, padding: "3px 8px" }}>
-                  Closed for Season
-                </span>
-              )}
-            </div>
-            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, color: "white" }}>{emoji} {name}</h1>
-          </div>
-          {resort?.powderScore != null && (
+      <HeroPhotoHeader
+        photoPath={resort?.photoPath}
+        title={<>{emoji} {name}</>}
+        badges={[
+          resortKey === KRAMES_BUTTE_KEY && (
+            <span key="dev" style={{ fontSize: 11, fontWeight: 900, color: "#a3e635", border: "1px dashed rgba(163,230,53,0.5)", borderRadius: 999, padding: "3px 8px" }}>
+              🧪 DEV
+            </span>
+          ),
+          resort?.isOpen === true && (
+            <span key="open" style={{ fontSize: 11, fontWeight: 900, color: "#4ade80", border: "1px solid rgba(34,197,94,0.5)", borderRadius: 999, padding: "3px 8px" }}>
+              Open
+            </span>
+          ),
+          resort?.isOpen === false && (
+            <span key="closed" style={{ fontSize: 11, fontWeight: 900, color: "#f87171", border: "1px solid rgba(239,68,68,0.5)", borderRadius: 999, padding: "3px 8px" }}>
+              Closed for Season
+            </span>
+          ),
+        ].filter(Boolean)}
+        scoreSlot={
+          resort?.powderScore != null && (
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <ScoreRing score={resort.powderScore} tier={resort.powderTier ?? "Closed"} size={64} strokeWidth={6} />
               <Badge label={resort.powderTier || "—"} color={TIER_COLORS[resort.powderTier] ?? TIER_COLORS.Closed} />
             </div>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
 
       {resort && (
         <StatStrip
