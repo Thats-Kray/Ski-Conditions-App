@@ -3070,6 +3070,7 @@ export async function getMountainEvents(resortKey, limit = 20) {
     .from("mountain_events")
     .select("*")
     .eq("resort_key", resortKey)
+    .gte("event_date", new Date().toISOString().slice(0, 10))
     .order("event_date", { ascending: true })
     .limit(limit)
   if (error) throw error

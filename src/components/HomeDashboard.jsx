@@ -639,7 +639,7 @@ function StartMyDayCta({ currentUser, sessionActive, resorts, onStartSession }) 
     )
   }
 
-  const topResort = resorts
+  const topResort = (resorts || [])
     .filter(r => r.isOpen !== false && r.powderScore != null)
     .sort((a, b) => (b.powderScore ?? -1) - (a.powderScore ?? -1))[0]
 

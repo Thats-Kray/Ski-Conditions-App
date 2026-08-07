@@ -59,7 +59,7 @@ export default function ActivityFeed() {
   if (!items.length) return <div style={{ padding: 20, fontSize: 13, color: "var(--color-text-3)" }}>No recent activity from your crew yet.</div>
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, overflowY: "auto" }}>
       {items.map((item) => {
         const actorName = item.profiles?.full_name || item.profiles?.username || "Someone"
         const describe = TYPE_COPY[item.type]
