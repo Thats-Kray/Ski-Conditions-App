@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { getActivityFeed, getActivityReactions, addActivityReaction, getCurrentUser } from "../lib/socialApi"
 import Avatar from "./ui/Avatar"
+import AccentCard from "./ui/AccentCard"
 import { timeAgo } from "../lib/format"
 import { resortName } from "../lib/resorts"
 
@@ -63,35 +64,38 @@ export default function ActivityFeed() {
         const actorName = item.profiles?.full_name || item.profiles?.username || "Someone"
         const describe = TYPE_COPY[item.type]
         const itemReactions = reactions[item.id] || []
+        const typeAccent = item.type === "ski_session" ? "#38bdf8" : item.type === "trip_created" ? "#fb923c" : "#a78bfa"
         return (
-          <div key={item.id} style={{ display: "flex", gap: 10, padding: "10px 12px", alignItems: "flex-start" }}>
-            <Avatar profile={item.profiles} size={32} />
-            <div style={{ fontSize: 13, flex: 1 }}>
-              <div>{describe ? describe(actorName, item.metadata) : `${actorName} did something`}</div>
-              <div style={{ fontSize: 11, color: "var(--color-text-3)", marginTop: 2 }}>{timeAgo(item.created_at)}</div>
-              <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
-                {EMOJIS.map((emoji) => {
-                  const count = itemReactions.filter((r) => r.emoji === emoji).length
-                  const mine = itemReactions.some((r) => r.user_id === currentUserId && r.emoji === emoji)
-                  return (
-                    <button
-                      key={emoji}
-                      onClick={() => handleReact(item.id, emoji)}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 3, padding: "2px 6px",
-                        borderRadius: "var(--radius-pill)", border: "none", cursor: "pointer", fontSize: 12,
-                        background: mine ? "var(--color-accent)" : "rgba(255,255,255,0.06)",
-                        color: mine ? "var(--color-bg)" : "var(--color-text-2)",
-                      }}
-                    >
-                      {emoji}
-                      {count > 0 && <span style={{ fontSize: 10, fontWeight: 700 }}>{count}</span>}
-                    </button>
-                  )
-                })}
+          <AccentCard key={item.id} accentColor={typeAccent}>
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <Avatar profile={item.profiles} size={36} />
+              <div style={{ fontSize: 13, flex: 1 }}>
+                <div>{describe ? describe(actorName, item.metadata) : `${actorName} did something`}</div>
+                <div style={{ fontSize: 11, color: "var(--color-text-3)", marginTop: 2 }}>{timeAgo(item.created_at)}</div>
+                <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                  {EMOJIS.map((emoji) => {
+                    const count = itemReactions.filter((r) => r.emoji === emoji).length
+                    const mine = itemReactions.some((r) => r.user_id === currentUserId && r.emoji === emoji)
+                    return (
+                      <button
+                        key={emoji}
+                        onClick={() => handleReact(item.id, emoji)}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 3, padding: "2px 6px",
+                          borderRadius: "var(--radius-pill)", border: "none", cursor: "pointer", fontSize: 12,
+                          background: mine ? "var(--color-accent)" : "rgba(255,255,255,0.06)",
+                          color: mine ? "var(--color-bg)" : "var(--color-text-2)",
+                        }}
+                      >
+                        {emoji}
+                        {count > 0 && <span style={{ fontSize: 10, fontWeight: 700 }}>{count}</span>}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             </div>
-          </div>
+          </AccentCard>
         )
       })}
     </div>
