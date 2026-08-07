@@ -503,13 +503,13 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
       >
         <div style={{ position: "absolute", top: 14, right: 14, display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {r.isOpen === false && (
-            <div style={{ background: "rgba(30,10,10,0.75)", border: "1px solid rgba(239,68,68,0.5)", borderRadius: 999, padding: "5px 9px", fontSize: 11, fontWeight: 900, color: "#f87171" }}>Closed for Season</div>
+            <div style={{ background: "rgba(30,10,10,0.75)", border: "1px solid rgba(239,68,68,0.5)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, color: "#f87171", backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>Closed for Season</div>
           )}
           {r.isOpen === true && (
-            <div style={{ background: "rgba(10,30,10,0.75)", border: "1px solid rgba(34,197,94,0.5)", borderRadius: 999, padding: "5px 9px", fontSize: 11, fontWeight: 900, color: "#4ade80" }}>Open</div>
+            <div style={{ background: "rgba(10,30,10,0.75)", border: "1px solid rgba(34,197,94,0.5)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, color: "#4ade80", backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>Open</div>
           )}
-          <div style={{ background: "rgba(4,8,15,0.65)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "5px 9px", fontSize: 11, fontWeight: 900 }}>{r.pass}</div>
-          <div style={{ background: "rgba(4,8,15,0.65)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "5px 9px", fontSize: 11, fontWeight: 900, color: riskColor(r.driveRisk) }}>{r.driveRisk || "Unknown"}</div>
+          <div style={{ background: "rgba(4,8,15,0.65)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>{r.pass}</div>
+          <div style={{ background: "rgba(4,8,15,0.65)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, color: riskColor(r.driveRisk), backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>{r.driveRisk || "Unknown"}</div>
         </div>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 12, paddingTop: 44 }}>
           <ResortLogo resort={r} />
@@ -539,9 +539,9 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
             { label: "Base",     value: r.baseDepth  != null ? `${r.baseDepth}"` : "—" },
             { label: "Skiers",   value: skierCounts?.[r.resortKey] ?? 0 },
           ].map(({ label, value }) => (
-            <div key={label} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "10px 12px" }}>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</div>
-              <div style={{ marginTop: 3, fontSize: 20, fontWeight: 900 }}>{value}</div>
+            <div key={label} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 16, padding: "12px 12px" }}>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
+              <div style={{ marginTop: 4, fontSize: 22, fontWeight: 900 }}>{value}</div>
             </div>
           ))}
         </div>

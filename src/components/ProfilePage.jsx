@@ -117,13 +117,15 @@ function SeasonStatsCard({ stats, priorStats, season, viewMode = "season" }) {
       </div>
 
       {/* 2×2 stats grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, padding: "0 1px 1px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "0 14px 14px" }}>
         {statItems.map(item => (
           <div key={item.label} style={{
-            background: "rgba(4,8,20,0.45)",
-            padding: "18px 18px 16px",
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 14,
+            padding: "16px 16px 14px",
           }}>
-            <div style={{ fontSize: 48, fontWeight: 900, color: "white", lineHeight: 1, letterSpacing: -2 }}>
+            <div style={{ fontSize: 32, fontWeight: 900, color: "white", lineHeight: 1, letterSpacing: -1 }}>
               {item.value}
             </div>
             <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", marginTop: 5, textTransform: "uppercase", letterSpacing: 0.6 }}>
@@ -258,8 +260,8 @@ function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fullName 
           const canEdit = typeof s.id === "string" && !s.id.startsWith("trip-")
           return (
             <div key={s.id || i} style={{
-              display: "flex", alignItems: "center", gap: 10,
-              padding: "11px 16px",
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "14px 16px",
               borderTop: i > 0 ? "1px solid rgba(255,255,255,0.05)" : "none",
             }}>
               <span style={{ fontSize: 18, flexShrink: 0 }}>{emoji}</span>

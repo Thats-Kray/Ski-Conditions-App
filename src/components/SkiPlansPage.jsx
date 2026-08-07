@@ -6,6 +6,7 @@ import TripDetailModal from "./TripDetailModal"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { formatDate } from "../lib/format"
 import Avatar from "./ui/Avatar"
+import AvatarStatusRail from "./ui/AvatarStatusRail"
 
 /* ── Compact upcoming trip strip ───────────────────────────────────── */
 function UpcomingStrip({ trips, invitedTrips, currentUser, onOpen }) {
@@ -19,7 +20,7 @@ function UpcomingStrip({ trips, invitedTrips, currentUser, onOpen }) {
   return (
     <div style={{ marginBottom: 20 }}>
       <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.38)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-        Your Upcoming Plans
+        Upcoming Trips
       </div>
       <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6, scrollbarWidth: "none" }}>
         {allCards.map((trip) => {
@@ -319,6 +320,15 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
         .plan-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(37,99,235,0.5) !important; }
         .trip-card:hover { transform: translateY(-3px); box-shadow: 0 36px 90px rgba(0,0,0,0.65) !important; }
         .hype-btn:hover { transform: scale(1.22) !important; background: rgba(255,255,255,0.13) !important; }
+        @media (max-width: 767px) {
+          .plan-cta {
+            width: 100%;
+            justify-content: center;
+            padding: 14px 20px !important;
+            font-size: 15px !important;
+            box-shadow: 0 8px 24px rgba(37,99,235,0.35) !important;
+          }
+        }
       `}</style>
 
       {/* ── Page header ── */}
@@ -358,6 +368,14 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
           onOpen={setStripTrip}
         />
       )}
+
+      {/* ── Active crew rail ── */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.38)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
+          Active Crew
+        </div>
+        <AvatarStatusRail />
+      </div>
 
       {/* ── Sub-tab selector ── */}
       <div style={{

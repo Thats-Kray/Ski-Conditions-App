@@ -20,6 +20,7 @@ import Card from "./ui/Card"
 import Badge, { TIER_COLORS } from "./ui/Badge"
 import ScoreRing from "./ui/ScoreRing"
 import SnowStat from "./ui/SnowStat"
+import HeroPhotoHeader from "./ui/HeroPhotoHeader"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -89,24 +90,24 @@ function TodaysBestMountainCard({ resorts, onTabChange }) {
   }
 
   return (
-    <Card style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <div style={{ fontSize: 11, color: "var(--color-text-3)", textTransform: "uppercase", letterSpacing: 0.5 }}>
-            Today's Best Mountain
-          </div>
-          <div style={{ fontSize: 22, fontWeight: 900, marginTop: 2 }}>
+    <Card style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ fontSize: 11, color: "var(--color-text-3)", textTransform: "uppercase", letterSpacing: 0.5 }}>
+        Today's Best Mountain
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <ScoreRing score={best.powderScore} tier={best.powderTier ?? "Closed"} size={96} strokeWidth={8} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 24, fontWeight: 900, lineHeight: 1.1 }}>
             {resortEmoji(best.resortKey)} {resortName(best.resortKey)}
           </div>
-          <div style={{ marginTop: 6 }}>
+          <div style={{ marginTop: 6, marginBottom: 10 }}>
             <Badge label={best.powderTier ?? "Closed"} color={TIER_COLORS[best.powderTier] ?? TIER_COLORS.Closed} />
           </div>
+          <div style={{ display: "flex", gap: 20 }}>
+            <SnowStat icon="❄️" label="Snow 24h" value={best.snowPrev24in ?? "—"} unit="in" />
+            <SnowStat icon="🚗" label="Drive Risk" value={best.driveRisk ?? "—"} />
+          </div>
         </div>
-        <ScoreRing score={best.powderScore} tier={best.powderTier ?? "Closed"} size={64} strokeWidth={6} />
-      </div>
-      <div style={{ display: "flex", gap: 20 }}>
-        <SnowStat icon="❄️" label="Snow 24h" value={best.snowPrev24in ?? "—"} unit="in" />
-        <SnowStat icon="🚗" label="Drive Risk" value={best.driveRisk ?? "—"} />
       </div>
       <button
         onClick={() => onTabChange("dashboard")}
@@ -638,47 +639,41 @@ function StartMyDayCta({ currentUser, sessionActive, resorts, onStartSession }) 
     )
   }
 
+  const topResort = (resorts || [])
+    .filter(r => r.isOpen !== false && r.powderScore != null)
+    .sort((a, b) => (b.powderScore ?? -1) - (a.powderScore ?? -1))[0]
+
   return (
-    <div style={{
-      background: "linear-gradient(135deg, rgba(56,189,248,0.12), rgba(2,132,199,0.08))",
-      border: "1px solid rgba(56,189,248,0.25)",
-      borderRadius: 20,
-      padding: "16px 20px",
-      marginBottom: 16,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: 12,
-    }}>
-      <div>
-        <div style={{ fontWeight: 900, fontSize: 15, color: "white" }}>Ready to ski?</div>
-        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", marginTop: 2 }}>
-          Track your runs, vertical, and speed
-        </div>
-      </div>
-      <button
-        onClick={() => {
-          // Use top-ranked open resort as default, user can change later
-          const topResort = resorts
-            .filter(r => r.isOpen !== false && r.powderScore != null)
-            .sort((a, b) => (b.powderScore ?? -1) - (a.powderScore ?? -1))[0]
-          onStartSession(topResort?.name ?? "Unknown Resort")
-        }}
-        style={{
-          background: "linear-gradient(135deg, #0284c7, #38bdf8)",
-          border: "none",
-          borderRadius: 14,
-          padding: "12px 20px",
-          color: "white",
-          fontWeight: 900,
-          fontSize: 14,
-          cursor: "pointer",
-          flexShrink: 0,
-          boxShadow: "0 4px 16px rgba(56,189,248,0.3)",
-        }}
+    <div style={{ marginBottom: 16 }}>
+      <HeroPhotoHeader
+        photoPath={topResort?.photoPath}
+        title="Ready to ski?"
+        badges={[]}
+        scoreSlot={null}
       >
-        Start My Day ⛷
-      </button>
+        <div style={{ marginTop: 14 }}>
+          <button
+            onClick={() => onStartSession(topResort?.name ?? "Unknown Resort")}
+            style={{
+              width: "100%",
+              background: "linear-gradient(135deg, #0284c7, #38bdf8)",
+              border: "none",
+              borderRadius: 14,
+              padding: "14px 20px",
+              color: "white",
+              fontWeight: 900,
+              fontSize: 15,
+              cursor: "pointer",
+              boxShadow: "0 4px 16px rgba(56,189,248,0.3)",
+            }}
+          >
+            Start My Day ⛷
+          </button>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 10, textAlign: "center" }}>
+            Track your runs, vertical, and speed.
+          </div>
+        </div>
+      </HeroPhotoHeader>
     </div>
   )
 }

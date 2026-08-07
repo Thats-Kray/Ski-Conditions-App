@@ -7,6 +7,7 @@ import {
 import { useCurrentPosition } from "../lib/useCurrentPosition"
 import { RESORT_NAMES, RESORT_EMOJI } from "../lib/resorts"
 import { timeAgo } from "../lib/format"
+import AccentCard from "./ui/AccentCard"
 
 const CATEGORIES = [
   { key: "safety",     label: "Safety",       emoji: "🚨" },
@@ -14,6 +15,16 @@ const CATEGORIES = [
   { key: "social",     label: "Social",       emoji: "🤙" },
   { key: "general",    label: "General",      emoji: "💬" },
 ]
+
+// Explicit, stable category→color map — unlike accentForIndex's positional
+// cycling (correct for unbounded lists like EventCard), safety-relevant
+// meaning here requires each fixed category to keep its own color.
+const CATEGORY_COLORS = {
+  safety: "#f87171",
+  lost_found: "#38bdf8",
+  social: "#2dd4bf",
+  general: "#fb923c",
+}
 
 const OWNER_EMAIL = "raykyle1104@gmail.com"
 const KRAMES_BUTTE_KEY = "kramesbutte"
@@ -216,7 +227,7 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
             const cat = CATEGORIES.find((c) => c.key === post.category)
             const author = post.profiles?.full_name || post.profiles?.username || "Someone"
             return (
-              <div key={post.id} style={{ padding: 12, borderRadius: 14, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
+              <AccentCard key={post.id} accentColor={CATEGORY_COLORS[post.category] ?? "#38bdf8"}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                   <span style={{ fontSize: 11, fontWeight: 800, color: "#38bdf8" }}>{cat?.emoji} {cat?.label || post.category}</span>
                   <button onClick={() => handleReport(post.id)} disabled={post._reported} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", fontSize: 11, cursor: "pointer" }}>
@@ -225,7 +236,7 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
                 </div>
                 <div style={{ fontSize: 14, color: "white", marginBottom: 6 }}>{post.content}</div>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{author} · {timeAgo(post.created_at)}</div>
-              </div>
+              </AccentCard>
             )
           })}
         </div>
