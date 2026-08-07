@@ -7,6 +7,8 @@ import {
 import { useCurrentPosition } from "../lib/useCurrentPosition"
 import { RESORT_NAMES, RESORT_EMOJI } from "../lib/resorts"
 import { timeAgo } from "../lib/format"
+import AccentCard from "./ui/AccentCard"
+import { accentForIndex } from "./ui/accentColors"
 
 const CATEGORIES = [
   { key: "safety",     label: "Safety",       emoji: "🚨" },
@@ -216,7 +218,7 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
             const cat = CATEGORIES.find((c) => c.key === post.category)
             const author = post.profiles?.full_name || post.profiles?.username || "Someone"
             return (
-              <div key={post.id} style={{ padding: 12, borderRadius: 14, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
+              <AccentCard key={post.id} accentColor={accentForIndex(CATEGORIES.findIndex((c) => c.key === post.category))}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                   <span style={{ fontSize: 11, fontWeight: 800, color: "#38bdf8" }}>{cat?.emoji} {cat?.label || post.category}</span>
                   <button onClick={() => handleReport(post.id)} disabled={post._reported} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", fontSize: 11, cursor: "pointer" }}>
@@ -225,7 +227,7 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
                 </div>
                 <div style={{ fontSize: 14, color: "white", marginBottom: 6 }}>{post.content}</div>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{author} · {timeAgo(post.created_at)}</div>
-              </div>
+              </AccentCard>
             )
           })}
         </div>
