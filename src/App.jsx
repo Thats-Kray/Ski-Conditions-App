@@ -1123,6 +1123,9 @@ export default function App() {
       const profile = await getMyProfile().catch(() => null)
       setCurrentProfile(profile || null)
 
+      document.documentElement.setAttribute("data-theme", profile?.theme || "blizzard")
+      try { localStorage.setItem("pd_theme", profile?.theme || "blizzard") } catch {}
+
       // Show onboarding for new users who haven't completed it and have no profile
       if (!profile && !localStorage.getItem("skicrew_onboarded") && !localStorage.getItem("powderdays_onboarded")) {
         setShowOnboarding(true)

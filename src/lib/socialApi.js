@@ -158,6 +158,7 @@ export async function upsertMyProfile(profile) {
     vehicle_seats: profile.vehicle_seats || null,
     powder_alerts_enabled: profile.powder_alerts_enabled ?? false,
     alert_phone: profile.alert_phone || null,
+    theme: profile.theme || "blizzard",
     updated_at: new Date().toISOString(),
   };
 

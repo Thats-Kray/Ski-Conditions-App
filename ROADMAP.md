@@ -420,19 +420,27 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 ---
 
-## SECTION 10 — Future Release Features
+## SECTION 10 — User Theme Switching
 
-### TASK 10.1 — User theme switching
+### TASK 10.1 — User theme switching (MVP) — ✅ COMPLETE 2026-08-08 (pending migration apply)
 
-*Deferred to a future release. Architecture is already in place via CSS custom properties.*
+**Plan:** ad-hoc, planned via `EnterPlanMode` same session (no `docs/superpowers/` spec/plan for this one).
 
-- [ ] Add `theme` column to `profiles` table (`blizzard` | `alpine-dawn` | `storm-chaser` | `aurora-peak` | `base-lodge`, default `blizzard`)
-- [ ] Define per-theme CSS variable sets in `src/themes/` directory
-- [ ] On app load: read `profile.theme` → apply `document.documentElement.setAttribute('data-theme', theme)`
-- [ ] Add theme picker UI in Profile settings (5 swatches, tapping one previews + saves)
-- [ ] All 5 themes already designed in `mockups/` — just need CSS variable extraction
+Research before implementation found the original scope note ("just CSS variable extraction") undersold it: ~580 raw hex literals exist across 47 files outside the 3 files Track B tokenized, and `Badge.jsx`'s `TIER_COLORS`/`RISK_COLORS` had the same hex-alpha-suffix hazard Track B found in `SKILL_OPTIONS`. Scoped as an explicit MVP rather than full app-wide tokenization — see "Outstanding" below.
 
-**Files:** `ProfilePage.jsx`, `src/themes/`, `migrations/` (add `theme` column), `src/App.jsx`
+- [x] `migrations/024_theme_preference.sql` — adds `theme TEXT NOT NULL DEFAULT 'blizzard'` to `profiles` with a `CHECK` constraint on the 5 theme keys (not yet applied to live Supabase, see Outstanding)
+- [x] 4 new `[data-theme="..."]` blocks in `src/index.css` (Alpine Dawn, Storm Chaser, Aurora Peak, Base Lodge) redefining every color/gradient/shadow token the existing Blizzard `:root` block defines, derived from `mockups/theme-{1,3,4,5}-*.html` using the same alpha/derivation relationships Blizzard itself uses. Status colors and a few semantic-adjacent gradients stay theme-invariant by design.
+- [x] Fixed `ui/Badge.jsx`'s `TIER_COLORS`/`RISK_COLORS` hex-alpha-suffix hazard (`` `${color}33` `` broke under a CSS var) — 6 new theme-invariant `--rating-*`/`--rating-*-border` token pairs replace the string-concat pattern; `ui/ScoreRing.jsx`'s ring gradient and tier-color fallback also tokenized while touching the file
+- [x] `src/lib/socialApi.js`'s `upsertMyProfile()` now carries `theme` through; audited all 4 call sites — 2 already spread `...profile` (safe), 2 are onboarding-only (blizzard default is correct), and `ProfilePage.jsx`'s `EditProfileModal.handleSave()` (which hand-lists fields) got `theme` added explicitly to avoid silently resetting a user's theme to Blizzard on an unrelated profile edit — caught during implementation, not part of the original plan
+- [x] Theme picker: 5-swatch section in `ProfilePage.jsx` (instant local apply + `localStorage` + DB persist on tap, per spec)
+- [x] `index.html` flash-of-wrong-theme mitigation (inline script reads `localStorage` before first paint) + `App.jsx` reconciliation effect (DB is source of truth, overwrites on every profile load/auth change)
+
+**Outstanding:**
+1. `migrations/024_theme_preference.sql` not yet applied to live Supabase — same pattern as migration 023, deliberately left for the app owner to run.
+2. **This is an MVP, not full app-wide theming.** Only what was already on CSS tokens repaints correctly: Home, Leaderboard, Profile, and the `ui/` primitives touched here. Everything else — `App.jsx`'s own resort-card rendering (`tierColor()`/`riskColor()`/`vibeTier()`/`scoreGradient()`), trip modals, messaging/crew chat, landing/onboarding, PowderMap, Mountain Page/Board, `SkiPlansPage.jsx`'s `DOT_COLORS`, `DirectMessageView.jsx`'s `SKILL_COLORS`, and the decorative avatar-fallback palettes — stays Blizzard-blue regardless of the picked theme. A full app-wide tokenization pass is a separate, much larger future effort (roughly on the order of the Premium UI Uplift sprint), not scheduled.
+3. No `npm`/`node` available in the session's sandbox — changes verified via `grep`-based hex audits, manual diff review, and brace/paren balance checks only. Run `npm run lint` and a visual pass across all 5 themes locally before considering this fully closed.
+
+**Files:** `migrations/024_theme_preference.sql`, `src/index.css`, `src/components/ui/Badge.jsx`, `src/components/ui/ScoreRing.jsx`, `src/lib/socialApi.js`, `src/components/ProfilePage.jsx`, `index.html`, `src/App.jsx`
 
 ---
 
@@ -504,7 +512,7 @@ Visual redesign toward the mockups' premium look across Mountain Page, Crew/Plan
 
 *Last verified against actual code/migrations/git history 2026-08-06 (not just checkbox state — see [[project_2026_08_roadmap_completion]], [[project_2026_08_04_mountain_page_session]], and [[project_2026_08_06_premium_ui_uplift_session]] memory).*
 
-All sprints 1–29 are merged, including Mountain Board (Section 11), the Mountain Page/Krames Butte architecture (Section 12), and the Premium UI Uplift redesign (Section 13, includes a same-day Home hero follow-on refinement) — all verified working live as of 2026-08-06. Section 10 (theme switching) remains the only fully-deferred section.
+All sprints 1–29 are merged, including Mountain Board (Section 11), the Mountain Page/Krames Butte architecture (Section 12), the Premium UI Uplift redesign (Section 13), and the Section 10 theme-switching MVP — all implemented, with two live-DB migrations (023, 024) pending the app owner's apply step.
 
 | Section | Tasks | Done |
 |---------|-------|------|
@@ -518,13 +526,13 @@ All sprints 1–29 are merged, including Mountain Board (Section 11), the Mounta
 | 7 — Powder Alerts | 3 | 3 |
 | 8 — Enhanced Conditions | 2 | 2 |
 | 9 — Live Features | 2 | 2 |
-| 10 — Future / Theme Switching | 1 | 0 (deferred) |
+| 10 — User Theme Switching | 1 | 1 (MVP — migration pending apply, full app-wide theming out of scope) |
 | 11 — Mountain Board | 1 | 1 |
 | 12 — Mountain Page & Krames Butte | 1 | 1 |
 | 13 — Premium UI Uplift | 1 | 1 |
-| **Total** | **32** | **31** |
+| **Total** | **32** | **32** |
 
-Task 0.2's hex-token cleanup is now complete (see task notes above, 2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) was applied to the live Supabase project and verified 2026-08-08 — Section 13 has no remaining outstanding items. Section 10 (theme switching) is the only fully-deferred, unstarted section left in this file.
+Task 0.2's hex-token cleanup is complete (2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) was applied to the live Supabase project and verified 2026-08-08. Section 10's theme-switching MVP is implemented (2026-08-08) but not yet fully closed: `migrations/024_theme_preference.sql` still needs to be applied live, and full app-wide theming beyond the MVP scope remains unscheduled follow-up work — see Section 10's task notes.
 
 ---
 

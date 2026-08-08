@@ -30,6 +30,14 @@ const SKILL_OPTIONS = [
 const PASS_OPTIONS = ["Epic", "Ikon", "Indy", "Mountain Collective", "None"]
 const SPORT_EMOJI = { ski: "⛷️", snowboard: "🏂", both: "🤙" }
 
+const THEME_OPTIONS = [
+  { key: "blizzard", label: "Blizzard", swatch: "#38bdf8" },
+  { key: "alpine-dawn", label: "Alpine Dawn", swatch: "#F59E0B" },
+  { key: "storm-chaser", label: "Storm Chaser", swatch: "#14B8A6" },
+  { key: "aurora-peak", label: "Aurora Peak", swatch: "#A855F7" },
+  { key: "base-lodge", label: "Base Lodge", swatch: "#F97316" },
+]
+
 function initials(name) {
   return (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
 }
@@ -379,6 +387,7 @@ function EditProfileModal({ profile, onSaved, onClose }) {
         vehicle_seats: vehicleSeats ? parseInt(vehicleSeats) : null,
         powder_alerts_enabled: powderAlertsEnabled,
         alert_phone: alertPhone.trim() || null,
+        theme: profile?.theme || "blizzard",
       })
       onSaved()
     } catch (e) {
@@ -657,6 +666,18 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
     }
   }
 
+  async function handleSelectTheme(themeName) {
+    document.documentElement.setAttribute("data-theme", themeName)
+    try { localStorage.setItem("pd_theme", themeName) } catch {}
+    try {
+      await upsertMyProfile({ ...profile, theme: themeName })
+      await load()
+    } catch (err) {
+      document.documentElement.setAttribute("data-theme", profile?.theme || "blizzard")
+      alert(err.message || "Could not save theme.")
+    }
+  }
+
   if (loading) {
     return (
       <div style={{ padding: 32, textAlign: "center", color: "rgba(255,255,255,0.35)", fontSize: 14 }}>
@@ -869,6 +890,33 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
       ) : (
         <SeasonCalendar sessions={recentSessions} startYear={season.startYear} />
       )}
+
+      {/* ── Theme ── */}
+      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px" }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Theme</div>
+        <div style={{ display: "flex", gap: 12 }}>
+          {THEME_OPTIONS.map((t) => {
+            const active = (profile?.theme || "blizzard") === t.key
+            return (
+              <button
+                key={t.key}
+                onClick={() => handleSelectTheme(t.key)}
+                style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 0 }}
+              >
+                <div style={{
+                  width: 40, height: 40, borderRadius: "50%",
+                  background: t.swatch,
+                  border: active ? "2px solid var(--color-accent)" : "2px solid transparent",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {active && <span style={{ fontSize: 16, color: "white", textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}>✓</span>}
+                </div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: active ? "white" : "rgba(255,255,255,0.5)" }}>{t.label}</div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
       {/* ── Season Passes ── */}
       {profile?.ski_passes?.length > 0 && (

@@ -7,14 +7,14 @@ export default function ScoreRing({ score, tier, size = 96, strokeWidth = 8, lab
   const circumference = 2 * Math.PI * radius
   const pct = score == null ? 0 : Math.max(0, Math.min(100, score)) / 100
   const offset = circumference * (1 - pct)
-  const tierColor = TIER_COLORS[tier] ?? "#64748b"
+  const tierColor = TIER_COLORS[tier] ?? "var(--rating-slate)"
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <defs>
         <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#38bdf8" />
-          <stop offset="100%" stopColor="#818cf8" />
+          <stop offset="0%" stopColor="var(--color-accent)" />
+          <stop offset="100%" stopColor="var(--color-accent-2)" />
         </linearGradient>
       </defs>
       <circle
