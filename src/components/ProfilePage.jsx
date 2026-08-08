@@ -273,7 +273,7 @@ function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fullName 
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>{dateLabel}</div>
               </div>
               {s.vertical_feet > 0 && (
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#60a5fa", flexShrink: 0 }}>+{fmt(s.vertical_feet)} ft</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--color-accent-soft)", flexShrink: 0 }}>+{fmt(s.vertical_feet)} ft</div>
               )}
               {canEdit && (
                 <button
@@ -299,7 +299,7 @@ function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fullName 
           onClick={() => { setEditError(""); setEditingSessionId(null) }}
         >
           <div
-            style={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 480 }}
+            style={{ background: "var(--color-modal-bg)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 480 }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
@@ -401,7 +401,7 @@ function EditProfileModal({ profile, onSaved, onClose }) {
     >
       <div style={{
         width: "100%", maxWidth: 480,
-        background: "linear-gradient(160deg,#0f172a,#0a0f1e)",
+        background: "linear-gradient(160deg, var(--color-modal-bg), var(--color-bg-deep))",
         border: "1px solid rgba(255,255,255,0.1)",
         borderRadius: "22px 22px 0 0",
         maxHeight: "92dvh",
@@ -433,7 +433,7 @@ function EditProfileModal({ profile, onSaved, onClose }) {
               {[{ key: "ski", label: "⛷️ Ski" }, { key: "snowboard", label: "🏂 Snowboard" }, { key: "both", label: "🤙 Both" }].map(({ key, label }) => (
                 <button key={key} onClick={() => setSportType(key)} style={{
                   flex: 1, padding: "9px 8px", borderRadius: 10,
-                  border: `1.5px solid ${sportType === key ? "#3b82f6" : "rgba(255,255,255,0.12)"}`,
+                  border: `1.5px solid ${sportType === key ? "var(--color-accent-strong)" : "rgba(255,255,255,0.12)"}`,
                   background: sportType === key ? "rgba(59,130,246,0.18)" : "rgba(255,255,255,0.05)",
                   color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer",
                 }}>{label}</button>
@@ -466,9 +466,9 @@ function EditProfileModal({ profile, onSaved, onClose }) {
                 return (
                   <button key={p} onClick={() => togglePass(p)} style={{
                     padding: "7px 14px", borderRadius: 10,
-                    border: `1.5px solid ${active ? "#22c55e" : "rgba(255,255,255,0.1)"}`,
+                    border: `1.5px solid ${active ? "var(--color-success-strong)" : "rgba(255,255,255,0.1)"}`,
                     background: active ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)",
-                    color: active ? "#22c55e" : "rgba(255,255,255,0.6)",
+                    color: active ? "var(--color-success-strong)" : "rgba(255,255,255,0.6)",
                     fontWeight: active ? 800 : 500, fontSize: 12, cursor: "pointer",
                   }}>{p}</button>
                 )
@@ -510,13 +510,13 @@ function EditProfileModal({ profile, onSaved, onClose }) {
 
         {/* Sticky footer */}
         <div style={{ flexShrink: 0, padding: "12px 20px max(24px, env(safe-area-inset-bottom))", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-          {error && <div style={{ fontSize: 13, color: "#f87171", marginBottom: 12 }}>{error}</div>}
+          {error && <div style={{ fontSize: 13, color: "var(--color-danger)", marginBottom: 12 }}>{error}</div>}
           <button
             onClick={handleSave}
             disabled={saving}
             style={{
               width: "100%", padding: "14px", borderRadius: 14, border: "none",
-              background: saving ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg,#2563eb,#0891b2)",
+              background: saving ? "rgba(255,255,255,0.1)" : "var(--gradient-cta)",
               color: "white", fontWeight: 900, fontSize: 15, cursor: saving ? "default" : "pointer",
             }}
           >
@@ -709,16 +709,20 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
               {/* Glowing ring border like Strava */}
               <div style={{
                 width: 96, height: 96, borderRadius: "50%",
-                background: "linear-gradient(135deg,#3b82f6,#0891b2)",
+                background: "linear-gradient(135deg, var(--color-accent-strong), var(--color-accent-teal))",
                 padding: 3, flexShrink: 0,
               }}>
-                <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: "#0a0f1e" }}>
+                <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: "var(--color-bg-deep)" }}>
                   {photoUploading ? (
                     <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.4)", fontSize: 22 }}>⏳</div>
                   ) : profile?.avatar_url ? (
                     <img src={profile.avatar_url} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                   ) : (
-                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: ["#2563eb","#0891b2","#7c3aed","#16a34a","#ea580c"][fullName.length % 5], fontSize: 32, fontWeight: 900, color: "white" }}>
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: [
+                      "var(--color-accent-deep)", "var(--color-accent-teal)",
+                      /* decorative-only, independent of the token palette */
+                      "#7c3aed", "#16a34a", "#ea580c",
+                    ][fullName.length % 5], fontSize: 32, fontWeight: 900, color: "white" }}>
                       {fullName.charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -730,7 +734,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
                 <div style={{
                   position: "absolute", bottom: 2, right: 2,
                   width: 26, height: 26, borderRadius: "50%",
-                  background: "#2563eb", border: "2px solid #0a0f1e",
+                  background: "var(--color-accent-deep)", border: "2px solid var(--color-bg-deep)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 13,
                 }}>📷</div>
@@ -742,7 +746,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
               <div
                 style={{
                   position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)",
-                  background: "#1e293b", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 14,
+                  background: "var(--color-surface-popover)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 14,
                   overflow: "hidden", zIndex: 50, minWidth: 180, boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
                 }}
               >
@@ -757,7 +761,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
                     <div style={{ height: 1, background: "rgba(255,255,255,0.07)" }} />
                     <button
                       onClick={handleRemovePhoto}
-                      style={{ width: "100%", padding: "13px 18px", background: "none", border: "none", color: "#f87171", fontSize: 14, fontWeight: 700, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}
+                      style={{ width: "100%", padding: "13px 18px", background: "none", border: "none", color: "var(--color-danger)", fontSize: 14, fontWeight: 700, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}
                     >
                       🗑️ Remove Photo
                     </button>
@@ -782,7 +786,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
             <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginTop: 3 }}>@{profile.username}</div>
           )}
           {profile?.favorite_mountain && (
-            <div style={{ color: "#60a5fa", fontSize: 12, fontWeight: 700, marginTop: 5 }}>📍 {profile.favorite_mountain}</div>
+            <div style={{ color: "var(--color-accent-soft)", fontSize: 12, fontWeight: 700, marginTop: 5 }}>📍 {profile.favorite_mountain}</div>
           )}
           {skillObj && (
             <div style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, background: `${skillObj.color}18`, border: `1px solid ${skillObj.color}44`, borderRadius: 999, padding: "3px 12px" }}>
@@ -811,7 +815,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
           </button>
           <div style={{ width: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
           <div style={{ flex: 1, textAlign: "center", padding: "4px 0" }}>
-            <div style={{ fontSize: 22, fontWeight: 900, color: seasonStats?.days > 0 ? "#60a5fa" : "white", lineHeight: 1 }}>{seasonStats?.days ?? "—"}</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: seasonStats?.days > 0 ? "var(--color-accent-soft)" : "white", lineHeight: 1 }}>{seasonStats?.days ?? "—"}</div>
             <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Days</div>
           </div>
         </div>
@@ -827,7 +831,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
           {seasonStats?.days > 0 && (
             <button
               onClick={() => setShowShare(true)}
-              style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer" }}
+              style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: "var(--gradient-cta)", color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer" }}
             >
               Share Season
             </button>
@@ -872,7 +876,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
           <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Season Passes</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {profile.ski_passes.map((p) => (
-              <div key={p} style={{ background: "linear-gradient(135deg,#22c55e,#14b8a6)", color: "#052e2b", borderRadius: 999, padding: "7px 14px", fontWeight: 800, fontSize: 13 }}>
+              <div key={p} style={{ background: "var(--gradient-pass-pill)", color: "var(--color-pass-pill-text)", borderRadius: 999, padding: "7px 14px", fontWeight: 800, fontSize: 13 }}>
                 {p}
               </div>
             ))}
@@ -888,7 +892,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
             <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>My Vehicle</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: "white", marginTop: 2 }}>{profile.vehicle_label}</div>
             {profile.vehicle_seats > 0 && (
-              <div style={{ fontSize: 12, color: "#60a5fa", marginTop: 2, fontWeight: 700 }}>
+              <div style={{ fontSize: 12, color: "var(--color-accent-soft)", marginTop: 2, fontWeight: 700 }}>
                 {profile.vehicle_seats} open seat{profile.vehicle_seats !== 1 ? "s" : ""} for passengers
               </div>
             )}
@@ -903,7 +907,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
             <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>Your Crew</div>
             <button
               onClick={() => onTabChange?.("friends")}
-              style={{ background: "none", border: "none", color: "#60a5fa", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: 0 }}
+              style={{ background: "none", border: "none", color: "var(--color-accent-soft)", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: 0 }}
             >
               See All →
             </button>

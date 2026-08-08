@@ -52,6 +52,39 @@
   --shadow-accent:       0 0 20px rgba(56, 189, 248, 0.25);
   --shadow-button:       0 6px 20px rgba(56, 189, 248, 0.22);
 
+  /* ── Track B: accent-shade tokens (preserve exact existing colors) ── */
+  --color-accent-soft:    #60a5fa;
+  --color-accent-strong:  #3b82f6;
+  --color-accent-deep:    #2563eb;
+  --color-accent-teal:    #0891b2;
+
+  /* ── Track B: status tokens ──────────────────────────────────────── */
+  --color-success:        #4ade80;
+  --color-success-strong: #22c55e;
+  --color-warning:        #fbbf24;
+  --color-danger:         #f87171;
+
+  /* ── Track B: trail-difficulty tokens (standalone use only — SKILL_OPTIONS's
+     hex-alpha-suffix usage is excluded, see ProfilePage.jsx) ────────── */
+  --color-trail-double-black: #f43f5e;
+  --color-trail-expert:       #c084fc;
+
+  /* ── Track B: surface / modal tokens ─────────────────────────────── */
+  --color-modal-bg:        #0f172a;
+  --color-bg-deep:         #0a0f1e;
+  --color-surface-popover: #1e293b;
+
+  /* ── Track B: HomeDashboard offseason-banner one-offs ────────────── */
+  --color-banner-heading:    #f1f5f9;
+  --color-banner-highlight:  #93c5fd;
+  --color-banner-badge-mint: #6ee7b7;
+
+  /* ── Track B: compound gradients / pill text ─────────────────────── */
+  --gradient-cta:              linear-gradient(135deg, var(--color-accent-deep), var(--color-accent-teal));
+  --gradient-banner-offseason: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f2744 100%);
+  --gradient-pass-pill:        linear-gradient(135deg, var(--color-success-strong), #14b8a6);
+  --color-pass-pill-text:      #052e2b;
+
   --radius-card:         18px;
   --radius-button:       12px;
   --radius-pill:         999px;

@@ -34,7 +34,7 @@ All 5 mockups remain in `mockups/` for reference.
 - [x] Updated `App.jsx` — all accent, background, gradient, and nav colors migrated to Blizzard palette; `SnowfallBackground` wired into app root
 - [x] Typography scale: heading sizes, body, label, caption (`--font-size-display/h1/h2/h3/body` etc. in `src/index.css`)
 - [x] Spacing scale: 4px base unit (`--space-1` … in `src/index.css`)
-- [ ] Replace remaining hardcoded hex values in other components (`HomeDashboard`, `LeaderboardPage`, `ProfilePage`, etc.) with token references — ongoing as each feature area is touched; still ~12–24 raw hex literals per file as of this update
+- [x] Replace remaining hardcoded hex values in `HomeDashboard.jsx`, `LeaderboardPage.jsx`, `ProfilePage.jsx` with token references — completed 2026-08-08. Audit found 70 hex literals (not the ~12–24/file originally estimated); 20 new CSS custom properties added to `src/index.css` (accent-shade, status, surface/modal, and banner-specific tokens) to preserve exact existing colors rather than coercing them. Two deliberate exceptions left as raw hex: `ProfilePage.jsx`'s `SKILL_OPTIONS` colors (consumed via `` `${color}18` `` hex-alpha-suffix string concatenation — a CSS var would silently break to an invalid value) and 3 of 5 values in the decorative, name-hash-indexed avatar-fallback palette (single-use, not worth a dedicated token). Verified via `grep`-based hex audit and manual diff review per file — **not** yet verified with `npm run lint` or in-browser (this session's sandbox has no `node`/`npm` on PATH); run `npm run lint` and a visual pass locally before considering this fully closed.
 
 **Files:** `src/index.css`, `src/components/SnowfallBackground.jsx`, `src/App.jsx`
 
@@ -483,7 +483,7 @@ A private, owner-only fake resort ("Krames Butte") that bypasses the Mountain Bo
 
 Visual redesign toward the mockups' premium look across Mountain Page, Crew/Plans, Home, Social Feed, and Profile — six new shared `ui/` primitives (`HeroPhotoHeader`, `StatStrip`, `AccentCard`, `EventCard`, `AvatarStatusRail`, `accentColors.js`) built once and reused across screens, plus a new Mountain Page Events feature.
 
-- [x] Mountain Page: hero/scrim treatment, "Mountain Stats" strip, restyled Bulletin board with per-category accent colors, new Events widget (`migrations/023_mountain_events.sql`, Krames-Butte-only rollout pending live migration apply)
+- [x] Mountain Page: hero/scrim treatment, "Mountain Stats" strip, restyled Bulletin board with per-category accent colors, new Events widget (`migrations/023_mountain_events.sql`, Krames-Butte-only rollout — migration applied live 2026-08-08, verified by creating a real event for Krames Butte)
 - [x] Crew/Plans (mobile): "Active Crew" avatar-status rail (resurrected `TodaysCrew.jsx`'s data logic, which had been orphaned since sprints 10/11), restyled trip strip, full-width primary CTA on mobile
 - [x] Home dashboard: "Today's Best Mountain" card enlarged/restyled; "Ready to ski?" hero rebuilt around a real photo + floating glass-panel CTA (follow-on refinement after initial ship — see below)
 - [x] Social Feed: existing text-based activity feed restyled with accent cards (explicitly *not* rebuilt as a photo/route-map feed — that would need new storage/upload infrastructure, out of scope)
@@ -496,7 +496,7 @@ Visual redesign toward the mockups' premium look across Mountain Page, Crew/Plan
 
 **Files:** `docs/superpowers/plans/2026-08-06-premium-ui-uplift.md`, `migrations/023_mountain_events.sql`, `src/components/ui/{HeroPhotoHeader,StatStrip,AccentCard,EventCard,AvatarStatusRail,accentColors,NavIcons}.jsx`, `src/components/{MountainPage,MountainBoard,EventsWidget,SkiPlansPage,HomeDashboard,ActivityFeed,ProfilePage}.jsx`, `src/App.jsx`, `src/lib/socialApi.js`
 
-**Outstanding:** `migrations/023_mountain_events.sql` has not been applied to the live Supabase project — deliberately left for the app owner rather than having a subagent make production schema changes. The Events tab degrades gracefully (clean error state, not a crash) until it's applied, and is gated to the owner-only Krames Butte resort in the meantime.
+**Outstanding:** none — `migrations/023_mountain_events.sql` was applied to the live Supabase project by the app owner on 2026-08-08 and verified end-to-end (Events tab loads, event creation works for Krames Butte).
 
 ---
 
@@ -524,7 +524,7 @@ All sprints 1–29 are merged, including Mountain Board (Section 11), the Mounta
 | 13 — Premium UI Uplift | 1 | 1 |
 | **Total** | **32** | **31** |
 
-One item remains genuinely incomplete within an otherwise-done task: Task 0.2's "replace remaining hardcoded hex values with token references" is explicitly ongoing (still ~12–24 raw hex literals in `HomeDashboard.jsx`, `LeaderboardPage.jsx`, `ProfilePage.jsx` as of this update). Separately, `migrations/023_mountain_events.sql` (Section 13) has not yet been applied to the live Supabase project — see that section's "Outstanding" note.
+Task 0.2's hex-token cleanup is now complete (see task notes above, 2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) was applied to the live Supabase project and verified 2026-08-08 — Section 13 has no remaining outstanding items. Section 10 (theme switching) is the only fully-deferred, unstarted section left in this file.
 
 ---
 

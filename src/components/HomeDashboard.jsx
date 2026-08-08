@@ -30,9 +30,9 @@ const HERO_FALLBACK_PHOTO = "/hero-mountain.jpg"
 
 function driveRiskColor(risk) {
   const r = (risk || "").toLowerCase()
-  if (r === "low") return "#4ade80"
-  if (r === "medium" || r === "moderate") return "#fbbf24"
-  if (r === "high") return "#f87171"
+  if (r === "low") return "var(--color-success)"
+  if (r === "medium" || r === "moderate") return "var(--color-warning)"
+  if (r === "high") return "var(--color-danger)"
   return "var(--color-text-2)"
 }
 
@@ -233,7 +233,7 @@ function NextTripCard({ currentUser, onTabChange }) {
             onClick={() => handleRsvp(pendingInvite.id, "going")}
             disabled={rsvpBusyId === pendingInvite.id}
             style={{
-              flex: 1, background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white",
+              flex: 1, background: "var(--gradient-cta)", color: "white",
               border: "none", borderRadius: 10, padding: "10px 14px", fontWeight: 800, fontSize: 13,
               cursor: rsvpBusyId === pendingInvite.id ? "not-allowed" : "pointer",
             }}
@@ -459,7 +459,7 @@ function MobileCrewListWidget({ currentUser, onTabChange }) {
         action={
           <button
             onClick={() => onTabChange("friends")}
-            style={{ background: "none", border: "none", color: "#60a5fa", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 8px", borderRadius: 8 }}
+            style={{ background: "none", border: "none", color: "var(--color-accent-soft)", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 8px", borderRadius: 8 }}
           >
             Open →
           </button>
@@ -502,7 +502,7 @@ function MobileCrewListWidget({ currentUser, onTabChange }) {
                   {crew.emoji}
                 </div>
                 {crew.unread && (
-                  <div style={{ position: "absolute", top: -2, right: -2, width: 10, height: 10, borderRadius: "50%", background: "#3b82f6", border: "2px solid rgba(6,10,22,1)" }} />
+                  <div style={{ position: "absolute", top: -2, right: -2, width: 10, height: 10, borderRadius: "50%", background: "var(--color-accent-strong)", border: "2px solid rgba(6,10,22,1)" }} />
                 )}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -549,7 +549,7 @@ function PingCta({ currentUser }) {
           onClick={handleOpen}
           style={{
             background: "none", border: "none", cursor: "pointer",
-            color: "#60a5fa", fontSize: 13, fontWeight: 700,
+            color: "var(--color-accent-soft)", fontSize: 13, fontWeight: 700,
             textDecoration: "underline", textUnderlineOffset: 3,
             padding: "6px 12px",
           }}
@@ -662,7 +662,7 @@ function StartMyDayCta({ currentUser, sessionActive, resorts, onStartSession }) 
         padding: "10px 16px",
         marginBottom: 16,
         fontSize: 13,
-        color: "#4ade80",
+        color: "var(--color-success)",
         fontWeight: 700,
       }}>
         ● Session active — tracking your day
@@ -702,7 +702,7 @@ function StartMyDayCta({ currentUser, sessionActive, resorts, onStartSession }) 
             style={{
               width: "100%",
               marginTop: 14,
-              background: "linear-gradient(135deg, #0284c7, #38bdf8)",
+              background: "var(--gradient-primary)",
               border: "none",
               borderRadius: 999,
               padding: "14px 20px",
@@ -736,7 +736,7 @@ function OffseasonBanner() {
   return (
     <div style={{
       position: "relative",
-      background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f2744 100%)",
+      background: "var(--gradient-banner-offseason)",
       border: "1px solid rgba(96,165,250,0.3)",
       borderRadius: 20,
       padding: "20px 48px 20px 24px",
@@ -750,17 +750,17 @@ function OffseasonBanner() {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontSize: 11, fontWeight: 800, letterSpacing: 1.2,
-          color: "#60a5fa", textTransform: "uppercase", marginBottom: 6,
+          color: "var(--color-accent-soft)", textTransform: "uppercase", marginBottom: 6,
         }}>
           Colorado Season Wrap — Winter 2025/26
         </div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 6, lineHeight: 1.4 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-banner-heading)", marginBottom: 6, lineHeight: 1.4 }}>
           The mountains are closing for the summer. See you on the slopes this fall! ⛷️
         </div>
         <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}>
-          PowderDays is officially launching for the <span style={{ color: "#93c5fd", fontWeight: 700 }}>2026/27 season</span>.
+          PowderDays is officially launching for the <span style={{ color: "var(--color-banner-highlight)", fontWeight: 700 }}>2026/27 season</span>.
           Invite your crew now — resort conditions, trip planning, and leaderboards
-          will be live when the lifts spin up in <span style={{ color: "#93c5fd", fontWeight: 700 }}>November 2026</span>.
+          will be live when the lifts spin up in <span style={{ color: "var(--color-banner-highlight)", fontWeight: 700 }}>November 2026</span>.
         </div>
 
         <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -768,7 +768,7 @@ function OffseasonBanner() {
             display: "inline-flex", alignItems: "center", gap: 6,
             background: "rgba(96,165,250,0.12)", border: "1px solid rgba(96,165,250,0.25)",
             borderRadius: 20, padding: "5px 14px",
-            fontSize: 12, fontWeight: 700, color: "#93c5fd",
+            fontSize: 12, fontWeight: 700, color: "var(--color-banner-highlight)",
           }}>
             🎿 Rope Drops Winter 2026
           </div>
@@ -776,7 +776,7 @@ function OffseasonBanner() {
             display: "inline-flex", alignItems: "center", gap: 6,
             background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.2)",
             borderRadius: 20, padding: "5px 14px",
-            fontSize: 12, fontWeight: 700, color: "#6ee7b7",
+            fontSize: 12, fontWeight: 700, color: "var(--color-banner-badge-mint)",
           }}>
             11 Colorado Resorts Tracked
           </div>
