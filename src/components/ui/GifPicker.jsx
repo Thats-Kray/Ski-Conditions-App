@@ -16,7 +16,7 @@ export default function GifPicker({ onSelect, onClose }) {
   return (
     <div style={{
       position: "absolute", bottom: "100%", left: 0, right: 0, zIndex: 100,
-      background: "#0f172a", border: "1px solid rgba(255,255,255,0.12)",
+      background: "var(--color-modal-bg)", border: "1px solid rgba(255,255,255,0.12)",
       borderRadius: 16, padding: "14px 14px 12px", marginBottom: 8,
       boxShadow: "0 -4px 24px rgba(0,0,0,0.6)",
     }}>
@@ -39,7 +39,7 @@ export default function GifPicker({ onSelect, onClose }) {
           type="submit"
           disabled={!url.trim()}
           style={{
-            background: url.trim() ? "linear-gradient(135deg,#2563eb,#0891b2)" : "rgba(255,255,255,0.08)",
+            background: url.trim() ? "var(--gradient-cta)" : "rgba(255,255,255,0.08)",
             border: "none", color: "white", borderRadius: 999, padding: "8px 16px",
             fontWeight: 800, fontSize: 13, cursor: url.trim() ? "pointer" : "default", flexShrink: 0,
           }}
@@ -65,7 +65,7 @@ export default function GifPicker({ onSelect, onClose }) {
 
       <div style={{ marginTop: 10, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
         Find a GIF at{" "}
-        <a href="https://giphy.com" target="_blank" rel="noopener noreferrer" style={{ color: "#60a5fa", textDecoration: "none", fontWeight: 700 }}>Giphy →</a>
+        <a href="https://giphy.com" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-accent-soft)", textDecoration: "none", fontWeight: 700 }}>Giphy →</a>
         {" "}then copy and paste the link above.
       </div>
     </div>

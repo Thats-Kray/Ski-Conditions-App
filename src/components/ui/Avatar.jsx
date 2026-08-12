@@ -1,4 +1,8 @@
-const COLORS = ["#2563eb", "#0891b2", "#7c3aed", "#16a34a", "#ea580c"]
+const COLORS = [
+  "var(--color-accent-deep)", "var(--color-accent-teal)",
+  /* decorative-only, independent of the token palette */
+  "#7c3aed", "#16a34a", "#ea580c",
+]
 
 export default function Avatar({ profile, size = 32 }) {
   const name = profile?.full_name || profile?.username || "?"

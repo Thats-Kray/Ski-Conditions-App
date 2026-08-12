@@ -35,7 +35,7 @@ export default function ResortPicker({ value, onChange, placeholder = "Search re
         onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
       />
       {showDropdown && filtered.length > 0 && (
-        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#1e293b", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, zIndex: 10, overflow: "hidden", marginTop: 4 }}>
+        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--color-surface-popover)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, zIndex: 10, overflow: "hidden", marginTop: 4 }}>
           {filtered.map((r) => (
             <div
               key={r}
