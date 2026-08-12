@@ -24,6 +24,10 @@ function UpcomingStrip({ trips, invitedTrips, currentUser, onOpen }) {
       </div>
       <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6, scrollbarWidth: "none" }}>
         {allCards.map((trip) => {
+          // Kept literal: feeds hex-alpha-suffix template literals below
+          // (`${accent}22`/`44`) — var() references break when concatenated
+          // with a hex alpha suffix (same constraint as DOT_COLORS below,
+          // SKILL_OPTIONS/TYPE_META precedent from Tasks 6/8).
           const accent = trip._role === "invited" ? "#60a5fa" : "#22c55e"
           const going = (trip.rsvps || []).filter((r) => r.status === "going").length
           return (
@@ -103,6 +107,10 @@ function CalendarView({ myTrips, rsvpdTrips, invitedTrips, friendsTrips, skiPlan
   const [selectedDate, setSelectedDate] = useState(null)
   const selectedTrips = selectedDate ? (tripsByDate.get(selectedDate) || []) : []
 
+  // Calendar dot colors — kept literal: feed hex-alpha-suffix template literals
+  // below (`${DOT_COLORS[t._role]}11`/`33`), same constraint as SKILL_OPTIONS
+  // (ProfileSetup.jsx et al., Task 6) / TYPE_META (NotificationBell.jsx, Task 8) —
+  // var() references break when concatenated with a hex alpha suffix.
   const DOT_COLORS = { mine: "#60a5fa", going: "#22c55e", invited: "#fbbf24", friend: "#a78bfa", daily: "#67e8f9" }
   const DOT_LABELS = { mine: "Your Trip", going: "Going", invited: "Invited", friend: "Friend's Trip", daily: "Check-in" }
 
@@ -155,7 +163,7 @@ function CalendarView({ myTrips, rsvpdTrips, invitedTrips, friendsTrips, skiPlan
                 padding: "6px 4px 8px",
                 borderRadius: 10,
                 border: isSelected
-                  ? "1.5px solid #60a5fa"
+                  ? "1.5px solid var(--color-accent-soft)"
                   : isToday
                   ? "1.5px solid rgba(255,255,255,0.25)"
                   : "1.5px solid transparent",
@@ -178,7 +186,7 @@ function CalendarView({ myTrips, rsvpdTrips, invitedTrips, friendsTrips, skiPlan
                 fontSize: 13,
                 fontWeight: isToday ? 900 : isWeekend ? 700 : 400,
                 color: isToday ? "white" : isWeekend ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.6)",
-                background: isToday ? "#60a5fa" : "transparent",
+                background: isToday ? "var(--color-accent-soft)" : "transparent",
                 borderRadius: "50%",
                 width: 24, height: 24,
                 display: "flex", alignItems: "center", justifyContent: "center",
@@ -347,7 +355,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
           onClick={handleCreateClick}
           className="plan-cta"
           style={{
-            background: "linear-gradient(135deg, #2563eb, #0891b2)",
+            background: "var(--gradient-cta)",
             color: "white", border: "none", borderRadius: 14,
             padding: "13px 20px", fontSize: 14, fontWeight: 900,
             cursor: "pointer", boxShadow: "0 8px 28px rgba(37,99,235,0.42)",
@@ -411,14 +419,14 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
             <div style={{ borderRadius: 24, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", padding: "48px 28px", textAlign: "center", display: "grid", gap: 16, justifyItems: "center" }}>
               <div style={{ fontSize: 38 }}>🎿</div>
               <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>Sign in to see your trips</div>
-              <button onClick={() => onRequireLogin?.()} style={{ background: "linear-gradient(135deg, #2563eb, #0891b2)", color: "white", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>Sign In</button>
+              <button onClick={() => onRequireLogin?.()} style={{ background: "var(--gradient-cta)", color: "white", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>Sign In</button>
             </div>
           ) : flatTrips.length === 0 ? (
             <div style={{ borderRadius: 24, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", padding: "52px 28px", textAlign: "center", display: "grid", gap: 18, justifyItems: "center" }}>
               <div style={{ fontSize: 38 }}>🏔️</div>
               <div style={{ fontSize: 22, fontWeight: 900, color: "white" }}>No ski trips yet</div>
               <div style={{ fontSize: 14, color: "rgba(255,255,255,0.48)", maxWidth: 340, lineHeight: 1.6 }}>Create a trip, pick a mountain, then let your crew RSVP in one tap.</div>
-              <button onClick={handleCreateClick} style={{ background: "linear-gradient(135deg, #2563eb, #0891b2)", color: "white", border: "none", borderRadius: 14, padding: "13px 28px", fontSize: 14, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 28px rgba(37,99,235,0.4)" }}>
+              <button onClick={handleCreateClick} style={{ background: "var(--gradient-cta)", color: "white", border: "none", borderRadius: 14, padding: "13px 28px", fontSize: 14, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 28px rgba(37,99,235,0.4)" }}>
                 Plan a Trip 🎿
               </button>
             </div>
@@ -428,7 +436,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
                 <div style={{
                   background: "rgba(96,165,250,0.07)",
                   border: "1px solid rgba(96,165,250,0.25)",
-                  borderLeft: "4px solid #60a5fa",
+                  borderLeft: "4px solid var(--color-accent-soft)",
                   borderRadius: 14,
                   padding: "13px 18px",
                   display: "flex",
@@ -436,7 +444,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
                   justifyContent: "space-between",
                   gap: 12,
                 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: "#93c5fd" }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "var(--color-banner-highlight)" }}>
                     ✉️ You have {invitedTrips.length} trip invite{invitedTrips.length > 1 ? "s" : ""}
                   </span>
                   <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>Respond below ↓</span>

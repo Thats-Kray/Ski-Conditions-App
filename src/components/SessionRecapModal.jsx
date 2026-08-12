@@ -132,7 +132,7 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
           maxWidth: 500,
           maxHeight: "90vh",
           overflowY: "auto",
-          background: "#08111e",
+          background: "var(--color-bg-deep)",
           border: "1px solid rgba(255,255,255,0.1)",
           borderRadius: 24,
           boxShadow: "0 40px 120px rgba(0,0,0,0.85)",
@@ -297,7 +297,10 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
                   style={{
                     display: "block",
                     textAlign: "center",
-                    background: "linear-gradient(135deg, #16a34a, #22c55e)",
+                    // Near-duplicate success gradient (no exact 2-stop token covers
+                    // #16a34a/#22c55e) — both stops route to the nearest single
+                    // token, same precedent as TodaysCrew.jsx's warning gradient.
+                    background: "linear-gradient(135deg, var(--color-success-strong), var(--color-success-strong))",
                     border: "none",
                     borderRadius: 14,
                     padding: "12px 14px",
@@ -315,6 +318,7 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
                   disabled={uploadState === "loading"}
                   style={{
                     width: "100%",
+                    /* Strava brand color — do not tokenize */
                     background: "linear-gradient(135deg, #fc4c02, #e34402)",
                     border: "none",
                     borderRadius: 14,
@@ -330,7 +334,7 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
                 </button>
               )}
               {uploadState === "error" && uploadError && (
-                <div style={{ fontSize: 11, color: "#f87171", padding: "0 4px" }}>{uploadError}</div>
+                <div style={{ fontSize: 11, color: "var(--color-danger)", padding: "0 4px" }}>{uploadError}</div>
               )}
             </div>
           )}
@@ -340,7 +344,7 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
             style={{
               flex: 1,
               minWidth: 100,
-              background: "linear-gradient(135deg, #0284c7, #38bdf8)",
+              background: "var(--gradient-primary)",
               border: "none",
               borderRadius: 14,
               padding: "12px 14px",

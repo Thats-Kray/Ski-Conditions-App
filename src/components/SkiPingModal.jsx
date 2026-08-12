@@ -19,9 +19,9 @@ const RESORT_OPTIONS = [
 ]
 
 const RESPONSE_OPTS = [
-  { value: "yes",   label: "I'm In! 🤙",  bg: "rgba(34,197,94,0.18)",  border: "rgba(34,197,94,0.45)",  color: "#4ade80" },
-  { value: "maybe", label: "Maybe 🤔",     bg: "rgba(251,191,36,0.15)", border: "rgba(251,191,36,0.4)",  color: "#fbbf24" },
-  { value: "no",    label: "Can't 😔",     bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.3)",   color: "#f87171" },
+  { value: "yes",   label: "I'm In! 🤙",  bg: "rgba(34,197,94,0.18)",  border: "rgba(34,197,94,0.45)",  color: "var(--color-success)" },
+  { value: "maybe", label: "Maybe 🤔",     bg: "rgba(251,191,36,0.15)", border: "rgba(251,191,36,0.4)",  color: "var(--color-warning)" },
+  { value: "no",    label: "Can't 😔",     bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.3)",   color: "var(--color-danger)" },
 ]
 
 
@@ -74,7 +74,7 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
     >
       <div style={{
         width: "100%", maxWidth: 480,
-        background: "linear-gradient(160deg, #0f172a 0%, #0a0f1e 100%)",
+        background: "linear-gradient(160deg, var(--color-modal-bg) 0%, var(--color-bg-deep) 100%)",
         border: "1px solid rgba(255,255,255,0.1)",
         borderRadius: "24px 24px 0 0",
         padding: "24px 20px 36px",
@@ -108,7 +108,7 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
                     style={{
                       display: "flex", alignItems: "center", gap: 7,
                       padding: "6px 12px 6px 6px", borderRadius: 999,
-                      border: isOn ? "1.5px solid #3b82f6" : "1.5px solid rgba(255,255,255,0.12)",
+                      border: isOn ? "1.5px solid var(--color-accent-strong)" : "1.5px solid rgba(255,255,255,0.12)",
                       background: isOn ? "rgba(59,130,246,0.18)" : "rgba(255,255,255,0.05)",
                       color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600,
                       transition: "all 0.15s",
@@ -116,7 +116,7 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
                   >
                     <Avatar profile={f} size={24} />
                     {name}
-                    {isOn && <span style={{ color: "#60a5fa", marginLeft: 2 }}>✓</span>}
+                    {isOn && <span style={{ color: "var(--color-accent-soft)", marginLeft: 2 }}>✓</span>}
                   </button>
                 )
               })}
@@ -175,14 +175,14 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
           />
         </div>
 
-        {err && <div style={{ fontSize: 13, color: "#f87171", marginBottom: 12 }}>{err}</div>}
+        {err && <div style={{ fontSize: 13, color: "var(--color-danger)", marginBottom: 12 }}>{err}</div>}
 
         <button
           onClick={handleSend}
           disabled={saving || selected.size === 0}
           style={{
             width: "100%", padding: "14px", borderRadius: 14, border: "none",
-            background: selected.size > 0 ? "#3b82f6" : "rgba(255,255,255,0.08)",
+            background: selected.size > 0 ? "var(--color-accent-strong)" : "rgba(255,255,255,0.08)",
             color: selected.size > 0 ? "#fff" : "rgba(255,255,255,0.35)",
             fontWeight: 800, fontSize: 15, cursor: selected.size > 0 ? "pointer" : "default",
           }}
@@ -220,7 +220,7 @@ export function PingCard({ ping, onRespond, responding }) {
         </div>
         <div style={{
           background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.3)",
-          borderRadius: 999, padding: "3px 9px", fontSize: 11, fontWeight: 800, color: "#fbbf24",
+          borderRadius: 999, padding: "3px 9px", fontSize: 11, fontWeight: 800, color: "var(--color-warning)",
           whiteSpace: "nowrap",
         }}>
           Down to ski?

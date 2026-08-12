@@ -151,7 +151,7 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
               setMessage("")
             }}
             style={{
-              background: "linear-gradient(135deg, #2563eb, #0891b2)",
+              background: "var(--gradient-cta)",
               color: "white",
               border: "none",
               padding: "10px 12px",
@@ -223,7 +223,7 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
               style={{
                 background: loading
                   ? "rgba(255,255,255,0.12)"
-                  : "linear-gradient(135deg, #2563eb, #0891b2)",
+                  : "var(--gradient-cta)",
                 color: "white",
                 border: "none",
                 padding: "10px 12px",
