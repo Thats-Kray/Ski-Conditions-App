@@ -47,7 +47,7 @@ function Hero({ onSignUp, scrollTo }) {
             display: "inline-flex", alignItems: "center", gap: 6,
             background: "rgba(37,99,235,0.12)", border: "1px solid rgba(96,165,250,0.25)",
             borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 700,
-            color: "#93c5fd", marginBottom: 24,
+            color: "var(--color-banner-highlight)", marginBottom: 24,
           }}>
             ❄️ PowderDays — now open for 2025–26 season
           </div>
@@ -95,6 +95,9 @@ function Hero({ onSignUp, scrollTo }) {
           </div>
 
           <div style={{ marginTop: 28, display: "flex", alignItems: "center", gap: 10 }}>
+            {/* Decorative fixed crew-avatar palette — 5 distinct per-person colors,
+                not the app's 5-theme palette; do not tokenize (would collapse
+                distinct avatars to the same color under some themes). */}
             {["K","S","J","A","M"].map((l, i) => (
               <div key={l} style={{
                 width: 28, height: 28, borderRadius: "50%", border: "2px solid var(--color-bg)",
@@ -163,6 +166,9 @@ function SocialProof() {
 
 // ── Features ──────────────────────────────────────────────────────────────────
 
+// `accent` values are used in `${f.accent}NN` hex-alpha-suffix template literals
+// below (icon tile background/border tinting), which requires literal hex — a
+// var(--token) reference would produce invalid CSS. Do not tokenize.
 const FEATURES = [
   {
     emoji: "❄️",
@@ -196,7 +202,7 @@ function Features() {
             display: "inline-flex", alignItems: "center", gap: 6,
             background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.2)",
             borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 700,
-            color: "#60a5fa", marginBottom: 16,
+            color: "var(--color-accent-soft)", marginBottom: 16,
           }}>
             Everything your crew needs
           </div>
@@ -259,7 +265,7 @@ function HowItWorks() {
             display: "inline-flex", alignItems: "center", gap: 6,
             background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)",
             borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 700,
-            color: "#86efac", marginBottom: 16,
+            color: "var(--color-banner-badge-mint)", marginBottom: 16,
           }}>
             Simple by design
           </div>
@@ -332,7 +338,7 @@ function Resorts() {
             padding: "8px 16px", borderRadius: 999,
             border: "1px solid rgba(96,165,250,0.2)",
             background: "rgba(96,165,250,0.08)",
-            color: "#60a5fa", fontSize: 13, fontWeight: 700,
+            color: "var(--color-accent-soft)", fontSize: 13, fontWeight: 700,
           }}>
             + more
           </div>

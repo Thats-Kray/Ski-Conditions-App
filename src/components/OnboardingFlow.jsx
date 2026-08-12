@@ -9,6 +9,10 @@ const SPORT_OPTIONS = [
   { key: "snowboard", label: "Boarder",    emoji: "🏂" },
   { key: "both",      label: "Both",       emoji: "🤙" },
 ]
+// Note: colors here are used in `${color}NN` hex-alpha-suffix template literals below
+// (active-state border/background tinting), which requires literal hex — a var(--token)
+// reference would produce invalid CSS. Same documented Task 0.2 exception as
+// ProfileSetup.jsx's SKILL_OPTIONS — do not tokenize.
 const SKILL_OPTIONS = [
   { key: "green",        label: "Green",       color: "#22c55e", desc: "Groomers & cruisers" },
   { key: "blue",         label: "Blue",         color: "#60a5fa", desc: "Solid intermediate" },
@@ -41,7 +45,7 @@ function WelcomeStep({ onNext }) {
           { n: "3", label: "Drop your first trip",     desc: "Pick a mountain and send invites" },
         ].map(({ n, label, desc }) => (
           <div key={n} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 999, background: "rgba(96,165,250,0.2)", border: "1px solid rgba(96,165,250,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, color: "#60a5fa", flexShrink: 0 }}>{n}</div>
+            <div style={{ width: 28, height: 28, borderRadius: 999, background: "rgba(96,165,250,0.2)", border: "1px solid rgba(96,165,250,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, color: "var(--color-accent-soft)", flexShrink: 0 }}>{n}</div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{label}</div>
               <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>{desc}</div>
@@ -103,7 +107,7 @@ function ProfileStep({ onNext, onSkip }) {
               const active = sportType === key
               return (
                 <button key={key} type="button" onClick={() => setSportType(active ? "" : key)}
-                  style={{ padding: "12px 8px", borderRadius: 12, border: active ? "1.5px solid #60a5fa" : "1.5px solid rgba(255,255,255,0.1)", background: active ? "rgba(96,165,250,0.14)" : "rgba(255,255,255,0.04)", color: active ? "#60a5fa" : "rgba(255,255,255,0.65)", fontWeight: 800, fontSize: 12, cursor: "pointer", display: "grid", gap: 4, justifyItems: "center" }}
+                  style={{ padding: "12px 8px", borderRadius: 12, border: active ? "1.5px solid var(--color-accent-soft)" : "1.5px solid rgba(255,255,255,0.1)", background: active ? "rgba(96,165,250,0.14)" : "rgba(255,255,255,0.04)", color: active ? "var(--color-accent-soft)" : "rgba(255,255,255,0.65)", fontWeight: 800, fontSize: 12, cursor: "pointer", display: "grid", gap: 4, justifyItems: "center" }}
                 >
                   <span style={{ fontSize: 22 }}>{emoji}</span><span>{label}</span>
                 </button>
@@ -140,7 +144,7 @@ function ProfileStep({ onNext, onSkip }) {
               const active = skiPasses.includes(p)
               return (
                 <button key={p} type="button" onClick={() => togglePass(p)}
-                  style={{ background: active ? "linear-gradient(135deg,#22c55e,#14b8a6)" : "rgba(255,255,255,0.06)", color: active ? "#052e2b" : "rgba(255,255,255,0.75)", border: "none", padding: "8px 14px", borderRadius: 999, fontWeight: 800, fontSize: 13, cursor: "pointer" }}
+                  style={{ background: active ? "var(--gradient-pass-pill)" : "rgba(255,255,255,0.06)", color: active ? "var(--color-pass-pill-text)" : "rgba(255,255,255,0.75)", border: "none", padding: "8px 14px", borderRadius: 999, fontWeight: 800, fontSize: 13, cursor: "pointer" }}
                 >
                   {p}
                 </button>
@@ -152,7 +156,7 @@ function ProfileStep({ onNext, onSkip }) {
 
       {/* Sticky footer — always visible */}
       <div style={{ flexShrink: 0, padding: "12px 24px 28px", borderTop: "1px solid rgba(255,255,255,0.07)", background: "var(--color-bg-elevated)" }}>
-        {error && <div style={{ fontSize: 13, color: "#fda4af", background: "rgba(244,63,94,0.1)", borderRadius: 10, padding: "9px 12px", marginBottom: 12 }}>{error}</div>}
+        {error && <div style={{ fontSize: 13, color: "var(--color-danger)", background: "rgba(244,63,94,0.1)", borderRadius: 10, padding: "9px 12px", marginBottom: 12 }}>{error}</div>}
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onSkip} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "12px 18px", color: "rgba(255,255,255,0.5)", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>Skip</button>
           <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: saving ? "rgba(255,255,255,0.08)" : "var(--gradient-primary)", color: saving ? "rgba(255,255,255,0.4)" : "white", border: "none", borderRadius: 14, padding: "13px", fontWeight: 900, cursor: saving ? "wait" : "pointer", fontSize: 14, boxShadow: saving ? "none" : "0 6px 24px rgba(37,99,235,0.35)" }}>
@@ -219,7 +223,7 @@ function FriendsStep({ onNext }) {
               const added = sent.has(u.id)
               return (
                 <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "10px 12px" }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 999, background: "rgba(96,165,250,0.2)", border: "1px solid rgba(96,165,250,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: "#93c5fd", overflow: "hidden", flexShrink: 0 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 999, background: "rgba(96,165,250,0.2)", border: "1px solid rgba(96,165,250,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: "var(--color-banner-highlight)", overflow: "hidden", flexShrink: 0 }}>
                     {u.avatar_url ? <img src={u.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (u.full_name || u.username || "?").charAt(0).toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -229,7 +233,7 @@ function FriendsStep({ onNext }) {
                   <button
                     onClick={() => handleAdd(u.id)}
                     disabled={added}
-                    style={{ background: added ? "rgba(34,197,94,0.15)" : "rgba(96,165,250,0.15)", border: `1px solid ${added ? "rgba(34,197,94,0.3)" : "rgba(96,165,250,0.3)"}`, borderRadius: 999, padding: "6px 14px", fontSize: 12, fontWeight: 800, color: added ? "#22c55e" : "#60a5fa", cursor: added ? "default" : "pointer" }}
+                    style={{ background: added ? "rgba(34,197,94,0.15)" : "rgba(96,165,250,0.15)", border: `1px solid ${added ? "rgba(34,197,94,0.3)" : "rgba(96,165,250,0.3)"}`, borderRadius: 999, padding: "6px 14px", fontSize: 12, fontWeight: 800, color: added ? "var(--color-success-strong)" : "var(--color-accent-soft)", cursor: added ? "default" : "pointer" }}
                   >
                     {added ? "✓ Sent" : "+ Add"}
                   </button>
@@ -288,7 +292,7 @@ function DoneStep({ onFinish }) {
           </div>
         ))}
       </div>
-      <button onClick={onFinish} style={{ background: "linear-gradient(135deg,#22c55e,#14b8a6)", color: "#052e16", border: "none", borderRadius: 16, padding: "14px", fontSize: 15, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 28px rgba(34,197,94,0.35)" }}>
+      <button onClick={onFinish} style={{ background: "var(--gradient-pass-pill)", color: "var(--color-bg)", border: "none", borderRadius: 16, padding: "14px", fontSize: 15, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 28px rgba(34,197,94,0.35)" }}>
         Let's Ride 🎿
       </button>
     </div>
@@ -300,7 +304,7 @@ function StepDots({ step }) {
   return (
     <div style={{ display: "flex", justifyContent: "center", gap: 8, padding: "16px 0 0" }}>
       {STEPS.map((s, i) => (
-        <div key={s} style={{ width: i === STEPS.indexOf(step) ? 22 : 8, height: 8, borderRadius: 999, background: i <= STEPS.indexOf(step) ? "#60a5fa" : "rgba(255,255,255,0.15)", transition: "all 0.25s ease", boxShadow: i === STEPS.indexOf(step) ? "0 0 8px rgba(96,165,250,0.6)" : "none" }} />
+        <div key={s} style={{ width: i === STEPS.indexOf(step) ? 22 : 8, height: 8, borderRadius: 999, background: i <= STEPS.indexOf(step) ? "var(--color-accent-soft)" : "rgba(255,255,255,0.15)", transition: "all 0.25s ease", boxShadow: i === STEPS.indexOf(step) ? "0 0 8px rgba(96,165,250,0.6)" : "none" }} />
       ))}
     </div>
   )

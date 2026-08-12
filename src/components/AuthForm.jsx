@@ -31,7 +31,7 @@ const buttonStyle = {
   border: "none",
   borderRadius: 10,
   padding: "10px 14px",
-  background: "#3b82f6",
+  background: "var(--color-accent-strong)",
   color: "#fff",
   fontWeight: 700,
   cursor: "pointer",
@@ -230,7 +230,7 @@ export default function AuthForm({
             borderRadius: 10,
             background: "rgba(239,68,68,0.14)",
             border: "1px solid rgba(239,68,68,0.35)",
-            color: "#fecaca",
+            color: "var(--color-danger)",
           }}
         >
           {errorMessage}
@@ -245,7 +245,7 @@ export default function AuthForm({
             borderRadius: 10,
             background: "rgba(34,197,94,0.14)",
             border: "1px solid rgba(34,197,94,0.35)",
-            color: "#bbf7d0",
+            color: "var(--color-success)",
             lineHeight: 1.5,
           }}
         >
@@ -381,7 +381,7 @@ export default function AuthForm({
                           border: "1px solid rgba(255,255,255,0.14)",
                           borderRadius: 999,
                           padding: "8px 12px",
-                          background: selected ? "#3b82f6" : "rgba(255,255,255,0.06)",
+                          background: selected ? "var(--color-accent-strong)" : "rgba(255,255,255,0.06)",
                           color: "#fff",
                           cursor: "pointer",
                         }}
