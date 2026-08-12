@@ -939,7 +939,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
               {[
                 { status: "going",  label: "Going",  icon: "✓", active: "var(--color-success-strong)", glow: "rgba(34,197,94,0.38)",   text: "var(--color-bg)" },
                 { status: "maybe",  label: "Maybe",  icon: "〜", active: "var(--color-warning)", glow: "rgba(251,191,36,0.38)", text: "var(--color-bg)" },
-                { status: "cantgo", label: "Can't",  icon: "✕", active: "var(--color-trail-double-black)", glow: "rgba(244,63,94,0.38)",   text: "var(--color-bg)" },
+                { status: "cantgo", label: "Can't",  icon: "✕", active: "var(--color-danger-strong)", glow: "rgba(244,63,94,0.38)",   text: "var(--color-bg)" },
               ].map(({ status, label, icon, active, glow, text }) => {
                 const isActive = myRsvp?.status === status
                 const isPending = pendingStatus === status
