@@ -53,7 +53,7 @@ export default function EventsWidget({ resortKey }) {
       {!composerOpen ? (
         <button
           onClick={() => setComposerOpen(true)}
-          style={{ padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(56,189,248,0.4)", background: "rgba(56,189,248,0.1)", color: "#38bdf8", fontWeight: 800, cursor: "pointer", justifySelf: "start" }}
+          style={{ padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(56,189,248,0.4)", background: "rgba(56,189,248,0.1)", color: "var(--color-accent)", fontWeight: 800, cursor: "pointer", justifySelf: "start" }}
         >
           + Add Event
         </button>
@@ -63,10 +63,10 @@ export default function EventsWidget({ resortKey }) {
           <input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} style={{ ...inputStyle, colorScheme: "dark" }} />
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" rows={2} maxLength={500} style={{ ...inputStyle, resize: "vertical" }} />
           <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="Link (optional)" style={inputStyle} />
-          {saveError && <div style={{ fontSize: 12, color: "#f87171" }}>{saveError}</div>}
+          {saveError && <div style={{ fontSize: 12, color: "var(--color-danger)" }}>{saveError}</div>}
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => setComposerOpen(false)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.6)", cursor: "pointer" }}>Cancel</button>
-            <button onClick={handleCreate} disabled={saving || !title.trim() || !eventDate} style={{ flex: 2, padding: "10px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#0284c7,#38bdf8)", color: "white", fontWeight: 800, cursor: saving ? "wait" : "pointer", opacity: saving || !title.trim() || !eventDate ? 0.6 : 1 }}>
+            <button onClick={handleCreate} disabled={saving || !title.trim() || !eventDate} style={{ flex: 2, padding: "10px", borderRadius: 10, border: "none", background: "var(--gradient-primary)", color: "white", fontWeight: 800, cursor: saving ? "wait" : "pointer", opacity: saving || !title.trim() || !eventDate ? 0.6 : 1 }}>
               {saving ? "Saving…" : "Create Event"}
             </button>
           </div>
@@ -76,7 +76,7 @@ export default function EventsWidget({ resortKey }) {
       {loading ? (
         <div style={{ padding: 20, fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Loading…</div>
       ) : loadError ? (
-        <div style={{ padding: 20, fontSize: 13, color: "#f87171" }}>Couldn't load events. Try again in a bit.</div>
+        <div style={{ padding: 20, fontSize: 13, color: "var(--color-danger)" }}>Couldn't load events. Try again in a bit.</div>
       ) : !events.length ? (
         <div style={{ padding: 20, fontSize: 13, color: "rgba(255,255,255,0.4)" }}>No upcoming events yet.</div>
       ) : (

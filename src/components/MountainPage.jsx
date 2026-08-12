@@ -48,17 +48,17 @@ export default function MountainPage({ resortKey, resort, currentUserEmail, onBa
         title={<>{emoji} {name}</>}
         badges={[
           resortKey === KRAMES_BUTTE_KEY && (
-            <span key="dev" style={{ fontSize: 11, fontWeight: 900, color: "#a3e635", border: "1px dashed rgba(163,230,53,0.5)", borderRadius: 999, padding: "3px 8px" }}>
+            <span key="dev" style={{ fontSize: 11, fontWeight: 900, color: "var(--color-dev-badge)", border: "1px dashed rgba(163,230,53,0.5)", borderRadius: 999, padding: "3px 8px" }}>
               🧪 DEV
             </span>
           ),
           resort?.isOpen === true && (
-            <span key="open" style={{ fontSize: 11, fontWeight: 900, color: "#4ade80", border: "1px solid rgba(34,197,94,0.5)", borderRadius: 999, padding: "3px 8px" }}>
+            <span key="open" style={{ fontSize: 11, fontWeight: 900, color: "var(--color-success)", border: "1px solid rgba(34,197,94,0.5)", borderRadius: 999, padding: "3px 8px" }}>
               Open
             </span>
           ),
           resort?.isOpen === false && (
-            <span key="closed" style={{ fontSize: 11, fontWeight: 900, color: "#f87171", border: "1px solid rgba(239,68,68,0.5)", borderRadius: 999, padding: "3px 8px" }}>
+            <span key="closed" style={{ fontSize: 11, fontWeight: 900, color: "var(--color-danger)", border: "1px solid rgba(239,68,68,0.5)", borderRadius: 999, padding: "3px 8px" }}>
               Closed for Season
             </span>
           ),
@@ -90,10 +90,10 @@ export default function MountainPage({ resortKey, resort, currentUserEmail, onBa
             onClick={() => setActiveWidgetKey(w.key)}
             style={{
               flexShrink: 0, padding: "10px 16px", borderRadius: "12px 12px 0 0", fontSize: 13, fontWeight: 800,
-              border: "none", borderBottom: activeWidgetKey === w.key ? "2px solid #38bdf8" : "2px solid transparent",
+              border: "none", borderBottom: activeWidgetKey === w.key ? "2px solid var(--color-accent)" : "2px solid transparent",
               cursor: "pointer",
               background: activeWidgetKey === w.key ? "rgba(56,189,248,0.1)" : "transparent",
-              color: activeWidgetKey === w.key ? "#38bdf8" : "rgba(255,255,255,0.6)",
+              color: activeWidgetKey === w.key ? "var(--color-accent)" : "rgba(255,255,255,0.6)",
             }}
           >
             {w.label}
