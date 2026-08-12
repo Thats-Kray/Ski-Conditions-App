@@ -202,7 +202,7 @@ export default function MediaMessageInput({ placeholder = "Message…", onSend, 
           disabled={busy}
           style={{
             flex: 1, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 999, padding: "10px 16px", color: "white", fontSize: 14, outline: "none",
+            borderRadius: 999, padding: "10px 16px", color: "white", fontSize: 16, outline: "none",
           }}
         />
 

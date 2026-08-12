@@ -817,18 +817,6 @@ function BottomNav({ activeTab, onTabChange, currentProfile, notifCount }) {
             }}>
               {label}
             </span>
-            {isActive && (
-              <div style={{
-                position: "absolute",
-                bottom: "max(10px, var(--safe-bottom, 0px))",
-                width: 4,
-                height: 4,
-                borderRadius: "50%",
-                background: "#38bdf8",
-                boxShadow: "0 0 6px #38bdf8",
-                marginTop: 1,
-              }} />
-            )}
           </button>
         )
       })}
