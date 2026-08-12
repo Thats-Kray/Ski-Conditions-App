@@ -7,6 +7,7 @@ This template provides a minimal setup to get React working in Vite with HMR and
 - **Frontend:** Vercel (static Vite build, auto-deploy from `main`)
 - **Database & Auth:** Supabase
 - **Backend (`server/`):** Render — a single Web Service serves the Express API **and** runs the weekly powder-briefing cron job in-process (`server/cron.js`, registered at startup by `server/index.js`). Because the cron schedule lives inside the API process, the service must stay on a persistent (paid) Render plan — the free tier sleeps after 15 minutes idle and would kill the schedule.
+- Railway is unused; its config (`railway.json`) is archived at `archive/railway.json.archived` in case the backend ever moves back.
 
 See `PRD.md` §8 for the full hosting/deployment plan and `CLAUDE.md` for a project overview.
 

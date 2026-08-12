@@ -27,3 +27,5 @@ Render hosts the backend, and one Render service does double duty as **both the 
 Because of that, the service **must run on a persistent (paid) Render plan, not the free tier** — Render's free tier sleeps after 15 minutes of inactivity, which would silently kill the cron schedule along with the API.
 
 Frontend (Vercel) and Supabase are unaffected by this — only the Express backend lives on Render. See `PRD.md` §8.2 for the full setup steps and environment variables.
+
+**Railway:** unused. `railway.json` was archived to `archive/railway.json.archived` — restore it (`git mv archive/railway.json.archived railway.json`) if the backend ever moves back to Railway.
