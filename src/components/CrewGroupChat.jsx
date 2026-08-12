@@ -93,7 +93,7 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
         </div>
 
         {error && (
-          <div style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 10, background: "rgba(239,68,68,0.14)", border: "1px solid rgba(239,68,68,0.3)", color: "#fecaca", fontSize: 13 }}>
+          <div style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 10, background: "rgba(239,68,68,0.14)", border: "1px solid rgba(239,68,68,0.3)", color: "var(--color-danger)" /* rule 7: nearest danger-family token */, fontSize: 13 }}>
             {error}
           </div>
         )}
@@ -163,7 +163,7 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
                   flex: 1, padding: "9px 12px", borderRadius: 10, cursor: "pointer",
                   background: inviteOnly === v ? "rgba(96,165,250,0.18)" : "rgba(255,255,255,0.05)",
                   border: inviteOnly === v ? "1px solid rgba(96,165,250,0.5)" : "1px solid rgba(255,255,255,0.1)",
-                  color: inviteOnly === v ? "#93c5fd" : "rgba(255,255,255,0.55)",
+                  color: inviteOnly === v ? "var(--color-banner-highlight)" : "rgba(255,255,255,0.55)",
                   fontWeight: 700, fontSize: 13,
                 }}
               >
@@ -201,7 +201,7 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
                       <div style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{name}</div>
                       {f.username && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>@{f.username}</div>}
                     </div>
-                    {sel && <div style={{ fontSize: 16, color: "#60a5fa" }}>✓</div>}
+                    {sel && <div style={{ fontSize: 16, color: "var(--color-accent-soft)" }}>✓</div>}
                   </button>
                 )
               })}
@@ -214,7 +214,7 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
           disabled={saving}
           style={{
             width: "100%", padding: "13px 20px", borderRadius: 12, border: "none",
-            background: saving ? "rgba(37,99,235,0.5)" : "linear-gradient(135deg,#2563eb,#0891b2)",
+            background: saving ? "rgba(37,99,235,0.5)" : "var(--gradient-cta)",
             color: "white", fontWeight: 800, fontSize: 15, cursor: saving ? "default" : "pointer",
           }}
         >
@@ -256,13 +256,13 @@ function EditCrewModal({ crew, onSaved, onClose }) {
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "24px 20px 40px", width: "100%", maxWidth: 480 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--color-modal-bg)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "24px 20px 40px", width: "100%", maxWidth: 480 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div style={{ fontSize: 17, fontWeight: 900, color: "white" }}>Edit Crew</div>
           <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}>✕</button>
         </div>
 
-        {error && <div style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 10, background: "rgba(239,68,68,0.14)", border: "1px solid rgba(239,68,68,0.3)", color: "#fecaca", fontSize: 13 }}>{error}</div>}
+        {error && <div style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 10, background: "rgba(239,68,68,0.14)", border: "1px solid rgba(239,68,68,0.3)", color: "var(--color-danger)" /* rule 7: nearest danger-family token */, fontSize: 13 }}>{error}</div>}
 
         {/* Emoji */}
         <div style={{ marginBottom: 14 }}>
@@ -288,12 +288,12 @@ function EditCrewModal({ crew, onSaved, onClose }) {
           <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Permissions</div>
           <div style={{ display: "flex", gap: 8 }}>
             {[{ v: true, label: "🔒 Invite Only" }, { v: false, label: "🌐 Open" }].map(({ v, label }) => (
-              <button key={String(v)} onClick={() => setInviteOnly(v)} style={{ flex: 1, padding: "9px 12px", borderRadius: 10, cursor: "pointer", background: inviteOnly === v ? "rgba(96,165,250,0.18)" : "rgba(255,255,255,0.05)", border: inviteOnly === v ? "1px solid rgba(96,165,250,0.5)" : "1px solid rgba(255,255,255,0.1)", color: inviteOnly === v ? "#93c5fd" : "rgba(255,255,255,0.55)", fontWeight: 700, fontSize: 13 }}>{label}</button>
+              <button key={String(v)} onClick={() => setInviteOnly(v)} style={{ flex: 1, padding: "9px 12px", borderRadius: 10, cursor: "pointer", background: inviteOnly === v ? "rgba(96,165,250,0.18)" : "rgba(255,255,255,0.05)", border: inviteOnly === v ? "1px solid rgba(96,165,250,0.5)" : "1px solid rgba(255,255,255,0.1)", color: inviteOnly === v ? "var(--color-banner-highlight)" : "rgba(255,255,255,0.55)", fontWeight: 700, fontSize: 13 }}>{label}</button>
             ))}
           </div>
         </div>
 
-        <button onClick={handleSave} disabled={saving} style={{ width: "100%", padding: "13px", borderRadius: 12, border: "none", background: saving ? "rgba(37,99,235,0.5)" : "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", fontWeight: 800, fontSize: 15, cursor: saving ? "default" : "pointer" }}>
+        <button onClick={handleSave} disabled={saving} style={{ width: "100%", padding: "13px", borderRadius: 12, border: "none", background: saving ? "rgba(37,99,235,0.5)" : "var(--gradient-cta)", color: "white", fontWeight: 800, fontSize: 15, cursor: saving ? "default" : "pointer" }}>
           {saving ? "Saving…" : "Save Changes"}
         </button>
       </div>
@@ -448,7 +448,7 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
           style={{
             padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
             background: showMembers ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.08)",
-            color: showMembers ? "#60a5fa" : "rgba(255,255,255,0.6)",
+            color: showMembers ? "var(--color-accent-soft)" : "rgba(255,255,255,0.6)",
             fontWeight: 700, fontSize: 12,
           }}
         >
@@ -468,7 +468,7 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               {invitableFriends.length > 0 && (
-                <button onClick={() => setShowInvite((v) => !v)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "#2563eb", color: "white", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                <button onClick={() => setShowInvite((v) => !v)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                   + Add
                 </button>
               )}
@@ -478,11 +478,11 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
                 </button>
               )}
               {isAdmin ? (
-                <button onClick={handleDelete} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "rgba(239,68,68,0.15)", color: "#fca5a5", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                <button onClick={handleDelete} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "rgba(239,68,68,0.15)", color: "var(--color-danger)" /* rule 7: nearest danger-family token */, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                   Delete
                 </button>
               ) : (
-                <button onClick={handleLeave} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "rgba(239,68,68,0.15)", color: "#fca5a5", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                <button onClick={handleLeave} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "rgba(239,68,68,0.15)", color: "var(--color-danger)" /* rule 7: nearest danger-family token */, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                   Leave
                 </button>
               )}
@@ -499,7 +499,7 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
                   style={{
                     display: "flex", alignItems: "center", gap: 6,
                     padding: "5px 10px", borderRadius: 999, border: "1px solid rgba(96,165,250,0.3)",
-                    background: "rgba(96,165,250,0.1)", color: "#93c5fd", fontWeight: 700, fontSize: 12, cursor: "pointer",
+                    background: "rgba(96,165,250,0.1)", color: "var(--color-banner-highlight)", fontWeight: 700, fontSize: 12, cursor: "pointer",
                   }}
                 >
                   <Avatar profile={f} size={18} />
@@ -522,7 +522,7 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
                   <div style={{ flex: 1, minWidth: 0, cursor: isMe ? "default" : "pointer" }} onClick={() => !isMe && setViewingUserId(p?.id)}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{name}</span>
                     {isMe && <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>you</span>}
-                    {m.role === "admin" && <span style={{ fontSize: 10, color: "#fbbf24", fontWeight: 800, marginLeft: 6, background: "rgba(251,191,36,0.15)", borderRadius: 4, padding: "1px 5px" }}>Admin</span>}
+                    {m.role === "admin" && <span style={{ fontSize: 10, color: "var(--color-warning)", fontWeight: 800, marginLeft: 6, background: "rgba(251,191,36,0.15)", borderRadius: 4, padding: "1px 5px" }}>Admin</span>}
                   </div>
                   {isAdmin && !isMe && (
                     <button
@@ -577,7 +577,7 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
                 <div style={{
                   padding: msg.media_url && !msg.content ? "6px" : "9px 13px",
                   borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                  background: isMe ? "linear-gradient(135deg,#2563eb,#0891b2)" : "rgba(255,255,255,0.1)",
+                  background: isMe ? "var(--gradient-cta)" : "rgba(255,255,255,0.1)",
                   color: "white", fontSize: 14, lineHeight: 1.45,
                   boxShadow: isMe ? "0 2px 8px rgba(37,99,235,0.3)" : "none",
                   overflow: "hidden",
@@ -705,7 +705,7 @@ export default function CrewGroupChat({ friends = [] }) {
           onClick={() => setShowCreate(true)}
           style={{
             padding: "9px 16px", borderRadius: 12, border: "none",
-            background: "linear-gradient(135deg,#2563eb,#0891b2)",
+            background: "var(--gradient-cta)",
             color: "white", fontWeight: 800, fontSize: 13, cursor: "pointer",
             boxShadow: "0 2px 12px rgba(37,99,235,0.35)",
           }}
@@ -741,7 +741,7 @@ export default function CrewGroupChat({ friends = [] }) {
                     )}
                   </div>
                   <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                    <button onClick={() => handleAcceptInvite(crew.id)} style={{ padding: "7px 14px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+                    <button onClick={() => handleAcceptInvite(crew.id)} style={{ padding: "7px 14px", borderRadius: 10, border: "none", background: "var(--gradient-cta)", color: "white", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
                       Accept
                     </button>
                     <button onClick={() => handleDeclineInvite(crew.id)} style={{ padding: "7px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
@@ -770,7 +770,7 @@ export default function CrewGroupChat({ friends = [] }) {
             onClick={() => setShowCreate(true)}
             style={{
               padding: "11px 24px", borderRadius: 12, border: "none",
-              background: "linear-gradient(135deg,#2563eb,#0891b2)",
+              background: "var(--gradient-cta)",
               color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer",
             }}
           >
@@ -808,7 +808,7 @@ export default function CrewGroupChat({ friends = [] }) {
                   {crew.name}
                 </div>
                 {crew.myRole === "admin" && (
-                  <span style={{ fontSize: 9, fontWeight: 800, color: "#fbbf24", background: "rgba(251,191,36,0.15)", borderRadius: 4, padding: "1px 5px", flexShrink: 0 }}>
+                  <span style={{ fontSize: 9, fontWeight: 800, color: "var(--color-warning)", background: "rgba(251,191,36,0.15)", borderRadius: 4, padding: "1px 5px", flexShrink: 0 }}>
                     ADMIN
                   </span>
                 )}

@@ -6,11 +6,11 @@ import Avatar from "./ui/Avatar"
 import MediaMessageInput, { MessageMedia } from "./ui/MediaMessageInput"
 
 const SKILL_COLORS = {
-  green:        "#22c55e",
-  blue:         "#60a5fa",
-  black:        "#e2e8f0",
-  double_black: "#f43f5e",
-  experts_only: "#c084fc",
+  green:        "var(--color-trail-green)",
+  blue:         "var(--color-trail-blue)",
+  black:        "var(--color-trail-black)",
+  double_black: "var(--color-trail-double-black)",
+  experts_only: "var(--color-trail-expert)",
 }
 const SKILL_LABELS = {
   green:        "Green",
@@ -96,7 +96,7 @@ export default function DirectMessageView({ partner, partnerId, currentUser, onB
             <div key={msg.id || i} style={{ display: "flex", flexDirection: isMe ? "row-reverse" : "row", alignItems: "flex-end", gap: 8 }}>
               {!isMe && <Avatar profile={partner} size={26} />}
               <div style={{ maxWidth: "72%", minWidth: 0 }}>
-                <div style={{ background: isMe ? "linear-gradient(135deg,#2563eb,#0891b2)" : "rgba(255,255,255,0.09)", color: "white", borderRadius: isMe ? "14px 14px 0 14px" : "0 14px 14px 14px", padding: msg.media_url && !msg.content ? "6px" : "9px 13px", fontSize: 14, lineHeight: 1.45, wordBreak: "break-word", overflow: "hidden" }}>
+                <div style={{ background: isMe ? "var(--gradient-cta)" : "rgba(255,255,255,0.09)", color: "white", borderRadius: isMe ? "14px 14px 0 14px" : "0 14px 14px 14px", padding: msg.media_url && !msg.content ? "6px" : "9px 13px", fontSize: 14, lineHeight: 1.45, wordBreak: "break-word", overflow: "hidden" }}>
                   {msg.media_url && <MessageMedia mediaUrl={msg.media_url} mediaType={msg.media_type} />}
                   {msg.content && <div style={{ marginTop: msg.media_url ? 6 : 0 }}>{msg.content}</div>}
                 </div>
