@@ -46,6 +46,8 @@ const RESORT_COORDS = {
   aspensnowmass: { lat: 39.2097, lon: -106.9499 },
 }
 
+// decorative per-entity color, independent of theme palette — per-trip color theme picker,
+// not the app's 5-theme palette
 const THEMES = {
   default:  { label: "Mountain Blue", overlay: "linear-gradient(to bottom,rgba(2,6,23,0.08) 0%,rgba(2,6,23,0.92) 100%)",                                    snow: false, wind: false, accent: "#60a5fa" },
   blizzard: { label: "Blizzard",      overlay: "linear-gradient(to bottom,rgba(200,225,255,0.2) 0%,rgba(2,6,23,0.92) 100%)",                                snow: true,  wind: false, accent: "#bfdbfe" },
@@ -166,13 +168,13 @@ function WeatherSnapshot({ data }) {
 
   // Lightweight powder score estimate (not normalized)
   let powderLabel = null
-  let powderColor = "#60a5fa"
+  let powderColor = "var(--color-accent-soft)"
   if (snowNew != null) {
-    if (snowNew >= 12) { powderLabel = "Elite"; powderColor = "#8ef6d1" }
-    else if (snowNew >= 6) { powderLabel = "Very Good"; powderColor = "#9bc6ff" }
-    else if (snowNew >= 3) { powderLabel = "Good"; powderColor = "#ffe39a" }
-    else if (snowNew >= 1) { powderLabel = "Okay"; powderColor = "#ffc996" }
-    else { powderLabel = "Low"; powderColor = "#ff9d9d" }
+    if (snowNew >= 12) { powderLabel = "Elite"; powderColor = "var(--rating-mint)" }
+    else if (snowNew >= 6) { powderLabel = "Very Good"; powderColor = "var(--rating-sky)" }
+    else if (snowNew >= 3) { powderLabel = "Good"; powderColor = "var(--rating-gold)" }
+    else if (snowNew >= 1) { powderLabel = "Okay"; powderColor = "var(--rating-peach)" }
+    else { powderLabel = "Low"; powderColor = "var(--rating-coral)" }
   }
 
   const items = [
@@ -408,7 +410,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
   const mediaFileRef = useRef(null)
 
   const resortKey = initialTrip.resort_key
-  const accent = RESORT_ACCENTS[resortKey] || "#60a5fa"
+  const accent = RESORT_ACCENTS[resortKey] || "var(--color-accent-soft)"
   const photo = RESORT_PHOTOS[resortKey]
   const resortName = RESORT_NAMES[resortKey] || resortKey
   const countdown = daysUntil(initialTrip.ski_date)
@@ -745,7 +747,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
         style={{
           width: "100%",
           maxWidth: isMobile ? "100%" : 620,
-          background: "#08111e",
+          background: "var(--color-bg-deep)",
           border: isMobile ? "none" : "1px solid rgba(255,255,255,0.1)",
           borderRadius: isMobile ? "24px 24px 0 0" : 28,
           overflow: "hidden",
@@ -758,14 +760,14 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
         {isMobile && <div className="sheet-handle" />}
 
         {/* ── Hero ── */}
-        <div style={{ position: "relative", height: 210, background: photo ? `${theme.overlay}, url(${photo}) center/cover no-repeat` : "linear-gradient(135deg,#1e293b,#0f172a)" }}>
+        <div style={{ position: "relative", height: 210, background: photo ? `${theme.overlay}, url(${photo}) center/cover no-repeat` : "linear-gradient(135deg, var(--color-surface-popover), var(--color-modal-bg))" }}>
           {theme.snow && <SnowEffect />}
           {theme.wind && <WindEffect />}
 
           <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, zIndex: 3, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", color: "white", cursor: "pointer", fontSize: 20, lineHeight: 1 }}>×</button>
 
           {countdown && (
-            <div style={{ position: "absolute", top: 14, left: 14, zIndex: 3, background: accent, color: "#020617", borderRadius: 999, padding: "5px 13px", fontSize: 12, fontWeight: 900, letterSpacing: 0.3, boxShadow: `0 4px 18px ${accent}77` }}>
+            <div style={{ position: "absolute", top: 14, left: 14, zIndex: 3, background: accent, color: "var(--color-bg)", borderRadius: 999, padding: "5px 13px", fontSize: 12, fontWeight: 900, letterSpacing: 0.3, boxShadow: `0 4px 18px ${accent}77` }}>
               {countdown}
             </div>
           )}
@@ -850,7 +852,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
 
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
                 <button onClick={() => setEditing(false)} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "8px 16px", color: "rgba(255,255,255,0.55)", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>Cancel</button>
-                <button onClick={handleSaveEdit} disabled={editSaving} style={{ background: editSaving ? "rgba(255,255,255,0.07)" : accent, border: "none", borderRadius: 10, padding: "8px 20px", color: editSaving ? "rgba(255,255,255,0.3)" : "#020617", fontWeight: 900, cursor: editSaving ? "wait" : "pointer", fontSize: 13, boxShadow: editSaving ? "none" : `0 4px 16px ${accent}55` }}>
+                <button onClick={handleSaveEdit} disabled={editSaving} style={{ background: editSaving ? "rgba(255,255,255,0.07)" : accent, border: "none", borderRadius: 10, padding: "8px 20px", color: editSaving ? "rgba(255,255,255,0.3)" : "var(--color-bg)", fontWeight: 900, cursor: editSaving ? "wait" : "pointer", fontSize: 13, boxShadow: editSaving ? "none" : `0 4px 16px ${accent}55` }}>
                   {editSaving ? "Saving…" : "Save Changes"}
                 </button>
               </div>
@@ -869,7 +871,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
               <a href={spotifyUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "rgba(30,215,96,0.08)", border: "1px solid rgba(30,215,96,0.22)", borderRadius: 14, textDecoration: "none" }}>
                 <span style={{ fontSize: 22 }}>🎵</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: "#1ed760" }}>Trip Playlist</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#1ed760" /* Spotify brand color — do not tokenize */ }}>Trip Playlist</div>
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>Open in Spotify</div>
                 </div>
                 {isHost && <button onClick={(e) => { e.preventDefault(); setEditingSpotify(true) }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.35)", cursor: "pointer", fontSize: 12 }}>Edit</button>}
@@ -935,9 +937,9 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
           <div style={{ padding: "16px 20px 0" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
               {[
-                { status: "going",  label: "Going",  icon: "✓", active: "#22c55e", glow: "rgba(34,197,94,0.38)",   text: "#052e16" },
-                { status: "maybe",  label: "Maybe",  icon: "〜", active: "#fbbf24", glow: "rgba(251,191,36,0.38)", text: "#1c1004" },
-                { status: "cantgo", label: "Can't",  icon: "✕", active: "#f43f5e", glow: "rgba(244,63,94,0.38)",   text: "#200008" },
+                { status: "going",  label: "Going",  icon: "✓", active: "var(--color-success-strong)", glow: "rgba(34,197,94,0.38)",   text: "var(--color-bg)" },
+                { status: "maybe",  label: "Maybe",  icon: "〜", active: "var(--color-warning)", glow: "rgba(251,191,36,0.38)", text: "var(--color-bg)" },
+                { status: "cantgo", label: "Can't",  icon: "✕", active: "var(--color-trail-double-black)", glow: "rgba(244,63,94,0.38)",   text: "var(--color-bg)" },
               ].map(({ status, label, icon, active, glow, text }) => {
                 const isActive = myRsvp?.status === status
                 const isPending = pendingStatus === status
@@ -958,7 +960,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
 
             {pendingStatus === "going" && (
               <div style={{ marginTop: 12, background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.18)", borderRadius: 16, padding: "16px", display: "grid", gap: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "#22c55e" }}>Let the crew know you're in 🎿</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-success-strong)" }}>Let the crew know you're in 🎿</div>
                 <textarea value={rsvpMessage} onChange={(e) => setRsvpMessage(e.target.value)} placeholder="Drop a message… (optional)" maxLength={200} rows={2} style={{ ...fieldStyle, resize: "none", lineHeight: 1.5, width: "100%", boxSizing: "border-box" }} />
                 <div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -992,7 +994,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
                       const active = rsvpRideStatus === key
                       return (
                         <button key={key} type="button" onClick={() => setRsvpRideStatus(active ? null : key)}
-                          style={{ padding: "9px 6px", borderRadius: 12, border: active ? "1.5px solid rgba(96,165,250,0.7)" : "1.5px solid rgba(255,255,255,0.1)", background: active ? "rgba(96,165,250,0.15)" : "rgba(255,255,255,0.05)", color: active ? "#60a5fa" : "rgba(255,255,255,0.6)", fontWeight: 800, fontSize: 11, cursor: "pointer", display: "grid", gap: 4, justifyItems: "center", transition: "all 0.15s ease" }}
+                          style={{ padding: "9px 6px", borderRadius: 12, border: active ? "1.5px solid rgba(96,165,250,0.7)" : "1.5px solid rgba(255,255,255,0.1)", background: active ? "rgba(96,165,250,0.15)" : "rgba(255,255,255,0.05)", color: active ? "var(--color-accent-soft)" : "rgba(255,255,255,0.6)", fontWeight: 800, fontSize: 11, cursor: "pointer", display: "grid", gap: 4, justifyItems: "center", transition: "all 0.15s ease" }}
                         >
                           <span style={{ fontSize: 16, lineHeight: 1 }}>{emoji}</span>
                           <span style={{ textAlign: "center", lineHeight: 1.2 }}>{label}</span>
@@ -1004,7 +1006,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
 
                 <div style={{ display: "flex", gap: 8 }}>
                   <button onClick={() => { setPendingStatus(null); setRsvpRideStatus(null) }} style={{ flex: 1, padding: "10px", borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>Nevermind</button>
-                  <button onClick={handleConfirmGoingRsvp} disabled={rsvpLoading} style={{ flex: 2, padding: "10px", borderRadius: 12, background: rsvpLoading ? "rgba(34,197,94,0.3)" : "#22c55e", border: "none", color: "#052e16", fontWeight: 900, cursor: rsvpLoading ? "wait" : "pointer", fontSize: 14, boxShadow: "0 6px 20px rgba(34,197,94,0.3)" }}>
+                  <button onClick={handleConfirmGoingRsvp} disabled={rsvpLoading} style={{ flex: 2, padding: "10px", borderRadius: 12, background: rsvpLoading ? "rgba(34,197,94,0.3)" : "var(--color-success-strong)", border: "none", color: "var(--color-bg)", fontWeight: 900, cursor: rsvpLoading ? "wait" : "pointer", fontSize: 14, boxShadow: "0 6px 20px rgba(34,197,94,0.3)" }}>
                     {rsvpLoading ? "Sending…" : "I'm In! 🎿"}
                   </button>
                 </div>
@@ -1032,7 +1034,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
               <textarea value={updateInput} onChange={(e) => setUpdateInput(e.target.value)} placeholder="Roads clear? Meeting time change? Let your crew know…" maxLength={400} rows={2} autoFocus style={{ ...fieldStyle, resize: "none", lineHeight: 1.5, border: "1.5px solid rgba(251,191,36,0.28)", width: "100%", boxSizing: "border-box" }} />
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <button type="button" onClick={() => setShowUpdateForm(false)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.35)", cursor: "pointer", fontSize: 13 }}>Cancel</button>
-                <button type="submit" disabled={!updateInput.trim() || updateLoading} style={{ padding: "8px 18px", background: updateInput.trim() ? "rgba(251,191,36,0.88)" : "rgba(255,255,255,0.06)", border: "none", borderRadius: 10, color: updateInput.trim() ? "#1c1004" : "rgba(255,255,255,0.3)", fontWeight: 900, cursor: updateInput.trim() ? "pointer" : "default", fontSize: 13 }}>
+                <button type="submit" disabled={!updateInput.trim() || updateLoading} style={{ padding: "8px 18px", background: updateInput.trim() ? "rgba(251,191,36,0.88)" : "rgba(255,255,255,0.06)", border: "none", borderRadius: 10, color: updateInput.trim() ? "var(--color-bg)" : "rgba(255,255,255,0.3)", fontWeight: 900, cursor: updateInput.trim() ? "pointer" : "default", fontSize: 13 }}>
                   {updateLoading ? "Posting…" : "Post"}
                 </button>
               </div>
@@ -1113,7 +1115,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
             <form onSubmit={handleComment} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
               <Avatar profile={currentUser?.user_metadata} size={28} />
               <input value={commentInput} onChange={(e) => setCommentInput(e.target.value)} placeholder="Add a message… 🎿" maxLength={280} style={{ flex: 1, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "8px 14px", fontSize: 16, color: "white", outline: "none" }} />
-              <button type="submit" disabled={!commentInput.trim() || commentLoading} style={{ background: commentInput.trim() ? accent : "rgba(255,255,255,0.07)", color: commentInput.trim() ? "#020617" : "rgba(255,255,255,0.35)", border: "none", borderRadius: 999, padding: "8px 16px", fontSize: 12, fontWeight: 900, cursor: commentInput.trim() ? "pointer" : "default", transition: "all 0.15s ease", flexShrink: 0 }}>Send</button>
+              <button type="submit" disabled={!commentInput.trim() || commentLoading} style={{ background: commentInput.trim() ? accent : "rgba(255,255,255,0.07)", color: commentInput.trim() ? "var(--color-bg)" : "rgba(255,255,255,0.35)", border: "none", borderRadius: 999, padding: "8px 16px", fontSize: 12, fontWeight: 900, cursor: commentInput.trim() ? "pointer" : "default", transition: "all 0.15s ease", flexShrink: 0 }}>Send</button>
             </form>
           )}
         </div>
@@ -1131,8 +1133,8 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
           >
             <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
               Guest List
-              {goingCount > 0 && <span style={{ background: "rgba(34,197,94,0.14)", border: "1px solid rgba(34,197,94,0.28)", borderRadius: 999, padding: "2px 9px", fontSize: 11, color: "#22c55e", fontWeight: 900, textTransform: "none", letterSpacing: 0 }}>{goingCount} going</span>}
-              {maybeRsvps.length > 0 && <span style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 999, padding: "2px 9px", fontSize: 11, color: "#fbbf24", fontWeight: 900, textTransform: "none", letterSpacing: 0 }}>{maybeRsvps.length} maybe</span>}
+              {goingCount > 0 && <span style={{ background: "rgba(34,197,94,0.14)", border: "1px solid rgba(34,197,94,0.28)", borderRadius: 999, padding: "2px 9px", fontSize: 11, color: "var(--color-success-strong)", fontWeight: 900, textTransform: "none", letterSpacing: 0 }}>{goingCount} going</span>}
+              {maybeRsvps.length > 0 && <span style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 999, padding: "2px 9px", fontSize: 11, color: "var(--color-warning)", fontWeight: 900, textTransform: "none", letterSpacing: 0 }}>{maybeRsvps.length} maybe</span>}
             </span>
           </SectionLabel>
 
@@ -1169,7 +1171,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
                       )
                     })}
                   </div>
-                  <button onClick={handleSendFriendInvites} disabled={!selectedFriendIds.size || inviteLoading} style={{ background: selectedFriendIds.size ? accent : "rgba(255,255,255,0.07)", border: "none", borderRadius: 10, padding: "9px 16px", color: selectedFriendIds.size ? "#020617" : "rgba(255,255,255,0.3)", fontWeight: 900, cursor: selectedFriendIds.size ? "pointer" : "default", fontSize: 13 }}>
+                  <button onClick={handleSendFriendInvites} disabled={!selectedFriendIds.size || inviteLoading} style={{ background: selectedFriendIds.size ? accent : "rgba(255,255,255,0.07)", border: "none", borderRadius: 10, padding: "9px 16px", color: selectedFriendIds.size ? "var(--color-bg)" : "rgba(255,255,255,0.3)", fontWeight: 900, cursor: selectedFriendIds.size ? "pointer" : "default", fontSize: 13 }}>
                     {inviteLoading ? "Inviting…" : `Invite ${selectedFriendIds.size || ""} Friend${selectedFriendIds.size !== 1 ? "s" : ""}`}
                   </button>
                 </>
@@ -1178,7 +1180,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
                   <input value={inviteEmailName} onChange={(e) => setInviteEmailName(e.target.value)} placeholder="Name (optional)" style={{ ...fieldStyle }} />
                   <div style={{ display: "flex", gap: 8 }}>
                     <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="Email address" type="email" style={{ ...fieldStyle, flex: 1 }} />
-                    <button onClick={handleSendEmailInvite} disabled={!inviteEmail.trim() || inviteLoading} style={{ background: inviteEmail.trim() ? accent : "rgba(255,255,255,0.07)", border: "none", borderRadius: 10, padding: "9px 14px", color: inviteEmail.trim() ? "#020617" : "rgba(255,255,255,0.3)", fontWeight: 900, cursor: inviteEmail.trim() ? "pointer" : "default", fontSize: 13, flexShrink: 0 }}>
+                    <button onClick={handleSendEmailInvite} disabled={!inviteEmail.trim() || inviteLoading} style={{ background: inviteEmail.trim() ? accent : "rgba(255,255,255,0.07)", border: "none", borderRadius: 10, padding: "9px 14px", color: inviteEmail.trim() ? "var(--color-bg)" : "rgba(255,255,255,0.3)", fontWeight: 900, cursor: inviteEmail.trim() ? "pointer" : "default", fontSize: 13, flexShrink: 0 }}>
                       {inviteLoading ? "…" : "Invite"}
                     </button>
                   </div>
@@ -1255,12 +1257,12 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
             <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
               Rides 🚗
               {totalSeatsOffered > 0 && (
-                <span style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 999, padding: "2px 9px", fontSize: 11, color: "#22c55e", fontWeight: 900 }}>
+                <span style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 999, padding: "2px 9px", fontSize: 11, color: "var(--color-success-strong)", fontWeight: 900 }}>
                   {totalSeatsOffered - totalSeatsTaken} open seat{totalSeatsOffered - totalSeatsTaken !== 1 ? "s" : ""}
                 </span>
               )}
               {needRideRsvps.length > 0 && (
-                <span style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.22)", borderRadius: 999, padding: "2px 9px", fontSize: 11, color: "#fbbf24", fontWeight: 900 }}>
+                <span style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.22)", borderRadius: 999, padding: "2px 9px", fontSize: 11, color: "var(--color-warning)", fontWeight: 900 }}>
                   {needRideRsvps.length} need{needRideRsvps.length === 1 ? "s" : ""} a ride
                 </span>
               )}
@@ -1339,7 +1341,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
               />
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <button onClick={() => setShowAddCarForm(false)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.35)", cursor: "pointer", fontSize: 13 }}>Cancel</button>
-                <button onClick={handleAddCar} disabled={carpoolActionLoading} style={{ background: accent, border: "none", borderRadius: 10, padding: "8px 18px", color: "#020617", fontWeight: 900, cursor: "pointer", fontSize: 13 }}>
+                <button onClick={handleAddCar} disabled={carpoolActionLoading} style={{ background: accent, border: "none", borderRadius: 10, padding: "8px 18px", color: "var(--color-bg)", fontWeight: 900, cursor: "pointer", fontSize: 13 }}>
                   {carpoolActionLoading ? "Adding…" : "Add Car"}
                 </button>
               </div>
@@ -1484,9 +1486,9 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
           {/* Smart carpool match suggestion */}
           {!isPast && needRideRsvps.length > 0 && totalSeatsOffered - totalSeatsTaken > 0 && (
             <div style={{ marginBottom: 14, background: "linear-gradient(135deg,rgba(96,165,250,0.08),rgba(34,197,94,0.06))", border: "1px solid rgba(96,165,250,0.25)", borderRadius: 14, padding: "12px 14px" }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>🤝 Ride Matches Available</div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "var(--color-accent-soft)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>🤝 Ride Matches Available</div>
               <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.5, marginBottom: 10 }}>
-                <strong style={{ color: "white" }}>{needRideRsvps.length}</strong> {needRideRsvps.length === 1 ? "person needs" : "people need"} a ride and there {totalSeatsOffered - totalSeatsTaken === 1 ? "is" : "are"} <strong style={{ color: "#22c55e" }}>{totalSeatsOffered - totalSeatsTaken} open seat{totalSeatsOffered - totalSeatsTaken !== 1 ? "s" : ""}</strong> available.
+                <strong style={{ color: "white" }}>{needRideRsvps.length}</strong> {needRideRsvps.length === 1 ? "person needs" : "people need"} a ride and there {totalSeatsOffered - totalSeatsTaken === 1 ? "is" : "are"} <strong style={{ color: "var(--color-success-strong)" }}>{totalSeatsOffered - totalSeatsTaken} open seat{totalSeatsOffered - totalSeatsTaken !== 1 ? "s" : ""}</strong> available.
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {needRideRsvps.map((rsvp) => {
@@ -1501,7 +1503,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
                       <span>{riderFirst} → {driverFirst}'s car</span>
                       {isMe && (
                         <button onClick={() => handleClaimSeat(availableCar.id)} disabled={carpoolActionLoading}
-                          style={{ background: "#60a5fa", border: "none", borderRadius: 6, padding: "3px 9px", fontSize: 11, fontWeight: 800, color: "#020617", cursor: "pointer", marginLeft: 4 }}>
+                          style={{ background: "var(--color-accent-soft)", border: "none", borderRadius: 6, padding: "3px 9px", fontSize: 11, fontWeight: 800, color: "var(--color-bg)", cursor: "pointer", marginLeft: 4 }}>
                           Claim →
                         </button>
                       )}
@@ -1570,7 +1572,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
               </div>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <button type="button" onClick={() => setShowPollForm(false)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.35)", cursor: "pointer", fontSize: 13 }}>Cancel</button>
-                <button type="submit" disabled={!pollQuestion.trim() || pollOptions.filter((o) => o.trim()).length < 2 || pollLoading} style={{ background: pollQuestion.trim() ? accent : "rgba(255,255,255,0.07)", border: "none", borderRadius: 10, padding: "8px 18px", color: pollQuestion.trim() ? "#020617" : "rgba(255,255,255,0.3)", fontWeight: 900, cursor: pollQuestion.trim() ? "pointer" : "default", fontSize: 13 }}>
+                <button type="submit" disabled={!pollQuestion.trim() || pollOptions.filter((o) => o.trim()).length < 2 || pollLoading} style={{ background: pollQuestion.trim() ? accent : "rgba(255,255,255,0.07)", border: "none", borderRadius: 10, padding: "8px 18px", color: pollQuestion.trim() ? "var(--color-bg)" : "rgba(255,255,255,0.3)", fontWeight: 900, cursor: pollQuestion.trim() ? "pointer" : "default", fontSize: 13 }}>
                   {pollLoading ? "Creating…" : "Create Poll"}
                 </button>
               </div>
@@ -1655,7 +1657,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
                   />
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                     <button type="button" onClick={() => setShowRecapForm(false)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.35)", cursor: "pointer", fontSize: 13 }}>Cancel</button>
-                    <button type="submit" disabled={recapSaving} style={{ background: accent, border: "none", borderRadius: 10, padding: "8px 18px", color: "#020617", fontWeight: 900, cursor: "pointer", fontSize: 13 }}>
+                    <button type="submit" disabled={recapSaving} style={{ background: accent, border: "none", borderRadius: 10, padding: "8px 18px", color: "var(--color-bg)", fontWeight: 900, cursor: "pointer", fontSize: 13 }}>
                       {recapSaving ? "Saving…" : "Save Recap"}
                     </button>
                   </div>

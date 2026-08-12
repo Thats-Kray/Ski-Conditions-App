@@ -2,6 +2,7 @@ import { useState } from "react"
 import { createTrip, addCarpool, getMyProfile } from "../lib/socialApi"
 import { useMobile } from "../lib/useMobile"
 
+// decorative per-entity color, independent of theme palette
 const RESORTS = [
   { key: "vail",          name: "Vail",           pass: "Epic", photo: "/resorts/vail.jpg",           accent: "#60a5fa" },
   { key: "beavercreek",   name: "Beaver Creek",   pass: "Epic", photo: "/resorts/beaver-creek.jpg",   accent: "#fbbf24" },
@@ -17,6 +18,7 @@ const RESORTS = [
   { key: "aspensnowmass", name: "Aspen Snowmass",  pass: "Ikon", photo: "/resorts/aspen-snowmass.jpg", accent: "#e2e8f0" },
 ]
 
+// decorative per-entity color, independent of theme palette
 const THEMES = [
   { key: "default",  label: "Mountain Blue",  emoji: "🏔️", bg: "linear-gradient(135deg,#1e3a5f,#0b1424)",  accent: "#60a5fa" },
   { key: "blizzard", label: "Blizzard",        emoji: "❄️", bg: "linear-gradient(135deg,#dbeafe,#93c5fd)",  accent: "#bfdbfe" },
@@ -75,7 +77,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
   const [profileVehicle, setProfileVehicle] = useState(null) // { label, seats } from profile
 
   const selectedResort = RESORTS.find((r) => r.key === resortKey)
-  const accent = selectedResort?.accent || "#60a5fa"
+  const accent = selectedResort?.accent || "var(--color-accent-soft)"
   const minDate = new Date().toISOString().slice(0, 10)
 
   function selectResort(key) {
@@ -162,7 +164,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
         style={{
           width: "100%",
           maxWidth: isMobile ? "100%" : step === 1 ? 700 : 560,
-          background: "#0b1424",
+          background: "var(--color-modal-bg)",
           border: isMobile ? "none" : "1px solid rgba(255,255,255,0.1)",
           borderRadius: isMobile ? "24px 24px 0 0" : 28,
           overflow: "hidden",
@@ -540,7 +542,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                   borderRadius: 12,
                   padding: "10px 14px",
                   fontSize: 13,
-                  color: "#fda4af",
+                  color: "var(--color-danger)",
                 }}
               >
                 {error}
@@ -576,7 +578,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                   border: "none",
                   borderRadius: 14,
                   padding: "12px 28px",
-                  color: !loading && skiDate ? "#020617" : "rgba(255,255,255,0.35)",
+                  color: !loading && skiDate ? "var(--color-bg)" : "rgba(255,255,255,0.35)",
                   fontWeight: 900,
                   cursor: !loading && skiDate ? "pointer" : "default",
                   fontSize: 14,
@@ -598,7 +600,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
             <div style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 14, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 20 }}>✅</span>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 900, color: "#22c55e" }}>Trip created!</div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: "var(--color-success-strong)" }}>Trip created!</div>
                 <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>Now set up your ride situation (optional)</div>
               </div>
             </div>
@@ -626,7 +628,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                   {cars.length === 0 ? "Are you driving? Add your car:" : "Add another car:"}
                 </span>
                 {profileVehicle && cars.length === 0 && (
-                  <span style={{ fontSize: 10, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 999, padding: "2px 8px" }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "var(--color-success-strong)", background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 999, padding: "2px 8px" }}>
                     from your profile
                   </span>
                 )}
@@ -653,7 +655,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                   type="button"
                   onClick={handleAddCar}
                   disabled={carSaving}
-                  style={{ background: carSaving ? "rgba(255,255,255,0.07)" : `linear-gradient(135deg,${accent}ee,${accent}99)`, border: "none", borderRadius: 12, padding: "11px", color: carSaving ? "rgba(255,255,255,0.35)" : "#020617", fontWeight: 900, cursor: carSaving ? "wait" : "pointer", fontSize: 13, boxShadow: carSaving ? "none" : `0 6px 20px ${accent}44` }}
+                  style={{ background: carSaving ? "rgba(255,255,255,0.07)" : `linear-gradient(135deg,${accent}ee,${accent}99)`, border: "none", borderRadius: 12, padding: "11px", color: carSaving ? "rgba(255,255,255,0.35)" : "var(--color-bg)", fontWeight: 900, cursor: carSaving ? "wait" : "pointer", fontSize: 13, boxShadow: carSaving ? "none" : `0 6px 20px ${accent}44` }}
                 >
                   {carSaving ? "Adding…" : "Add Car 🚗"}
                 </button>
