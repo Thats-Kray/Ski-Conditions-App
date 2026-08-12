@@ -2,6 +2,10 @@ import { useState, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { getProfileById } from "../lib/socialApi"
 
+// SKILL_OPTIONS feeds `${skillObj.color}18`/`${skillObj.color}44` hex-alpha-suffix template
+// literals below (skill-badge tinting), which requires literal hex — a var(--token)
+// reference would produce invalid CSS. Same documented Task 0.2 exception as
+// ProfileSetup.jsx's SKILL_OPTIONS — do not tokenize.
 const SKILL_OPTIONS = [
   { key: "green",        label: "Green",        color: "#22c55e" },
   { key: "blue",         label: "Blue",         color: "#60a5fa" },
@@ -117,7 +121,7 @@ export default function UserProfileModal({ userId, onClose }) {
                   )}
 
                   {profile.favorite_mountain && (
-                    <div style={{ color: "#60a5fa", fontSize: 12, fontWeight: 700, marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                    <div style={{ color: "var(--color-accent-soft)", fontSize: 12, fontWeight: 700, marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
                       📍 {profile.favorite_mountain}
                     </div>
                   )}
@@ -140,7 +144,7 @@ export default function UserProfileModal({ userId, onClose }) {
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {profile.ski_passes.map((p) => (
-                    <div key={p} style={{ background: "linear-gradient(135deg,#22c55e,#14b8a6)", color: "#052e2b", borderRadius: 999, padding: "6px 13px", fontWeight: 800, fontSize: 13 }}>
+                    <div key={p} style={{ background: "var(--gradient-pass-pill)", color: "var(--color-pass-pill-text)", borderRadius: 999, padding: "6px 13px", fontWeight: 800, fontSize: 13 }}>
                       {p}
                     </div>
                   ))}
@@ -156,7 +160,7 @@ export default function UserProfileModal({ userId, onClose }) {
                   <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>Vehicle</div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: "white", marginTop: 2 }}>{profile.vehicle_label}</div>
                   {profile.vehicle_seats > 0 && (
-                    <div style={{ fontSize: 12, color: "#60a5fa", marginTop: 2, fontWeight: 700 }}>
+                    <div style={{ fontSize: 12, color: "var(--color-accent-soft)", marginTop: 2, fontWeight: 700 }}>
                       {profile.vehicle_seats} open seat{profile.vehicle_seats !== 1 ? "s" : ""}
                     </div>
                   )}

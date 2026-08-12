@@ -67,7 +67,7 @@ function FriendAvatar({ profile, size = 26 }) {
       width: size, height: size, borderRadius: 999, flexShrink: 0,
       background: "rgba(96,165,250,0.2)", border: "2px solid rgba(96,165,250,0.35)",
       display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: size * 0.42, fontWeight: 800, color: "#93c5fd",
+      fontSize: size * 0.42, fontWeight: 800, color: "var(--color-banner-highlight)",
     }}>
       {name.charAt(0).toUpperCase()}
     </div>
@@ -84,7 +84,7 @@ function WeekendPlanner({ days }) {
         <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8 }}>
           Friends' Ski Plans
         </div>
-        <div style={{ background: "rgba(96,165,250,0.15)", border: "1px solid rgba(96,165,250,0.25)", borderRadius: 999, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#60a5fa" }}>
+        <div style={{ background: "rgba(96,165,250,0.15)", border: "1px solid rgba(96,165,250,0.25)", borderRadius: 999, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "var(--color-accent-soft)" }}>
           Next 2 weeks
         </div>
       </div>
@@ -97,7 +97,7 @@ function WeekendPlanner({ days }) {
             borderRadius: 14, padding: "10px 12px",
           }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 5, marginBottom: 8 }}>
-              <div style={{ fontSize: 12, fontWeight: 900, color: day.isWeekend ? "#60a5fa" : "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.5 }}>
+              <div style={{ fontSize: 12, fontWeight: 900, color: day.isWeekend ? "var(--color-accent-soft)" : "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.5 }}>
                 {day.dayName}
               </div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{day.dateLabel}</div>
@@ -156,7 +156,7 @@ function CrewInviteCard({ invite, onAccept, onDecline, working }) {
       {invite.status === "pending" ? (
         <div style={{ display: "flex", gap: 6 }}>
           <button onClick={() => onAccept(invite.id)} disabled={working === invite.id}
-            style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "#2563eb", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+            style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
             Accept
           </button>
           <button onClick={() => onDecline(invite.id)} disabled={working === invite.id}
@@ -165,7 +165,7 @@ function CrewInviteCard({ invite, onAccept, onDecline, working }) {
           </button>
         </div>
       ) : (
-        <div style={{ fontSize: 12, fontWeight: 700, color: invite.status === "accepted" ? "#86efac" : "rgba(255,255,255,0.4)" }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: invite.status === "accepted" ? "var(--color-success)" : "rgba(255,255,255,0.4)" }}>
           {invite.status === "accepted" ? "Accepted" : "Declined"}
         </div>
       )}
@@ -387,7 +387,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
               <span style={{
                 position: "absolute", top: 6, right: 8,
                 width: 7, height: 7, borderRadius: 999,
-                background: "#ef4444",
+                background: "var(--color-danger)",
               }} />
             )}
           </button>
@@ -425,7 +425,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
               border: "1px solid rgba(96,165,250,0.28)",
               padding: "14px 16px",
             }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "var(--color-accent-soft)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
                 {incomingRequests.length} Friend Request{incomingRequests.length > 1 ? "s" : ""}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -446,7 +446,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
                       <button
                         onClick={() => handleRespondToRequest(req.id, "accepted")}
                         disabled={workingId === req.id}
-                        style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "#2563eb", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                        style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
                         Accept
                       </button>
                       <button
@@ -520,7 +520,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
               </div>
               <button type="submit" disabled={searching || !searchText.trim()} style={{
                 padding: "12px 18px", borderRadius: 12, border: "none", flexShrink: 0, minHeight: 48,
-                background: searchText.trim() ? "#2563eb" : "rgba(255,255,255,0.07)",
+                background: searchText.trim() ? "var(--color-accent-deep)" : "rgba(255,255,255,0.07)",
                 color: searchText.trim() ? "white" : "rgba(255,255,255,0.3)",
                 fontWeight: 700, fontSize: 14, cursor: searchText.trim() ? "pointer" : "default",
               }}>
@@ -554,17 +554,17 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
                       </div>
                       <div style={{ flexShrink: 0 }}>
                         {p.isFriend ? (
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "#86efac", background: "rgba(134,239,172,0.12)", borderRadius: 8, padding: "5px 10px" }}>Friends</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-success)", background: "rgba(134,239,172,0.12)", borderRadius: 8, padding: "5px 10px" }}>Friends</span>
                         ) : p.hasIncoming ? (
                           <button onClick={() => handleRespondToRequest(incomingRequests.find(r => r.requester_id === p.id)?.id, "accepted")}
-                            style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "rgba(250,204,21,0.15)", color: "#fde68a", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                            style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "rgba(250,204,21,0.15)", color: "var(--color-warning)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                             Accept
                           </button>
                         ) : p.isPending ? (
                           <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.07)", borderRadius: 8, padding: "5px 10px" }}>Pending</span>
                         ) : (
                           <button onClick={() => handleSendRequest(p.id)} disabled={workingId === p.id}
-                            style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#2563eb", color: "white", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                            style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                             {workingId === p.id ? "…" : "+ Add"}
                           </button>
                         )}
@@ -591,7 +591,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
                   {label}
                   {count > 0 && (
                     <span style={{
-                      background: friendsFilter === key ? "#2563eb" : "rgba(255,255,255,0.12)",
+                      background: friendsFilter === key ? "var(--color-accent-deep)" : "rgba(255,255,255,0.12)",
                       color: friendsFilter === key ? "white" : "rgba(255,255,255,0.45)",
                       borderRadius: 999, padding: "1px 7px", fontSize: 11, fontWeight: 800,
                     }}>
@@ -633,7 +633,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
                               <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>@{friend.username}</span>
                             )}
                             {friend.daysTogether > 0 && (
-                              <span style={{ fontSize: 11, fontWeight: 700, color: "#60a5fa", background: "rgba(96,165,250,0.12)", borderRadius: 6, padding: "2px 7px" }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-accent-soft)", background: "rgba(96,165,250,0.12)", borderRadius: 6, padding: "2px 7px" }}>
                                 {friend.daysTogether} shared day{friend.daysTogether !== 1 ? "s" : ""}
                               </span>
                             )}
@@ -648,7 +648,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
                           <button
                             onClick={() => onMessageFriend(friend)}
                             title="Message"
-                            style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(96,165,250,0.25)", background: "rgba(37,99,235,0.12)", color: "#60a5fa", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, minHeight: 40 }}
+                            style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(96,165,250,0.25)", background: "rgba(37,99,235,0.12)", color: "var(--color-accent-soft)", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, minHeight: 40 }}
                           >
                             💬
                           </button>
@@ -658,7 +658,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
                           style={{
                             padding: "10px 14px", borderRadius: 10, border: "none", flexShrink: 0, minHeight: 40,
                             background: showInviteId === friend.id ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.07)",
-                            color: showInviteId === friend.id ? "#60a5fa" : "rgba(255,255,255,0.5)",
+                            color: showInviteId === friend.id ? "var(--color-accent-soft)" : "rgba(255,255,255,0.5)",
                             fontWeight: 700, fontSize: 13, cursor: "pointer",
                           }}>
                           {showInviteId === friend.id ? "✕" : "Invite"}
@@ -693,7 +693,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
                             placeholder="Add a note…" rows={2}
                             style={{ ...inputStyle, fontSize: 13, padding: "8px 10px", resize: "none", marginBottom: 8 }} />
                           <button onClick={() => handleSendCrewInvite(friend.id)} disabled={workingId === friend.id}
-                            style={{ width: "100%", padding: "9px", borderRadius: 10, border: "none", background: "#2563eb", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                            style={{ width: "100%", padding: "9px", borderRadius: 10, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
                             {workingId === friend.id ? "Sending…" : "Send Invite"}
                           </button>
                         </div>
@@ -752,7 +752,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
                       <span style={{ fontSize: 22, flexShrink: 0 }}>{getResortEmoji(plan.resort_key)}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 800, fontSize: 14, color: "white" }}>{formatResortName(plan.resort_key)}</div>
-                        <div style={{ fontSize: 12, color: "#93c5fd", marginTop: 1 }}>{formatDate(plan.ski_date)}</div>
+                        <div style={{ fontSize: 12, color: "var(--color-banner-highlight)", marginTop: 1 }}>{formatDate(plan.ski_date)}</div>
                       </div>
                       {plan.note && (
                         <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{plan.note}</div>

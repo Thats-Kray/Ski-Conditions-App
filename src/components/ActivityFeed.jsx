@@ -64,7 +64,10 @@ export default function ActivityFeed() {
         const actorName = item.profiles?.full_name || item.profiles?.username || "Someone"
         const describe = TYPE_COPY[item.type]
         const itemReactions = reactions[item.id] || []
-        const typeAccent = item.type === "ski_session" ? "#38bdf8" : item.type === "trip_created" ? "#fb923c" : "#a78bfa"
+        // trip_created/default accents have no exact :root token match — left literal as
+        // per-type decorative differentiators (rule 5), same precedent as MountainBoard.jsx's
+        // CATEGORY_COLORS social/general entries (Task 7).
+        const typeAccent = item.type === "ski_session" ? "var(--color-accent)" : item.type === "trip_created" ? "#fb923c" : "#a78bfa"
         return (
           <AccentCard key={item.id} accentColor={typeAccent}>
             <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
