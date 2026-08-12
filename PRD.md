@@ -318,8 +318,9 @@ powderScore = clamp(rawScore, 0, 100)  ← no normalization
     └──────────────┬──────────────┘
                    │ HTTPS API calls
     ┌──────────────▼──────────────┐
-    │    Railway (Backend Proxy)   │
+    │     Render (Backend Proxy)   │
     │    Node.js / Express         │
+    │  API routes + cron runner    │
     │    Scraping + NWS proxy      │
     └──────────────┬──────────────┘
            ┌───────┴───────┐
@@ -354,25 +355,27 @@ powderScore = clamp(rawScore, 0, 100)  ← no normalization
 
 **Auto-deploy:** Every push to `main` triggers a new production deploy. PRs get preview URLs.
 
-### 8.2 Backend Proxy — Railway
+### 8.2 Backend Proxy — Render
 
-**Why Railway:** Node.js hosting with zero Docker overhead, $5/month starter plan, persistent (no sleep on inactivity), straightforward env var management.
+**Why Render:** one persistent Node service covers both jobs the backend needs to do — serving the Express API and running the scheduled powder-briefing cron — without paying for or operating two separate pieces of infrastructure.
+
+**How the one service does both jobs:** `server/index.js` boots the Express app (all `/api/*` routes) and, in the same process, calls `registerWeeklyBriefingCron()` from `server/cron.js`, which registers an in-process `node-cron` schedule (Wednesdays 7 AM America/Denver) for the weekly powder-briefing email. There's no separate cron worker or Render Cron Job resource — the API service *is* the cron runner, for as long as it stays up.
 
 **Steps:**
-1. Create a Railway project, connect GitHub repo
+1. Create a Render Web Service, connect the GitHub repo
 2. Set root directory to `/server`
-3. Set start command: `node index.js`
-4. Railway auto-detects Node and sets `NODE_ENV=production`
-5. Expose the service on a Railway-provided subdomain (e.g., `ski-proxy.railway.app`)
+3. Set build command: `npm install`
+4. Set start command: `node index.js`
+5. Choose a **persistent (paid) plan, not the free tier** — Render's free tier sleeps after 15 minutes of inactivity, which would silently kill the in-process cron schedule along with the API. This is a hard requirement, not an optimization.
 6. Add environment variables (see §8.4)
 
-**Alternative: Render.com**
-- Free tier available but sleeps after 15 minutes of inactivity — not suitable for a morning-use app where the server must be warm
-- Paid tier ($7/mo) is persistent and equivalent to Railway
+**Alternative: Railway**
+- Equivalent Node.js hosting, $5/month starter plan, persistent (no sleep on inactivity)
+- Same one-service-does-both-jobs model applies if used instead of Render
 
 **Alternative: Fly.io**
 - More control (Docker), global regions, persistent machines
-- Higher setup complexity — use only if Railway limits are hit
+- Higher setup complexity — use only if Render limits are hit
 
 **Required code change before deploying:**
 The frontend currently hardcodes `http://localhost:8787` for all API calls. This must be changed to an environment variable:
@@ -422,13 +425,13 @@ Supabase is already cloud-hosted. For production:
 |---|---|---|
 | `VITE_SUPABASE_URL` | Supabase project URL | `https://xyz.supabase.co` |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key | `eyJ...` |
-| `VITE_API_URL` | Backend proxy URL (Railway) | `https://ski-proxy.railway.app` |
+| `VITE_API_URL` | Backend proxy URL (Render) | `https://ski-proxy.onrender.com` |
 
-**Backend (Railway environment variables):**
+**Backend (Render environment variables — apply to the single service that runs both the API and the cron runner):**
 
 | Variable | Description | Example |
 |---|---|---|
-| `PORT` | Server port (Railway auto-sets this) | `8787` |
+| `PORT` | Server port (Render auto-sets this) | `8787` |
 | `ALLOWED_ORIGINS` | Comma-separated allowed CORS origins | `https://skiapp.yourdomain.com` |
 | `NODE_ENV` | Environment flag | `production` |
 
@@ -451,8 +454,9 @@ Supabase is already cloud-hosted. For production:
 
 Before going live, verify:
 
-- [ ] `VITE_API_URL` points to the Railway backend (not localhost)
-- [ ] Railway backend is live and responding to `/api/nws/snow?lat=39.64&lon=-106.37`
+- [ ] `VITE_API_URL` points to the Render backend (not localhost)
+- [ ] Render backend is live and responding to `/api/nws/snow?lat=39.64&lon=-106.37`
+- [ ] Render service is on a persistent (non-free) plan, so the in-process cron schedule survives idle periods
 - [ ] CORS on backend is restricted to the production domain
 - [ ] Supabase Site URL is set to the production domain
 - [ ] Password reset emails redirect to production domain
@@ -479,7 +483,7 @@ Before going live, verify:
 | HTTP client (server) | node-fetch 3 | ES module fetch |
 | Email | Resend | Transactional email |
 | Hosting (frontend) | Vercel | CDN, auto-deploy |
-| Hosting (backend) | Railway | Persistent Node.js |
+| Hosting (backend) | Render | Persistent Node.js — one service runs both the API and the cron runner |
 | Database | Supabase (PostgreSQL) | Cloud, with RLS |
 
 ### Frontend Structure
@@ -526,7 +530,7 @@ public/
 | `/api/drive-risk` | GET | `resort` | COtrip road alert scraper | 5 min |
 | `/api/cotrip` | GET | — | COtrip general page | 5 min |
 
-The server uses an in-memory `Map` for caching. Cache is reset on server restart and does not scale across multiple instances — acceptable for single-instance Railway deployment.
+The server uses an in-memory `Map` for caching. Cache is reset on server restart and does not scale across multiple instances — acceptable for single-instance Render deployment.
 
 ---
 
@@ -795,7 +799,7 @@ CREATE POLICY "Users manage own comments" ON trip_comments FOR ALL USING (auth.u
 | User on slow mobile connection (3G) | All data fetches are async with loading states. Dashboard cards render with `—` placeholders while loading |
 | Backend takes > 10 seconds to respond | No timeout currently set — add `AbortController` with 10-second timeout to all fetch calls |
 | User loses network mid-session | Failed refreshes show the last cached data with a timestamp; a non-blocking error banner appears |
-| Server is down (Railway restart) | Backend returns connection refused → frontend shows error banner, retains last known data |
+| Server is down (Render restart) | Backend returns connection refused → frontend shows error banner, retains last known data. A restart also re-registers the cron schedule, since it lives in the same process |
 | User hammers "Refresh Live Data" button | Button is disabled while `loading=true` — no duplicate requests possible |
 | Very large friend count (500+) | `getAcceptedFriendIds` fetches all at once — for large friend lists, this SELECT could be slow. Add pagination if needed |
 
@@ -814,7 +818,7 @@ CREATE POLICY "Users manage own comments" ON trip_comments FOR ALL USING (auth.u
 - NFR-006: The dashboard must function in a degraded state (showing partial data) when any single data source is unavailable
 - NFR-007: Auth and social features must be fully independent of the conditions backend — Supabase downtime affects social but not the static dashboard
 - NFR-008: Backend cache must prevent redundant scraping — no more than one scrape per resort per 5-minute window
-- NFR-009: The Railway backend must have a health check endpoint (`GET /health → 200`) for uptime monitoring
+- NFR-009: The Render backend must have a health check endpoint (`GET /health → 200`) for uptime monitoring
 
 ### Security
 - NFR-010: All Supabase tables must have RLS enabled — no table should be accessible without a valid JWT
@@ -826,7 +830,7 @@ CREATE POLICY "Users manage own comments" ON trip_comments FOR ALL USING (auth.u
 
 ### Availability
 - NFR-016: Target 99% uptime for the frontend (Vercel SLA)
-- NFR-017: Target 99% uptime for the backend (Railway SLA, or Render paid tier)
+- NFR-017: Target 99% uptime for the backend (Render paid-tier SLA — required for the cron runner as well as the API, since both live in the same service)
 - NFR-018: Supabase free tier has no formal SLA — upgrade to Pro ($25/mo) before public launch
 
 ### Compatibility
@@ -888,7 +892,7 @@ CREATE POLICY "Users manage own comments" ON trip_comments FOR ALL USING (auth.u
 
 **Technical requirements:**
 - `powder_alerts_enabled` column on `profiles` (boolean, default `false`)
-- Wednesday cron job (Railway cron or external scheduler) that:
+- Wednesday cron job (in-process `node-cron` schedule in `server/cron.js`, registered by the same Render service that serves the API) that:
   1. Queries all profiles with `powder_alerts_enabled = true`
   2. Fetches current powder scores for all open resorts
   3. Composes a briefing (top 3, best bet, weekend outlook)
@@ -919,7 +923,7 @@ CREATE POLICY "Users manage own comments" ON trip_comments FOR ALL USING (auth.u
 | Should trip visibility be opt-in public (anyone with the link) vs. friends-only? A public trip URL would allow sharing via text for users not yet on the platform | Product | High |
 | What is the cutoff date for a "ski season"? Should the dashboard show a "No conditions available" state off-season (April–November)? | Product | Medium |
 | Should OnTheSnow scraping be replaced now, or wait until it breaks? OpenSnow API is ~$99/mo for commercial use | Engineering | High |
-| Should the backend cache be moved to Redis (persistent, survives restarts) on Railway? This would cost ~$3/mo extra but would improve cold-start performance | Engineering | Low |
+| Should the backend cache be moved to Redis (persistent, survives restarts) on Render? This would cost ~$3/mo extra but would improve cold-start performance | Engineering | Low |
 | What should happen when a user signs up but no profile row is created (Supabase function trigger vs. client-side upsert on signup)? The current flow creates the profile client-side, which can fail silently | Engineering | High |
 | Should `App2.jsx` be deleted? It appears to be a deprecated prototype | Engineering | Low |
 | Should the password reset redirect URL be configurable per environment (dev vs. prod)? Currently Supabase has a single redirect URL | Engineering | Medium |
