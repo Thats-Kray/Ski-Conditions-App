@@ -292,7 +292,7 @@ function DoneStep({ onFinish }) {
           </div>
         ))}
       </div>
-      <button onClick={onFinish} style={{ background: "var(--gradient-pass-pill)", color: "var(--color-bg)", border: "none", borderRadius: 16, padding: "14px", fontSize: 15, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 28px rgba(34,197,94,0.35)" }}>
+      <button onClick={onFinish} style={{ background: "var(--gradient-pass-pill)", color: "var(--color-pass-pill-text)", border: "none", borderRadius: 16, padding: "14px", fontSize: 15, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 28px rgba(34,197,94,0.35)" }}>
         Let's Ride 🎿
       </button>
     </div>
