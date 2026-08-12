@@ -55,7 +55,7 @@ export default function StravaSyncReview({ activities, skippedNonSki, onClose, o
       onClick={onClose}
     >
       <div
-        style={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "24px 20px 32px", width: "100%", maxWidth: 520, maxHeight: "85dvh", display: "flex", flexDirection: "column" }}
+        style={{ background: "var(--color-modal-bg)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "24px 20px 32px", width: "100%", maxWidth: 520, maxHeight: "85dvh", display: "flex", flexDirection: "column" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexShrink: 0 }}>
@@ -118,14 +118,14 @@ export default function StravaSyncReview({ activities, skippedNonSki, onClose, o
               })}
             </div>
 
-            {error && <div style={{ fontSize: 13, color: "#f87171", marginTop: 12, flexShrink: 0 }}>{error}</div>}
+            {error && <div style={{ fontSize: 13, color: "var(--color-danger)", marginTop: 12, flexShrink: 0 }}>{error}</div>}
 
             <button
               onClick={handleImport}
               disabled={importing || includedCount === 0 || missingResort}
               style={{
                 marginTop: 16, width: "100%", padding: "13px 0", borderRadius: 12, border: "none",
-                background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", fontWeight: 900, fontSize: 14,
+                background: "var(--gradient-cta)", color: "white", fontWeight: 900, fontSize: 14,
                 cursor: importing || includedCount === 0 || missingResort ? "not-allowed" : "pointer",
                 opacity: importing || includedCount === 0 || missingResort ? 0.6 : 1,
                 flexShrink: 0,
