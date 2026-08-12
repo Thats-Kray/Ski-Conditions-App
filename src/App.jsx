@@ -1646,7 +1646,14 @@ export default function App() {
         notifCount={notifCount}
       />
 
-      <div className="mobile-scroll-pad" style={{ maxWidth: 1320, margin: "0 auto", padding: isMobile ? "16px 14px 20px" : "30px 20px 48px" }}>
+      <div className="mobile-scroll-pad" style={{
+        maxWidth: 1320,
+        margin: "0 auto",
+        paddingTop: isMobile ? 16 : 30,
+        paddingLeft: isMobile ? 14 : 20,
+        paddingRight: isMobile ? 14 : 20,
+        paddingBottom: isMobile ? undefined : 48,
+      }}>
         {mountainPageResortKey ? (
           <MountainPage
             resortKey={mountainPageResortKey}
