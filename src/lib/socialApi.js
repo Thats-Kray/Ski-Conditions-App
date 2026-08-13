@@ -118,7 +118,84 @@ export async function verifyPhoneOtp(phone, token) {
   return data
 }
 
+/* -----------------------------
+   Verification (Sprint 30)
+----------------------------- */
 
+export async function getMyVerificationTier() {
+  const user = await getCurrentUser()
+
+  const { data, error } = await supabase
+    .from("user_verification")
+    .select("tier, oauth_provider, oauth_linked_at, phone_verified_at")
+    .eq("user_id", user.id)
+    .maybeSingle()
+
+  if (error) throw error
+  return data || { tier: 0, oauth_provider: null, oauth_linked_at: null, phone_verified_at: null }
+}
+
+export async function linkOAuthIdentity(provider) {
+  if (!["google", "facebook"].includes(provider)) {
+    throw new Error(`Unsupported provider: ${provider}`)
+  }
+
+  const { data, error } = await supabase.auth.linkIdentity({
+    provider,
+    options: { redirectTo: window.location.origin },
+  })
+  if (error) throw error
+  return data // { url } — Supabase redirects the browser there automatically
+}
+
+// Reconciles user_verification with whatever Supabase Auth already knows —
+// call after any auth-state change (identity link redirect returning, phone
+// verified) since linkIdentity()'s OAuth round-trip leaves the app with no
+// other signal that an identity was just linked. Safe to call redundantly:
+// mark_oauth_linked is idempotent and re-verifies against auth.identities.
+export async function syncVerificationFromAuth() {
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error) throw error
+  if (!user) return null
+
+  const linkedProviders = (user.identities || [])
+    .map((identity) => identity.provider)
+    .filter((provider) => provider === "google" || provider === "facebook")
+
+  for (const provider of linkedProviders) {
+    await supabase.rpc("mark_oauth_linked", { p_provider: provider })
+  }
+
+  return getMyVerificationTier()
+}
+
+export async function startPhoneVerificationForTier1(phone) {
+  const { error } = await supabase.auth.updateUser({ phone })
+  if (error) throw error
+}
+
+export async function verifyPhoneForTier1(phone, otp) {
+  const { error: verifyError } = await supabase.auth.verifyOtp({
+    phone,
+    token: otp,
+    type: "phone_change",
+  })
+  if (verifyError) throw verifyError
+
+  const { data, error } = await supabase.rpc("mark_phone_verified")
+  if (error) throw error
+  return data
+}
+
+export async function reportContent(targetType, targetId, reason) {
+  const { data, error } = await supabase.rpc("report_content", {
+    p_target_type: targetType,
+    p_target_id: targetId,
+    p_reason: reason,
+  })
+  if (error) throw error
+  return data
+}
 
 /* -----------------------------
    Profiles
