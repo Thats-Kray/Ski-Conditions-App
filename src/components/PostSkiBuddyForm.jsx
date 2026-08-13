@@ -88,10 +88,10 @@ export default function PostSkiBuddyForm({ onClose, onCreated }) {
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>Post a Ski Buddy Listing</div>
-          <button type="button" onClick={onClose} style={{
+          <button type="button" onClick={busy ? undefined : onClose} disabled={busy} style={{
             background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "50%",
             width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center",
-            color: "white", fontSize: 18, cursor: "pointer", flexShrink: 0,
+            color: "white", fontSize: 18, cursor: busy ? "default" : "pointer", flexShrink: 0,
           }}>×</button>
         </div>
 

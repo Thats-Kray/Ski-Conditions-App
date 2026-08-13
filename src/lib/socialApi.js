@@ -225,6 +225,7 @@ async function moderatePostDescription(postId, description) {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ contentType: "ski_buddy_post", contentId: postId, text: description }),
+      signal: AbortSignal.timeout(5000),
     })
   } catch (err) {
     console.error("Post moderation check failed:", err?.message)
