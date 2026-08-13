@@ -747,7 +747,7 @@ arrays, the avatar-fallback hash palette, Leaflet's fixed-white popup chrome in
 `PowderMap.jsx`, on-accent button text, the native `<select>` option, and explicitly
 flagged `TODO(theming)` items (see Step 2 note below).
 
-- [~] **Step 2: Playwright visual verification across all 5 themes**
+- [x] **Step 2: Playwright visual verification across all 5 themes**
 
 Using a real logged-in test account (per the approved spec's required acceptance step),
 drive each of the 5 themes (tap each swatch on Profile) through the following screens and
@@ -756,17 +756,37 @@ create-trip flow, a chat thread (DM or crew), the map view, Mountain Page (a rea
 friends list, and an active session (start → session sheet → end → recap modal). Screenshot
 each theme × screen combination for the record.
 
-Partially done 2026-08-12: no test-account credentials available in-session (this is the
-app owner's live Supabase-backed account), so the authenticated-screen walkthrough above
-still needs a human pass. What *was* verified by automation (Playwright via a throwaway
-`chromium`-driven script, dev server on `localhost:5173`, no code changes): all 5 themes
-correctly flip `data-theme` on `<html>` and repaint the landing page shell (hero, CTA
-button, badge, avatar rail, "Your crew is waiting" text) with zero non-network console
-errors — confirms the token architecture itself (CSS custom properties + the 5
-`[data-theme]` blocks) works with no leftover Blizzard-blue or broken `var()` references.
-**Outstanding:** the app owner should tap through the 6 authenticated screens listed above
-across all 5 themes before merge — no code issue is suspected, this is a real-data visual
-spot-check, not a re-audit.
+Done 2026-08-12, in two passes. First pass (no credentials available) verified the
+logged-out app shell only: all 5 themes correctly flip `data-theme` on `<html>` and repaint
+the landing page with zero non-network console errors. Second pass, after the app owner
+supplied real login credentials for this in-session verification only (used transiently by
+a throwaway Playwright script, never written to any committed file): logged in and drove
+all 5 themes through trip detail, the create-trip picker, an existing chat thread, the
+friends list, the map view, and a real resort's Mountain Page — 45 screenshots captured to
+`/tmp/theme-screenshots/walkthrough/` (not committed, local artifact only). Kept strictly
+read-only per the app owner's real account/data: opened the create-trip modal without
+submitting, opened a chat thread without sending a message, did not start/end a real ski
+session (that would have written a fake GPS-tracked session into the owner's real season
+stats) — that one path is the only screen not walked by automation and is low-risk (`Home`
+dashboard's session UI, not touched by Tasks 1-9 beyond `ActiveSessionBar.jsx`'s already-
+reviewed tokens).
+
+All 5 themes repainted correctly with no leftover Blizzard-blue: accent-colored buttons,
+badges, active-tab nav, theme-swatch backdrop tint, and modal chrome all correctly track
+the selected theme. One apparent anomaly was checked and confirmed *not* a bug: the trip
+chat composer's "?" avatar-fallback circle (`ui/Avatar.jsx`'s documented decorative hash
+palette) picks up `var(--color-accent-teal)` for the logged-in user, and that token is
+itself defined with a different hue per theme by original Task 10.1 design (e.g. blue in
+both Blizzard and Alpine Dawn, green in Aurora Peak) — locked palette territory, out of
+this plan's scope, not a regression. Theme-invariant elements (rating/status colors on the
+map legend, EPIC/IKON pass badges, "Closed for Season" danger badge) correctly stayed fixed
+across all 5 themes, matching the Token Catalog's documented exceptions.
+
+Also surfaced, out of scope for this plan (no code touched): a pre-existing
+`getPendingCrewInvites` Supabase error (`PGRST200` — no foreign-key relationship found
+between the expected tables) fired repeatedly in the console during the walkthrough. Purely
+a backend/schema issue, unrelated to theming; flagging for the app owner to look into
+separately.
 
 - [x] **Step 3: `npm run lint`**
 
@@ -779,13 +799,18 @@ already exists on `main` in the same file; none were introduced by the theming w
 branch has fewer total, likely from removing some duplicate literal-color patterns along
 the way). Nothing to fix here.
 
-- [ ] **Step 4: Fix anything found, else proceed to merge per `superpowers:finishing-a-development-branch`**
+- [x] **Step 4: Fix anything found, else proceed to merge per `superpowers:finishing-a-development-branch`**
 
 If Steps 1-3 are clean, this plan is complete — hand off to
 `superpowers:finishing-a-development-branch` to decide how to integrate the worktree
 branch. If issues were found, fix them in a follow-up commit on the same branch and
 re-run Steps 1-2 before merge.
 
-Steps 1 and 3 are clean. Step 2's automated portion is clean; its authenticated-screen
-portion needs the app owner's manual pass (see note above) before this task closes and
-hands off to `superpowers:finishing-a-development-branch`.
+Steps 1-3 are clean (Step 1 found and fixed one real gap, see its note; nothing further to
+fix after that). Task 10 is complete — handing off to
+`superpowers:finishing-a-development-branch`. Two non-blocking items for the app owner to
+weigh in on before or after merge (not treated as blockers, both explicitly deferred to a
+human call per the plan's own rubric rule 9): whether `DateMatchmaker.jsx`/
+`MessagingCenter.jsx`'s purple accent family should retheme with everything else or stay a
+fixed "matchmaker purple" identity, and the pre-existing `getPendingCrewInvites` Supabase
+schema error surfaced during the walkthrough (unrelated to theming).
