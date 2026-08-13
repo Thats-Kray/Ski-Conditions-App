@@ -85,7 +85,7 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>👋 Down to ski?</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "var(--color-text-1)" }}>👋 Down to ski?</div>
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 3 }}>Send a quick pulse to your crew</div>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
@@ -110,7 +110,7 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
                       padding: "6px 12px 6px 6px", borderRadius: 999,
                       border: isOn ? "1.5px solid var(--color-accent-strong)" : "1.5px solid rgba(255,255,255,0.12)",
                       background: isOn ? "rgba(59,130,246,0.18)" : "rgba(255,255,255,0.05)",
-                      color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600,
+                      color: "var(--color-text-1)", cursor: "pointer", fontSize: 13, fontWeight: 600,
                       transition: "all 0.15s",
                     }}
                   >
@@ -134,7 +134,7 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
               style={{
                 width: "100%", padding: "9px 10px", borderRadius: 10,
                 border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-                color: "#fff", fontSize: 16, outline: "none",
+                color: "var(--color-text-1)", fontSize: 16, outline: "none",
               }}
             >
               <option value="">Any mountain</option>
@@ -152,7 +152,7 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
               style={{
                 width: "100%", padding: "9px 10px", borderRadius: 10,
                 border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-                color: "#fff", fontSize: 16, outline: "none", boxSizing: "border-box",
+                color: "var(--color-text-1)", fontSize: 16, outline: "none", boxSizing: "border-box",
               }}
             />
           </div>
@@ -170,7 +170,7 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 12,
               border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-              color: "#fff", fontSize: 16, outline: "none", resize: "none", boxSizing: "border-box",
+              color: "var(--color-text-1)", fontSize: 16, outline: "none", resize: "none", boxSizing: "border-box",
             }}
           />
         </div>
@@ -211,7 +211,7 @@ export function PingCard({ ping, onRespond, responding }) {
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
         <Avatar profile={ping.senderProfile} size={36} />
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{senderName}</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: "var(--color-text-1)" }}>{senderName}</div>
           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
             {resortLabel && <span style={{ marginRight: 8 }}>🏔️ {resortLabel}</span>}
             {ping.ski_date && <span>📅 {formatDate(ping.ski_date)}</span>}

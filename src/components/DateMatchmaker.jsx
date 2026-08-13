@@ -92,7 +92,7 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>📅 Date Matchmaker</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "var(--color-text-1)" }}>📅 Date Matchmaker</div>
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 3 }}>Find dates that work for everyone</div>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
@@ -108,7 +108,7 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 11,
               border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-              color: "#fff", fontSize: 16, outline: "none", boxSizing: "border-box",
+              color: "var(--color-text-1)", fontSize: 16, outline: "none", boxSizing: "border-box",
             }}
           />
         </div>
@@ -122,7 +122,7 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 11,
               border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-              color: "#fff", fontSize: 16, outline: "none",
+              color: "var(--color-text-1)", fontSize: 16, outline: "none",
             }}
           >
             <option value="">TBD — vote first, pick resort later</option>
@@ -142,7 +142,7 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
               style={{
                 flex: 1, padding: "9px 12px", borderRadius: 11,
                 border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-                color: "#fff", fontSize: 16, outline: "none",
+                color: "var(--color-text-1)", fontSize: 16, outline: "none",
               }}
             />
             <button onClick={addDate} style={{
@@ -187,7 +187,7 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
                     padding: "5px 12px 5px 6px", borderRadius: 999,
                     border: isOn ? "1.5px solid var(--color-accent-strong)" : "1.5px solid rgba(255,255,255,0.12)",
                     background: isOn ? "rgba(59,130,246,0.18)" : "rgba(255,255,255,0.05)",
-                    color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600,
+                    color: "var(--color-text-1)", cursor: "pointer", fontSize: 13, fontWeight: 600,
                   }}>
                     <Avatar profile={f} size={22} />
                     {name}
@@ -209,7 +209,7 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 12,
               border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-              color: "#fff", fontSize: 16, outline: "none", resize: "none", boxSizing: "border-box",
+              color: "var(--color-text-1)", fontSize: 16, outline: "none", resize: "none", boxSizing: "border-box",
             }}
           />
         </div>
@@ -256,7 +256,7 @@ export function DatePollCard({ poll, onVote, voting }) {
     }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 14, color: "#fff", marginBottom: 3 }}>{poll.title}</div>
+          <div style={{ fontWeight: 800, fontSize: 14, color: "var(--color-text-1)", marginBottom: 3 }}>{poll.title}</div>
           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
             {poll.isMine ? "You" : creatorName} asked
             {resortLabel ? ` · 🏔️ ${resortLabel}` : ""}
@@ -299,7 +299,7 @@ export function DatePollCard({ poll, onVote, voting }) {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   {isBest && <span style={{ fontSize: 14 }}>⭐</span>}
-                  <span style={{ fontSize: 13, fontWeight: 700, color: isBest ? "var(--color-success)" : "#fff" }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: isBest ? "var(--color-success)" : "var(--color-text-1)" }}>
                     {formatDate(opt.ski_date)}
                   </span>
                 </div>

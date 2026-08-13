@@ -366,7 +366,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ padding: "0 0 80px", color: "#fff" }}>
+    <div style={{ padding: "0 0 80px", color: "var(--color-text-1)" }}>
 
       {/* ── Top tab bar ── */}
       <div style={{ display: "flex", gap: 2, marginBottom: 16, background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 4 }}>
