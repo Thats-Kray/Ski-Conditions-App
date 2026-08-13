@@ -10,8 +10,12 @@ ALTER TABLE moderation_flags ADD COLUMN IF NOT EXISTS submitted_by UUID REFERENC
 CREATE OR REPLACE FUNCTION public.valid_riding_styles(p_styles TEXT[])
 RETURNS BOOLEAN
 LANGUAGE SQL IMMUTABLE AS $$
-  SELECT p_styles IS NOT NULL
-     AND array_length(p_styles, 1) > 0
+  -- COALESCE(..., 0) matters here: Postgres's array_length() returns NULL
+  -- (not 0) for an empty array, and a NULL result from this function would
+  -- make the CHECK constraint that calls it silently PASS (Postgres only
+  -- rejects a row on an explicit false, never on NULL) — coalescing to 0
+  -- ensures an empty riding_style array is correctly rejected as false.
+  SELECT COALESCE(array_length(p_styles, 1), 0) > 0
      AND p_styles <@ ARRAY['beginner_friendly','cruiser','park_terrain','backcountry_curious','advanced_expert','anyone_chill']::text[];
 $$;
 
