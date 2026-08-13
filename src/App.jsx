@@ -14,6 +14,7 @@ import HomeDashboard from "./components/HomeDashboard"
 import ActiveSessionBar from "./components/ActiveSessionBar"
 import SessionRecapModal from "./components/SessionRecapModal"
 import MountainBoard from "./components/MountainBoard"
+import SkiBuddyBoard from "./components/SkiBuddyBoard"
 import MountainPage from "./components/MountainPage"
 import Badge, { TIER_COLORS } from "./components/ui/Badge"
 import ScoreRing from "./components/ui/ScoreRing"
@@ -1738,6 +1739,7 @@ export default function App() {
                 { key: "conditions", label: "🏔️ Snow" },
                 { key: "map",        label: "🗺️ Map" },
                 { key: "board",      label: "📋 Board" },
+                { key: "buddy",      label: "🎿 Buddy" },
               ].map(({ key, label }) => (
                 <button
                   key={key}
@@ -1773,6 +1775,10 @@ export default function App() {
 
             {conditionsSubTab === "board" && (
               <MountainBoard defaultResortKey={topResort?.resortKey || "vail"} currentUserEmail={currentUser?.email} />
+            )}
+
+            {conditionsSubTab === "buddy" && (
+              <SkiBuddyBoard />
             )}
 
             {conditionsSubTab === "conditions" && topResort && (
