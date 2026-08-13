@@ -29,6 +29,7 @@ import {
   getTripDetail,
   logActivityOnce,
   logOut,
+  syncVerificationFromAuth,
 } from "./lib/socialApi"
 import { flushSessionToSupabase, logSkiDay } from "./lib/leaderboardApi"
 import { useGpsTracker } from "./lib/useGpsTracker"
@@ -1247,7 +1248,13 @@ export default function App() {
     if (event === "PASSWORD_RECOVERY") {
       setIsRecoveryMode(true)
       setAuthModalMode("reset")
-  
+
+    }
+
+    if (event === "USER_UPDATED") {
+      syncVerificationFromAuth().catch((err) =>
+        console.error("Verification sync failed:", err.message)
+      )
     }
   })
 
