@@ -522,11 +522,21 @@ Visual redesign toward the mockups' premium look across Mountain Page, Crew/Plan
 - [x] Owner-only "Test Verification Gate" stub in the Krames Butte dev area (`MountainBoard.jsx`) — exercises the full gate end-to-end without a real board existing yet
 - [x] **Critical bug found by final review, fixed same session:** `supabase.auth.linkIdentity()`'s redirect returns fire `SIGNED_IN`/`INITIAL_SESSION`, never `USER_UPDATED` as the original plan assumed — verified against the installed `@supabase/auth-js` source, not just docs. The tier-sync chain silently didn't complete on OAuth-link return. Fixed by listening for all three events and making the test-gate button self-reconciling (`syncVerificationFromAuth()` instead of a stale `getMyVerificationTier()` read).
 - [x] Other final-review fixes: `linkOAuthIdentity` now preserves the user's return URL (was resetting to app root); `syncVerificationFromAuth()` now self-heals the phone leg too (previously only OAuth), and the upgrade modal got a back-button + busy-state guard on its backdrop.
+- [x] Supabase Dashboard → Authentication → "Allow manual linking" flipped on by Kyle (2026-08-13)
+
+### TASK 14.1 — Configure Google/Facebook OAuth app credentials
+
+Not code — external console setup in Google Cloud Console and Meta for Developers, needed before `linkOAuthIdentity()` can actually complete an OAuth link (it'll fail with "Unsupported provider" until each provider has a real Client ID/Secret entered in Supabase Dashboard → Authentication → Sign In / Providers). Worth its own guided session since each provider involves creating an app, setting a redirect URI, and (for Google) a consent screen.
+
+- [ ] Create a Google Cloud Console OAuth app, get Client ID/Secret, add to Supabase → Authentication → Sign In / Providers → Google
+- [ ] Create a Meta for Developers (Facebook) app, get App ID/Secret, add to Supabase → Authentication → Sign In / Providers → Facebook
+- [ ] End-to-end test: owner-only "🔒 Test Verification Gate" button (Krames Butte dev area) should flip to `✅ Tier 1` after linking one provider + verifying phone
+
+**Files:** none (Supabase Dashboard + Google Cloud Console + Meta for Developers configuration only)
 
 **Outstanding:**
 1. `/api/moderate-content` (the Express route wiring `server/moderation.js` into a live endpoint) was deliberately **not** wired up — zero callers exist until Sprint 31's board ships, and shipping an unattributed, unvalidated write endpoint into `moderation_flags` with no present-day use was assessed as unnecessary attack surface. Sprint 31 should wire the route with request attribution and input validation when a real caller exists.
-2. Google/Facebook OAuth apps (Client ID/Secret in Google Cloud Console / Meta for Developers) aren't configured yet, and Supabase Dashboard → Authentication → Settings → "Enable Manual Linking" hasn't been flipped on — both are manual, app-owner-only steps blocking full end-to-end testing of the OAuth-link path. Code is ready; testing that path is a follow-up once those exist.
-3. A handful of Minor findings from the final review were deferred, not fixed: `leo-profanity`'s French/Russian dictionaries ship to every visitor (~40-50KB unused for an English-only check); `VerificationUpgradeModal.jsx` hardcodes `white`/`rgba(...)` literals instead of the theme tokens the Premium UI Uplift sprint (Section 13) established; missing indexes on `content_reports`/`moderation_flags`; a couple of FK `ON DELETE` actions worth a deliberate choice. None block Sprint 31.
+2. A handful of Minor findings from the final review were deferred, not fixed: `leo-profanity`'s French/Russian dictionaries ship to every visitor (~40-50KB unused for an English-only check); `VerificationUpgradeModal.jsx` hardcodes `white`/`rgba(...)` literals instead of the theme tokens the Premium UI Uplift sprint (Section 13) established; missing indexes on `content_reports`/`moderation_flags`; a couple of FK `ON DELETE` actions worth a deliberate choice. None block Sprint 31.
 
 **Files:** `migrations/026_verification_infrastructure.sql`, `migrations/027_report_content_dedupe.sql`, `src/lib/socialApi.js`, `src/lib/profanity.js`, `src/components/VerificationUpgradeModal.jsx`, `src/components/AuthForm.jsx`, `src/components/MountainBoard.jsx`, `src/App.jsx`, `server/moderation.js`, `server/index.js`
 
@@ -554,8 +564,8 @@ All sprints 1–30 are merged, including Mountain Board (Section 11), the Mounta
 | 11 — Mountain Board | 1 | 1 |
 | 12 — Mountain Page & Krames Butte | 1 | 1 |
 | 13 — Premium UI Uplift | 1 | 1 |
-| 14 — Trust Tier & Verification Infrastructure | 1 | 1 (moderation route wiring + OAuth app setup deferred, see task notes) |
-| **Total** | **33** | **33** |
+| 14 — Trust Tier & Verification Infrastructure | 2 | 1 (Task 14.1, OAuth app credential setup, still open — see task notes) |
+| **Total** | **34** | **33** |
 
 Task 0.2's hex-token cleanup is complete (2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) and `migrations/024_theme_preference.sql` (Section 10) are both applied to the live Supabase project (2026-08-08). Section 10's theme-switching MVP is implemented and its migration is live, but `npm run lint` and a visual pass across all 5 themes haven't been run yet, and full app-wide theming beyond the MVP scope remains unscheduled follow-up work — see Section 10's task notes.
 
