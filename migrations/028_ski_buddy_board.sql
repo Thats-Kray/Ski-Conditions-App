@@ -1,6 +1,10 @@
 -- Migration 028: Ski Buddy Board (Sprint 31)
 -- Run in Supabase SQL Editor, then: NOTIFY pgrst, 'reload schema';
 
+-- KNOWN GAP: is_held_for_review has no release mechanism yet (no admin
+-- RPC/UI exists). A false-positive moderation flag permanently hides a post
+-- today. Tracked as a Sprint 32 follow-up in ROADMAP.md.
+
 -- Attribution for moderation_flags rows — Sprint 30 left this column out
 -- since the moderation route had no real caller yet; it does now (below).
 ALTER TABLE moderation_flags ADD COLUMN IF NOT EXISTS submitted_by UUID REFERENCES auth.users(id) ON DELETE SET NULL;
@@ -158,6 +162,10 @@ BEGIN
   END IF;
 
   IF v_post.status <> 'open' THEN
+    RAISE EXCEPTION 'POST_NOT_OPEN';
+  END IF;
+
+  IF v_post.is_held_for_review THEN
     RAISE EXCEPTION 'POST_NOT_OPEN';
   END IF;
 
