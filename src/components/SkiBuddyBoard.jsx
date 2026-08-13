@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   getSkiBuddyPosts,
   getSkiBuddyResponses,
@@ -105,25 +105,56 @@ export default function SkiBuddyBoard() {
   const [reportingId, setReportingId] = useState(null)
   const [reportReason, setReportReason] = useState("")
 
+  // Holds the gated action (e.g. "open the post form") while the verification
+  // modal is up, so it can be resumed after the user verifies instead of
+  // being silently dropped. A ref, not state — it doesn't need to trigger a
+  // re-render, only to be read once verification completes. See Task 4
+  // review Finding 2.
+  const pendingActionRef = useRef(null)
+
   useEffect(() => {
     getCurrentUser().then((u) => setCurrentUserId(u.id)).catch(() => setCurrentUserId(null))
   }, [])
 
-  function loadPosts() {
-    setLoading(true)
-    setLoadError(null)
-    getSkiBuddyPosts({
+  // Shared, memoized filter-param fetch — no state-setting of its own, so it
+  // can be reused by both the cancellation-guarded effect below and the
+  // plain callable `loadPosts` used for manual reconciliation elsewhere in
+  // this component (see handleStatusChange's catch).
+  const fetchPosts = useCallback(() => {
+    return getSkiBuddyPosts({
       passType: passTypeFilter === "all" ? null : passTypeFilter,
       resortKey: resortFilter === "all" ? null : resortFilter,
       carpoolStatus: carpoolFilter === "all" ? null : carpoolFilter,
       ridingStyle: ridingStyleFilter === "all" ? null : ridingStyleFilter,
     })
+  }, [passTypeFilter, resortFilter, carpoolFilter, ridingStyleFilter])
+
+  // Callable version for the manual reconciliation call in handleStatusChange
+  // — fire-and-forget, not tied to the filter-change race below, so it
+  // doesn't need a cancelled guard of its own.
+  function loadPosts() {
+    setLoading(true)
+    setLoadError(null)
+    fetchPosts()
       .then(setPosts)
       .catch((err) => { setPosts([]); setLoadError(err) })
       .finally(() => setLoading(false))
   }
 
-  useEffect(loadPosts, [passTypeFilter, resortFilter, carpoolFilter, ridingStyleFilter])
+  // Cancellation-guarded so a slower, earlier fetch (e.g. from a filter
+  // clicked before this one) can't resolve after a later one and clobber it
+  // with stale results — same pattern as ResponseThread's effect above and
+  // MountainBoard.jsx's getBoardPosts effect.
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setLoadError(null)
+    fetchPosts()
+      .then((rows) => { if (!cancelled) setPosts(rows) })
+      .catch((err) => { if (!cancelled) { setPosts([]); setLoadError(err) } })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [fetchPosts])
 
   async function requireTier1(action) {
     try {
@@ -132,6 +163,7 @@ export default function SkiBuddyBoard() {
     } catch {
       // fall through to the modal — if we can't confirm tier, don't assume it
     }
+    pendingActionRef.current = action
     setShowVerifyModal(true)
   }
 
@@ -200,7 +232,12 @@ export default function SkiBuddyBoard() {
       {showVerifyModal && (
         <VerificationUpgradeModal
           onClose={() => setShowVerifyModal(false)}
-          onVerified={() => setShowVerifyModal(false)}
+          onVerified={() => {
+            setShowVerifyModal(false)
+            const action = pendingActionRef.current
+            pendingActionRef.current = null
+            action?.()
+          }}
         />
       )}
 
