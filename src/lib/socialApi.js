@@ -152,7 +152,11 @@ export async function linkOAuthIdentity(provider) {
 // call after any auth-state change (identity link redirect returning, phone
 // verified) since linkIdentity()'s OAuth round-trip leaves the app with no
 // other signal that an identity was just linked. Safe to call redundantly:
-// mark_oauth_linked is idempotent and re-verifies against auth.identities.
+// mark_oauth_linked/mark_phone_verified are both idempotent and re-verify
+// against auth.identities/auth.users server-side. Also self-heals the phone
+// leg: if verifyPhoneForTier1()'s RPC call failed transiently after the OTP
+// was already confirmed, calling this again (e.g. via a retry button, or
+// automatically on the next auth event) recovers without needing a new OTP.
 export async function syncVerificationFromAuth() {
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error) throw error
@@ -164,6 +168,10 @@ export async function syncVerificationFromAuth() {
 
   for (const provider of linkedProviders) {
     await supabase.rpc("mark_oauth_linked", { p_provider: provider })
+  }
+
+  if (user.phone_confirmed_at) {
+    await supabase.rpc("mark_phone_verified")
   }
 
   return getMyVerificationTier()

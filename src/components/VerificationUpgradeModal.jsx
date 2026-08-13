@@ -95,7 +95,7 @@ export default function VerificationUpgradeModal({ onClose, onVerified }) {
 
   return (
     <div
-      onClick={onClose}
+      onClick={busy ? undefined : onClose}
       style={{
         position: "fixed",
         inset: 0,
@@ -249,6 +249,24 @@ export default function VerificationUpgradeModal({ onClose, onVerified }) {
               }}
             >
               {busy ? "Confirming…" : "Confirm"}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => { setPhoneStep("enter"); setOtp(""); setError("") }}
+              style={{
+                width: "100%",
+                marginTop: 10,
+                padding: "8px",
+                background: "transparent",
+                border: "none",
+                color: "rgba(255,255,255,0.5)",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: busy ? "default" : "pointer",
+              }}
+            >
+              ← Use a different number
             </button>
           </form>
         )}
