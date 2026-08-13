@@ -781,12 +781,81 @@ app.get("/api/resubscribe", async (req, res) => {
 })
 
 // ── Server-side content moderation (OpenAI Moderation API) ──
-// server/moderation.js's moderateText() is ready to use, but the route that
-// calls it (POST /api/moderate-content) is intentionally not wired up yet —
-// there's no real caller until Sprint 31's board ships. Wire it back in then,
-// with request attribution (req.userId on the moderation_flags row) and input
-// validation this sprint's version was missing. See Sprint 30's final review
-// for the full reasoning.
+import { moderateText } from "./moderation.js"
+
+const MODERATION_CONTENT_TYPES = new Set(["ski_buddy_post"])
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Verifies the caller's Supabase JWT and pins req.userId to the *authenticated*
+// user, same pattern as requireAuth in routes/strava.js:49-70 — defined locally
+// here since it isn't currently exported from that module.
+async function requireAuth(req, res, next) {
+  const header = req.get("authorization") || ""
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : null
+
+  if (!token) {
+    return res.status(401).json({ error: "Missing Authorization bearer token" })
+  }
+
+  try {
+    const { data, error } = await getSupabase().auth.getUser(token)
+    if (error || !data?.user) {
+      return res.status(401).json({ error: "Invalid or expired session" })
+    }
+    req.userId = data.user.id
+    next()
+  } catch (err) {
+    console.error("Auth verification error:", err.message)
+    res.status(401).json({ error: "Could not verify session" })
+  }
+}
+
+app.post("/api/moderate-content", requireAuth, async (req, res) => {
+  const { contentType, contentId, text } = req.body || {}
+
+  if (!contentType || !contentId || !text) {
+    return res.status(400).json({ error: "contentType, contentId, and text are required" })
+  }
+  if (!MODERATION_CONTENT_TYPES.has(contentType)) {
+    return res.status(400).json({ error: `Unsupported contentType: ${contentType}` })
+  }
+  if (!UUID_RE.test(contentId)) {
+    return res.status(400).json({ error: "contentId must be a UUID" })
+  }
+  if (typeof text !== "string" || text.length > 2000) {
+    return res.status(400).json({ error: "text must be a string of 2000 characters or fewer" })
+  }
+
+  try {
+    const result = await moderateText(text)
+
+    if (result.flagged) {
+      const { error: flagError } = await getSupabase().from("moderation_flags").insert({
+        content_type: contentType,
+        content_id: contentId,
+        source: "openai_moderation",
+        category: result.category,
+        score: result.score,
+        auto_held: true,
+        submitted_by: req.userId,
+      })
+      if (flagError) throw flagError
+
+      if (contentType === "ski_buddy_post") {
+        const { error: holdError } = await getSupabase()
+          .from("ski_buddy_posts")
+          .update({ is_held_for_review: true })
+          .eq("id", contentId)
+        if (holdError) throw holdError
+      }
+    }
+
+    res.json({ flagged: result.flagged, held: result.flagged })
+  } catch (err) {
+    console.error("Moderation check failed:", err.message)
+    res.status(500).json({ error: "Moderation check failed" })
+  }
+})
 
 // ── Aggregate conditions + Powder Score, for the cron job (no HTTP round-trip) ──
 
