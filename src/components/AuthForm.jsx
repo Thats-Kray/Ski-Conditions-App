@@ -7,6 +7,7 @@ import {
   sendPhoneOtp,
   verifyPhoneOtp,
 } from "../lib/socialApi"
+import { isUsernameProfane } from "../lib/profanity"
 
 const fieldStyle = {
   width: "100%",
@@ -118,6 +119,9 @@ export default function AuthForm({
         if (onSuccess) onSuccess()
 
       } else if (formMode === "signup") {
+        if (isUsernameProfane(username.trim())) {
+          throw new Error("That username isn't allowed. Please choose another.")
+        }
         await signUpWithProfile({
           first_name: firstName.trim(),
           last_name: lastName.trim(),
