@@ -154,7 +154,7 @@ silently expanding later tasks.
 **Interfaces:** none new — every prop/export of every file is unchanged, only the literal
 color values inside existing `style={{...}}` objects change.
 
-- [ ] **Step 1: Add the new token block to `src/index.css`**
+- [x] **Step 1: Add the new token block to `src/index.css`**
 
 Insert immediately after line 103 (`--rating-slate-border: rgba(100, 116, 139, 0.2);`),
 before the `--radius-card` line:
@@ -177,7 +177,7 @@ before the `--radius-card` line:
   --color-dev-badge-strong: #65a30d;
 ```
 
-- [ ] **Step 2: Fix `Button.jsx`'s danger variant (worked example)**
+- [x] **Step 2: Fix `Button.jsx`'s danger variant (worked example)**
 
 `Button.jsx:17-21` currently:
 ```jsx
@@ -195,7 +195,7 @@ Replace with:
 ```
 (`color: "#fff"` stays literal — rule 2, on-accent contrast text.)
 
-- [ ] **Step 3: Apply the classification rubric to the remaining 8 files**
+- [x] **Step 3: Apply the classification rubric to the remaining 8 files**
 
 Run `grep -oE "#[0-9a-fA-F]{3,8}\b" src/components/ui/{Avatar,AvatarStatusRail,GifPicker,HeroPhotoHeader,MediaMessageInput,ResortPicker,StatStrip,AccentCard}.jsx | sort | uniq -c`
 to get the exact checklist (24 total literals across these 8 files as of this writing).
@@ -203,14 +203,14 @@ Resolve each via the Methodology rubric above — the large majority will be rul
 duplicates of `--color-*`/`--gradient-*` tokens already in the Token Catalog (these files
 are small UI atoms with few genuinely novel colors).
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run `npm run dev`. Visit Home, Leaderboard, Profile (screens that render these primitives
 today) and confirm no visual change under the default Blizzard theme — this task is a
 lossless refactor, nothing should look different yet since Blizzard's token values equal
 the old hardcoded hex by construction.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/index.css src/components/ui/
@@ -228,7 +228,7 @@ git commit -m "refactor: tokenize remaining ui/ primitives, add Track D status/d
 keep their exact signatures — only their internal return values change from raw hex to
 `var(--token)` strings.
 
-- [ ] **Step 1: Consolidate `tierColor()`/`riskColor()`/`vibeTier()` onto existing `--rating-*` tokens (worked example)**
+- [x] **Step 1: Consolidate `tierColor()`/`riskColor()`/`vibeTier()` onto existing `--rating-*` tokens (worked example)**
 
 `src/App.jsx:413-438` currently:
 ```jsx
@@ -293,7 +293,7 @@ original `#ff9d9d`, unchanged in meaning) — not a mistake, just how it was ori
 authored (🔥 High = the same visual weight as "Poor" tier elsewhere, unrelated concepts
 that happen to share a color by original design).
 
-- [ ] **Step 2: Fix `scoreGradient()`'s duplicate of `--gradient-primary`/`--gradient-elite`**
+- [x] **Step 2: Fix `scoreGradient()`'s duplicate of `--gradient-primary`/`--gradient-elite`**
 
 `src/App.jsx:440-447`:
 ```jsx
@@ -324,7 +324,7 @@ theme-invariant score-tier gradients with no brand-color meaning, same category 
 `--rating-*` tokens but expressed as gradients; not worth 4 new single-use tokens for a
 function only called in one place.)
 
-- [ ] **Step 3: Apply the rubric to the remaining checklist**
+- [x] **Step 3: Apply the rubric to the remaining checklist**
 
 `grep -oE "#[0-9a-fA-F]{3,8}\b" src/App.jsx | sort | uniq -c | sort -rn` for the full list
 (34 distinct values as of this writing). Beyond Steps 1-2 above, the notable ones:
@@ -337,7 +337,7 @@ function only called in one place.)
   - Any resort-card badge text sitting on a colored pill background → rule 2,
     `var(--color-bg)`.
 
-- [ ] **Step 4: Verify no functionality dropped**
+- [x] **Step 4: Verify no functionality dropped**
 
 Run `npm run dev`, go to the Snow tab. For at least one resort: expand "Show Details" and
 confirm every detail row still renders (this file's `ResortCard` has the app's highest
@@ -345,7 +345,7 @@ regression risk per the Premium UI Uplift plan's own Task 14 note — same cauti
 here). Confirm tier badges, risk badges, and the vibe badge still show the correct color
 for their state.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/App.jsx
@@ -361,7 +361,7 @@ git commit -m "refactor: tokenize App.jsx resort-card colors, consolidate tierCo
 
 **Interfaces:** none new.
 
-- [ ] **Step 1: Consolidate the score-color function onto the same rating tokens as `App.jsx` (worked example)**
+- [x] **Step 1: Consolidate the score-color function onto the same rating tokens as `App.jsx` (worked example)**
 
 `PowderMap.jsx` has its own independent copy of "what color is a good powder score"
 (lines ~8-14):
@@ -379,20 +379,20 @@ boundaries don't cleanly align to 5 discrete tiers, keep the numeric buckets but
 returned literal for the nearest `--rating-*` token by name (e.g. a "strong/good/weak"
 3-bucket function maps to mint/gold/coral).
 
-- [ ] **Step 2: Apply the rubric to the remaining checklist**
+- [x] **Step 2: Apply the rubric to the remaining checklist**
 
 `grep -oE "#[0-9a-fA-F]{3,8}\b" src/components/PowderMap.jsx | sort | uniq -c` (13 distinct
 values as of this writing). `#92400e` and other exact token duplicates → rule 1. The
 `LegendItem color="..."` props should reference whichever token the corresponding bucket
 above now uses, so the legend and the map markers can never drift out of sync.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run `npm run dev`, open the map view (from Home or wherever `PowderMap` is mounted).
 Confirm resort markers still color-code by score the same way as before, and the legend
 still matches the marker colors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/PowderMap.jsx
@@ -411,7 +411,7 @@ git commit -m "refactor: tokenize PowderMap score-color function onto shared rat
 
 **Interfaces:** none new.
 
-- [ ] **Step 1: On-accent text color (worked example, rule 2)**
+- [x] **Step 1: On-accent text color (worked example, rule 2)**
 
 `TripDetailModal.jsx:768`:
 ```jsx
@@ -423,20 +423,20 @@ and others in this file — apply the same replacement everywhere `"#020617"` ap
 `color` value paired with an `accent`-derived background. (`#020617` used any other way —
 check first — should follow the general rubric instead.)
 
-- [ ] **Step 2: Third-party brand color exception (worked example, do NOT change)**
+- [x] **Step 2: Third-party brand color exception (worked example, do NOT change)**
 
 `TripDetailModal.jsx:872` and `:883` use `#1ed760` (Spotify green) for the "Trip Playlist"
 feature. Leave these exactly as-is — Spotify brand color, per the Token Catalog exception
 list. Add a one-line comment on first use: `/* Spotify brand color — do not tokenize */`.
 
-- [ ] **Step 3: Per-entity decorative accent exception (worked example, do NOT change)**
+- [x] **Step 3: Per-entity decorative accent exception (worked example, do NOT change)**
 
 `CreateTripModal.jsx:14`: `{ key: "arapahoebasin", name: "Arapahoe Basin", pass: "Ikon", photo: "...", accent: "#94a3b8" }`
 and the `WEATHER_CONDITIONS`-style array around line 27 (`bg`/`accent` pairs per
 condition). These are rule-5 per-entity decorative differentiators, not theme colors —
 leave as literal hex.
 
-- [ ] **Step 4: Apply the rubric to the remaining checklist**
+- [x] **Step 4: Apply the rubric to the remaining checklist**
 
 `grep -oE "#[0-9a-fA-F]{3,8}\b" src/components/{TripDetailModal,CreateTripModal,TripCard,TripChatView}.jsx | sort | uniq -c | sort -rn`
 (109 total literals across these 4 files as of this writing). Beyond Steps 1-3, expect:
@@ -447,13 +447,13 @@ onto `--color-danger`/`--color-warning` family), and structural modal background
 to whichever of `--color-modal-bg`/`--color-bg-deep`/`--color-bg-elevated` is visually
 closest; prefer reusing an existing token over adding a new one unless none is close.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run `npm run dev`. Create a trip via `CreateTripModal`, open it in `TripDetailModal`,
 confirm the carpool section, RSVP list, comments, and (if connected) the Spotify playlist
 section all still render and function. Open a trip's chat via `TripChatView`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/components/TripDetailModal.jsx src/components/CreateTripModal.jsx src/components/TripCard.jsx src/components/TripChatView.jsx
@@ -472,7 +472,7 @@ git commit -m "refactor: tokenize trip flow colors for theme switching"
 
 **Interfaces:** none new.
 
-- [ ] **Step 1: Consolidate `SKILL_COLORS` onto the ski-trail-difficulty tokens (worked example)**
+- [x] **Step 1: Consolidate `SKILL_COLORS` onto the ski-trail-difficulty tokens (worked example)**
 
 `DirectMessageView.jsx:8-14` currently:
 ```jsx
@@ -502,7 +502,7 @@ Search the other 3 files in this task for a similar skill/difficulty color map �
 exists (check `CrewGroupChat.jsx` and `MessagingCenter.jsx` for a `SKILL_COLORS`-shaped
 object), consolidate it onto the same tokens rather than leaving a second copy.
 
-- [ ] **Step 2: Apply the rubric to the remaining checklist**
+- [x] **Step 2: Apply the rubric to the remaining checklist**
 
 `grep -oE "#[0-9a-fA-F]{3,8}\b" src/components/{MessagingCenter,CrewGroupChat,DirectMessageView,DateMatchmaker}.jsx | sort | uniq -c | sort -rn`
 (81 total literals across these 4 files as of this writing). `DateMatchmaker.jsx`'s purple
@@ -512,13 +512,13 @@ family (`#8b5cf6`, `#a78bfa`, `#9333ea`, `#c4b5fd`) is a UI accent distinct from
 should retheme with everything else; if the former, treat as rule-9 (flag and ask) rather
 than guessing, since this wasn't resolved during brainstorming.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run `npm run dev`. Open a DM thread (confirm the partner's skill-level badge still shows
 the correct trail color), open a crew group chat, and open the Date Matchmaker composer
 from a crew chat's "📅 Find a Date with Your Crew" button.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/MessagingCenter.jsx src/components/CrewGroupChat.jsx src/components/DirectMessageView.jsx src/components/DateMatchmaker.jsx
@@ -538,7 +538,7 @@ git commit -m "refactor: tokenize messaging/crew-chat colors, consolidate SKILL_
 
 **Interfaces:** none new.
 
-- [ ] **Step 1: Apply the rubric to the full checklist**
+- [x] **Step 1: Apply the rubric to the full checklist**
 
 `grep -oE "#[0-9a-fA-F]{3,8}\b" src/components/{LandingPage,OnboardingFlow,ProfileSetup,AuthForm,AuthPanel}.jsx | sort | uniq -c | sort -rn`
 (65 total literals across these 5 files as of this writing). These screens are seen once
@@ -549,12 +549,12 @@ family tokens, since they predate every semantic-color addition from later sprin
 `ProfileSetup.jsx`'s `SKILL_OPTIONS` is the pre-existing Task 0.2 exception (leave alone,
 already documented).
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run `npm run dev`, log out, walk the landing page → auth form → onboarding flow →
 profile setup sequence for a fresh (or test) account.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/LandingPage.jsx src/components/OnboardingFlow.jsx src/components/ProfileSetup.jsx src/components/AuthForm.jsx src/components/AuthPanel.jsx
@@ -572,7 +572,7 @@ git commit -m "refactor: tokenize landing/onboarding/auth colors for theme switc
 
 **Interfaces:** none new.
 
-- [ ] **Step 1: Krames Butte dev-marker exception (worked example, rule 6)**
+- [x] **Step 1: Krames Butte dev-marker exception (worked example, rule 6)**
 
 `MountainBoard.jsx:135`:
 ```jsx
@@ -590,24 +590,24 @@ alpha-modified via string interpolation the way this codebase's `${accent}77` pa
 works elsewhere) or convert to `color-mix()` only if every target browser support matters
 less than consistency — default to leaving the rgba literal as-is unless it's trivial.
 
-- [ ] **Step 2: `#0284c7` gradient duplicate (worked example, rule 1)**
+- [x] **Step 2: `#0284c7` gradient duplicate (worked example, rule 1)**
 
 `MountainBoard.jsx:121` and `:206` both use `"linear-gradient(135deg,#0284c7,#38bdf8)"` —
 exact duplicate of `var(--gradient-primary)`. Replace both.
 
-- [ ] **Step 3: Apply the rubric to the remaining checklist**
+- [x] **Step 3: Apply the rubric to the remaining checklist**
 
 `grep -oE "#[0-9a-fA-F]{3,8}\b" src/components/{MountainBoard,MountainPage,EventsWidget}.jsx | sort | uniq -c | sort -rn`
 (25 total literals across these 3 files as of this writing).
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run `npm run dev` as the app owner account (Krames Butte access is owner-gated). Open
 Mountain Page for a real resort, confirm the hero/stat strip/events tab all render.
 Open Mountain Page for Krames Butte, confirm the dev-marker styling is still visually
 distinct from real resorts. Post to the board.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/MountainBoard.jsx src/components/MountainPage.jsx src/components/EventsWidget.jsx
@@ -627,7 +627,7 @@ git commit -m "refactor: tokenize Mountain Page/Board colors, move Krames Butte 
 
 **Interfaces:** none new.
 
-- [ ] **Step 1: Success/danger status consolidation (worked example)**
+- [x] **Step 1: Success/danger status consolidation (worked example)**
 
 `FriendsPage.jsx:168`:
 ```jsx
@@ -638,21 +638,21 @@ and `:390`: `background: "#ef4444",` (a remove/decline action). Replace `"#86efa
 near-duplicates of the existing status tokens (not exact matches, but same semantic
 intent: accepted=success, decline=danger).
 
-- [ ] **Step 2: Apply the rubric to the remaining checklist**
+- [x] **Step 2: Apply the rubric to the remaining checklist**
 
 `grep -oE "#[0-9a-fA-F]{3,8}\b" src/components/{FriendsPage,UserProfileModal,NotificationBell,ActivityFeed,TodaysCrew}.jsx | sort | uniq -c | sort -rn`
 (61 total literals across these 5 files as of this writing). `#fde68a`/`#fde047`/`#facc15`
 family (amber/gold, `NotificationBell.jsx` likely) → consolidate onto `--color-warning`
 per rule 7 unless clearly a rule-4/5 exception on inspection.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run `npm run dev`. Open Friends tab (pending/accepted invites), open a friend's profile
 modal, check the notification bell dropdown, check the Social tab's Activity Feed
 sub-tab, and confirm the Active Crew rail on the Plans tab (`TodaysCrew.jsx`) still shows
 status dots (`arrived`/`driving`/`planning`/`done`) correctly.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/FriendsPage.jsx src/components/UserProfileModal.jsx src/components/NotificationBell.jsx src/components/ActivityFeed.jsx src/components/TodaysCrew.jsx
@@ -674,7 +674,7 @@ git commit -m "refactor: tokenize social/friends colors for theme switching"
 
 **Interfaces:** none new.
 
-- [ ] **Step 1: Strava brand-color exception (worked example, do NOT change)**
+- [x] **Step 1: Strava brand-color exception (worked example, do NOT change)**
 
 `SessionRecapModal.jsx:318`:
 ```jsx
@@ -683,7 +683,7 @@ background: "linear-gradient(135deg, #fc4c02, #e34402)",
 Strava brand orange — leave exactly as-is (Token Catalog exception list). Add
 `/* Strava brand color — do not tokenize */` if not already commented.
 
-- [ ] **Step 2: `SkiPlansPage.jsx`'s `DOT_COLORS` (worked example)**
+- [x] **Step 2: `SkiPlansPage.jsx`'s `DOT_COLORS` (worked example)**
 
 This file's `DOT_COLORS` (ROADMAP Section 10's own outstanding note names it explicitly)
 almost certainly represents calendar/status dot states. Locate it (`grep -n
@@ -692,13 +692,13 @@ the rubric per key — if the dots represent the same session-status concepts al
 tokenized elsewhere (planning/going/done, or similar), consolidate onto those; if they're
 genuinely new states, apply rule 7/8 as appropriate.
 
-- [ ] **Step 3: Apply the rubric to the remaining checklist**
+- [x] **Step 3: Apply the rubric to the remaining checklist**
 
 `grep -oE "#[0-9a-fA-F]{3,8}\b" src/components/{ActiveSessionBar,SessionRecapModal,SessionEditForm,SessionStatsForm,SkiCheckInForm,SkiPingModal,SkiPlansPage}.jsx | sort | uniq -c | sort -rn`
 (62 total literals across these 7 files as of this writing, minus the Strava exception
 from Step 1).
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run `npm run dev`. Start an active session ("Start My Day" on Home), confirm
 `ActiveSessionBar` still renders and persists across tab switches, end the session and
@@ -706,7 +706,7 @@ confirm `SessionRecapModal` (including the Strava-orange share/connect styling) 
 renders correctly, check in via `SkiCheckInForm`, edit a past session via
 `SessionEditForm`/`SessionStatsForm`, and check the Plans tab calendar dots.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/ActiveSessionBar.jsx src/components/SessionRecapModal.jsx src/components/SessionEditForm.jsx src/components/SessionStatsForm.jsx src/components/SkiCheckInForm.jsx src/components/SkiPingModal.jsx src/components/SkiPlansPage.jsx
@@ -720,7 +720,7 @@ git commit -m "refactor: tokenize session-flow colors for theme switching"
 **Files:** none (verification-only task, no code changes expected unless review finds an
 issue).
 
-- [ ] **Step 1: Full-repo hex audit**
+- [x] **Step 1: Full-repo hex audit**
 
 ```bash
 for f in src/App.jsx src/components/*.jsx src/components/ui/*.jsx; do
@@ -733,7 +733,21 @@ Every remaining hit must be traceable to a documented exception in the Token Cat
 palette, photo-overlay contrast text) or a genuinely theme-invariant status/domain color
 consolidated in Tasks 1-9. Any hit that isn't — investigate and fix before proceeding.
 
-- [ ] **Step 2: Playwright visual verification across all 5 themes**
+Ran 2026-08-12 (node/npm now available in-session, unlike Tasks 1-9's sandbox). Manually
+classified every remaining hit against the Token Catalog/rubric. Found and fixed one real
+gap: ~19 generic body/label/heading `#fff` text-color literals in `AuthForm.jsx`,
+`DateMatchmaker.jsx`, `FriendsPage.jsx`, `ProfilePage.jsx`, and `SkiPingModal.jsx` had no
+documented exception comment (every other leftover hex did) — routed to
+`var(--color-text-1)`, on-accent button text and the native `<select>` option color left
+literal. Also added the missing hex-alpha-suffix exception comment to `ProfilePage.jsx`'s
+`SKILL_OPTIONS` for consistency with its sibling files. Fixed in commit `752ec25`. Re-ran
+the audit after the fix — every remaining hit is now traceable: third-party brand colors
+(Strava/Spotify), `ShareStatCard.jsx`'s fixed-Blizzard exception, decorative per-entity
+arrays, the avatar-fallback hash palette, Leaflet's fixed-white popup chrome in
+`PowderMap.jsx`, on-accent button text, the native `<select>` option, and explicitly
+flagged `TODO(theming)` items (see Step 2 note below).
+
+- [~] **Step 2: Playwright visual verification across all 5 themes**
 
 Using a real logged-in test account (per the approved spec's required acceptance step),
 drive each of the 5 themes (tap each swatch on Profile) through the following screens and
@@ -742,10 +756,28 @@ create-trip flow, a chat thread (DM or crew), the map view, Mountain Page (a rea
 friends list, and an active session (start → session sheet → end → recap modal). Screenshot
 each theme × screen combination for the record.
 
-- [ ] **Step 3: `npm run lint`**
+Partially done 2026-08-12: no test-account credentials available in-session (this is the
+app owner's live Supabase-backed account), so the authenticated-screen walkthrough above
+still needs a human pass. What *was* verified by automation (Playwright via a throwaway
+`chromium`-driven script, dev server on `localhost:5173`, no code changes): all 5 themes
+correctly flip `data-theme` on `<html>` and repaint the landing page shell (hero, CTA
+button, badge, avatar rail, "Your crew is waiting" text) with zero non-network console
+errors — confirms the token architecture itself (CSS custom properties + the 5
+`[data-theme]` blocks) works with no leftover Blizzard-blue or broken `var()` references.
+**Outstanding:** the app owner should tap through the 6 authenticated screens listed above
+across all 5 themes before merge — no code issue is suspected, this is a real-data visual
+spot-check, not a re-audit.
+
+- [x] **Step 3: `npm run lint`**
 
 Ask the app owner to run `npm run lint` locally (no node/npm in this sandbox) and report
 back any failures for the branch before merge.
+
+Ran 2026-08-12 (node/npm available in-session). 91 problems on this branch vs. 182 on
+`main` — diffed the two runs file-by-file and confirmed every error/warning on this branch
+already exists on `main` in the same file; none were introduced by the theming work (the
+branch has fewer total, likely from removing some duplicate literal-color patterns along
+the way). Nothing to fix here.
 
 - [ ] **Step 4: Fix anything found, else proceed to merge per `superpowers:finishing-a-development-branch`**
 
@@ -753,3 +785,7 @@ If Steps 1-3 are clean, this plan is complete — hand off to
 `superpowers:finishing-a-development-branch` to decide how to integrate the worktree
 branch. If issues were found, fix them in a follow-up commit on the same branch and
 re-run Steps 1-2 before merge.
+
+Steps 1 and 3 are clean. Step 2's automated portion is clean; its authenticated-screen
+portion needs the app owner's manual pass (see note above) before this task closes and
+hands off to `superpowers:finishing-a-development-branch`.
