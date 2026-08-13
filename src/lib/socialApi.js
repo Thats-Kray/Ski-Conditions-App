@@ -206,6 +206,161 @@ export async function reportContent(targetType, targetId, reason) {
 }
 
 /* -----------------------------
+   Ski Buddy Board (Sprint 31)
+----------------------------- */
+
+const MODERATE_ENDPOINT = `${import.meta.env.VITE_API_URL || "http://localhost:8787"}/api/moderate-content`
+
+// Best-effort — the post already exists (is_verified() already gated its
+// creation at the RPC layer, which is the real security boundary) before
+// this runs. A moderation-service outage must never undo or block a
+// successful post; reports are the actual backstop (see PRD: "review, not
+// auto-punish"). Failures are logged, never thrown.
+async function moderatePostDescription(postId, description) {
+  if (!description || !description.trim()) return
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    await fetch(MODERATE_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ contentType: "ski_buddy_post", contentId: postId, text: description }),
+    })
+  } catch (err) {
+    console.error("Post moderation check failed:", err?.message)
+  }
+}
+
+export async function createSkiBuddyPost({
+  passType, resortKey, skiDate, ridingStyle, groupSizeWanted, carpoolStatus, carpoolSeats, description,
+}) {
+  const { data, error } = await supabase.rpc("create_ski_buddy_post", {
+    p_pass_type: passType,
+    p_resort_key: resortKey,
+    p_ski_date: skiDate,
+    p_riding_style: ridingStyle,
+    p_group_size_wanted: groupSizeWanted || null,
+    p_carpool_status: carpoolStatus || "none",
+    p_carpool_seats: carpoolSeats || null,
+    p_description: description || null,
+  })
+  if (error) throw error
+
+  await moderatePostDescription(data.id, description)
+
+  // Re-fetch so the caller sees is_held_for_review if the moderation check
+  // (which just ran, above) flagged it.
+  const { data: fresh, error: freshError } = await supabase
+    .from("ski_buddy_posts")
+    .select("*")
+    .eq("id", data.id)
+    .single()
+  if (freshError) throw freshError
+  return fresh
+}
+
+export async function getSkiBuddyPosts(filters = {}) {
+  let query = supabase
+    .from("ski_buddy_posts")
+    .select("*")
+    .in("status", ["open", "filled"])
+    .gte("ski_date", new Date().toISOString().slice(0, 10))
+    .order("ski_date", { ascending: true })
+
+  if (filters.passType) query = query.eq("pass_type", filters.passType)
+  if (filters.resortKey) query = query.eq("resort_key", filters.resortKey)
+  if (filters.carpoolStatus) query = query.eq("carpool_status", filters.carpoolStatus)
+  if (filters.ridingStyle) query = query.contains("riding_style", [filters.ridingStyle])
+  if (filters.dateFrom) query = query.gte("ski_date", filters.dateFrom)
+  if (filters.dateTo) query = query.lte("ski_date", filters.dateTo)
+
+  const { data, error } = await query
+  if (error) throw error
+  const posts = data || []
+  if (!posts.length) return posts
+
+  // ski_buddy_posts.user_id only references auth.users, never profiles — no
+  // FK path for a PostgREST embed. Resolve as a second query, matching
+  // getBoardPosts()'s established fix for the same situation.
+  const userIds = [...new Set(posts.map((p) => p.user_id))]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .in("id", userIds)
+
+  const pm = new Map((profiles || []).map((p) => [p.id, p]))
+  return posts.map((p) => ({ ...p, profiles: pm.get(p.user_id) || null }))
+}
+
+export async function getMySkiBuddyPosts() {
+  const user = await getCurrentUser()
+  const { data, error } = await supabase
+    .from("ski_buddy_posts")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+  if (error) throw error
+  return data || []
+}
+
+export async function respondToSkiBuddyPost(postId, message) {
+  const { data, error } = await supabase.rpc("respond_to_ski_buddy_post", {
+    p_post_id: postId,
+    p_message: message || null,
+  })
+  if (error) throw error
+  return data
+}
+
+export async function getSkiBuddyResponses(postId) {
+  const { data, error } = await supabase
+    .from("ski_buddy_responses")
+    .select("*")
+    .eq("post_id", postId)
+    .order("created_at", { ascending: true })
+  if (error) throw error
+  const responses = data || []
+  if (!responses.length) return responses
+
+  const responderIds = [...new Set(responses.map((r) => r.responder_id))]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .in("id", responderIds)
+
+  const pm = new Map((profiles || []).map((p) => [p.id, p]))
+  return responses.map((r) => ({ ...r, profiles: pm.get(r.responder_id) || null }))
+}
+
+export async function respondToSkiBuddyResponse(responseId, status) {
+  if (!["accepted", "declined"].includes(status)) {
+    throw new Error("Invalid response status.")
+  }
+  const { data, error } = await supabase
+    .from("ski_buddy_responses")
+    .update({ status })
+    .eq("id", responseId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateSkiBuddyPostStatus(postId, status) {
+  if (!["open", "filled", "removed"].includes(status)) {
+    throw new Error("Invalid post status.")
+  }
+  const { data, error } = await supabase
+    .from("ski_buddy_posts")
+    .update({ status })
+    .eq("id", postId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+/* -----------------------------
    Profiles
 ----------------------------- */
 
