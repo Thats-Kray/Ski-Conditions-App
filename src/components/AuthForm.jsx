@@ -14,7 +14,7 @@ const fieldStyle = {
   borderRadius: 10,
   border: "1px solid rgba(255,255,255,0.14)",
   background: "rgba(255,255,255,0.06)",
-  color: "#fff",
+  color: "var(--color-text-1)",
   outline: "none",
   boxSizing: "border-box",
   fontSize: 16,
@@ -31,8 +31,8 @@ const buttonStyle = {
   border: "none",
   borderRadius: 10,
   padding: "10px 14px",
-  background: "#3b82f6",
-  color: "#fff",
+  background: "var(--color-accent-strong)",
+  color: "var(--color-text-1)",
   fontWeight: 700,
   cursor: "pointer",
 }
@@ -212,7 +212,7 @@ export default function AuthForm({
         padding: 20,
         width: "100%",
         maxWidth: 520,
-        color: "#fff",
+        color: "var(--color-text-1)",
       }}
     >
       <div style={{ marginBottom: 16 }}>
@@ -230,7 +230,7 @@ export default function AuthForm({
             borderRadius: 10,
             background: "rgba(239,68,68,0.14)",
             border: "1px solid rgba(239,68,68,0.35)",
-            color: "#fecaca",
+            color: "var(--color-danger)",
           }}
         >
           {errorMessage}
@@ -245,7 +245,7 @@ export default function AuthForm({
             borderRadius: 10,
             background: "rgba(34,197,94,0.14)",
             border: "1px solid rgba(34,197,94,0.35)",
-            color: "#bbf7d0",
+            color: "var(--color-success)",
             lineHeight: 1.5,
           }}
         >
@@ -381,8 +381,8 @@ export default function AuthForm({
                           border: "1px solid rgba(255,255,255,0.14)",
                           borderRadius: 999,
                           padding: "8px 12px",
-                          background: selected ? "#3b82f6" : "rgba(255,255,255,0.06)",
-                          color: "#fff",
+                          background: selected ? "var(--color-accent-strong)" : "rgba(255,255,255,0.06)",
+                          color: "var(--color-text-1)",
                           cursor: "pointer",
                         }}
                       >

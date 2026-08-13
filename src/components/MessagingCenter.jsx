@@ -57,7 +57,7 @@ function ConversationRow({ crew, unread, onOpen, active }) {
         background: active
           ? "rgba(96,165,250,0.14)"
           : unread ? "rgba(96,165,250,0.04)" : "transparent",
-        borderLeft: `3px solid ${active ? "#60a5fa" : "transparent"}`,
+        borderLeft: `3px solid ${active ? "var(--color-accent-soft)" : "transparent"}`,
         transition: "background 0.15s",
         position: "relative",
       }}
@@ -81,7 +81,7 @@ function ConversationRow({ crew, unread, onOpen, active }) {
           <div style={{
             position: "absolute", top: -3, right: -3,
             width: 11, height: 11, borderRadius: "50%",
-            background: "#3b82f6",
+            background: "var(--color-accent-strong)",
             border: "2px solid rgba(6,10,22,1)",
           }} />
         )}
@@ -92,7 +92,7 @@ function ConversationRow({ crew, unread, onOpen, active }) {
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 6, marginBottom: 3 }}>
           <div style={{
             fontWeight: unread ? 800 : 600, fontSize: 14,
-            color: active ? "#93c5fd" : "white",
+            color: active ? "var(--color-banner-highlight)" : "white",
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
             flex: 1, minWidth: 0,
           }}>
@@ -146,7 +146,7 @@ function InviteRow({ crew, onAccept, onDecline, accepting }) {
             disabled={accepting}
             style={{
               padding: "4px 12px", borderRadius: 6, border: "none",
-              background: accepting ? "rgba(37,99,235,0.4)" : "linear-gradient(135deg,#2563eb,#0891b2)",
+              background: accepting ? "rgba(37,99,235,0.4)" : "var(--gradient-cta)",
               color: "white", fontSize: 11, fontWeight: 800, cursor: accepting ? "default" : "pointer",
             }}
           >
@@ -210,7 +210,7 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
         <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
           {EMOJI_OPTIONS.map(e => (
             <button key={e} onClick={() => setEmoji(e)} style={{
-              width: 40, height: 40, borderRadius: 10, border: `2px solid ${emoji === e ? "#60a5fa" : "rgba(255,255,255,0.1)"}`,
+              width: 40, height: 40, borderRadius: 10, border: `2px solid ${emoji === e ? "var(--color-accent-soft)" : "rgba(255,255,255,0.1)"}`,
               background: emoji === e ? "rgba(96,165,250,0.15)" : "rgba(255,255,255,0.04)",
               fontSize: 20, cursor: "pointer",
             }}>{e}</button>
@@ -237,7 +237,7 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
                   }}>
                     <Avatar profile={f} size={32} />
                     <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "white" }}>{f.full_name || f.username}</span>
-                    <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${sel ? "#60a5fa" : "rgba(255,255,255,0.2)"}`, background: sel ? "#60a5fa" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${sel ? "var(--color-accent-soft)" : "rgba(255,255,255,0.2)"}`, background: sel ? "var(--color-accent-soft)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {sel && <span style={{ color: "white", fontSize: 11 }}>✓</span>}
                     </div>
                   </div>
@@ -247,11 +247,11 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
           </div>
         )}
 
-        {error && <div style={{ color: "#f87171", fontSize: 13, marginBottom: 10 }}>{error}</div>}
+        {error && <div style={{ color: "var(--color-danger)", fontSize: 13, marginBottom: 10 }}>{error}</div>}
 
         <button onClick={handleCreate} disabled={saving || !name.trim()} style={{
           width: "100%", padding: "14px", borderRadius: 14, border: "none",
-          background: name.trim() ? "linear-gradient(135deg,#2563eb,#0891b2)" : "rgba(255,255,255,0.08)",
+          background: name.trim() ? "var(--gradient-cta)" : "rgba(255,255,255,0.08)",
           color: "white", fontWeight: 800, fontSize: 15, cursor: name.trim() ? "pointer" : "default",
         }}>
           {saving ? "Creating…" : `Create ${emoji} ${name || "Crew"}`}
@@ -577,7 +577,7 @@ export default function MessagingCenter() {
               {totalUnread > 0 && (
                 <span style={{
                   marginLeft: 8, fontSize: 11, fontWeight: 800,
-                  background: "#2563eb", color: "white",
+                  background: "var(--color-accent-deep)", color: "white",
                   borderRadius: 999, padding: "1px 7px",
                 }}>
                   {totalUnread}
@@ -591,7 +591,7 @@ export default function MessagingCenter() {
                 title="New Crew"
                 style={{
                   width: 32, height: 32, borderRadius: 9, border: "none",
-                  background: "linear-gradient(135deg,#2563eb,#0891b2)",
+                  background: "var(--gradient-cta)",
                   color: "white", fontSize: 17, cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   boxShadow: "0 2px 10px rgba(37,99,235,0.35)",
@@ -619,7 +619,7 @@ export default function MessagingCenter() {
                 style={{
                   flex: 1, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer",
                   background: panel === key ? "rgba(96,165,250,0.18)" : "transparent",
-                  color: panel === key ? "#60a5fa" : "rgba(255,255,255,0.4)",
+                  color: panel === key ? "var(--color-accent-soft)" : "rgba(255,255,255,0.4)",
                   fontWeight: panel === key ? 800 : 500, fontSize: 13,
                   transition: "all 0.15s",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
@@ -628,7 +628,7 @@ export default function MessagingCenter() {
                 {label}
                 {badge > 0 && (
                   <span style={{
-                    background: "#ef4444", color: "white",
+                    background: "var(--color-danger-strong)" /* rule 7: nearest danger-family token; original literal had no exact-match token */, color: "white",
                     fontSize: 10, fontWeight: 800,
                     borderRadius: 999, padding: "1px 5px",
                     lineHeight: 1.4,
@@ -656,7 +656,7 @@ export default function MessagingCenter() {
                   style={{
                     padding: "4px 12px", borderRadius: 999, border: "none", cursor: "pointer",
                     background: filter === key ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.06)",
-                    color: filter === key ? "#60a5fa" : "rgba(255,255,255,0.4)",
+                    color: filter === key ? "var(--color-accent-soft)" : "rgba(255,255,255,0.4)",
                     fontWeight: filter === key ? 700 : 500, fontSize: 12,
                     transition: "all 0.15s",
                   }}
@@ -668,6 +668,10 @@ export default function MessagingCenter() {
           )}
 
           {/* Date matchmaker CTA — chats panel only */}
+          {/* TODO(theming): purple family (rgba(139,92,246,…) / #a78bfa) left literal —
+              unresolved whether this is a fixed feature-identity color for the Date
+              Matchmaker feature or should retheme with --color-accent-2. Flagging per
+              rule 9 rather than guessing; see DateMatchmaker.jsx for the matching flag. */}
           {panel === "chats" && (
             <div style={{ padding: "6px 12px 4px", flexShrink: 0 }}>
               <button
@@ -695,7 +699,7 @@ export default function MessagingCenter() {
                   <>
                     <div style={{
                       padding: "10px 14px 6px",
-                      fontSize: 10, fontWeight: 800, color: "#60a5fa",
+                      fontSize: 10, fontWeight: 800, color: "var(--color-accent-soft)",
                       textTransform: "uppercase", letterSpacing: 0.9,
                     }}>
                       Crew Invites · {pendingInvites.length}
@@ -745,7 +749,7 @@ export default function MessagingCenter() {
                             background: selectedDM?.partnerId === conv.partnerId
                               ? "rgba(96,165,250,0.14)"
                               : conv.unread ? "rgba(96,165,250,0.04)" : "transparent",
-                            borderLeft: `3px solid ${selectedDM?.partnerId === conv.partnerId ? "#60a5fa" : "transparent"}`,
+                            borderLeft: `3px solid ${selectedDM?.partnerId === conv.partnerId ? "var(--color-accent-soft)" : "transparent"}`,
                             transition: "background 0.15s",
                             position: "relative",
                           }}
@@ -754,12 +758,12 @@ export default function MessagingCenter() {
                           <div style={{ position: "relative", flexShrink: 0 }}>
                             <Avatar profile={conv.partner} size={44} />
                             {conv.unread && selectedDM?.partnerId !== conv.partnerId && (
-                              <div style={{ position: "absolute", top: -3, right: -3, width: 11, height: 11, borderRadius: "50%", background: "#3b82f6", border: "2px solid rgba(6,10,22,1)" }} />
+                              <div style={{ position: "absolute", top: -3, right: -3, width: 11, height: 11, borderRadius: "50%", background: "var(--color-accent-strong)", border: "2px solid rgba(6,10,22,1)" }} />
                             )}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 6, marginBottom: 3 }}>
-                              <div style={{ fontWeight: conv.unread ? 800 : 600, fontSize: 14, color: selectedDM?.partnerId === conv.partnerId ? "#93c5fd" : "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: conv.unread ? 800 : 600, fontSize: 14, color: selectedDM?.partnerId === conv.partnerId ? "var(--color-banner-highlight)" : "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
                                 {partnerName}
                               </div>
                               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", flexShrink: 0 }}>
@@ -792,7 +796,7 @@ export default function MessagingCenter() {
                     {filter === "all" && (
                       <button
                         onClick={() => setShowCreate(true)}
-                        style={{ marginTop: 14, padding: "9px 18px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", fontWeight: 800, fontSize: 13, cursor: "pointer" }}
+                        style={{ marginTop: 14, padding: "9px 18px", borderRadius: 10, border: "none", background: "var(--gradient-cta)", color: "white", fontWeight: 800, fontSize: 13, cursor: "pointer" }}
                       >
                         + New Crew
                       </button>
@@ -811,7 +815,7 @@ export default function MessagingCenter() {
                     width: "100%", padding: "10px 14px", borderRadius: 12,
                     background: "linear-gradient(135deg,rgba(59,130,246,0.2),rgba(16,185,129,0.12))",
                     border: "1px solid rgba(59,130,246,0.3)",
-                    color: "#93c5fd", fontWeight: 800, fontSize: 13, cursor: "pointer",
+                    color: "var(--color-banner-highlight)", fontWeight: 800, fontSize: 13, cursor: "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                     marginBottom: 14,
                   }}
@@ -843,7 +847,7 @@ export default function MessagingCenter() {
                       <button
                         onClick={() => handleMessageFriend(f)}
                         title="Message"
-                        style={{ background: "rgba(37,99,235,0.15)", border: "1px solid rgba(96,165,250,0.2)", borderRadius: 8, padding: "5px 10px", color: "#60a5fa", fontSize: 13, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}
+                        style={{ background: "rgba(37,99,235,0.15)", border: "1px solid rgba(96,165,250,0.2)", borderRadius: 8, padding: "5px 10px", color: "var(--color-accent-soft)", fontSize: 13, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}
                       >
                         💬
                       </button>

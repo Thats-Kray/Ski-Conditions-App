@@ -50,7 +50,7 @@ export default function SessionStatsForm({ initial, onSave, onSkip, saving }) {
           onClick={handleSave}
           disabled={saving}
           style={{
-            background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", border: "none",
+            background: "var(--gradient-cta)", color: "white", border: "none",
             borderRadius: 12, padding: "12px 20px", fontSize: 14, fontWeight: 900,
             cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, flex: onSkip ? "none" : 1,
           }}

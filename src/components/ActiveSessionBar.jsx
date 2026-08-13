@@ -13,11 +13,15 @@ function formatElapsed(ms) {
 }
 
 function gpsDotColor(status, gpsAccuracy) {
-  if (status === "requesting" || status === "paused") return "#94a3b8" // gray
-  if (status === "error" || (gpsAccuracy != null && gpsAccuracy > 50)) return "#ef4444" // red
-  if (gpsAccuracy != null && gpsAccuracy >= 20) return "#f59e0b" // orange
-  if (gpsAccuracy != null && gpsAccuracy < 20) return "#22c55e" // green
-  return "#94a3b8" // fallback gray (accuracy unknown yet)
+  // "requesting"/"paused"/unknown gray (#94a3b8) has no exact or family-appropriate
+  // catalog match (not danger/success/warning) — same value/role Task 1 already
+  // flagged TODO(theming) on AvatarStatusRail.jsx's unknown-status case; left
+  // literal here for the same reason rather than guessing at a token.
+  if (status === "requesting" || status === "paused") return "#94a3b8" /* TODO(theming): unclear semantic, ask before tokenizing */
+  if (status === "error" || (gpsAccuracy != null && gpsAccuracy > 50)) return "var(--color-danger)" // red
+  if (gpsAccuracy != null && gpsAccuracy >= 20) return "var(--color-warning)" // orange
+  if (gpsAccuracy != null && gpsAccuracy < 20) return "var(--color-success-strong)" // green
+  return "#94a3b8" /* TODO(theming): unclear semantic, ask before tokenizing */ // fallback gray (accuracy unknown yet)
 }
 
 function isGpsPulsing(status, gpsAccuracy) {
@@ -277,7 +281,7 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
                 height: 26,
                 borderRadius: 999,
                 border: "1px solid rgba(255,255,255,0.18)",
-                background: sharingLocation ? "linear-gradient(135deg, #0284c7, #38bdf8)" : "rgba(255,255,255,0.12)",
+                background: sharingLocation ? "var(--gradient-primary)" : "rgba(255,255,255,0.12)",
                 position: "relative",
                 cursor: tracker.status === "error" ? "not-allowed" : "pointer",
                 opacity: tracker.status === "error" ? 0.5 : 1,
@@ -323,7 +327,12 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
               onClick={handleEnd}
               style={{
                 flex: 1,
-                background: "linear-gradient(135deg, #dc2626, #ef4444)",
+                // Near-duplicate danger gradient: stop 1 (#dc2626) is an exact match
+                // for --color-danger-strong; stop 2 (#ef4444) has no exact token, so
+                // it routes to the nearest danger-family token (--color-danger) —
+                // preserves the original dark-to-light direction rather than
+                // flattening to --gradient-danger's different stop order/colors.
+                background: "linear-gradient(135deg, var(--color-danger-strong), var(--color-danger))",
                 border: "none",
                 borderRadius: 14,
                 padding: "12px 14px",
@@ -374,7 +383,7 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
           ⛷ {tracker.runCount ?? 0} runs
         </span>
         {tracker.currentSpeedMph > 0 && (
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#38bdf8", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--color-accent)", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {tracker.currentSpeedMph} mph
           </span>
         )}
@@ -386,7 +395,7 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
             border: "1px solid rgba(239,68,68,0.35)",
             borderRadius: 10,
             padding: "6px 12px",
-            color: "#f87171",
+            color: "var(--color-danger)",
             fontWeight: 800,
             fontSize: 12,
             cursor: "pointer",

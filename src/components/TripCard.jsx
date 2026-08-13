@@ -4,6 +4,8 @@ import TripDetailModal from "./TripDetailModal"
 import { RESORT_NAMES, RESORT_PHOTOS, RESORT_ACCENTS } from "../lib/resorts"
 import { formatDateFull } from "../lib/format"
 
+// decorative per-entity color, independent of theme palette — mirrors CreateTripModal's
+// per-trip color theme picker, not the app's 5-theme palette
 const THEME_ACCENTS = {
   blizzard: "#bfdbfe",
   powder:   "#3b82f6",
@@ -120,7 +122,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
   const [showDetail, setShowDetail] = useState(false)
 
   const { resort_key: resortKey, ski_date: skiDate } = trip
-  const accent = RESORT_ACCENTS[resortKey] || "#60a5fa"
+  const accent = RESORT_ACCENTS[resortKey] || "var(--color-accent-soft)"
   const themeAccent = THEME_ACCENTS[trip.theme]
   const photo = RESORT_PHOTOS[resortKey]
   const resortName = RESORT_NAMES[resortKey] || resortKey
@@ -214,7 +216,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
           height: 196,
           background: photo
             ? `linear-gradient(to bottom, rgba(2,6,23,0.12) 0%, rgba(2,6,23,0.88) 100%), url(${photo}) center/cover no-repeat`
-            : "linear-gradient(135deg, #1e293b, #0f172a)",
+            : "linear-gradient(135deg, var(--color-surface-popover), var(--color-modal-bg))",
           overflow: "hidden",
         }}
       >
@@ -226,7 +228,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
               top: 16,
               right: 16,
               background: accent,
-              color: "#020617",
+              color: "var(--color-bg)",
               borderRadius: 999,
               padding: "6px 14px",
               fontSize: 12,
@@ -392,7 +394,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
           {(goingCount > 0 || maybeCount > 0) && (
             <div style={{ textAlign: "right", flexShrink: 0 }}>
               {goingCount > 0 && (
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#34d399" }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "var(--color-success)" }}>
                   {goingCount} going
                 </div>
               )}
@@ -440,24 +442,24 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
                 status: "going",
                 label: "Going",
                 icon: "✓",
-                activeColor: "#22c55e",
-                activeText: "#052e16",
+                activeColor: "var(--color-success-strong)",
+                activeText: "var(--color-bg)",
                 glow: "rgba(34,197,94,0.38)",
               },
               {
                 status: "maybe",
                 label: "Maybe",
                 icon: "〜",
-                activeColor: "#fbbf24",
-                activeText: "#1c1004",
+                activeColor: "var(--color-warning)",
+                activeText: "var(--color-bg)",
                 glow: "rgba(251,191,36,0.38)",
               },
               {
                 status: "cantgo",
                 label: "Can't",
                 icon: "✕",
-                activeColor: "#f43f5e",
-                activeText: "#200008",
+                activeColor: "var(--color-danger-strong)",
+                activeText: "var(--color-bg)",
                 glow: "rgba(244,63,94,0.38)",
               },
             ].map(({ status, label, icon, activeColor, activeText, glow }) => {

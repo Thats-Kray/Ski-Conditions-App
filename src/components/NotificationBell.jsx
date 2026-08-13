@@ -10,6 +10,10 @@ import {
 } from "../lib/socialApi"
 import { timeAgo } from "../lib/format"
 
+// TYPE_META.color feeds `${meta.color}1a`/`${meta.color}33` hex-alpha-suffix template
+// literals below (notification-icon badge tinting), which requires literal hex — a
+// var(--token) reference would produce invalid CSS. Same documented exception pattern as
+// SKILL_OPTIONS (see ProfileSetup.jsx/UserProfileModal.jsx) — do not tokenize.
 const TYPE_META = {
   invite:        { icon: "✉️", color: "#60a5fa" },
   rsvp:          { icon: "✓",  color: "#22c55e" },
@@ -164,7 +168,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
           border: "none",
           cursor: "pointer",
           padding: "4px 2px",
-          color: unread > 0 ? "#60a5fa" : "rgba(255,255,255,0.42)",
+          color: unread > 0 ? "var(--color-accent-soft)" : "rgba(255,255,255,0.42)",
           transition: "color 0.15s ease",
           minWidth: 0,
           position: "relative",
@@ -193,7 +197,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
                 <span style={{
                   position: "absolute", top: -4, right: -6,
                   minWidth: 16, height: 16, borderRadius: 999,
-                  background: "linear-gradient(135deg,#ef4444,#dc2626)",
+                  background: "var(--gradient-danger)",
                   color: "white", fontSize: 9, fontWeight: 900,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   padding: "0 3px", border: "1.5px solid rgba(8,17,30,1)", lineHeight: 1,
@@ -213,7 +217,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
               <span style={{
                 position: "absolute", top: -2, right: -2,
                 minWidth: 18, height: 18, borderRadius: 999,
-                background: "linear-gradient(135deg, #ef4444, #dc2626)",
+                background: "var(--gradient-danger)",
                 color: "white", fontSize: 11, fontWeight: 900,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 padding: "0 4px", border: "2px solid rgba(2,6,23,1)", lineHeight: 1,
@@ -276,7 +280,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
                 style={{
                   background: "none",
                   border: "none",
-                  color: "#60a5fa",
+                  color: "var(--color-accent-soft)",
                   fontSize: 12,
                   fontWeight: 700,
                   cursor: "pointer",
@@ -331,7 +335,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
                       width: 6,
                       height: 6,
                       borderRadius: 999,
-                      background: "#60a5fa",
+                      background: "var(--color-accent-soft)",
                     }} />
                   )}
 
@@ -387,7 +391,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
                       <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                         <button
                           onClick={(e) => handleCrewAccept(e, notif)}
-                          style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: "none", background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                          style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: "none", background: "var(--gradient-cta)", color: "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
                         >
                           Accept
                         </button>

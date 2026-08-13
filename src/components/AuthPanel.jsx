@@ -96,7 +96,7 @@ export default function AuthPanel() {
           <button
             type="submit"
             style={{
-              background: "linear-gradient(135deg, #2563eb, #0891b2)",
+              background: "var(--gradient-cta)",
               color: "white",
               border: "none",
               padding: "10px 12px",

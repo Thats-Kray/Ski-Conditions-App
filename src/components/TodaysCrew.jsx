@@ -14,11 +14,18 @@ function formatPlanTime(isoString) {
 }
 
 function statusColor(status) {
-  if (status === "arrived") return "#8ef6d1"
-  if (status === "driving") return "#fde68a"
-  if (status === "planning") return "#93c5fd"
-  if (status === "done") return "#c4b5fd"
-  return "#ff9d9d"
+  // "arrived"/"done"/unknown intentionally avoid the numerically-exact --rating-mint/
+  // --rating-coral tokens (those are domain-locked to ski-conditions tier/risk ratings,
+  // not crew-arrival status) in favor of the semantically-correct generic status tokens —
+  // matching the same driving/warning + arrived/success pairing already used by this same
+  // file's Driving/Arrived action buttons below.
+  if (status === "arrived") return "var(--color-success)"
+  if (status === "driving") return "var(--color-warning)"
+  if (status === "planning") return "var(--color-banner-highlight)"
+  // "done": no existing token (exact or near) matches this pale-violet shade — same
+  // unresolved value as AvatarStatusRail.jsx's identical "done" case (Task 1, rule 9).
+  if (status === "done") return "#c4b5fd" // TODO(theming): no catalog token matches this pale-violet shade
+  return "var(--color-danger)"
 }
 
 function statusLabel(status) {
@@ -83,12 +90,12 @@ function Avatar({ plan, currentUser }) {
         height: 36,
         borderRadius: 999,
         overflow: "hidden",
-        background: "#dbeafe",
+        background: "#dbeafe", // TODO(theming): no catalog token matches this pale-blue avatar-fallback shade
         display: "grid",
         placeItems: "center",
         fontSize: 11,
         fontWeight: 900,
-        color: "#0f172a",
+        color: "var(--color-modal-bg)",
         flexShrink: 0,
       }}
     >
@@ -228,8 +235,8 @@ export default function TodaysCrew() {
                 style={{
                   background: driving
                     ? "rgba(255,255,255,0.12)"
-                    : "linear-gradient(135deg,#fde047,#facc15)",
-                  color: "#1f2937",
+                    : "linear-gradient(135deg,var(--color-warning),var(--color-warning))",
+                  color: "var(--color-bg)",
                   border: "none",
                   padding: "8px 10px",
                   borderRadius: 10,
@@ -247,8 +254,8 @@ export default function TodaysCrew() {
                 style={{
                   background: arriving
                     ? "rgba(255,255,255,0.12)"
-                    : "linear-gradient(135deg,#34d399,#22c55e)",
-                  color: "#052e2b",
+                    : "linear-gradient(135deg,var(--color-success),var(--color-success-strong))",
+                  color: "var(--color-pass-pill-text)",
                   border: "none",
                   padding: "8px 10px",
                   borderRadius: 10,

@@ -392,7 +392,7 @@ function SevenDayForecastPanel({ dailySnow }) {
               style={{
                 width: "100%",
                 height: Math.max(4, (d.inches / max) * 44),
-                background: d.date === best.date && best.inches > 0 ? "#34d399" : "rgba(255,255,255,0.15)",
+                background: d.date === best.date && best.inches > 0 ? "var(--color-success)" : "rgba(255,255,255,0.15)",
                 borderRadius: 3,
               }}
               title={`${d.inches.toFixed(1)}"`}
@@ -411,19 +411,19 @@ function SevenDayForecastPanel({ dailySnow }) {
 }
 
 function tierColor(tier) {
-  if (tier === "Elite")     return "#8ef6d1"
-  if (tier === "Very Good") return "#9bc6ff"
-  if (tier === "Good")      return "#ffe39a"
-  if (tier === "Okay")      return "#ffc996"
-  if (tier === "Closed")    return "#64748b"
-  return "#ff9d9d" // Poor
+  if (tier === "Elite")     return "var(--rating-mint)"
+  if (tier === "Very Good") return "var(--rating-sky)"
+  if (tier === "Good")      return "var(--rating-gold)"
+  if (tier === "Okay")      return "var(--rating-peach)"
+  if (tier === "Closed")    return "var(--rating-slate)"
+  return "var(--rating-coral)" // Poor
 }
 
 function riskColor(risk) {
-  if (risk === "Low") return "#8ef6d1"
-  if (risk === "Moderate") return "#ffe39a"
-  if (risk === "High") return "#ffc996"
-  return "#ff9d9d"
+  if (risk === "Low") return "var(--rating-mint)"
+  if (risk === "Moderate") return "var(--rating-gold)"
+  if (risk === "High") return "var(--rating-peach)"
+  return "var(--rating-coral)"
 }
 
 function computeVibeScore(checkins, rsvps, powderScore) {
@@ -432,14 +432,14 @@ function computeVibeScore(checkins, rsvps, powderScore) {
 }
 
 function vibeTier(score) {
-  if (score >= 70) return { label: "🔥 High", color: "#ff9d9d" }
-  if (score >= 40) return { label: "👍 Active", color: "#ffe39a" }
-  return { label: "😶 Quiet", color: "#64748b" }
+  if (score >= 70) return { label: "🔥 High", color: "var(--rating-coral)" }
+  if (score >= 40) return { label: "👍 Active", color: "var(--rating-gold)" }
+  return { label: "😶 Quiet", color: "var(--rating-slate)" }
 }
 
 function scoreGradient(score) {
   if (score == null) return "linear-gradient(135deg, #334155, #1e293b)"
-  if (score >= 80) return "linear-gradient(135deg, #0e7490, #38bdf8)"   // Elite
+  if (score >= 80) return "var(--gradient-elite)"                       // Elite
   if (score >= 65) return "linear-gradient(135deg, #1d4ed8, #4338ca)"   // Very Good
   if (score >= 50) return "linear-gradient(135deg, #475569, #334155)"   // Good
   if (score >= 35) return "linear-gradient(135deg, #7c2d12, #92400e)"   // Okay
@@ -457,7 +457,7 @@ function FriendsGoingBadge({ friends }) {
       >
         <div style={{ display: "flex" }}>
           {friends.slice(0, 3).map((f, i) => (
-            <div key={f.id} style={{ marginLeft: i > 0 ? -8 : 0, border: "2px solid #0b1120", borderRadius: "50%" }}>
+            <div key={f.id} style={{ marginLeft: i > 0 ? -8 : 0, border: "2px solid var(--color-bg)", borderRadius: "50%" }}>
               <Avatar profile={f} size={22} />
             </div>
           ))}
@@ -467,7 +467,7 @@ function FriendsGoingBadge({ friends }) {
         </span>
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "110%", left: 0, background: "#111827", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: 10, zIndex: 20, minWidth: 160, boxShadow: "0 12px 40px rgba(0,0,0,0.4)" }}>
+        <div style={{ position: "absolute", top: "110%", left: 0, background: "var(--color-surface-popover)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: 10, zIndex: 20, minWidth: 160, boxShadow: "0 12px 40px rgba(0,0,0,0.4)" }}>
           {friends.map((f) => (
             <div key={f.id} style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", padding: "4px 0" }}>{f.full_name || f.username}</div>
           ))}
@@ -513,10 +513,10 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
       >
         <div style={{ position: "absolute", top: 14, right: 14, display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {r.isOpen === false && (
-            <div style={{ background: "rgba(30,10,10,0.75)", border: "1px solid rgba(239,68,68,0.5)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, color: "#f87171", backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>Closed for Season</div>
+            <div style={{ background: "rgba(30,10,10,0.75)", border: "1px solid rgba(239,68,68,0.5)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, color: "var(--color-danger)", backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>Closed for Season</div>
           )}
           {r.isOpen === true && (
-            <div style={{ background: "rgba(10,30,10,0.75)", border: "1px solid rgba(34,197,94,0.5)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, color: "#4ade80", backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>Open</div>
+            <div style={{ background: "rgba(10,30,10,0.75)", border: "1px solid rgba(34,197,94,0.5)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, color: "var(--color-success)", backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>Open</div>
           )}
           <div style={{ background: "rgba(4,8,15,0.65)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>{r.pass}</div>
           <div style={{ background: "rgba(4,8,15,0.65)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, color: riskColor(r.driveRisk), backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>{r.driveRisk || "Unknown"}</div>
@@ -624,7 +624,7 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
         {/* Mountain Page */}
         <button
           onClick={() => onOpenMountainPage(r.resortKey)}
-          style={{ display: "grid", placeItems: "center", border: "1px solid rgba(56,189,248,0.3)", color: "#38bdf8", fontWeight: 800, padding: "11px 14px", borderRadius: 14, background: "rgba(56,189,248,0.08)", fontSize: 13, cursor: "pointer" }}
+          style={{ display: "grid", placeItems: "center", border: "1px solid rgba(56,189,248,0.3)", color: "var(--color-accent)", fontWeight: 800, padding: "11px 14px", borderRadius: 14, background: "rgba(56,189,248,0.08)", fontSize: 13, cursor: "pointer" }}
         >
           🏔️ Mountain Page →
         </button>
@@ -634,7 +634,7 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
           href={mapsUrl(r.directionsQuery)}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ display: "grid", placeItems: "center", textDecoration: "none", color: "#052e2b", fontWeight: 900, padding: "11px 14px", borderRadius: 14, background: "linear-gradient(135deg, #34d399, #22c55e)", fontSize: 13 }}
+          style={{ display: "grid", placeItems: "center", textDecoration: "none", color: "var(--color-pass-pill-text)", fontWeight: 900, padding: "11px 14px", borderRadius: 14, background: "linear-gradient(135deg, var(--color-success), var(--color-success-strong))", fontSize: 13 }}
         >
           📍 Directions
         </a>
@@ -657,7 +657,7 @@ function ResortLogo({ resort }) {
         width: 46,
         height: 46,
         borderRadius: 14,
-        background: "linear-gradient(135deg, #1e293b, #334155)",
+        background: "linear-gradient(135deg, var(--color-surface-popover), var(--color-text-muted))",
         border: "1px solid rgba(255,255,255,0.14)",
         display: "grid",
         placeItems: "center",
@@ -732,7 +732,7 @@ function AuthGate({ icon, title, desc, onSignIn, onSignUp }) {
         <div style={{ fontSize: 22, fontWeight: 900, color: "white", letterSpacing: -0.4 }}>{title}</div>
         <div style={{ fontSize: 14, color: "rgba(255,255,255,0.48)", lineHeight: 1.6 }}>{desc}</div>
         <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-          <button onClick={onSignUp} style={{ background: "linear-gradient(135deg,#0284c7,#38bdf8)", color: "white", border: "none", borderRadius: 12, padding: "12px 22px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>
+          <button onClick={onSignUp} style={{ background: "var(--gradient-primary)", color: "white", border: "none", borderRadius: 12, padding: "12px 22px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>
             Create Free Account
           </button>
           <button onClick={onSignIn} style={{ background: "rgba(255,255,255,0.07)", color: "white", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "12px 22px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
@@ -757,7 +757,7 @@ const TOP_TABS = BOTTOM_TABS
 function ProfileAvatar({ profile, size, isActive }) {
   const name = profile?.full_name || profile?.username || "U"
   const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
-  const border = `2px solid ${isActive ? "#38bdf8" : "rgba(255,255,255,0.22)"}`
+  const border = `2px solid ${isActive ? "var(--color-accent)" : "rgba(255,255,255,0.22)"}`
   const shadow = isActive ? "0 0 8px rgba(56,189,248,0.4)" : "none"
   return profile?.avatar_url ? (
     <img src={profile.avatar_url} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", border, boxShadow: shadow, flexShrink: 0 }} />
@@ -791,7 +791,7 @@ function BottomNav({ activeTab, onTabChange, currentProfile, notifCount }) {
               border: "none",
               cursor: "pointer",
               padding: "4px 2px",
-              color: isActive ? "#38bdf8" : "rgba(255,255,255,0.42)",
+              color: isActive ? "var(--color-accent)" : "rgba(255,255,255,0.42)",
               transition: "color 0.15s ease",
               minWidth: 0,
               position: "relative",
@@ -803,7 +803,7 @@ function BottomNav({ activeTab, onTabChange, currentProfile, notifCount }) {
               <span style={{ position: "relative", lineHeight: 1, display: "flex", filter: isActive ? "drop-shadow(0 0 6px rgba(96,165,250,0.6))" : "none", transition: "filter 0.15s ease" }}>
                 <Icon size={22} />
                 {isSocial && notifCount > 0 && (
-                  <span style={{ position: "absolute", top: -4, right: -6, minWidth: 16, height: 16, borderRadius: 999, background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "1.5px solid rgba(4,8,15,1)", lineHeight: 1 }}>
+                  <span style={{ position: "absolute", top: -4, right: -6, minWidth: 16, height: 16, borderRadius: 999, background: "var(--gradient-danger)", color: "white", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "1.5px solid rgba(4,8,15,1)", lineHeight: 1 }}>
                     {notifCount > 9 ? "9+" : notifCount}
                   </span>
                 )}
@@ -829,7 +829,7 @@ function TopNav({ activeTab, onTabChange, currentProfile, notifCount }) {
     <nav className="top-nav">
       <div className="top-nav-inner">
         {/* Branding */}
-        <div style={{ fontSize: 17, fontWeight: 800, background: "linear-gradient(135deg, #e0f2fe, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", letterSpacing: -0.3, flexShrink: 0 }}>
+        <div style={{ fontSize: 17, fontWeight: 800, background: "linear-gradient(135deg, var(--color-text-1), var(--color-accent))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", letterSpacing: -0.3, flexShrink: 0 }}>
           ❄️ PowderDays
         </div>
 
@@ -848,7 +848,7 @@ function TopNav({ activeTab, onTabChange, currentProfile, notifCount }) {
                   display: "flex", alignItems: "center", gap: 6,
                   padding: "8px 14px", borderRadius: 10, border: "none",
                   background: isActive ? "rgba(56,189,248,0.15)" : "transparent",
-                  color: isActive ? "#38bdf8" : "rgba(255,255,255,0.55)",
+                  color: isActive ? "var(--color-accent)" : "rgba(255,255,255,0.55)",
                   fontWeight: isActive ? 800 : 500,
                   fontSize: 13, cursor: "pointer",
                   transition: "all 0.15s",
@@ -861,7 +861,7 @@ function TopNav({ activeTab, onTabChange, currentProfile, notifCount }) {
                   <span style={{ position: "relative", display: "flex", lineHeight: 1 }}>
                     <Icon size={16} />
                     {isSocial && notifCount > 0 && (
-                      <span style={{ position: "absolute", top: -4, right: -6, minWidth: 14, height: 14, borderRadius: 999, background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white", fontSize: 8, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 2px", border: "1.5px solid rgba(4,8,15,1)", lineHeight: 1 }}>
+                      <span style={{ position: "absolute", top: -4, right: -6, minWidth: 14, height: 14, borderRadius: 999, background: "var(--gradient-danger)", color: "white", fontSize: 8, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 2px", border: "1.5px solid rgba(4,8,15,1)", lineHeight: 1 }}>
                         {notifCount > 9 ? "9+" : notifCount}
                       </span>
                     )}
@@ -872,7 +872,7 @@ function TopNav({ activeTab, onTabChange, currentProfile, notifCount }) {
                   <div style={{
                     position: "absolute", bottom: 2, left: "50%", transform: "translateX(-50%)",
                     width: 4, height: 4, borderRadius: "50%",
-                    background: "#38bdf8", boxShadow: "0 0 6px #38bdf8",
+                    background: "var(--color-accent)", boxShadow: "0 0 6px var(--color-accent)",
                   }} />
                 )}
               </button>
@@ -890,7 +890,7 @@ function TabButton({ active, onClick, children }) {
       onClick={onClick}
       style={{
         background: active
-          ? "linear-gradient(135deg, #0284c7, #38bdf8)"
+          ? "var(--gradient-primary)"
           : "rgba(255,255,255,0.06)",
         color: "white",
         border: "1px solid rgba(255,255,255,0.12)",
@@ -1420,8 +1420,7 @@ export default function App() {
     <div
       style={{
         minHeight: "100vh",
-        background:
-          "radial-gradient(ellipse 80% 35% at 50% 0%, rgba(56,189,248,0.08) 0%, transparent 100%), linear-gradient(180deg, #04080f 0%, #060d1a 100%)",
+        background: "var(--gradient-bg)",
         color: "white",
       }}
     >
@@ -1559,7 +1558,7 @@ export default function App() {
             <div style={{ display: "grid", gap: 12 }}>
               <button
                 onClick={() => openAuthModal("login")}
-                style={{ padding: "14px 20px", borderRadius: 14, background: "linear-gradient(135deg,#0284c7,#38bdf8)", border: "none", color: "white", fontWeight: 800, fontSize: 16, cursor: "pointer", boxShadow: "0 4px 20px rgba(56,189,248,0.3)" }}
+                style={{ padding: "14px 20px", borderRadius: 14, background: "var(--gradient-primary)", border: "none", color: "white", fontWeight: 800, fontSize: 16, cursor: "pointer", boxShadow: "0 4px 20px rgba(56,189,248,0.3)" }}
               >
                 Sign In
               </button>
@@ -1689,7 +1688,7 @@ export default function App() {
                 onClick={refresh}
                 disabled={loading}
                 style={{
-                  background: loading ? "rgba(255,255,255,0.12)" : "linear-gradient(135deg, #0284c7, #38bdf8)",
+                  background: loading ? "rgba(255,255,255,0.12)" : "var(--gradient-primary)",
                   color: "white", border: "none", padding: isMobile ? "10px 12px" : "10px 16px",
                   borderRadius: 12, fontWeight: 800, cursor: loading ? "not-allowed" : "pointer",
                   fontSize: 13, boxShadow: "0 6px 20px rgba(56,189,248,0.22)",
@@ -1709,7 +1708,7 @@ export default function App() {
         )}
 
         {error && (
-          <div style={{ background: "rgba(255,0,0,0.12)", border: "1px solid rgba(255,0,0,0.25)", padding: 12, borderRadius: 14, color: "#ffd1d1", marginBottom: 16 }}>
+          <div style={{ background: "rgba(255,0,0,0.12)", border: "1px solid rgba(255,0,0,0.25)", padding: 12, borderRadius: 14, color: "var(--color-danger)", marginBottom: 16 }}>
             <strong>Error:</strong> {error}
           </div>
         )}
@@ -1739,7 +1738,7 @@ export default function App() {
                   onClick={() => setConditionsSubTab(key)}
                   style={{
                     background: conditionsSubTab === key
-                      ? "linear-gradient(135deg, #0284c7, #38bdf8)"
+                      ? "var(--gradient-primary)"
                       : "rgba(255,255,255,0.06)",
                     color: "white",
                     border: "1px solid rgba(255,255,255,0.12)",
@@ -1850,7 +1849,7 @@ export default function App() {
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                       width: "100%", padding: "12px 16px", marginBottom: 16, borderRadius: 14,
                       border: "1px dashed rgba(163,230,53,0.5)", background: "rgba(163,230,53,0.08)",
-                      color: "#a3e635", fontWeight: 800, fontSize: 13, cursor: "pointer",
+                      color: "var(--color-dev-badge)", fontWeight: 800, fontSize: 13, cursor: "pointer",
                     }}
                   >
                     🧪 Krames Butte — Dev Testing Ground →
@@ -1871,9 +1870,9 @@ export default function App() {
                         style={{
                           background:
                             passFilter === p
-                              ? "linear-gradient(135deg, #22c55e, #14b8a6)"
+                              ? "var(--gradient-pass-pill)"
                               : "rgba(255,255,255,0.06)",
-                          color: passFilter === p ? "#062018" : "white",
+                          color: passFilter === p ? "var(--color-pass-pill-text)" : "white",
                           border: "1px solid rgba(255,255,255,0.1)",
                           padding: "10px 14px",
                           borderRadius: 999,

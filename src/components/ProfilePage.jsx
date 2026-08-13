@@ -19,6 +19,10 @@ import SnowStat from "./ui/SnowStat"
 import Card from "./ui/Card"
 import Button from "./ui/Button"
 
+// SKILL_OPTIONS feeds `${opt.color}18`/`${skillObj.color}44` hex-alpha-suffix template
+// literals below (skill-badge tinting), which requires literal hex — a var(--token)
+// reference would produce invalid CSS. Same documented Task 0.2 exception as
+// ProfileSetup.jsx's SKILL_OPTIONS — do not tokenize.
 const SKILL_OPTIONS = [
   { key: "green",        label: "Green",        color: "#22c55e" },
   { key: "blue",         label: "Blue",         color: "#60a5fa" },

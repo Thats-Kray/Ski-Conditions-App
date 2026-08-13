@@ -102,6 +102,21 @@
   --rating-slate:        #64748b;  /* Closed tier */
   --rating-slate-border: rgba(100, 116, 139, 0.2);
 
+  /* Track D — app-wide theming follow-up: additional theme-invariant status/domain
+     tokens. Same rule as Track C below: semantic meaning (danger intensity, ski-trail-
+     difficulty convention, dev-only marker) must read the same regardless of the picked
+     cosmetic theme, so these live here only — not redefined per [data-theme]. */
+  --gradient-danger:        linear-gradient(135deg, #ef4444, #b91c1c);
+  --color-danger-strong:    #dc2626;
+  --color-success-bg:       rgba(34, 197, 94, 0.12);
+  --color-danger-bg:        rgba(239, 68, 68, 0.12);
+  --color-warning-bg:       rgba(251, 191, 36, 0.12);
+  --color-trail-green:      #22c55e;
+  --color-trail-blue:       #60a5fa;
+  --color-trail-black:      #e2e8f0;
+  --color-dev-badge:        #a3e635;
+  --color-dev-badge-strong: #65a30d;
+
   --radius-card:         18px;
   --radius-button:       12px;
   --radius-pill:         999px;

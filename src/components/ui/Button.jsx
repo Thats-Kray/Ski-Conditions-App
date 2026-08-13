@@ -15,7 +15,7 @@ const VARIANTS = {
     border: "none",
   },
   danger: {
-    background: "linear-gradient(135deg, #ef4444, #b91c1c)",
+    background: "var(--gradient-danger)",
     color: "#fff",
     border: "none",
   },

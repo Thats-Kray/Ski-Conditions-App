@@ -151,8 +151,8 @@ export default function StravaConnect({ userId }) {
             <div style={{ fontSize: 14, fontWeight: 800, color: "white" }}>Strava</div>
           </div>
           {isConnected && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800, color: "#22c55e" }}>
-              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800, color: "var(--color-success-strong)" }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--color-success-strong)" }} />
               Connected
             </div>
           )}
@@ -164,7 +164,7 @@ export default function StravaConnect({ userId }) {
             marginBottom: 12, padding: "9px 12px", borderRadius: 10, fontSize: 12, fontWeight: 700,
             background: toast.type === "success" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
             border: `1px solid ${toast.type === "success" ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`,
-            color: toast.type === "success" ? "#22c55e" : "#f87171",
+            color: toast.type === "success" ? "var(--color-success-strong)" : "var(--color-danger)",
           }}>
             {toast.message}
           </div>
@@ -207,7 +207,7 @@ export default function StravaConnect({ userId }) {
                 style={{
                   flex: 1, padding: "10px 0", borderRadius: 12,
                   border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.08)",
-                  color: "#f87171", fontWeight: 800, fontSize: 13, cursor: "pointer",
+                  color: "var(--color-danger)", fontWeight: 800, fontSize: 13, cursor: "pointer",
                 }}
               >
                 Disconnect
@@ -215,7 +215,7 @@ export default function StravaConnect({ userId }) {
             </div>
 
             {previewError && (
-              <div style={{ marginTop: 12, fontSize: 12, fontWeight: 700, color: "#f87171" }}>
+              <div style={{ marginTop: 12, fontSize: 12, fontWeight: 700, color: "var(--color-danger)" }}>
                 {previewError}
               </div>
             )}
@@ -223,7 +223,7 @@ export default function StravaConnect({ userId }) {
             {syncResult && (
               <div style={{
                 marginTop: 12, fontSize: 12, fontWeight: 700,
-                color: syncResult.error ? "#f87171" : "rgba(255,255,255,0.6)",
+                color: syncResult.error ? "var(--color-danger)" : "rgba(255,255,255,0.6)",
               }}>
                 {syncResult.error
                   ? `Import failed: ${syncResult.error}`

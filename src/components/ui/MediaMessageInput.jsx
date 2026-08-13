@@ -139,7 +139,7 @@ export default function MediaMessageInput({ placeholder = "Message…", onSend, 
               style={{
                 position: "absolute", top: -6, right: -6,
                 width: 18, height: 18, borderRadius: "50%",
-                background: "#1e293b", border: "1px solid rgba(255,255,255,0.2)",
+                background: "var(--color-surface-popover)", border: "1px solid rgba(255,255,255,0.2)",
                 color: "rgba(255,255,255,0.7)", fontSize: 12, lineHeight: 1,
                 cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                 padding: 0,
@@ -187,7 +187,7 @@ export default function MediaMessageInput({ placeholder = "Message…", onSend, 
             flexShrink: 0, borderRadius: 8, height: 36, padding: "0 10px",
             background: showGifs ? "rgba(96,165,250,0.15)" : "rgba(255,255,255,0.07)",
             border: showGifs ? "1px solid rgba(96,165,250,0.3)" : "1px solid rgba(255,255,255,0.1)",
-            color: showGifs ? "#60a5fa" : "rgba(255,255,255,0.55)",
+            color: showGifs ? "var(--color-accent-soft)" : "rgba(255,255,255,0.55)",
             fontSize: 11, fontWeight: 800, cursor: "pointer", letterSpacing: 0.3,
           }}
         >GIF</button>
@@ -212,7 +212,7 @@ export default function MediaMessageInput({ placeholder = "Message…", onSend, 
           disabled={!canSend}
           style={{
             flexShrink: 0, width: 40, height: 40, borderRadius: "50%",
-            background: canSend ? "linear-gradient(135deg,#2563eb,#0891b2)" : "rgba(255,255,255,0.08)",
+            background: canSend ? "var(--gradient-cta)" : "rgba(255,255,255,0.08)",
             border: "none", color: "white", fontSize: 16, cursor: canSend ? "pointer" : "default",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}

@@ -1,4 +1,4 @@
-export default function AccentCard({ accentColor = "#38bdf8", children }) {
+export default function AccentCard({ accentColor = "var(--color-accent)", children }) {
   return (
     <div
       style={{

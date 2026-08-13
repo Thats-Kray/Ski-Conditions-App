@@ -4,9 +4,11 @@ import { getCurrentUser, getTodaysVisiblePlans } from "../../lib/socialApi"
 import UserProfileModal from "../UserProfileModal"
 
 function statusColor(status) {
-  if (status === "arrived") return "#4ade80"
-  if (status === "driving") return "#fbbf24"
-  if (status === "planning") return "#60a5fa"
+  if (status === "arrived") return "var(--color-success)"
+  if (status === "driving") return "var(--color-warning)"
+  if (status === "planning") return "var(--color-accent-soft)"
+  /* TODO(theming): unclear semantic, ask before tokenizing — no existing token matches
+     these "done"/unknown-status shades exactly, and Task 1 must stay pixel-lossless. */
   if (status === "done") return "#c4b5fd"
   return "#94a3b8"
 }
@@ -70,10 +72,10 @@ export default function AvatarStatusRail() {
               }}
             >
               <div style={{ position: "relative" }}>
-                <div style={{ width: 56, height: 56, borderRadius: "50%", overflow: "hidden", background: "#1e293b", display: "grid", placeItems: "center", fontSize: 16, fontWeight: 900, color: "white", border: `2px solid ${color}` }}>
+                <div style={{ width: 56, height: 56, borderRadius: "50%", overflow: "hidden", background: "var(--color-surface-popover)", display: "grid", placeItems: "center", fontSize: 16, fontWeight: 900, color: "white", border: `2px solid ${color}` }}>
                   {avatarUrl ? <img src={avatarUrl} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initialsFromName(name)}
                 </div>
-                <div style={{ position: "absolute", bottom: 2, right: 2, width: 12, height: 12, borderRadius: "50%", background: color, border: "2px solid #04080f" }} />
+                <div style={{ position: "absolute", bottom: 2, right: 2, width: 12, height: 12, borderRadius: "50%", background: color, border: "2px solid var(--color-bg)" }} />
               </div>
               <div style={{ fontSize: 12, fontWeight: 800, color: "white", textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%" }}>{name}</div>
               <div style={{ fontSize: 10, fontWeight: 700, color, textAlign: "center" }}>{statusLabel(plan.status)}</div>

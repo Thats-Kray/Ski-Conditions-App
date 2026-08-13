@@ -19,9 +19,12 @@ const CATEGORIES = [
 // Explicit, stable category→color map — unlike accentForIndex's positional
 // cycling (correct for unbounded lists like EventCard), safety-relevant
 // meaning here requires each fixed category to keep its own color.
+// safety/lost_found exactly match existing semantic tokens (rule 1); social/general
+// don't match any :root token and are per-entity decorative differentiators
+// (rule 5), independent of theme palette — left as literal hex.
 const CATEGORY_COLORS = {
-  safety: "#f87171",
-  lost_found: "#38bdf8",
+  safety: "var(--color-danger)",
+  lost_found: "var(--color-accent)",
   social: "#2dd4bf",
   general: "#fb923c",
 }
@@ -118,7 +121,7 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
               style={{
                 flexShrink: 0, padding: "8px 14px", borderRadius: 999, fontSize: 12, fontWeight: 800,
                 border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer",
-                background: resortKey === key ? "linear-gradient(135deg,#0284c7,#38bdf8)" : "rgba(255,255,255,0.06)",
+                background: resortKey === key ? "var(--gradient-primary)" : "rgba(255,255,255,0.06)",
                 color: "white",
               }}
             >
@@ -132,7 +135,7 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
               style={{
                 flexShrink: 0, padding: "8px 14px", borderRadius: 999, fontSize: 12, fontWeight: 800,
                 border: "1px dashed rgba(163,230,53,0.5)", cursor: "pointer",
-                background: resortKey === KRAMES_BUTTE_KEY ? "linear-gradient(135deg,#65a30d,#a3e635)" : "rgba(163,230,53,0.08)",
+                background: resortKey === KRAMES_BUTTE_KEY ? "linear-gradient(135deg,var(--color-dev-badge-strong),var(--color-dev-badge))" : "rgba(163,230,53,0.08)",
                 color: "white",
               }}
             >
@@ -165,7 +168,7 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
       {!composerOpen ? (
         <button
           onClick={() => setComposerOpen(true)}
-          style={{ padding: "12px 16px", borderRadius: 14, border: "1px solid rgba(56,189,248,0.4)", background: "rgba(56,189,248,0.1)", color: "#38bdf8", fontWeight: 800, cursor: "pointer" }}
+          style={{ padding: "12px 16px", borderRadius: 14, border: "1px solid rgba(56,189,248,0.4)", background: "rgba(56,189,248,0.1)", color: "var(--color-accent)", fontWeight: 800, cursor: "pointer" }}
         >
           📍 Post to {displayName(resortKey)}
         </button>
@@ -195,7 +198,7 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
             style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: 10, color: "white", fontSize: 13, resize: "none" }}
           />
           <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", textAlign: "right" }}>{content.length}/280</div>
-          {postError && <div style={{ fontSize: 12, color: "#f87171" }}>{postError}</div>}
+          {postError && <div style={{ fontSize: 12, color: "var(--color-danger)" }}>{postError}</div>}
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => { setComposerOpen(false); setPostError(null) }} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.6)", cursor: "pointer" }}>
               Cancel
@@ -203,7 +206,7 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
             <button
               onClick={handleSubmitPost}
               disabled={posting || !content.trim()}
-              style={{ flex: 2, padding: "10px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#0284c7,#38bdf8)", color: "white", fontWeight: 800, cursor: posting ? "wait" : "pointer", opacity: posting || !content.trim() ? 0.6 : 1 }}
+              style={{ flex: 2, padding: "10px", borderRadius: 10, border: "none", background: "var(--gradient-primary)", color: "white", fontWeight: 800, cursor: posting ? "wait" : "pointer", opacity: posting || !content.trim() ? 0.6 : 1 }}
             >
               {posting ? "Checking location…" : "Post"}
             </button>
@@ -214,7 +217,7 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
       {loading ? (
         <div style={{ padding: 20, fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Loading…</div>
       ) : loadError ? (
-        <div style={{ padding: 20, fontSize: 13, color: "#f87171" }}>
+        <div style={{ padding: 20, fontSize: 13, color: "var(--color-danger)" }}>
           Couldn't load the board. Try again in a bit.
         </div>
       ) : !visiblePosts.length ? (
@@ -227,9 +230,9 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
             const cat = CATEGORIES.find((c) => c.key === post.category)
             const author = post.profiles?.full_name || post.profiles?.username || "Someone"
             return (
-              <AccentCard key={post.id} accentColor={CATEGORY_COLORS[post.category] ?? "#38bdf8"}>
+              <AccentCard key={post.id} accentColor={CATEGORY_COLORS[post.category] ?? "var(--color-accent)"}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: "#38bdf8" }}>{cat?.emoji} {cat?.label || post.category}</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "var(--color-accent)" }}>{cat?.emoji} {cat?.label || post.category}</span>
                   <button onClick={() => handleReport(post.id)} disabled={post._reported} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", fontSize: 11, cursor: "pointer" }}>
                     {post._reported ? "Reported" : "🚩 Report"}
                   </button>

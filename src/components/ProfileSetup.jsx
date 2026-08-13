@@ -217,7 +217,7 @@ export default function ProfileSetup({ onSaved }) {
                 {sportObj && <span style={{ fontSize: 18 }}>{sportObj.emoji}</span>}
               </div>
               {username && <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, marginTop: 2 }}>@{username}</div>}
-              {favoriteMountain && <div style={{ color: "#60a5fa", fontSize: 12, fontWeight: 700, marginTop: 4 }}>📍 {favoriteMountain}</div>}
+              {favoriteMountain && <div style={{ color: "var(--color-accent-soft)", fontSize: 12, fontWeight: 700, marginTop: 4 }}>📍 {favoriteMountain}</div>}
             </div>
           </div>
         </div>
@@ -227,7 +227,7 @@ export default function ProfileSetup({ onSaved }) {
           <StatChip emoji={sportObj?.emoji || "⛷️"} label="Sport" value={sportObj?.label} />
           <StatChip emoji="🎯" label="Skill Level" value={skillObj ? `${skillObj.label} · ${skillObj.desc}` : null} color={skillObj?.color} />
           {vehicleLabel && <StatChip emoji="🚗" label="Vehicle" value={`${vehicleLabel}${vehicleSeats > 0 ? ` · ${vehicleSeats} seats` : ""}`} />}
-          {favoriteMountain && <StatChip emoji="🏔️" label="Home Mountain" value={favoriteMountain} color="#60a5fa" />}
+          {favoriteMountain && <StatChip emoji="🏔️" label="Home Mountain" value={favoriteMountain} color="var(--color-accent-soft)" />}
         </div>
 
         {/* Passes */}
@@ -236,17 +236,17 @@ export default function ProfileSetup({ onSaved }) {
             <div style={{ ...labelStyle, marginBottom: 4 }}>Season Passes</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {skiPasses.map((p) => (
-                <div key={p} style={{ background: "linear-gradient(135deg,#22c55e,#14b8a6)", color: "#052e2b", borderRadius: 999, padding: "7px 14px", fontWeight: 800, fontSize: 13 }}>{p}</div>
+                <div key={p} style={{ background: "var(--gradient-pass-pill)", color: "var(--color-pass-pill-text)", borderRadius: 999, padding: "7px 14px", fontWeight: 800, fontSize: 13 }}>{p}</div>
               ))}
             </div>
           </div>
         )}
 
-        {message && <div style={{ fontSize: 13, color: "#22c55e" }}>{message}</div>}
+        {message && <div style={{ fontSize: 13, color: "var(--color-success-strong)" }}>{message}</div>}
 
         <button
           onClick={() => { setIsEditing(true); setMessage("") }}
-          style={{ background: "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", border: "none", padding: "12px", borderRadius: 14, cursor: "pointer", fontWeight: 800, fontSize: 14, boxShadow: "0 6px 24px rgba(37,99,235,0.35)" }}
+          style={{ background: "var(--gradient-cta)", color: "white", border: "none", padding: "12px", borderRadius: 14, cursor: "pointer", fontWeight: 800, fontSize: 14, boxShadow: "0 6px 24px rgba(37,99,235,0.35)" }}
         >
           Edit Profile
         </button>
@@ -264,7 +264,7 @@ export default function ProfileSetup({ onSaved }) {
           <div style={{ width: 88, height: 88, borderRadius: 999, overflow: "hidden", background: "rgba(255,255,255,0.08)", border: "2px solid rgba(255,255,255,0.15)", display: "grid", placeItems: "center", fontWeight: 900, fontSize: 28, color: "white" }}>
             {avatarUrl ? <img src={avatarUrl} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initialsFromName(fullName)}
           </div>
-          <label style={{ position: "absolute", bottom: 0, right: 0, width: 28, height: 28, borderRadius: 999, background: "#2563eb", border: "2px solid #0b1424", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>
+          <label style={{ position: "absolute", bottom: 0, right: 0, width: 28, height: 28, borderRadius: 999, background: "var(--color-accent-deep)", border: "2px solid var(--color-modal-bg)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>
             📷
             <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: "none" }} />
           </label>
@@ -290,7 +290,7 @@ export default function ProfileSetup({ onSaved }) {
             const active = sportType === key
             return (
               <button key={key} type="button" onClick={() => setSportType(active ? "" : key)}
-                style={{ padding: "14px 8px", borderRadius: 14, border: active ? "1.5px solid #60a5fa" : "1.5px solid rgba(255,255,255,0.1)", background: active ? "rgba(96,165,250,0.14)" : "rgba(255,255,255,0.04)", color: active ? "#60a5fa" : "rgba(255,255,255,0.65)", fontWeight: 800, fontSize: 13, cursor: "pointer", display: "grid", gap: 5, justifyItems: "center", transition: "all 0.15s" }}
+                style={{ padding: "14px 8px", borderRadius: 14, border: active ? "1.5px solid var(--color-accent-soft)" : "1.5px solid rgba(255,255,255,0.1)", background: active ? "rgba(96,165,250,0.14)" : "rgba(255,255,255,0.04)", color: active ? "var(--color-accent-soft)" : "rgba(255,255,255,0.65)", fontWeight: 800, fontSize: 13, cursor: "pointer", display: "grid", gap: 5, justifyItems: "center", transition: "all 0.15s" }}
               >
                 <span style={{ fontSize: 24 }}>{emoji}</span>
                 <span>{label}</span>
@@ -328,7 +328,7 @@ export default function ProfileSetup({ onSaved }) {
             const active = skiPasses.includes(passName)
             return (
               <button key={passName} type="button" onClick={() => togglePass(passName)}
-                style={{ background: active ? "linear-gradient(135deg,#22c55e,#14b8a6)" : "rgba(255,255,255,0.06)", color: active ? "#052e2b" : "rgba(255,255,255,0.75)", border: active ? "none" : "1px solid rgba(255,255,255,0.12)", padding: "8px 14px", borderRadius: 999, fontWeight: 800, fontSize: 13, cursor: "pointer", transition: "all 0.15s" }}
+                style={{ background: active ? "var(--gradient-pass-pill)" : "rgba(255,255,255,0.06)", color: active ? "var(--color-pass-pill-text)" : "rgba(255,255,255,0.75)", border: active ? "none" : "1px solid rgba(255,255,255,0.12)", padding: "8px 14px", borderRadius: 999, fontWeight: 800, fontSize: 13, cursor: "pointer", transition: "all 0.15s" }}
               >
                 {passName}
               </button>
@@ -372,7 +372,7 @@ export default function ProfileSetup({ onSaved }) {
           {vehicleSeats > 0 && (
             <div style={{ display: "flex", gap: 5, marginTop: 10 }}>
               {Array.from({ length: vehicleSeats }).map((_, i) => (
-                <div key={i} style={{ width: 12, height: 12, borderRadius: "50%", background: "#60a5fa", boxShadow: "0 0 6px rgba(96,165,250,0.5)" }} />
+                <div key={i} style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--color-accent-soft)", boxShadow: "0 0 6px rgba(96,165,250,0.5)" }} />
               ))}
             </div>
           )}
@@ -380,14 +380,14 @@ export default function ProfileSetup({ onSaved }) {
       </div>
 
       {message && (
-        <div style={{ fontSize: 13, color: message.includes("saved") || message.includes("uploaded") ? "#22c55e" : "#f43f5e", padding: "10px 14px", background: message.includes("saved") || message.includes("uploaded") ? "rgba(34,197,94,0.08)" : "rgba(244,63,94,0.08)", borderRadius: 10 }}>
+        <div style={{ fontSize: 13, color: message.includes("saved") || message.includes("uploaded") ? "var(--color-success-strong)" : "var(--color-danger)", padding: "10px 14px", background: message.includes("saved") || message.includes("uploaded") ? "rgba(34,197,94,0.08)" : "rgba(244,63,94,0.08)", borderRadius: 10 }}>
           {message}
         </div>
       )}
 
       <div style={{ display: "flex", gap: 10 }}>
         <button type="submit" disabled={loading}
-          style={{ flex: 1, background: loading ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg,#2563eb,#0891b2)", color: "white", border: "none", padding: "13px", borderRadius: 14, cursor: loading ? "not-allowed" : "pointer", fontWeight: 900, fontSize: 14, boxShadow: loading ? "none" : "0 6px 24px rgba(37,99,235,0.35)" }}
+          style={{ flex: 1, background: loading ? "rgba(255,255,255,0.1)" : "var(--gradient-cta)", color: "white", border: "none", padding: "13px", borderRadius: 14, cursor: loading ? "not-allowed" : "pointer", fontWeight: 900, fontSize: 14, boxShadow: loading ? "none" : "0 6px 24px rgba(37,99,235,0.35)" }}
         >
           {loading ? "Saving…" : hasProfile ? "Save Changes" : "Create Profile"}
         </button>

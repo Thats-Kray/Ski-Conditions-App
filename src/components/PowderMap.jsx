@@ -5,12 +5,12 @@ import UserProfileModal from "./UserProfileModal"
 import { useLiveFriendLocations } from "../lib/useLiveFriendLocations"
 
 function scoreColor(score) {
-  if (score == null) return "#bfdbfe"   // fallback light blue
-  if (score >= 88) return "#0f172a"     // dark navy
-  if (score >= 76) return "#1e3a8a"     // strong navy-blue
-  if (score >= 63) return "#2563eb"     // medium blue
-  if (score >= 50) return "#60a5fa"     // lighter blue
-  return "#bae6fd"                      // very light blue
+  if (score == null) return "var(--rating-slate)"  // no data
+  if (score >= 88) return "var(--rating-mint)"      // elite / best snow
+  if (score >= 76) return "var(--rating-sky)"       // very good
+  if (score >= 63) return "var(--rating-gold)"      // good
+  if (score >= 50) return "var(--rating-peach)"     // okay / decent
+  return "var(--rating-coral)"                      // low powder score
 }
 
 function markerRadius(count) {
@@ -49,6 +49,10 @@ function avatarFallback(name) {
     .toUpperCase()
 }
 
+// Renders only inside a Leaflet <Popup>, which uses leaflet.css's fixed white
+// popup chrome (no app dark-theme override exists for it) — colors below are
+// intentionally literal hex chosen for contrast on that white surface, not
+// app-theme tokens which are calibrated for the dark app chrome.
 function SkierRow({ person, onViewProfile }) {
   const name = displayName(person)
   const eta = formatPlanTime(person.eta)
@@ -129,7 +133,7 @@ function MarkerSizeItem({ size, label }) {
           width: size,
           height: size,
           borderRadius: 999,
-          background: "#2563eb",
+          background: "var(--color-accent-deep)",
           border: "1px solid rgba(255,255,255,0.25)",
         }}
       />
@@ -172,11 +176,11 @@ export default function PowderMap({
             Powder Score Color
           </div>
 
-          <LegendItem color="#bae6fd" label="Low powder score" />
-          <LegendItem color="#60a5fa" label="Okay / decent" />
-          <LegendItem color="#2563eb" label="Good" />
-          <LegendItem color="#1e3a8a" label="Very good" />
-          <LegendItem color="#0f172a" label="Elite / best snow" />
+          <LegendItem color="var(--rating-coral)" label="Low powder score" />
+          <LegendItem color="var(--rating-peach)" label="Okay / decent" />
+          <LegendItem color="var(--rating-gold)" label="Good" />
+          <LegendItem color="var(--rating-sky)" label="Very good" />
+          <LegendItem color="var(--rating-mint)" label="Elite / best snow" />
         </div>
 
         <div
@@ -252,6 +256,8 @@ export default function PowderMap({
                       Skiers Today: <strong>{count}</strong>
                     </div>
 
+                    {/* Popup interior renders on Leaflet's fixed white chrome (see
+                        SkierRow comment above) — border/text colors below stay literal. */}
                     <div
                       style={{
                         marginTop: 10,
@@ -290,9 +296,12 @@ export default function PowderMap({
               key={`friend-${friendId}`}
               center={[loc.lat, loc.lng]}
               radius={10}
-              pathOptions={{ color: "#fbbf24", fillColor: "#fbbf24", fillOpacity: 0.9, weight: 2 }}
+              pathOptions={{ color: "var(--color-warning)", fillColor: "var(--color-warning)", fillOpacity: 0.9, weight: 2 }}
               eventHandlers={{ click: () => setViewingUserId(friendId) }}
             >
+              {/* Popup interior renders on Leaflet's fixed white chrome (see SkierRow
+                  comment above) — avatar/text colors below stay literal, not app-theme
+                  tokens. */}
               <Popup maxWidth={220}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <div

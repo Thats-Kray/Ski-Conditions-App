@@ -72,7 +72,7 @@ export default function TripChatView({ trip, currentUser, onBack }) {
                     {msg.profile.full_name?.split(" ")[0] || msg.profile.username}
                   </div>
                 )}
-                <div style={{ background: isMe ? "linear-gradient(135deg,#2563eb,#0891b2)" : "rgba(255,255,255,0.09)", color: "white", borderRadius: isMe ? "14px 14px 0 14px" : "0 14px 14px 14px", padding: msg.media_url && !msg.content ? "6px" : "8px 12px", fontSize: 13, lineHeight: 1.45, wordBreak: "break-word", overflow: "hidden" }}>
+                <div style={{ background: isMe ? "var(--gradient-cta)" : "rgba(255,255,255,0.09)", color: "white", borderRadius: isMe ? "14px 14px 0 14px" : "0 14px 14px 14px", padding: msg.media_url && !msg.content ? "6px" : "8px 12px", fontSize: 13, lineHeight: 1.45, wordBreak: "break-word", overflow: "hidden" }}>
                   {msg.media_url && <MessageMedia mediaUrl={msg.media_url} mediaType={msg.media_type} />}
                   {msg.content && <div style={{ marginTop: msg.media_url ? 6 : 0 }}>{msg.content}</div>}
                 </div>
