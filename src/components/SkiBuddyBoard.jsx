@@ -101,6 +101,7 @@ export default function SkiBuddyBoard() {
   const [responseMessage, setResponseMessage] = useState("")
   const [responseError, setResponseError] = useState(null)
   const [responding, setResponding] = useState(false)
+  const [respondedPostIds, setRespondedPostIds] = useState(new Set())
 
   const [reportingId, setReportingId] = useState(null)
   const [reportReason, setReportReason] = useState("")
@@ -180,6 +181,7 @@ export default function SkiBuddyBoard() {
     setResponseError(null)
     try {
       await respondToSkiBuddyPost(postId, responseMessage.trim())
+      setRespondedPostIds((prev) => new Set(prev).add(postId))
       setRespondingPostId(null)
       setExpandedPostId(postId)
     } catch (err) {
@@ -349,8 +351,17 @@ export default function SkiBuddyBoard() {
                         {expandedPostId === post.id ? "Hide responses" : "View responses"}
                       </button>
                     ) : (
-                      <button onClick={() => handleRespondClick(post.id)} disabled={post.status !== "open"} style={{ background: "none", border: "none", color: post.status === "open" ? "var(--color-accent)" : "rgba(255,255,255,0.3)", fontSize: 11, fontWeight: 700, cursor: post.status === "open" ? "pointer" : "default" }}>
-                        Respond
+                      <button
+                        onClick={() => handleRespondClick(post.id)}
+                        disabled={post.status !== "open" || respondedPostIds.has(post.id)}
+                        style={{
+                          background: "none", border: "none",
+                          color: post.status === "open" && !respondedPostIds.has(post.id) ? "var(--color-accent)" : "rgba(255,255,255,0.3)",
+                          fontSize: 11, fontWeight: 700,
+                          cursor: post.status === "open" && !respondedPostIds.has(post.id) ? "pointer" : "default",
+                        }}
+                      >
+                        {respondedPostIds.has(post.id) ? "✓ Response Sent" : "Respond"}
                       </button>
                     )}
                     {!isOwner && (
