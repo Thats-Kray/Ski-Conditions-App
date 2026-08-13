@@ -33,3 +33,4 @@ coverageProject Planning/
 
 # Claude Code session data
 .claude/
+.superpowers/
