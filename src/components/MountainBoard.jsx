@@ -3,11 +3,13 @@ import {
   getBoardPosts,
   createBoardPost,
   reportBoardPost,
+  getMyVerificationTier,
 } from "../lib/socialApi"
 import { useCurrentPosition } from "../lib/useCurrentPosition"
 import { RESORT_NAMES, RESORT_EMOJI } from "../lib/resorts"
 import { timeAgo } from "../lib/format"
 import AccentCard from "./ui/AccentCard"
+import VerificationUpgradeModal from "./VerificationUpgradeModal"
 
 const CATEGORIES = [
   { key: "safety",     label: "Safety",       emoji: "🚨" },
@@ -54,6 +56,9 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
   const [content, setContent] = useState("")
   const [postError, setPostError] = useState(null)
   const [posting, setPosting] = useState(false)
+  // Owner-only dev stub (Krames Butte test area) — see handleTestGateClick below.
+  const [showVerifyModal, setShowVerifyModal] = useState(false)
+  const [verifyTier, setVerifyTier] = useState(null)
 
   const { requestPosition } = useCurrentPosition()
 
@@ -110,6 +115,15 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
     }
   }
 
+  // Owner-only dev stub: no real user-facing board is gated on verification
+  // tier yet this sprint, so this button in the Krames Butte test area is how
+  // the owner exercises getMyVerificationTier() + VerificationUpgradeModal end-to-end.
+  async function handleTestGateClick() {
+    const { tier } = await getMyVerificationTier()
+    setVerifyTier(tier)
+    if (tier < 1) setShowVerifyModal(true)
+  }
+
   return (
     <div style={{ display: "grid", gap: 14 }}>
       {!lockedResortKey && (
@@ -129,18 +143,47 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
             </button>
           ))}
           {currentUserEmail === OWNER_EMAIL && (
-            <button
-              key={KRAMES_BUTTE_KEY}
-              onClick={() => setSelectedResortKey(KRAMES_BUTTE_KEY)}
-              style={{
-                flexShrink: 0, padding: "8px 14px", borderRadius: 999, fontSize: 12, fontWeight: 800,
-                border: "1px dashed rgba(163,230,53,0.5)", cursor: "pointer",
-                background: resortKey === KRAMES_BUTTE_KEY ? "linear-gradient(135deg,var(--color-dev-badge-strong),var(--color-dev-badge))" : "rgba(163,230,53,0.08)",
-                color: "white",
-              }}
-            >
-              🧪 Krames Butte (Dev)
-            </button>
+            <>
+              <button
+                key={KRAMES_BUTTE_KEY}
+                onClick={() => setSelectedResortKey(KRAMES_BUTTE_KEY)}
+                style={{
+                  flexShrink: 0, padding: "8px 14px", borderRadius: 999, fontSize: 12, fontWeight: 800,
+                  border: "1px dashed rgba(163,230,53,0.5)", cursor: "pointer",
+                  background: resortKey === KRAMES_BUTTE_KEY ? "linear-gradient(135deg,var(--color-dev-badge-strong),var(--color-dev-badge))" : "rgba(163,230,53,0.08)",
+                  color: "white",
+                }}
+              >
+                🧪 Krames Butte (Dev)
+              </button>
+              <button
+                onClick={handleTestGateClick}
+                style={{
+                  flexShrink: 0, padding: "8px 14px", borderRadius: 999, fontSize: 12, fontWeight: 800,
+                  border: "1px dashed rgba(163,230,53,0.5)", cursor: "pointer",
+                  background: "rgba(163,230,53,0.08)",
+                  color: "white",
+                }}
+              >
+                🔒 Test Verification Gate
+              </button>
+              {verifyTier !== null && (
+                <span
+                  style={{
+                    flexShrink: 0, alignSelf: "center", fontSize: 11, fontWeight: 700,
+                    color: verifyTier >= 1 ? "var(--color-accent)" : "rgba(255,255,255,0.5)",
+                  }}
+                >
+                  {verifyTier >= 1 ? `✅ Tier ${verifyTier}` : "Tier 0 — gate should block"}
+                </span>
+              )}
+              {showVerifyModal && (
+                <VerificationUpgradeModal
+                  onClose={() => setShowVerifyModal(false)}
+                  onVerified={(row) => { setVerifyTier(row.tier); setShowVerifyModal(false) }}
+                />
+              )}
+            </>
           )}
         </div>
       )}
