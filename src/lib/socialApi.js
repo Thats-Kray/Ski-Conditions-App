@@ -142,7 +142,7 @@ export async function linkOAuthIdentity(provider) {
 
   const { data, error } = await supabase.auth.linkIdentity({
     provider,
-    options: { redirectTo: window.location.origin },
+    options: { redirectTo: window.location.href },
   })
   if (error) throw error
   return data // { url } — Supabase redirects the browser there automatically
