@@ -8,7 +8,6 @@ import stravaRouter from "./routes/strava.js"
 import { computePowderScore } from "./powderScore.js"
 import { registerWeeklyBriefingCron } from "./cron.js"
 import { signAlertToken, verifyAlertToken } from "./alertTokens.js"
-import { moderateText } from "./moderation.js"
 
 function getSupabase() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -782,59 +781,12 @@ app.get("/api/resubscribe", async (req, res) => {
 })
 
 // ── Server-side content moderation (OpenAI Moderation API) ──
-
-// Verifies the caller's Supabase JWT and pins req.userId to the *authenticated*
-// user, same pattern as requireAuth in routes/strava.js:49-70 — defined locally
-// here since it isn't currently exported from that module.
-async function requireAuth(req, res, next) {
-  const header = req.get("authorization") || ""
-  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : null
-
-  if (!token) {
-    return res.status(401).json({ error: "Missing Authorization bearer token" })
-  }
-
-  try {
-    const { data, error } = await getSupabase().auth.getUser(token)
-    if (error || !data?.user) {
-      return res.status(401).json({ error: "Invalid or expired session" })
-    }
-    req.userId = data.user.id
-    next()
-  } catch (err) {
-    console.error("Auth verification error:", err.message)
-    res.status(401).json({ error: "Could not verify session" })
-  }
-}
-
-app.post("/api/moderate-content", requireAuth, async (req, res) => {
-  const { contentType, contentId, text } = req.body || {}
-
-  if (!contentType || !contentId || !text) {
-    return res.status(400).json({ error: "contentType, contentId, and text are required" })
-  }
-
-  try {
-    const result = await moderateText(text)
-
-    if (result.flagged) {
-      const { error } = await getSupabase().from("moderation_flags").insert({
-        content_type: contentType,
-        content_id: contentId,
-        source: "openai_moderation",
-        category: result.category,
-        score: result.score,
-        auto_held: true,
-      })
-      if (error) throw error
-    }
-
-    res.json({ flagged: result.flagged, held: result.flagged })
-  } catch (err) {
-    console.error("Moderation check failed:", err.message)
-    res.status(500).json({ error: "Moderation check failed" })
-  }
-})
+// server/moderation.js's moderateText() is ready to use, but the route that
+// calls it (POST /api/moderate-content) is intentionally not wired up yet —
+// there's no real caller until Sprint 31's board ships. Wire it back in then,
+// with request attribution (req.userId on the moderation_flags row) and input
+// validation this sprint's version was missing. See Sprint 30's final review
+// for the full reasoning.
 
 // ── Aggregate conditions + Powder Score, for the cron job (no HTTP round-trip) ──
 
