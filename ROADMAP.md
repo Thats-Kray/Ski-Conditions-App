@@ -542,11 +542,42 @@ Not code — external console setup in Google Cloud Console and Meta for Develop
 
 ---
 
+## SECTION 15 — Ski Buddy Board
+
+**Plan:** `docs/superpowers/plans/2026-08-13-sprint-31-ski-buddy-board.md` (6 tasks, executed via `superpowers:subagent-driven-development` in an isolated worktree, including a final whole-branch review). Public matchmaking/carpool board gated on Sprint 30's `is_verified()` Tier 1 check: a verified user posts "skiing X resort on Y date, looking for Z riding style, offering/needing a carpool seat," other verified users respond, the post owner accepts/declines, an accepted response marks the post "Filled." Posts get a best-effort OpenAI moderation check on creation via the route Sprint 30 stubbed and this sprint wired up; a flagged post is held from public view (visible only to its own owner, marked "under review").
+
+- [x] `migrations/028_ski_buddy_board.sql` — `ski_buddy_posts`/`ski_buddy_responses` tables, RLS (no `INSERT`/`DELETE` policy on either — all writes go through `SECURITY DEFINER` RPCs), `create_ski_buddy_post()`/`respond_to_ski_buddy_post()` RPCs, `valid_riding_styles()` CHECK function, `moderation_flags.submitted_by` column (closes the Sprint 30 attribution gap) — applied live 2026-08-13
+- [x] `POST /api/moderate-content` (`server/index.js`) — re-wired from Sprint 30's stub now that a real caller exists; bearer-auth middleware matching `strava.js`'s pattern, attributes flags to the authenticated caller via `submitted_by`
+- [x] `src/lib/skiBuddyOptions.js` + 7 new `src/lib/socialApi.js` functions (`createSkiBuddyPost`, `getSkiBuddyPosts`, `getMySkiBuddyPosts`, `respondToSkiBuddyPost`, `getSkiBuddyResponses`, `respondToSkiBuddyResponse`, `updateSkiBuddyPostStatus`)
+- [x] `src/components/SkiBuddyBoard.jsx` — filterable public list + inline expand-in-place response threads
+- [x] `src/components/PostSkiBuddyForm.jsx` — modal creation form
+- [x] Wired into `App.jsx`'s Snow tab as a new "🎿 Buddy" sub-tab
+- [x] **Two bugs found and fixed during per-task review, both latent in the plan's own verbatim code, not implementer deviations:** Task 1 — RLS `UPDATE` policies granted full-row write instead of just `status` (an owner could self-clear their own moderation hold, or rewrite another user's response message); fixed with column-scoped `REVOKE`/`GRANT UPDATE (status)`. Task 1 — `valid_riding_styles()` used `array_length(...) > 0`, which is `NULL` (not `false`) for an empty array, and Postgres CHECK constraints pass on `NULL` — silently allowing a post with zero riding styles; fixed with `COALESCE(array_length(...), 0) > 0`, live-verified.
+- [x] **Task 4 fix round:** the filter-driven post list had no fetch-cancellation guard (fast filter-chip clicking could show stale results); the tier-gate modal dropped the user's original action after successful verification, forcing a second click. Both fixed to match established codebase idioms (`MountainBoard.jsx`'s cancellation pattern, `VerificationUpgradeModal.jsx`'s `onVerified` timing).
+- [x] **Final whole-branch review (opus) found 4 Important issues, all fixed same session:** `respond_to_ski_buddy_post` didn't check `is_held_for_review` (a user holding a held post's UUID could still respond to it — inert when a prior task's reviewer deferred it, activated once this sprint's moderation-hold write landed), no timeout on the moderation fetch combined with an always-enabled modal close button (could produce duplicate posts against a hung moderation service), and a responder got zero feedback after submitting (dead code, silent no-op resubmission). Re-reviewed clean, including an independent live-DB read-back confirming the SQL fix actually deployed.
+
+**Outstanding:**
+1. **`is_held_for_review` has no release mechanism anywhere in the codebase** — no admin RPC, no admin UI. A false-positive OpenAI moderation flag permanently hides a post with no recourse today. Not a blocker while `OPENAI_API_KEY` is unset (moderation silently no-ops, so the hold path never fires — see item 2), but must be built before real users hit it. See TASK 15.1.
+2. `OPENAI_API_KEY` is not yet set in Railway/`server/.env` — the moderation route degrades safely (post creation still succeeds, moderation just silently no-ops) but doesn't actually check anything against OpenAI yet. Set this *after* TASK 15.1 lands, not before — the day the key goes live is the day posts can start disappearing with no way back.
+3. A handful of Minor findings from the final review were deferred, not fixed: dead `getMySkiBuddyPosts()` export (no caller yet — candidate for a future "my listings" view); `reportContent` uses `"post"` as its `target_type` here vs. `moderation_flags`' `"ski_buddy_post"` (harmless today, only caller in the codebase, but ambiguous if another board starts reporting under `"post"` too); accept/decline is two non-atomic writes (a deliberate cross-table-RLS-over-third-RPC tradeoff, not a bug); other pending responses on a post don't auto-decline once one is accepted; a freshly created post shows "Someone" as its author until the next reload; failed report submissions fail silently; a duplicated local `formatDate()` in `SkiBuddyBoard.jsx` instead of importing `lib/format.js`'s equivalent. None block this sprint.
+
+### TASK 15.1 — Admin release mechanism for moderation-held posts
+
+Not started. `is_held_for_review` can currently only be set to `true` (by the moderation route) and never back to `false` — nothing in the codebase can un-hide a post once OpenAI's moderation API flags it, even as a false positive. Needed before `OPENAI_API_KEY` goes live in production (Outstanding item 2, above).
+
+- [ ] `release_held_post(post_id uuid)` `SECURITY DEFINER` RPC — service-role or an admin-tier check, sets `is_held_for_review = false`
+- [ ] Minimal admin surface to call it — even a Krames-Butte-style owner-only dev-area button is enough for beta; a real moderation queue UI (reading `moderation_flags`/`content_reports`) is the longer-term answer
+- [ ] Decide whether a held post's author gets any notification when it's released (or when it's permanently rejected, if that state gets added later)
+
+**Files:** likely `migrations/029_*.sql` (new RPC), a small admin-only UI surface (component TBD)
+
+---
+
 ## Progress Summary
 
 *Last verified against actual code/migrations/git history 2026-08-06 (not just checkbox state — see [[project_2026_08_roadmap_completion]], [[project_2026_08_04_mountain_page_session]], and [[project_2026_08_06_premium_ui_uplift_session]] memory).*
 
-All sprints 1–30 are merged, including Mountain Board (Section 11), the Mountain Page/Krames Butte architecture (Section 12), the Premium UI Uplift redesign (Section 13), the Section 10 theme-switching MVP, and the Trust Tier & Verification Infrastructure (Section 14) — all implemented and live, including migrations 023–027.
+All sprints 1–31 are merged, including Mountain Board (Section 11), the Mountain Page/Krames Butte architecture (Section 12), the Premium UI Uplift redesign (Section 13), the Section 10 theme-switching MVP, the Trust Tier & Verification Infrastructure (Section 14), and the Ski Buddy Board (Section 15) — all implemented and live, including migrations 023–028.
 
 | Section | Tasks | Done |
 |---------|-------|------|
@@ -565,7 +596,8 @@ All sprints 1–30 are merged, including Mountain Board (Section 11), the Mounta
 | 12 — Mountain Page & Krames Butte | 1 | 1 |
 | 13 — Premium UI Uplift | 1 | 1 |
 | 14 — Trust Tier & Verification Infrastructure | 2 | 1 (Task 14.1, OAuth app credential setup, still open — see task notes) |
-| **Total** | **34** | **33** |
+| 15 — Ski Buddy Board | 2 | 1 (Task 15.1, admin release mechanism for moderation-held posts, still open — see task notes) |
+| **Total** | **36** | **34** |
 
 Task 0.2's hex-token cleanup is complete (2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) and `migrations/024_theme_preference.sql` (Section 10) are both applied to the live Supabase project (2026-08-08). Section 10's theme-switching MVP is implemented and its migration is live, but `npm run lint` and a visual pass across all 5 themes haven't been run yet, and full app-wide theming beyond the MVP scope remains unscheduled follow-up work — see Section 10's task notes.
 
