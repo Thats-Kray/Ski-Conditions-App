@@ -3,7 +3,7 @@ import {
   getBoardPosts,
   createBoardPost,
   reportBoardPost,
-  getMyVerificationTier,
+  syncVerificationFromAuth,
 } from "../lib/socialApi"
 import { useCurrentPosition } from "../lib/useCurrentPosition"
 import { RESORT_NAMES, RESORT_EMOJI } from "../lib/resorts"
@@ -117,11 +117,19 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
 
   // Owner-only dev stub: no real user-facing board is gated on verification
   // tier yet this sprint, so this button in the Krames Butte test area is how
-  // the owner exercises getMyVerificationTier() + VerificationUpgradeModal end-to-end.
+  // the owner exercises syncVerificationFromAuth() + VerificationUpgradeModal
+  // end-to-end. Calls syncVerificationFromAuth() (not getMyVerificationTier())
+  // so the button is self-reconciling against Supabase Auth's own state on
+  // every click, regardless of which auth event actually fired on return from
+  // an OAuth-link redirect.
   async function handleTestGateClick() {
-    const { tier } = await getMyVerificationTier()
-    setVerifyTier(tier)
-    if (tier < 1) setShowVerifyModal(true)
+    try {
+      const { tier } = await syncVerificationFromAuth()
+      setVerifyTier(tier)
+      if (tier < 1) setShowVerifyModal(true)
+    } catch (err) {
+      console.error("Verification gate check failed:", err?.message)
+    }
   }
 
   return (

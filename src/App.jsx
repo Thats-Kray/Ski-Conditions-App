@@ -1248,12 +1248,11 @@ export default function App() {
     if (event === "PASSWORD_RECOVERY") {
       setIsRecoveryMode(true)
       setAuthModalMode("reset")
-
     }
 
-    if (event === "USER_UPDATED") {
+    if (event === "USER_UPDATED" || event === "SIGNED_IN" || event === "INITIAL_SESSION") {
       syncVerificationFromAuth().catch((err) =>
-        console.error("Verification sync failed:", err.message)
+        console.error("Verification sync failed:", err?.message)
       )
     }
   })
