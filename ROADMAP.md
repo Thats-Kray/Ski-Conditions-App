@@ -422,13 +422,13 @@ Add: top speed, longest run, most lifts, time on mountain.
 
 ## SECTION 10 — User Theme Switching
 
-### TASK 10.1 — User theme switching (MVP) — ✅ COMPLETE 2026-08-08 (pending migration apply)
+### TASK 10.1 — User theme switching (MVP) — ✅ COMPLETE 2026-08-08
 
 **Plan:** ad-hoc, planned via `EnterPlanMode` same session (no `docs/superpowers/` spec/plan for this one).
 
 Research before implementation found the original scope note ("just CSS variable extraction") undersold it: ~580 raw hex literals exist across 47 files outside the 3 files Track B tokenized, and `Badge.jsx`'s `TIER_COLORS`/`RISK_COLORS` had the same hex-alpha-suffix hazard Track B found in `SKILL_OPTIONS`. Scoped as an explicit MVP rather than full app-wide tokenization — see "Outstanding" below.
 
-- [x] `migrations/024_theme_preference.sql` — adds `theme TEXT NOT NULL DEFAULT 'blizzard'` to `profiles` with a `CHECK` constraint on the 5 theme keys (not yet applied to live Supabase, see Outstanding)
+- [x] `migrations/024_theme_preference.sql` — adds `theme TEXT NOT NULL DEFAULT 'blizzard'` to `profiles` with a `CHECK` constraint on the 5 theme keys — applied to live Supabase 2026-08-08
 - [x] 4 new `[data-theme="..."]` blocks in `src/index.css` (Alpine Dawn, Storm Chaser, Aurora Peak, Base Lodge) redefining every color/gradient/shadow token the existing Blizzard `:root` block defines, derived from `mockups/theme-{1,3,4,5}-*.html` using the same alpha/derivation relationships Blizzard itself uses. Status colors and a few semantic-adjacent gradients stay theme-invariant by design.
 - [x] Fixed `ui/Badge.jsx`'s `TIER_COLORS`/`RISK_COLORS` hex-alpha-suffix hazard (`` `${color}33` `` broke under a CSS var) — 6 new theme-invariant `--rating-*`/`--rating-*-border` token pairs replace the string-concat pattern; `ui/ScoreRing.jsx`'s ring gradient and tier-color fallback also tokenized while touching the file
 - [x] `src/lib/socialApi.js`'s `upsertMyProfile()` now carries `theme` through; audited all 4 call sites — 2 already spread `...profile` (safe), 2 are onboarding-only (blizzard default is correct), and `ProfilePage.jsx`'s `EditProfileModal.handleSave()` (which hand-lists fields) got `theme` added explicitly to avoid silently resetting a user's theme to Blizzard on an unrelated profile edit — caught during implementation, not part of the original plan
@@ -436,9 +436,8 @@ Research before implementation found the original scope note ("just CSS variable
 - [x] `index.html` flash-of-wrong-theme mitigation (inline script reads `localStorage` before first paint) + `App.jsx` reconciliation effect (DB is source of truth, overwrites on every profile load/auth change)
 
 **Outstanding:**
-1. `migrations/024_theme_preference.sql` not yet applied to live Supabase — same pattern as migration 023, deliberately left for the app owner to run.
-2. **This is an MVP, not full app-wide theming.** Only what was already on CSS tokens repaints correctly: Home, Leaderboard, Profile, and the `ui/` primitives touched here. Everything else — `App.jsx`'s own resort-card rendering (`tierColor()`/`riskColor()`/`vibeTier()`/`scoreGradient()`), trip modals, messaging/crew chat, landing/onboarding, PowderMap, Mountain Page/Board, `SkiPlansPage.jsx`'s `DOT_COLORS`, `DirectMessageView.jsx`'s `SKILL_COLORS`, and the decorative avatar-fallback palettes — stays Blizzard-blue regardless of the picked theme. A full app-wide tokenization pass is a separate, much larger future effort (roughly on the order of the Premium UI Uplift sprint), not scheduled.
-3. No `npm`/`node` available in the session's sandbox — changes verified via `grep`-based hex audits, manual diff review, and brace/paren balance checks only. Run `npm run lint` and a visual pass across all 5 themes locally before considering this fully closed.
+1. **This is an MVP, not full app-wide theming.** Only what was already on CSS tokens repaints correctly: Home, Leaderboard, Profile, and the `ui/` primitives touched here. Everything else — `App.jsx`'s own resort-card rendering (`tierColor()`/`riskColor()`/`vibeTier()`/`scoreGradient()`), trip modals, messaging/crew chat, landing/onboarding, PowderMap, Mountain Page/Board, `SkiPlansPage.jsx`'s `DOT_COLORS`, `DirectMessageView.jsx`'s `SKILL_COLORS`, and the decorative avatar-fallback palettes — stays Blizzard-blue regardless of the picked theme. A full app-wide tokenization pass is a separate, much larger future effort (roughly on the order of the Premium UI Uplift sprint), not scheduled.
+2. No `npm`/`node` available in the session's sandbox — changes verified via `grep`-based hex audits, manual diff review, and brace/paren balance checks only. `npm run lint` and a visual pass across all 5 themes (tap each swatch on Profile, confirm Home/Leaderboard/Profile/nav/badges repaint) haven't been run/confirmed yet — do that before treating this as fully verified end-to-end.
 
 **Files:** `migrations/024_theme_preference.sql`, `src/index.css`, `src/components/ui/Badge.jsx`, `src/components/ui/ScoreRing.jsx`, `src/lib/socialApi.js`, `src/components/ProfilePage.jsx`, `index.html`, `src/App.jsx`
 
@@ -508,11 +507,36 @@ Visual redesign toward the mockups' premium look across Mountain Page, Crew/Plan
 
 ---
 
+## SECTION 14 — Trust Tier & Verification Infrastructure
+
+**Not in ROADMAP.md when started** — Sprint 30, tracked in `sprints/sprint-30-verification-infrastructure.md`. Shared verification/moderation plumbing that Sprint 31 (Ski Buddy Board) gates writes on. No new user-facing board ships in this sprint — pure infrastructure, zero UX change for existing Tier 0 users.
+
+**Plan:** `docs/superpowers/plans/2026-08-13-sprint-30-verification-infrastructure.md` (8 tasks, executed via `superpowers:subagent-driven-development` in an isolated worktree, including a final whole-branch review that caught and fixed a real bug before merge)
+
+- [x] `migrations/026_verification_infrastructure.sql` — `user_verification`, `content_reports`, `moderation_flags` tables; `is_verified()`, `mark_oauth_linked()`, `mark_phone_verified()`, `report_content()` `SECURITY DEFINER` RPCs matching Sprint 29's `search_path`/`revoke`/`grant` convention; `profiles.username` profanity `CHECK` constraint — applied live 2026-08-13
+- [x] `migrations/027_report_content_dedupe.sql` — `UNIQUE (reporter_id, target_type, target_id)` on `content_reports` + `ON CONFLICT` dedupe in `report_content()`, found by final review (one account could file unlimited duplicate reports) — applied live 2026-08-13
+- [x] OAuth identity linking (Google/Facebook via `supabase.auth.linkIdentity`) and phone verification (`updateUser`/`verifyOtp(type:"phone_change")`, not the existing sign-in OTP pair) — new functions in `src/lib/socialApi.js`
+- [x] `VerificationUpgradeModal.jsx` — combined OAuth + phone upgrade flow
+- [x] `server/moderation.js` — OpenAI Moderation API integration, ready for Sprint 31 to wire in (see Outstanding below)
+- [x] Client-side username profanity check (`leo-profanity`) at signup, backed by the DB-level `CHECK` as defense-in-depth
+- [x] Owner-only "Test Verification Gate" stub in the Krames Butte dev area (`MountainBoard.jsx`) — exercises the full gate end-to-end without a real board existing yet
+- [x] **Critical bug found by final review, fixed same session:** `supabase.auth.linkIdentity()`'s redirect returns fire `SIGNED_IN`/`INITIAL_SESSION`, never `USER_UPDATED` as the original plan assumed — verified against the installed `@supabase/auth-js` source, not just docs. The tier-sync chain silently didn't complete on OAuth-link return. Fixed by listening for all three events and making the test-gate button self-reconciling (`syncVerificationFromAuth()` instead of a stale `getMyVerificationTier()` read).
+- [x] Other final-review fixes: `linkOAuthIdentity` now preserves the user's return URL (was resetting to app root); `syncVerificationFromAuth()` now self-heals the phone leg too (previously only OAuth), and the upgrade modal got a back-button + busy-state guard on its backdrop.
+
+**Outstanding:**
+1. `/api/moderate-content` (the Express route wiring `server/moderation.js` into a live endpoint) was deliberately **not** wired up — zero callers exist until Sprint 31's board ships, and shipping an unattributed, unvalidated write endpoint into `moderation_flags` with no present-day use was assessed as unnecessary attack surface. Sprint 31 should wire the route with request attribution and input validation when a real caller exists.
+2. Google/Facebook OAuth apps (Client ID/Secret in Google Cloud Console / Meta for Developers) aren't configured yet, and Supabase Dashboard → Authentication → Settings → "Enable Manual Linking" hasn't been flipped on — both are manual, app-owner-only steps blocking full end-to-end testing of the OAuth-link path. Code is ready; testing that path is a follow-up once those exist.
+3. A handful of Minor findings from the final review were deferred, not fixed: `leo-profanity`'s French/Russian dictionaries ship to every visitor (~40-50KB unused for an English-only check); `VerificationUpgradeModal.jsx` hardcodes `white`/`rgba(...)` literals instead of the theme tokens the Premium UI Uplift sprint (Section 13) established; missing indexes on `content_reports`/`moderation_flags`; a couple of FK `ON DELETE` actions worth a deliberate choice. None block Sprint 31.
+
+**Files:** `migrations/026_verification_infrastructure.sql`, `migrations/027_report_content_dedupe.sql`, `src/lib/socialApi.js`, `src/lib/profanity.js`, `src/components/VerificationUpgradeModal.jsx`, `src/components/AuthForm.jsx`, `src/components/MountainBoard.jsx`, `src/App.jsx`, `server/moderation.js`, `server/index.js`
+
+---
+
 ## Progress Summary
 
 *Last verified against actual code/migrations/git history 2026-08-06 (not just checkbox state — see [[project_2026_08_roadmap_completion]], [[project_2026_08_04_mountain_page_session]], and [[project_2026_08_06_premium_ui_uplift_session]] memory).*
 
-All sprints 1–29 are merged, including Mountain Board (Section 11), the Mountain Page/Krames Butte architecture (Section 12), the Premium UI Uplift redesign (Section 13), and the Section 10 theme-switching MVP — all implemented, with two live-DB migrations (023, 024) pending the app owner's apply step.
+All sprints 1–30 are merged, including Mountain Board (Section 11), the Mountain Page/Krames Butte architecture (Section 12), the Premium UI Uplift redesign (Section 13), the Section 10 theme-switching MVP, and the Trust Tier & Verification Infrastructure (Section 14) — all implemented and live, including migrations 023–027.
 
 | Section | Tasks | Done |
 |---------|-------|------|
@@ -526,13 +550,14 @@ All sprints 1–29 are merged, including Mountain Board (Section 11), the Mounta
 | 7 — Powder Alerts | 3 | 3 |
 | 8 — Enhanced Conditions | 2 | 2 |
 | 9 — Live Features | 2 | 2 |
-| 10 — User Theme Switching | 1 | 1 (MVP — migration pending apply, full app-wide theming out of scope) |
+| 10 — User Theme Switching | 1 | 1 (MVP — full app-wide theming out of scope, see task notes) |
 | 11 — Mountain Board | 1 | 1 |
 | 12 — Mountain Page & Krames Butte | 1 | 1 |
 | 13 — Premium UI Uplift | 1 | 1 |
-| **Total** | **32** | **32** |
+| 14 — Trust Tier & Verification Infrastructure | 1 | 1 (moderation route wiring + OAuth app setup deferred, see task notes) |
+| **Total** | **33** | **33** |
 
-Task 0.2's hex-token cleanup is complete (2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) was applied to the live Supabase project and verified 2026-08-08. Section 10's theme-switching MVP is implemented (2026-08-08) but not yet fully closed: `migrations/024_theme_preference.sql` still needs to be applied live, and full app-wide theming beyond the MVP scope remains unscheduled follow-up work — see Section 10's task notes.
+Task 0.2's hex-token cleanup is complete (2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) and `migrations/024_theme_preference.sql` (Section 10) are both applied to the live Supabase project (2026-08-08). Section 10's theme-switching MVP is implemented and its migration is live, but `npm run lint` and a visual pass across all 5 themes haven't been run yet, and full app-wide theming beyond the MVP scope remains unscheduled follow-up work — see Section 10's task notes.
 
 ---
 
