@@ -81,6 +81,20 @@ BEGIN
   -- SECURITY DEFINER RPCs below, matching Sprint 29/30's convention.
 END $$;
 
+-- Column-scoped UPDATE grants: the RLS USING/WITH CHECK clauses above only
+-- restrict which ROWS an owner can touch, not which COLUMNS — without this,
+-- an owner could rewrite fields the policies were never meant to expose
+-- (e.g. self-clearing is_held_for_review on ski_buddy_posts, or rewriting
+-- another user's message/responder_id on ski_buddy_responses via the
+-- post-owner policy). Revoke the blanket UPDATE Supabase's default
+-- privileges grant, then grant back only the column each owner-update
+-- policy is actually meant to allow.
+REVOKE UPDATE ON ski_buddy_posts FROM authenticated;
+GRANT UPDATE (status) ON ski_buddy_posts TO authenticated;
+
+REVOKE UPDATE ON ski_buddy_responses FROM authenticated;
+GRANT UPDATE (status) ON ski_buddy_responses TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.create_ski_buddy_post(
   p_pass_type TEXT, p_resort_key TEXT, p_ski_date DATE, p_riding_style TEXT[],
   p_group_size_wanted INT, p_carpool_status TEXT, p_carpool_seats INT, p_description TEXT
