@@ -645,6 +645,10 @@ Instructions: When asked "what can we work on next?" refer to this list for pote
 Last updated 8/13/2026 at 3:49PM
 
 # Improvements
+-Community section (Social tab) — revisit how the pages are layered. Kyle, 2026-08-13 after
+ Sprint 32 moved the board there: "Looks good for now, might need to adjust how the pages are
+ layered." Nesting today is Social tab → FriendsPage → Community section → SkiBuddyBoard, which
+ is three levels deep before a user sees a post.
 -Improve the Powder Score algorithm
 -Improve the mountain conditions and weather API
 -Improve the Map View and test out Friends locations on each mountain
