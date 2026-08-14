@@ -362,6 +362,44 @@ export async function updateSkiBuddyPostStatus(postId, status) {
 }
 
 /* -----------------------------
+   Admin Moderation (Sprint 32 / TASK 15.1)
+----------------------------- */
+
+// Reuses getMyProfile()'s existing select("*") rather than a separate
+// round trip — profiles.is_admin (added by migration 029) rides along
+// with every other profile fetch. This is a cheap render hint only; the
+// actual security boundary is server-side (is_admin() re-checked inside
+// release_held_post/get_held_posts, both SECURITY DEFINER).
+export async function getMyAdminStatus() {
+  const profile = await getMyProfile()
+  return !!profile?.is_admin
+}
+
+export async function getHeldPosts() {
+  const { data, error } = await supabase.rpc("get_held_posts")
+  if (error) throw error
+  const posts = data || []
+  if (!posts.length) return posts
+
+  // Same no-FK-path situation as getSkiBuddyPosts() — resolve authors as a
+  // second query.
+  const userIds = [...new Set(posts.map((p) => p.user_id))]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .in("id", userIds)
+
+  const pm = new Map((profiles || []).map((p) => [p.id, p]))
+  return posts.map((p) => ({ ...p, profiles: pm.get(p.user_id) || null }))
+}
+
+export async function releaseHeldPost(postId) {
+  const { data, error } = await supabase.rpc("release_held_post", { p_post_id: postId })
+  if (error) throw error
+  return data
+}
+
+/* -----------------------------
    Profiles
 ----------------------------- */
 

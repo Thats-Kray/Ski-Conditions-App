@@ -557,19 +557,43 @@ Not code — external console setup in Google Cloud Console and Meta for Develop
 - [x] **Final whole-branch review (opus) found 4 Important issues, all fixed same session:** `respond_to_ski_buddy_post` didn't check `is_held_for_review` (a user holding a held post's UUID could still respond to it — inert when a prior task's reviewer deferred it, activated once this sprint's moderation-hold write landed), no timeout on the moderation fetch combined with an always-enabled modal close button (could produce duplicate posts against a hung moderation service), and a responder got zero feedback after submitting (dead code, silent no-op resubmission). Re-reviewed clean, including an independent live-DB read-back confirming the SQL fix actually deployed.
 
 **Outstanding:**
-1. **`is_held_for_review` has no release mechanism anywhere in the codebase** — no admin RPC, no admin UI. A false-positive OpenAI moderation flag permanently hides a post with no recourse today. Not a blocker while `OPENAI_API_KEY` is unset (moderation silently no-ops, so the hold path never fires — see item 2), but must be built before real users hit it. See TASK 15.1.
-2. `OPENAI_API_KEY` is not yet set in Railway/`server/.env` — the moderation route degrades safely (post creation still succeeds, moderation just silently no-ops) but doesn't actually check anything against OpenAI yet. Set this *after* TASK 15.1 lands, not before — the day the key goes live is the day posts can start disappearing with no way back.
+1. ~~**`is_held_for_review` has no release mechanism anywhere in the codebase**~~ — **RESOLVED by TASK 15.1 (Sprint 32, 2026-08-13).** `release_held_post()` + `get_held_posts()` RPCs and an owner-only `ModerationQueue` panel now exist. See Section 16.
+2. `OPENAI_API_KEY` is not yet set in Railway/`server/.env` — the moderation route degrades safely (post creation still succeeds, moderation just silently no-ops) but doesn't actually check anything against OpenAI yet. **TASK 15.1 has now landed, so it is safe to set this** — a false-positive flag is recoverable via the moderation queue. Still unset as of 2026-08-13; setting it is a deliberate manual step.
 3. A handful of Minor findings from the final review were deferred, not fixed: dead `getMySkiBuddyPosts()` export (no caller yet — candidate for a future "my listings" view); `reportContent` uses `"post"` as its `target_type` here vs. `moderation_flags`' `"ski_buddy_post"` (harmless today, only caller in the codebase, but ambiguous if another board starts reporting under `"post"` too); accept/decline is two non-atomic writes (a deliberate cross-table-RLS-over-third-RPC tradeoff, not a bug); other pending responses on a post don't auto-decline once one is accepted; a freshly created post shows "Someone" as its author until the next reload; failed report submissions fail silently; a duplicated local `formatDate()` in `SkiBuddyBoard.jsx` instead of importing `lib/format.js`'s equivalent. None block this sprint.
 
-### TASK 15.1 — Admin release mechanism for moderation-held posts
+### TASK 15.1 — Admin release mechanism for moderation-held posts — ✅ COMPLETE 2026-08-13 (Sprint 32)
 
-Not started. `is_held_for_review` can currently only be set to `true` (by the moderation route) and never back to `false` — nothing in the codebase can un-hide a post once OpenAI's moderation API flags it, even as a false positive. Needed before `OPENAI_API_KEY` goes live in production (Outstanding item 2, above).
+`is_held_for_review` could only be set to `true` (by the moderation route) and never back to `false` — nothing in the codebase could un-hide a post once OpenAI's moderation API flagged it, even as a false positive. Blocked `OPENAI_API_KEY` from going live.
 
-- [ ] `release_held_post(post_id uuid)` `SECURITY DEFINER` RPC — service-role or an admin-tier check, sets `is_held_for_review = false`
-- [ ] Minimal admin surface to call it — even a Krames-Butte-style owner-only dev-area button is enough for beta; a real moderation queue UI (reading `moderation_flags`/`content_reports`) is the longer-term answer
-- [ ] Decide whether a held post's author gets any notification when it's released (or when it's permanently rejected, if that state gets added later)
+- [x] `release_held_post(p_post_id uuid)` `SECURITY DEFINER` RPC — admin-tier check via `is_admin()`, sets `is_held_for_review = false`. Idempotent; raises `NOT_ADMIN` / `POST_NOT_FOUND`.
+- [x] `get_held_posts()` `SECURITY DEFINER` RPC — **not in the original plan, added during Sprint 32.** RLS hides held posts from everyone except their own author, so an admin release button would have had nothing to list. The release RPC alone would have been unusable.
+- [x] `profiles.is_admin BOOLEAN NOT NULL DEFAULT false` — chosen over hardcoding the owner email in SQL so admin can be granted to a second person later without a migration.
+- [x] `ModerationQueue.jsx` rendered in the owner-only Krames Butte dev area — lists held posts, Release button, optimistic removal with rollback + visible error state on failure.
+- [ ] **Still open:** a held post's author gets no notification when it's released (or rejected). Deferred deliberately — revisit when notifications are reworked.
 
-**Files:** likely `migrations/029_*.sql` (new RPC), a small admin-only UI surface (component TBD)
+**Files:** `migrations/029_admin_moderation_release.sql`, `src/lib/socialApi.js`, `src/components/ModerationQueue.jsx`, `src/components/MountainBoard.jsx`
+
+---
+
+## SECTION 16 — Debt Clearing (Sprint 32)
+
+**Plan:** `sprints/sprint-32-debt-clearing.md` — first sprint run on the Opus-plans/Sonnet-implements model from `Claude Code - Opus Planning Mode.md` rather than all-Opus subagents. One Haiku scout, one Opus plan, four Sonnet implementers (three in parallel), one Sonnet whole-branch review. Reusable agent definitions added at `.claude/agents/{scout,implementer,reviewer,debugger}.md`.
+
+- [x] **TASK 15.1** — see Section 15 above.
+- [x] **Ski Buddy Board moved to Social, renamed "🎿 Community"** — removed from the Snow tab's sub-nav (Snow is now exactly 🏔️ Snow / 🗺️ Map / 📋 Board) and added as a 4th section in `FriendsPage.jsx` alongside Leaderboard / Crews / Friends. Label text only — `SkiBuddyBoard`, `ski_buddy_posts`, `skiBuddyOptions.js` and all RPC names are unchanged. Note: the rest of Kyle's nav-reorg note (Friends and Leaderboard living on the Social page) was **already implemented** — scouting found it in place before any work started.
+- [x] **Defect 1 — notification popup clipped** (`defects/defects-1`). Two overlapping causes, both fixed; see the defects file for the full write-up.
+- [x] **Defect 2 — milestone popups repeat** (`defects/defects-1`). Root cause was *when* localStorage was written, not that it was missing; see the defects file.
+- [x] **Review fixes:** the admin render gate was `OWNER_EMAIL && isAdmin` (an AND), which would have prevented any future second admin from seeing the queue despite `profiles.is_admin` being the intended authority — changed to gate on `isAdmin` alone. `NotificationBell`'s fixed-position anchor was refreshed on `resize` only, going stale on scroll — added a capture-phase `scroll` listener.
+
+**Verified during Sprint 32's review (both were flagged as suspected bugs and both came back clean — recording so they aren't re-investigated):**
+- `getMyProfile()` uses `.select("*")`, so `profiles.is_admin` rides along with no extra round trip.
+- `anon` and `service_role` hold pre-existing full-column `UPDATE` grants on `ski_buddy_posts` (migration 028 narrowed only `authenticated`). **Confirmed inert:** the sole UPDATE policy is scoped `TO authenticated`, so `anon` matches zero rows; `service_role` bypassing RLS is standard Supabase behavior and its key is never client-side. A `REVOKE UPDATE ON ski_buddy_posts FROM anon` is worthwhile hygiene but not urgent.
+
+**Outstanding:**
+1. `npm run lint` reports 92 problems (83 errors, 9 warnings) — **identical on `main` before this sprint**, verified by diffing lint output branch-vs-main. Entirely pre-existing baseline debt. Sprint 32 introduced zero new findings but also fixed none. Worth its own cleanup pass.
+2. Author notification on moderation release — see TASK 15.1.
+
+**Files:** `migrations/029_admin_moderation_release.sql`, `src/lib/socialApi.js`, `src/components/ModerationQueue.jsx`, `src/components/MountainBoard.jsx`, `src/App.jsx`, `src/components/FriendsPage.jsx`, `src/components/ProfilePage.jsx`, `src/components/NotificationBell.jsx`
 
 ---
 
@@ -578,6 +602,8 @@ Not started. `is_held_for_review` can currently only be set to `true` (by the mo
 *Last verified against actual code/migrations/git history 2026-08-06 (not just checkbox state — see [[project_2026_08_roadmap_completion]], [[project_2026_08_04_mountain_page_session]], and [[project_2026_08_06_premium_ui_uplift_session]] memory).*
 
 All sprints 1–31 are merged, including Mountain Board (Section 11), the Mountain Page/Krames Butte architecture (Section 12), the Premium UI Uplift redesign (Section 13), the Section 10 theme-switching MVP, the Trust Tier & Verification Infrastructure (Section 14), and the Ski Buddy Board (Section 15) — all implemented and live, including migrations 023–028.
+
+Sprint 32 (Section 16) is **implemented and reviewed but not yet merged** — it sits on branch `sprint-32-debt-clearing` pending a manual visual check. Note that `migrations/029_admin_moderation_release.sql` **is already applied to the live Supabase project**, so the database is ahead of `main` until this branch merges.
 
 | Section | Tasks | Done |
 |---------|-------|------|
@@ -596,8 +622,9 @@ All sprints 1–31 are merged, including Mountain Board (Section 11), the Mounta
 | 12 — Mountain Page & Krames Butte | 1 | 1 |
 | 13 — Premium UI Uplift | 1 | 1 |
 | 14 — Trust Tier & Verification Infrastructure | 2 | 1 (Task 14.1, OAuth app credential setup, still open — see task notes) |
-| 15 — Ski Buddy Board | 2 | 1 (Task 15.1, admin release mechanism for moderation-held posts, still open — see task notes) |
-| **Total** | **36** | **34** |
+| 15 — Ski Buddy Board | 2 | 2 (Task 15.1 completed in Sprint 32 — see Section 16) |
+| 16 — Debt Clearing (Sprint 32) | 4 | 4 |
+| **Total** | **40** | **38** |
 
 Task 0.2's hex-token cleanup is complete (2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) and `migrations/024_theme_preference.sql` (Section 10) are both applied to the live Supabase project (2026-08-08). Section 10's theme-switching MVP is implemented and its migration is live, but `npm run lint` and a visual pass across all 5 themes haven't been run yet, and full app-wide theming beyond the MVP scope remains unscheduled follow-up work — see Section 10's task notes.
 
@@ -610,3 +637,20 @@ Detailed, execution-ready plans live in `sprints/` (one file per plan, self-cont
 **Sprints 1–29 are all executed, merged, and verified live** (confirmed against migrations 010–022, on-disk components, and commit history as of 2026-08-04). The Mountain Page/Krames Butte architecture (Section 12) and the Premium UI Uplift redesign (Section 13) each shipped as their own spec + plan under `docs/superpowers/` rather than a numbered `sprints/` file — Section 13 is the first of these executed via a real isolated git worktree (`superpowers:using-git-worktrees` + `superpowers:subagent-driven-development` together), not just a fresh subagent per task in the main checkout.
 
 Task 1.3 required no sprint (already fully implemented — see the task's own notes above). Section 10 (theme switching) is explicitly deferred per its own heading and has no sprint — **it is the only remaining unstarted work in this file**, alongside the still-ongoing hex-token cleanup noted in Task 0.2 and the pending live migration apply noted in Section 13.
+
+
+# Kyle's Notes for future roadmap items
+Instructions: When asked "what can we work on next?" refer to this list for potential items to add to the next sprint development.
+
+Last updated 8/13/2026 at 3:49PM
+
+# Improvements
+-Improve the Powder Score algorithm
+-Improve the mountain conditions and weather API
+-Improve the Map View and test out Friends locations on each mountain
+-~~Reorganize certain pages in the app. (i.e. Friends and Leaderboard should live on the social page in its own tab, same with the friends list, and the Buddy page - which should be renamed Community instead of Buddy)~~ **DONE — Sprint 32.** Friends/Leaderboard/friends-list were already on the Social page; the Buddy board moved there and was renamed Community.
+
+# New Items
+Ski Tracking User Interface. Page for viewing live tracking data.
+-include a home-screen widget that shows live stats on the users as an iphone lock screen widget
+-challenge friends to most vert, most runs, most distance, most lifts

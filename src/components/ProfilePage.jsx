@@ -88,12 +88,15 @@ function getShownMilestones(startYear) {
   }
 }
 
-function markMilestoneShown(startYear, id) {
+// Marks an entire batch of milestone ids as shown in a single read-modify-write,
+// rather than one localStorage read+write per id — avoids leaving ids unmarked if
+// the user dismisses some of the queue and navigates away before finishing the rest.
+function markMilestonesShown(startYear, ids) {
+  if (!ids || !ids.length) return
   try {
     const shown = getShownMilestones(startYear)
-    if (!shown.includes(id)) {
-      localStorage.setItem(`pd_milestones_shown_${startYear}`, JSON.stringify([...shown, id]))
-    }
+    const merged = Array.from(new Set([...shown, ...ids]))
+    localStorage.setItem(`pd_milestones_shown_${startYear}`, JSON.stringify(merged))
   } catch {
     // private browsing / storage disabled — fail silently, matching existing convention
   }
@@ -611,7 +614,13 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
 
         const shownIds = getShownMilestones(startYear)
         const newlyCrossed = MILESTONES.filter((m) => m.check(currentStats) && !shownIds.includes(m.id))
-        if (newlyCrossed.length) setMilestoneQueue(newlyCrossed)
+        if (newlyCrossed.length) {
+          setMilestoneQueue(newlyCrossed)
+          // Persist the whole batch now, at queue time — not as each is individually
+          // dismissed — so a user who closes some and navigates away doesn't leave the
+          // rest unmarked and see them reappear next visit.
+          markMilestonesShown(startYear, newlyCrossed.map((m) => m.id))
+        }
       }
       if (Array.isArray(priorSessions)) {
         setPriorStats(computeStats(priorSessions))
@@ -635,8 +644,8 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   useEffect(() => { load() }, [load])
 
   function dismissMilestone() {
-    const current = milestoneQueue[0]
-    if (current) markMilestoneShown(season.startYear, current.id)
+    // Persistence already happened in bulk when the queue was built (see load()) —
+    // this only advances the on-screen queue.
     setMilestoneQueue((q) => q.slice(1))
   }
 

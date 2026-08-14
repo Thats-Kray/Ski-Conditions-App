@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import CrewGroupChat from "./CrewGroupChat";
 import LeaderboardPage from "./LeaderboardPage";
+import SkiBuddyBoard from "./SkiBuddyBoard";
 import UserProfileModal from "./UserProfileModal";
 import {
   searchProfiles,
@@ -374,6 +375,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
           { key: "leaderboard", label: "🏆 Friend Leaderboard" },
           ...(hideCrew ? [] : [{ key: "crews", label: "🤙 Crews" }]),
           { key: "friends",     label: "👥 Friends" },
+          { key: "community",   label: "🎿 Community" },
         ].map(({ key, label }) => (
           <button key={key} onClick={() => setActiveSection(key)} style={{
             flex: 1, padding: "11px 8px", borderRadius: 9, border: "none", cursor: "pointer",
@@ -412,6 +414,9 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
 
       {/* ══ CREWS TAB ══ */}
       {activeSection === "crews" && <CrewGroupChat friends={acceptedFriends} />}
+
+      {/* ══ COMMUNITY TAB (Ski Buddy board) ══ */}
+      {activeSection === "community" && <SkiBuddyBoard />}
 
       {/* ══ FRIENDS TAB ══ */}
       {activeSection === "friends" && (

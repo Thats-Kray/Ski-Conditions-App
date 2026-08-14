@@ -1,0 +1,42 @@
+# List of defects or bugs encountered in the application
+
+# 1 - Notification cut off
+Category: Cosmetic
+Status: Fixed (Sprint 32, 2026-08-13)
+
+Detail: In messages page, when clicking the notification bell, the notification popup appears, but the left side of the notifcation is cut off by the outer frame of the app.
+
+Root cause: two overlapping causes. (1) The popup was `position: absolute` inside an ancestor
+at MessagingCenter.jsx:552 carrying `overflow: hidden` (which is there to clip content to the
+card's `borderRadius: 18` — so it could not simply be removed). (2) Independently, the popup's
+`right: 0` plus its 340px width pushed it ~21px past the left edge of a 375px viewport even
+with no clipping at all.
+
+Fix: NotificationBell.jsx popup switched to `position: fixed` with an anchor rect captured on
+open and refreshed on resize + scroll, and a clamped `left` that keeps the popup within 16px of
+both viewport edges. MessagingCenter.jsx was left untouched.
+-
+-
+# 2 - Medals and Awards Keep popping up
+Category: Functionality
+Status: Fixed (Sprint 32, 2026-08-13)
+Detail: When landing on my profile page I receive a series of badges/medals for accomplishments. When returning to the page again, I get another series of popups for mostly the same medals and awards. The logic is delivering the same award notification multiple times.
+
+Root cause: NOT missing persistence — localStorage persistence (`pd_milestones_shown_${startYear}`)
+already existed and its read/write keys matched. The bug was *when* it wrote: dismissMilestone()
+marked milestones shown one at a time as each was individually closed. Closing 2 of 5 queued
+milestones and navigating away left the other 3 unmarked, so they reappeared on the next visit —
+matching the "mostly the same medals" wording in the original report.
+
+Fix: ProfilePage.jsx now batch-marks the entire newly-crossed set at queue time via
+markMilestonesShown(startYear, ids) (single read + single write), not on dismissal.
+Known tradeoff: milestones are marked seen the moment they are queued, so closing the tab
+mid-queue means the remaining ones are never shown. Accepted deliberately.
+-
+-
+# 3- 
+Category: Functionality
+Status: Not started
+Detail:
+-
+-

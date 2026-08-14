@@ -4,12 +4,14 @@ import {
   createBoardPost,
   reportBoardPost,
   syncVerificationFromAuth,
+  getMyAdminStatus,
 } from "../lib/socialApi"
 import { useCurrentPosition } from "../lib/useCurrentPosition"
 import { RESORT_NAMES, RESORT_EMOJI } from "../lib/resorts"
 import { timeAgo } from "../lib/format"
 import AccentCard from "./ui/AccentCard"
 import VerificationUpgradeModal from "./VerificationUpgradeModal"
+import ModerationQueue from "./ModerationQueue"
 
 const CATEGORIES = [
   { key: "safety",     label: "Safety",       emoji: "🚨" },
@@ -59,6 +61,12 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
   // Owner-only dev stub (Krames Butte test area) — see handleTestGateClick below.
   const [showVerifyModal, setShowVerifyModal] = useState(false)
   const [verifyTier, setVerifyTier] = useState(null)
+  // Admin surface (Sprint 32 / TASK 15.1) — isAdmin (profiles.is_admin, via
+  // getMyAdminStatus()) is the sole, server-confirmed gate for whether
+  // ModerationQueue renders; currentUserEmail is only used to decide whether
+  // to bother checking, not as a co-requirement. See handleTestGateClick's
+  // comment above for the same pattern applied to verification tier.
+  const [isAdmin, setIsAdmin] = useState(false)
 
   const { requestPosition } = useCurrentPosition()
 
@@ -72,6 +80,23 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [resortKey])
+
+  useEffect(() => {
+    if (!currentUserEmail) {
+      setIsAdmin(false)
+      return
+    }
+    let cancelled = false
+    getMyAdminStatus()
+      .then((admin) => { if (!cancelled) setIsAdmin(admin) })
+      .catch((err) => {
+        if (!cancelled) {
+          setIsAdmin(false)
+          console.error("Admin status check failed:", err?.message)
+        }
+      })
+    return () => { cancelled = true }
+  }, [currentUserEmail])
 
   const visiblePosts = useMemo(
     () => (categoryFilter === "all" ? posts : posts.filter((p) => p.category === categoryFilter)),
@@ -194,6 +219,14 @@ export default function MountainBoard({ defaultResortKey, currentUserEmail, reso
             </>
           )}
         </div>
+      )}
+
+      {/* Admin surface — gated solely on the server-confirmed isAdmin flag
+          (profiles.is_admin), not on currentUserEmail === OWNER_EMAIL. See
+          TASK 2, Sprint 32: OWNER_EMAIL is at most a cheap hint elsewhere in
+          this component, never a co-requirement for this gate. */}
+      {!lockedResortKey && isAdmin && (
+        <ModerationQueue />
       )}
 
       <div style={{ display: "flex", gap: 6 }}>

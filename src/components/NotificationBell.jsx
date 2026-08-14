@@ -46,10 +46,23 @@ export function useNotificationCount(currentUser) {
   return count
 }
 
+// Non-dropUp popup width/margin, used both for inline style and for clamping the
+// fixed-position anchor calculation below (keep in sync with the width/maxWidth used
+// in the panel's style block).
+const POPUP_WIDTH = 340
+const POPUP_MARGIN = 16
+
 export default function NotificationBell({ currentUser, onOpenTrip, onTabChange, dropUp = false, variant = "icon" }) {
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const panelRef = useRef(null)
+  const buttonRef = useRef(null)
+  // Bounding rect of the bell button, captured when the panel opens. The panel is
+  // rendered with position:fixed (see below) so it can escape MessagingCenter's
+  // overflow:hidden ancestor (that overflow exists to clip the rounded-corner chat
+  // container, not this popup) — fixed positioning isn't relative to the button, so
+  // we anchor it manually from this rect instead.
+  const [anchorRect, setAnchorRect] = useState(null)
 
   const unread = notifications.filter((n) => !n.read).length
 
@@ -90,8 +103,26 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
   }, [open])
 
   async function handleOpen() {
+    if (!open && buttonRef.current) {
+      setAnchorRect(buttonRef.current.getBoundingClientRect())
+    }
     setOpen((v) => !v)
   }
+
+  // Keep the anchored popup aligned to the button if the viewport is resized or
+  // scrolled (including nested scrolling containers, via capture) while open.
+  useEffect(() => {
+    if (!open || dropUp) return
+    function updateAnchor() {
+      if (buttonRef.current) setAnchorRect(buttonRef.current.getBoundingClientRect())
+    }
+    window.addEventListener("resize", updateAnchor)
+    window.addEventListener("scroll", updateAnchor, { capture: true, passive: true })
+    return () => {
+      window.removeEventListener("resize", updateAnchor)
+      window.removeEventListener("scroll", updateAnchor, { capture: true, passive: true })
+    }
+  }, [open, dropUp])
 
   async function handleMarkAll() {
     await markAllNotificationsRead()
@@ -151,10 +182,20 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
 
   const isTab = variant === "tab"
 
+  // Anchor the fixed-position (non-dropUp) popup under the button, clamped so it
+  // never extends past the viewport's left or right edge (with POPUP_MARGIN of
+  // breathing room) regardless of where the button sits.
+  let popupLeft = POPUP_MARGIN
+  if (anchorRect) {
+    const maxLeft = Math.max(POPUP_MARGIN, window.innerWidth - POPUP_MARGIN - POPUP_WIDTH)
+    popupLeft = Math.min(Math.max(anchorRect.right - POPUP_WIDTH, POPUP_MARGIN), maxLeft)
+  }
+
   return (
     <div ref={panelRef} style={{ position: "relative", ...(isTab ? { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" } : {}) }}>
       {/* Bell button — icon variant (round) or tab variant (column) */}
       <button
+        ref={buttonRef}
         onClick={handleOpen}
         style={isTab ? {
           flex: 1,
@@ -249,10 +290,14 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
             flexDirection: "column",
             overflow: "hidden",
           } : {
-            position: "absolute",
-            top: 54,
-            right: 0,
-            width: 340,
+            // Fixed (not absolute) so the popup escapes MessagingCenter's
+            // overflow:hidden ancestor instead of being clipped by it; position is
+            // computed from the button's rect (anchorRect/popupLeft above) since
+            // fixed positioning is relative to the viewport, not the button.
+            position: "fixed",
+            top: anchorRect ? anchorRect.bottom + 10 : 54,
+            left: popupLeft,
+            width: POPUP_WIDTH,
             maxWidth: "calc(100vw - 32px)",
             maxHeight: 480,
             background: "rgba(10,14,30,0.98)",
