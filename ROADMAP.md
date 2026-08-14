@@ -597,6 +597,26 @@ Not code — external console setup in Google Cloud Console and Meta for Develop
 
 ---
 
+## SECTION 17 — Close the `profiles` Strava Token Exposure (Sprint 33)
+
+**Plan:** `sprints/sprint-33-profile-token-exposure.md`. `profiles` has two RLS SELECT policies, both `USING (true)` for `authenticated`, plus column-level SELECT grants on `strava_access_token`, `strava_refresh_token`, `strava_token_expires_at` — a Strava OAuth bearer credential. This was not merely permitted but actively happening: `getMyProfile()`, `getAcceptedFriends()`, `getReceivedCrewInvites()`, and `getSentCrewInvites()` all did `select("*")` on `profiles`, so opening the friends list shipped friends' Strava tokens into the browser.
+
+- [x] `src/lib/socialApi.js` — replaced all four `select("*")` calls against `profiles` with explicit column lists. `getMyProfile()` (own row): `id, first_name, last_name, full_name, username, avatar_url, skill_level, sport_type, ski_passes, favorite_mountain, vehicle_label, vehicle_seats, powder_alerts_enabled, alert_phone, theme, is_admin, strava_athlete_id` — `strava_athlete_id` was added beyond the plan's starting list after grepping consumers: `App.jsx` reads `currentProfile?.strava_athlete_id` to gate the Strava-connected UI, so omitting it would have silently broken that check with no error. `getAcceptedFriends()`, `getReceivedCrewInvites()`, `getSentCrewInvites()` (other users' rows): `id, first_name, last_name, full_name, username, avatar_url` only.
+- [x] **Flagged, not fixed:** `src/lib/leaderboardApi.js`'s `getLeaderboard()` reads `friend.skill_level` off `getAcceptedFriends()`'s result to backfill leaderboard rows for friends with no sessions this season. `skill_level` is outside the display-fields-only list above and is another user's profile field, so per the sprint's instruction it was not silently added — that value now comes back `undefined` there. Currently harmless: `LeaderboardPage.jsx` never renders `skill_level` from that path, so this is a dead field today, not a visible regression. Flagging as a design question: if a future consumer needs a friend's skill level, decide deliberately whether to widen `getAcceptedFriends()`'s column list app-wide or fetch it narrowly for that one caller (`getProfileById()` already includes `skill_level` for a single other user, so precedent exists either way).
+- [x] **Critical review finding, fixed:** `signUpWithProfile()` and `upsertMyProfile()` both wrote to `profiles` via `.upsert(...).select().single()` — a bare `.select()` (no column list). PostgREST turns a bare post-write `.select()` into `RETURNING *`, and Postgres requires SELECT privilege on every column named in a `RETURNING` clause, checked against the same write statement — so once migration 030 revokes SELECT on the three Strava token columns from `authenticated`, both statements would fail with a permission error and roll back their write. That's not a display bug like the `select("*")` findings above; it would have permanently broken signup and every profile edit app-wide, regardless of deploy ordering, since the error fires on the write itself. Fixed by extracting the column list from `getMyProfile()` into a shared `PROFILE_SELECT_COLUMNS` constant at the top of `socialApi.js` and using it in all three of `getMyProfile()`, `signUpWithProfile()`, and `upsertMyProfile()` — one definition instead of three copies, so this can't silently drift back to `select("*")` or a bare `.select()` in one call site while staying fixed in another. Traced both functions' callers (`AuthForm.jsx`, `ProfileSetup.jsx`, `OnboardingFlow.jsx`, `ProfilePage.jsx`) — none read a field off the returned profile object (they either ignore the return value or re-fetch separately via `load()`), so no consumer needed a token column. Checked the rest of `src/` for other bare `.select()` on a `profiles` insert/update/upsert/delete chain: none found — these two were the only `profiles` write chains outside this file's own audited set.
+- [x] `migrations/030_profile_token_exposure.sql` — **written, not applied.** `REVOKE SELECT` on the three Strava token columns from `authenticated`/`anon`, plus consolidation of the duplicate SELECT and duplicate UPDATE RLS policies on `profiles` down to one each (semantics unchanged, cleanup only). Must not be applied until the explicit-column-list frontend above is live on powdays.app and Kyle has approved — applying it first breaks `select("*")` for every still-unmigrated caller. `server/` is unaffected: it authenticates with `SUPABASE_SERVICE_ROLE_KEY`, which bypasses column grants.
+- [x] `railway.json` deleted — stale. The API runs on Render, not Railway.
+
+**Known residual, recorded not fixed (see the sprint's Non-goals):** `alert_phone` is not fully closed by this sprint. The explicit-column change stops it being broadcast to other users' browsers by the app's own code, but the RLS policy stays `USING (true)` and the column grant stays, so a determined signed-in user could still query it directly. Also deferred: splitting sensitive columns into a `profiles_private` table — Kyle chose the narrower column-grant fix for this sprint.
+
+**Outstanding:**
+1. Apply `migrations/030_profile_token_exposure.sql` to the live Supabase project — **only after** this sprint's frontend build is confirmed live and Kyle has explicitly approved. Deliberately not done as part of this sprint's implementation.
+2. The `alert_phone` and `profiles_private`-split residuals above — no sprint scheduled yet.
+
+**Files:** `src/lib/socialApi.js`, `migrations/030_profile_token_exposure.sql`, `railway.json` (deleted)
+
+---
+
 ## Progress Summary
 
 *Last verified against actual code/migrations/git history 2026-08-06 (not just checkbox state — see [[project_2026_08_roadmap_completion]], [[project_2026_08_04_mountain_page_session]], and [[project_2026_08_06_premium_ui_uplift_session]] memory).*
@@ -604,6 +624,8 @@ Not code — external console setup in Google Cloud Console and Meta for Develop
 All sprints 1–31 are merged, including Mountain Board (Section 11), the Mountain Page/Krames Butte architecture (Section 12), the Premium UI Uplift redesign (Section 13), the Section 10 theme-switching MVP, the Trust Tier & Verification Infrastructure (Section 14), and the Ski Buddy Board (Section 15) — all implemented and live, including migrations 023–028.
 
 Sprint 32 (Section 16) is **implemented and reviewed but not yet merged** — it sits on branch `sprint-32-debt-clearing` pending a manual visual check. Note that `migrations/029_admin_moderation_release.sql` **is already applied to the live Supabase project**, so the database is ahead of `main` until this branch merges.
+
+Sprint 33 (Section 17) is **implemented, not yet merged** — it sits on branch `sprint-33-profile-token-exposure`. `migrations/030_profile_token_exposure.sql` is **written but deliberately not applied**; it must wait until the frontend build is live and Kyle approves (see Section 17's own notes for why applying it early breaks production).
 
 | Section | Tasks | Done |
 |---------|-------|------|
@@ -624,7 +646,8 @@ Sprint 32 (Section 16) is **implemented and reviewed but not yet merged** — it
 | 14 — Trust Tier & Verification Infrastructure | 2 | 1 (Task 14.1, OAuth app credential setup, still open — see task notes) |
 | 15 — Ski Buddy Board | 2 | 2 (Task 15.1 completed in Sprint 32 — see Section 16) |
 | 16 — Debt Clearing (Sprint 32) | 4 | 4 |
-| **Total** | **40** | **38** |
+| 17 — Profile Token Exposure (Sprint 33) | 4 | 3 (migration 030 written but deliberately not applied — see task notes) |
+| **Total** | **44** | **41** |
 
 Task 0.2's hex-token cleanup is complete (2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) and `migrations/024_theme_preference.sql` (Section 10) are both applied to the live Supabase project (2026-08-08). Section 10's theme-switching MVP is implemented and its migration is live, but `npm run lint` and a visual pass across all 5 themes haven't been run yet, and full app-wide theming beyond the MVP scope remains unscheduled follow-up work — see Section 10's task notes.
 

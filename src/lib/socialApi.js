@@ -1,4 +1,20 @@
 import { supabase } from "./supabase";
+
+/* -----------------------------
+   Constants
+----------------------------- */
+
+// Columns safe to request in RETURNING/select clauses on `profiles` writes.
+// Sprint 33 (migration 030) revokes SELECT on strava_access_token,
+// strava_refresh_token, and strava_token_expires_at from `authenticated`.
+// A bare `.select()` after insert/update/upsert/delete makes PostgREST issue
+// `RETURNING *`, and Postgres requires SELECT privilege on every column named
+// in RETURNING — so a bare `.select()` on a `profiles` write fails once that
+// migration is live. Keep this list as the single source of truth for
+// `profiles` write-returning columns; never add the token columns to it.
+const PROFILE_SELECT_COLUMNS =
+  "id, first_name, last_name, full_name, username, avatar_url, skill_level, sport_type, ski_passes, favorite_mountain, vehicle_label, vehicle_seats, powder_alerts_enabled, alert_phone, theme, is_admin, strava_athlete_id";
+
 /* -----------------------------
    Helpers
 ----------------------------- */
@@ -60,7 +76,7 @@ export async function signUpWithProfile({
       ride_type: ride_type || null,
       updated_at: new Date().toISOString(),
     })
-    .select()
+    .select(PROFILE_SELECT_COLUMNS)
     .single();
 
   if (profileError) throw profileError;
@@ -365,9 +381,9 @@ export async function updateSkiBuddyPostStatus(postId, status) {
    Admin Moderation (Sprint 32 / TASK 15.1)
 ----------------------------- */
 
-// Reuses getMyProfile()'s existing select("*") rather than a separate
-// round trip — profiles.is_admin (added by migration 029) rides along
-// with every other profile fetch. This is a cheap render hint only; the
+// Reuses getMyProfile()'s existing fetch rather than a separate round trip —
+// profiles.is_admin (added by migration 029) is in PROFILE_SELECT_COLUMNS, so
+// it rides along with every other profile fetch. This is a cheap render hint only; the
 // actual security boundary is server-side (is_admin() re-checked inside
 // release_held_post/get_held_posts, both SECURITY DEFINER).
 export async function getMyAdminStatus() {
@@ -408,7 +424,7 @@ export async function getMyProfile() {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("*")
+    .select(PROFILE_SELECT_COLUMNS)
     .eq("id", user.id)
     .maybeSingle();
 
@@ -444,7 +460,7 @@ export async function upsertMyProfile(profile) {
   const { data, error } = await supabase
     .from("profiles")
     .upsert(payload)
-    .select()
+    .select(PROFILE_SELECT_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -986,7 +1002,7 @@ export async function getReceivedCrewInvites() {
 
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
-    .select("*")
+    .select("id, first_name, last_name, full_name, username, avatar_url")
     .in("id", inviterIds)
 
   if (profilesError) throw profilesError
@@ -1019,7 +1035,7 @@ export async function getSentCrewInvites() {
 
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
-    .select("*")
+    .select("id, first_name, last_name, full_name, username, avatar_url")
     .in("id", inviteeIds)
 
   if (profilesError) throw profilesError
@@ -1284,7 +1300,7 @@ export async function getAcceptedFriends() {
 
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
-    .select("*")
+    .select("id, first_name, last_name, full_name, username, avatar_url")
     .in("id", friendIds)
 
   if (profilesError) throw profilesError
