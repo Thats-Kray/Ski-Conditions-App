@@ -682,6 +682,49 @@ visible to any single task's reviewer:
    owner-only; the policy keys off `visibility <> 'private'`, so they are
    readable by all friends and crewmates. Comment corrected.
 
+### TASK 18.3 — Close the crew_members self-join hole (SECURITY, open)
+- [ ] `"crew members can insert members"` is `WITH CHECK ((user_id = auth.uid()) OR (my_crew_role(crew_id) IS NOT NULL))`.
+      The first branch lets any signed-in user insert **themselves into any crew_id**,
+      and `"members can update own row"` lets a pending member flip their own
+      `status` to `'active'` — which defeats the `status='active'` guard in
+      `shares_crew_with()` and grants read access to that crew's members' plans.
+- [ ] Not fixed in Sprint 34 on purpose: the `user_id = auth.uid()` branch is what
+      lets a crew's creator insert the first membership row (`my_crew_role` is NULL
+      at that moment), and the self-update **is** the accept-invite flow
+      (`acceptCrewInvite`). Closing it properly needs a SECURITY DEFINER
+      create-crew / join-crew RPC, not a policy tweak.
+- [ ] Lower practical severity than the friend_requests hole that migration 033
+      closed: exploiting it requires knowing a crew UUID, and crew ids are not
+      enumerable (`crews`/`crew_members` SELECT both require membership). The
+      friend path needed only a user id, and `profiles` is world-readable.
+
+### TASK 18.4 — `getCrewMembers()` returns pending members
+- [ ] The crew chips on the shared calendar build their member sets from
+      `getCrewMembers`, which neither selects nor filters `crew_members.status`, so
+      a pending invitee is attributed to a crew they never joined. Cosmetic while
+      TASK 18.3 is open (RLS still won't return a non-friend pending member's
+      plans), but the chip's member set and `shares_crew_with()` disagree.
+
+**A second whole-branch review pass found 6 more, all fixed except 18.3/18.4:**
+1. **Security, fixed in migration 033:** `friend_requests_insert_own` constrained
+   only the requester, not `status` — so anyone could INSERT a row already marked
+   `'accepted'` and become your "friend" without approval. Reproduced live: one
+   INSERT flipped `are_friends()` false→true and exposed the victim's
+   `daily_plans`; the test row was deleted immediately. A second path let the
+   *recipient* rewrite `requester_id` to a victim and accept, since `WITH CHECK`
+   cannot see the pre-update row — closed by column-scoping the UPDATE grant to
+   `(status, updated_at)`.
+2. A failed month fetch in `SkiPlansTab` unmounted `PlanCalendar` along with the
+   month nav, and `loadError` only clears in the effect keyed on `[userId, month]`
+   — bricking the tab permanently. The error now renders inline.
+3. Scope chips filtered check-ins but not trips, so picking a single crew still
+   showed everyone's trips. Trips now honour the same scope.
+4. `getLeaderboard` failing rendered as "not friends", showing the friends-only
+   lock card to an actual friend on any RPC blip. Now a distinct error state.
+5. `getProfileById` rejection produced a blank "Unnamed Skier" profile with no
+   error — covered by the same distinct error state.
+6. Pending crew members in the chip sets — logged as TASK 18.4 above.
+
 **Verification notes:** RLS was proven by impersonating three real accounts in
 Postgres (`set local role authenticated` + `request.jwt.claims`), not by reading
 policy text — migration 030 is the precedent for SQL that reports success and
@@ -728,8 +771,8 @@ Sprints 32 and 33 were verified on the live app by Kyle on 2026-08-17. Both spri
 | 15 — Ski Buddy Board | 2 | 2 (Task 15.1 completed in Sprint 32 — see Section 16) |
 | 16 — Debt Clearing (Sprint 32) | 4 | 4 |
 | 17 — Profile Token Exposure (Sprint 33) | 4 | 4 (migration 030 was a no-op; migration 031 closed it — see task notes) |
-| 18 — Friend Profiles & Ski Plan Calendar (Sprint 34) | 2 | 0 (both are follow-ups the sprint deliberately left open — the sprint's own scope shipped) |
-| **Total** | **46** | **42** |
+| 18 — Friend Profiles & Ski Plan Calendar (Sprint 34) | 4 | 0 (all four are follow-ups the sprint deliberately left open — the sprint's own scope shipped; 18.3 is a known SECURITY gap) |
+| **Total** | **48** | **42** |
 
 Task 0.2's hex-token cleanup is complete (2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) and `migrations/024_theme_preference.sql` (Section 10) are both applied to the live Supabase project (2026-08-08). Section 10's theme-switching MVP is implemented and its migration is live, but `npm run lint` and a visual pass across all 5 themes haven't been run yet, and full app-wide theming beyond the MVP scope remains unscheduled follow-up work — see Section 10's task notes.
 

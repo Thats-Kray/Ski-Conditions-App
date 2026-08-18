@@ -866,15 +866,29 @@ export async function sendFriendRequest(recipientId) {
   }
 
   if (existing.status === "declined") {
+    // Delete + insert rather than UPDATE. Reviving a declined request can flip
+    // the direction (the other person may have asked first), and migration 033
+    // column-scopes UPDATE to (status, updated_at) so requester_id/recipient_id
+    // can no longer be rewritten — that rewrite was the second half of a
+    // privilege-escalation path where a recipient could point a row at a victim
+    // and then accept it. Both statements are permitted: delete_own covers
+    // either party, and insert_own requires requester = self, status = pending.
+    const { error: delError } = await supabase
+      .from("friend_requests")
+      .delete()
+      .eq("id", existing.id)
+
+    if (delError) throw delError
+
     const { data, error } = await supabase
       .from("friend_requests")
-      .update({
+      .insert({
         requester_id: user.id,
         recipient_id: recipientId,
         status: "pending",
+        created_at: now,
         updated_at: now,
       })
-      .eq("id", existing.id)
       .select()
       .single()
 

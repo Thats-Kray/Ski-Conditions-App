@@ -319,6 +319,7 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
   const [shareFromMilestone, setShareFromMilestone] = useState(false)
   const [profileTab, setProfileTab]   = useState("stats")   // "stats" | "plans"
   const [notFriends, setNotFriends]   = useState(false)
+  const [statsError, setStatsError]   = useState(false)
   const fileInputRef = useRef(null)
 
   const season = getCurrentSeason()
@@ -333,17 +334,28 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
         // every accepted friend with 16 season stats each, so a friend's stats
         // need no new query — and absence from that list IS the not-a-friend
         // signal.
+        // getLeaderboard failing is NOT the same as "not a friend" — an empty
+        // board is exactly the signal used to detect a non-friend, so a blip
+        // would show the friends-only lock card to an actual friend. Track the
+        // failure separately and say so.
+        let boardFailed = false
         const [prof, board] = await Promise.all([
           getProfileById(userId),
-          getLeaderboard(startYear).catch(() => []),
+          getLeaderboard(startYear).catch(() => { boardFailed = true; return [] }),
         ])
         setProfile(prof)
 
         const row = (board || []).find((r) => r.id === userId)
-        if (!row) {
+        if (boardFailed) {
+          setStatsError(true)
+          setNotFriends(false)
+          setSeasonStats(null)
+        } else if (!row) {
+          setStatsError(false)
           setNotFriends(true)
           setSeasonStats(null)
         } else {
+          setStatsError(false)
           setNotFriends(false)
           // Key names must match computeStats() — SeasonStatsCard reads both.
           setSeasonStats({
@@ -699,6 +711,12 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
         <>
           {/* Not an accepted friend — stats are gated server-side too, this is
               just the honest explanation instead of an empty card. */}
+          {statsError && (
+            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "24px 20px", textAlign: "center", color: "var(--color-danger)", fontSize: 13 }}>
+              Couldn&apos;t load season stats right now. Try again in a bit.
+            </div>
+          )}
+
           {notFriends && (
             <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "28px 20px", textAlign: "center", display: "grid", gap: 8, justifyItems: "center" }}>
               <div style={{ fontSize: 30 }}>🔒</div>
@@ -710,7 +728,7 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
           )}
 
           {/* ── Season Stats ── */}
-          {seasonStats && !notFriends && (
+          {seasonStats && !notFriends && !statsError && (
             <>
               {isOwnProfile && (
                 <div style={{ display: "flex", justifyContent: "flex-end" }}>

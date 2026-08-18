@@ -159,12 +159,18 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
   if (!hasLoaded) {
     return <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(255,255,255,0.3)", fontSize: 14 }}>Loading plans…</div>
   }
-  if (loadError) {
-    return <div style={{ textAlign: "center", padding: "40px 0", color: "var(--color-danger)", fontSize: 13 }}>Couldn&apos;t load ski plans. Try again in a bit.</div>
-  }
 
   return (
     <div>
+      {/* Inline, not an early return: unmounting PlanCalendar here would take
+          the month nav with it, and loadError only clears in the effect keyed on
+          [userId, month] — so one failed fetch would brick the tab for good. */}
+      {loadError && (
+        <div style={{ color: "var(--color-danger)", fontSize: 13, marginBottom: 12 }}>
+          Couldn&apos;t load ski plans for this month. Try another month, or come back in a bit.
+        </div>
+      )}
+
       {editable && (
         <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>
           Tap a day to mark where you&apos;re skiing. Friends and crewmates can see it; mark a day Private to hide it.

@@ -249,6 +249,24 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
     return () => { cancelled = true }
   }, [calMonth, currentUser])
 
+  // A trip belongs to "me" if I host it, RSVP'd, or was invited; friendsTrips
+  // follow the friends/crew chips the same way check-ins do. Without this the
+  // chips only filtered check-ins and every trip rendered regardless of scope.
+  const mineScoped = scopes.has("me")
+  const inScope = (userId) => {
+    if (userId === currentUser?.id) return scopes.has("me")
+    if (scopes.has("friends") && friendIds.has(userId)) return true
+    for (const sc of scopes) {
+      if (!sc.startsWith("crew:")) continue
+      if (crewMemberIds.get(sc.slice(5))?.has(userId)) return true
+    }
+    return false
+  }
+  const scopedMyTrips      = mineScoped ? myTrips : []
+  const scopedRsvpdTrips   = mineScoped ? rsvpdTrips : []
+  const scopedInvitedTrips = mineScoped ? invitedTrips : []
+  const scopedFriendsTrips = friendsTrips.filter((t) => inScope(t.host_id))
+
   const scopedPlans = !currentUser ? [] : visiblePlans.filter((p) => {
     if (p.user_id === currentUser?.id) return scopes.has("me")
     // Must test real friendship: getVisiblePlansInRange returns friends AND
@@ -465,7 +483,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
             })}
           </div>
 
-          {scopedPlans.length === 0 && (
+          {scopedPlans.length === 0 && scopedMyTrips.length === 0 && scopedRsvpdTrips.length === 0 && scopedInvitedTrips.length === 0 && scopedFriendsTrips.length === 0 && (
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginBottom: 10 }}>
               {scopes.size === 0
                 ? "Pick at least one group above to see plans."
@@ -474,10 +492,10 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
           )}
 
           <CalendarView
-            myTrips={myTrips}
-            rsvpdTrips={rsvpdTrips}
-            invitedTrips={invitedTrips}
-            friendsTrips={friendsTrips}
+            myTrips={scopedMyTrips}
+            rsvpdTrips={scopedRsvpdTrips}
+            invitedTrips={scopedInvitedTrips}
+            friendsTrips={scopedFriendsTrips}
             skiPlans={scopedPlans}
             currentUserId={currentUser?.id}
             onOpenTrip={setStripTrip}
