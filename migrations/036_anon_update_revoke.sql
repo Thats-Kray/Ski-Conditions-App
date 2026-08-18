@@ -1,0 +1,33 @@
+-- Migration 036: hold the 033/034 column-scoping for the anon role too (Sprint 34)
+-- Run in Supabase SQL Editor, then: NOTIFY pgrst, 'reload schema';
+--
+-- WHY THIS EXISTS: migrations 033 and 034 established an invariant —
+--   * friend_requests.requester_id / recipient_id are unwritable from the client
+--     (so a recipient cannot repoint a row at a victim and accept it), and
+--   * crew_members.crew_id / role are unwritable from the client
+--     (so a member cannot move themselves into another crew or self-promote).
+--
+-- Both did this with `REVOKE UPDATE ON <table> FROM authenticated` followed by a
+-- column-scoped GRANT. But Supabase's default schema grants give the SAME
+-- table-level privileges to `anon`, and neither migration revoked from it — so
+-- the invariant held for one client role and not the other.
+--
+-- NOT EXPLOITABLE TODAY, and this is a completeness fix rather than an incident:
+-- every RLS policy on both tables is `TO authenticated`, so an anon request
+-- matches zero rows and has nothing to update. This closes the gap so the
+-- invariant does not silently depend on that, and so a future policy written
+-- `TO public` cannot quietly re-open it.
+--
+-- DELIBERATELY NARROW: `anon` holds table-level UPDATE on 47 tables in this
+-- schema — that is the stock Supabase `GRANT ALL` default, not something these
+-- sprints introduced. Revoking it project-wide is a separate hardening pass with
+-- real regression risk for the logged-out/landing experience, and is tracked as
+-- ROADMAP.md TASK 18.6. This migration touches only the two tables whose column
+-- scoping 033/034 already established.
+--
+-- ROLLBACK, if anything breaks:
+--   GRANT UPDATE ON friend_requests TO anon;
+--   GRANT UPDATE ON crew_members TO anon;
+
+REVOKE UPDATE ON friend_requests FROM anon;
+REVOKE UPDATE ON crew_members    FROM anon;

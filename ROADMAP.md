@@ -656,6 +656,18 @@ rows and no code path (the app uses `crews`/`crew_members`). Also fixed:
       and `shares_crew_with()` correctly requires `active` on both sides), but the
       chip's member set and the RLS grant disagree. Filter at the query.
 
+### TASK 18.6 — Project-wide `anon` grants (hardening, open)
+- [ ] `anon` holds table-level UPDATE on **47** tables in `public` — the stock Supabase
+      `GRANT ALL` default, not something Sprints 33/34 introduced. Migration 036 revoked
+      it only on `friend_requests` and `crew_members`, the two tables whose column
+      scoping 033/034 established, so that invariant now holds for both client roles.
+- [ ] Not currently exploitable anywhere it was checked: every RLS policy on those
+      tables is `TO authenticated`, so an `anon` request matches zero rows. The risk is
+      latent — a future policy written `TO public` would silently re-open write access.
+- [ ] A project-wide revoke is its own pass with real regression risk for the
+      logged-out/landing experience (which legitimately reads as `anon`). Needs an audit
+      of what `anon` actually requires, table by table, not a blanket statement.
+
 **Whole-branch review caught 8 issues, all fixed the same session** — none were
 visible to any single task's reviewer:
 1. Month navigation on Profile → Ski Plans was dead: the `loading` early-return
@@ -762,7 +774,7 @@ block a real pending crew invitee (`without_guard: true`, `with_active_guard: fa
 
 **Files:** `migrations/032_daily_plans_visibility_fix.sql`,
 `migrations/033_friend_request_consent.sql`, `migrations/034_crew_membership_consent.sql`,
-`migrations/035_crew_pending_invite_visibility.sql`,
+`migrations/035_crew_pending_invite_visibility.sql`, `migrations/036_anon_update_revoke.sql`,
 `src/lib/socialApi.js`,
 `src/lib/profileNav.js`, `src/lib/calendarDates.js`, `src/lib/profileStats.js`,
 `src/components/PlanCalendar.jsx`, `src/components/ProfileStats.jsx`,
@@ -801,8 +813,8 @@ Sprints 32 and 33 were verified on the live app by Kyle on 2026-08-17. Both spri
 | 15 — Ski Buddy Board | 2 | 2 (Task 15.1 completed in Sprint 32 — see Section 16) |
 | 16 — Debt Clearing (Sprint 32) | 4 | 4 |
 | 17 — Profile Token Exposure (Sprint 33) | 4 | 4 (migration 030 was a no-op; migration 031 closed it — see task notes) |
-| 18 — Friend Profiles & Ski Plan Calendar (Sprint 34) | 5 | 2 (18.3 SECURITY fix as migration 034, 18.5 crew-invite visibility as migration 035; 18.1/18.2/18.4 remain deliberate follow-ups) |
-| **Total** | **49** | **44** |
+| 18 — Friend Profiles & Ski Plan Calendar (Sprint 34) | 6 | 2 (18.3 SECURITY fix as migration 034, 18.5 crew-invite visibility as migration 035; 18.1/18.2/18.4/18.6 remain deliberate follow-ups) |
+| **Total** | **50** | **44** |
 
 Task 0.2's hex-token cleanup is complete (2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) and `migrations/024_theme_preference.sql` (Section 10) are both applied to the live Supabase project (2026-08-08). Section 10's theme-switching MVP is implemented and its migration is live, but `npm run lint` and a visual pass across all 5 themes haven't been run yet, and full app-wide theming beyond the MVP scope remains unscheduled follow-up work — see Section 10's task notes.
 
@@ -839,6 +851,15 @@ sub-tab bar (Leaderboard / Crews / Friends / Community) inside MessagingCenter's
 Chats/People/Activity shell, so there are two competing levels of navigation before any
 content. Sprint 34 added a fifth surface (full friend profiles) reachable from it. Needs
 a real information-architecture pass, not just spacing tweaks.
+  - **Include the load-resilience fix here.** `FriendsPage.loadPageData()` awaits ten
+    calls in a single `Promise.all`, so one rejection blanks the entire tab — this is
+    exactly what happened on 2026-08-18, when a stale-bundle `profiles` 403 made the
+    whole friends list vanish behind a raw Postgres error toast. Deliberately deferred
+    out of Sprint 34: the naive fix (`.catch(() => [])` on everything) trades a loud
+    failure for a silent one, and the loud failure is what made that bug findable in
+    minutes. The right version degrades **per section** and still shows the user that
+    something failed — which is a layout decision, so it belongs with the IA pass
+    rather than ahead of it.
 
 -**"Where are my friends skiing" calendar — the flagship view.** Sprint 34 shipped the
 mechanics (per-person plan calendars, crew-filterable scope chips on the Plans tab), but
