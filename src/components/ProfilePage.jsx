@@ -2,20 +2,24 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import {
   getCurrentUser,
   getMyProfile,
+  getProfileById,
   getAcceptedFriends,
   getAllVisibleTrips,
   upsertMyProfile,
   uploadProfilePhoto,
 } from "../lib/socialApi"
-import { getMySessions, getCurrentSeason, getAllTimeStats, updateSessionStats } from "../lib/leaderboardApi"
+import { getMySessions, getCurrentSeason, getAllTimeStats, getLeaderboard } from "../lib/leaderboardApi"
+import { computeStats } from "../lib/profileStats"
+import {
+  SeasonStatsCard,
+  StatsViewToggle,
+  HistoryViewToggle,
+  RecentSessionsFeed,
+} from "./ProfileStats"
 import ShareStatCard from "./ShareStatCard"
 import StravaConnect from "./StravaConnect"
-import SessionEditForm from "./SessionEditForm"
 import SeasonCalendar from "./SeasonCalendar"
-import { resortName, resortEmoji } from "../lib/resorts"
-import { fmt } from "../lib/format"
 import Avatar from "./ui/Avatar"
-import SnowStat from "./ui/SnowStat"
 import Card from "./ui/Card"
 import Button from "./ui/Button"
 
@@ -44,27 +48,6 @@ const THEME_OPTIONS = [
 
 function initials(name) {
   return (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
-}
-
-function computeStats(sessions) {
-  const days       = sessions.length
-  const vertical   = sessions.reduce((s, r) => s + (r.vertical_feet  || 0), 0)
-  const miles      = sessions.reduce((s, r) => s + (r.miles_skied    || 0), 0)
-  const powderDays = sessions.filter(r => r.is_powder_day).length
-  const resortSet  = new Set(sessions.map(r => r.resort_name).filter(Boolean))
-  const resorts    = resortSet.size
-
-  const counts = {}
-  for (const s of sessions) {
-    if (s.resort_name) counts[s.resort_name] = (counts[s.resort_name] || 0) + 1
-  }
-  const topResort = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || null
-
-  const totalRuns       = sessions.reduce((acc, s) => acc + (s.runs_logged || 0), 0)
-  const topSpeed         = sessions.reduce((max, s) => (s.top_speed_mph != null && (max == null || s.top_speed_mph > max) ? s.top_speed_mph : max), null)
-  const timeOnMountain   = sessions.reduce((acc, s) => acc + (s.time_on_mountain_min || 0), 0)
-
-  return { days, vertical, miles: parseFloat(miles.toFixed(1)), powderDays, resorts, topResort, totalRuns, topSpeed, timeOnMountain }
 }
 
 // ── Season Milestones ─────────────────────────────────────────────────────────
@@ -100,265 +83,6 @@ function markMilestonesShown(startYear, ids) {
   } catch {
     // private browsing / storage disabled — fail silently, matching existing convention
   }
-}
-
-function formatMinutes(mins) {
-  if (!mins) return "—"
-  return `${Math.floor(mins / 60)}h ${mins % 60}m`
-}
-
-// ── Season Stats Card ─────────────────────────────────────────────────────────
-
-function SeasonStatsCard({ stats, priorStats, season, viewMode = "season" }) {
-  const statItems = [
-    { label: "Days on Mountain", value: stats.days,                  emoji: "⛷️" },
-    { label: "Vertical Feet",    value: fmt(stats.vertical) + " ft", emoji: "📏" },
-    { label: "Resorts",          value: stats.resorts,               emoji: "🏔️" },
-    { label: "Powder Days",      value: stats.powderDays,            emoji: "❄️" },
-  ]
-
-  return (
-    <div style={{
-      background: "linear-gradient(135deg,rgba(15,118,110,0.35),rgba(37,99,235,0.28))",
-      border: "1px solid rgba(96,165,250,0.2)",
-      borderRadius: 20,
-      overflow: "hidden",
-    }}>
-      {/* Header */}
-      <div style={{ padding: "14px 18px 10px" }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: 0.9 }}>
-          {viewMode === "allTime" ? "All-Time" : `${season.label} Season`}
-        </div>
-      </div>
-
-      {/* 2×2 stats grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "0 14px 14px" }}>
-        {statItems.map(item => (
-          <div key={item.label} style={{
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 14,
-            padding: "16px 16px 14px",
-          }}>
-            <div style={{ fontSize: 32, fontWeight: 900, color: "white", lineHeight: 1, letterSpacing: -1 }}>
-              {item.value}
-            </div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", marginTop: 5, textTransform: "uppercase", letterSpacing: 0.6 }}>
-              {item.emoji} {item.label}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* New stat tiles — Total Runs / Top Speed / Time on Mountain */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, padding: "12px 14px 0" }}>
-        <SnowStat icon="🎿" label="Total Runs" value={stats.totalRuns} />
-        <SnowStat icon="⚡" label="Top Speed" value={stats.topSpeed ?? "—"} unit={stats.topSpeed != null ? "mph" : undefined} />
-        <SnowStat icon="⏱️" label="Time on Mountain" value={formatMinutes(stats.timeOnMountain)} />
-      </div>
-
-      {/* Season-over-season delta row */}
-      {priorStats && (
-        <div style={{ fontSize: 13, color: "var(--color-text-2)", marginTop: 8, padding: "0 14px" }}>
-          {stats.days === priorStats.days
-            ? "Same days on mountain as last season"
-            : stats.days > priorStats.days
-              ? `↑ ${stats.days - priorStats.days} more day${stats.days - priorStats.days === 1 ? "" : "s"} than last season`
-              : `↓ ${priorStats.days - stats.days} fewer day${priorStats.days - stats.days === 1 ? "" : "s"} than last season`}
-        </div>
-      )}
-
-      {/* Bottom: top resort + miles */}
-      {(stats.topResort || stats.miles > 0) && (
-        <div style={{ display: "flex", gap: 8, padding: "12px 14px" }}>
-          {stats.topResort && (
-            <div style={{ flex: 1, background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 10, padding: "9px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 15 }}>🏆</span>
-              <div>
-                <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.5 }}>Top Resort</div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "white", marginTop: 1 }}>{resortName(stats.topResort)}</div>
-              </div>
-            </div>
-          )}
-          {stats.miles > 0 && (
-            <div style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "9px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 15 }}>🛷</span>
-              <div>
-                <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.5 }}>Miles Skied</div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "white", marginTop: 1 }}>{stats.miles} mi</div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {stats.days === 0 && (
-        <div style={{ textAlign: "center", padding: "20px", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
-          No days logged yet — get out there! ⛷️
-        </div>
-      )}
-    </div>
-  )
-}
-
-function StatsViewToggle({ viewMode, onChange }) {
-  return (
-    <div style={{ display: "flex", gap: 4 }}>
-      {["season", "allTime"].map((mode) => (
-        <button
-          key={mode}
-          onClick={() => onChange(mode)}
-          style={{
-            padding: "6px 14px", borderRadius: "var(--radius-pill)", border: "none", cursor: "pointer",
-            background: viewMode === mode ? "var(--color-accent)" : "rgba(255,255,255,0.06)",
-            color: viewMode === mode ? "var(--color-bg)" : "var(--color-text-2)",
-            fontWeight: 700, fontSize: 13,
-          }}
-        >
-          {mode === "season" ? "This Season" : "All-Time"}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-function HistoryViewToggle({ viewMode, onChange }) {
-  return (
-    <div style={{ display: "flex", gap: 4 }}>
-      {["list", "calendar"].map((mode) => (
-        <button
-          key={mode}
-          onClick={() => onChange(mode)}
-          style={{
-            padding: "6px 14px", borderRadius: "var(--radius-pill)", border: "none", cursor: "pointer",
-            background: viewMode === mode ? "var(--color-accent)" : "rgba(255,255,255,0.06)",
-            color: viewMode === mode ? "var(--color-bg)" : "var(--color-text-2)",
-            fontWeight: 700, fontSize: 13,
-          }}
-        >
-          {mode === "list" ? "List" : "Calendar"}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-// ── Recent Sessions Feed ──────────────────────────────────────────────────────
-
-function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fullName }) {
-  const [editingSessionId, setEditingSessionId] = useState(null)
-  const [savingStatsFor, setSavingStatsFor]       = useState(null)
-  const [editError, setEditError]                 = useState("")
-  const [shareSession, setShareSession]           = useState(null)
-
-  if (!sessions.length) {
-    return (
-      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "18px 16px", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
-        No sessions logged yet — check in from the Home tab
-      </div>
-    )
-  }
-
-  const editingSession = sessions.find((s) => s.id === editingSessionId)
-  const shown = Number.isFinite(limit) ? sessions.slice(0, limit) : sessions
-
-  return (
-    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden" }}>
-      <div style={{ padding: "12px 16px 10px", fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>
-        {Number.isFinite(limit) ? "Recent Sessions" : "Session History"}
-      </div>
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        {shown.map((s, i) => {
-          const date = new Date(s.session_date + "T12:00:00")
-          const dateLabel = date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
-          const emoji = resortEmoji(s.resort_key || s.resort_name)
-          const canEdit = typeof s.id === "string" && !s.id.startsWith("trip-")
-          return (
-            <div key={s.id || i} style={{
-              display: "flex", alignItems: "center", gap: 12,
-              padding: "14px 16px",
-              borderTop: i > 0 ? "1px solid rgba(255,255,255,0.05)" : "none",
-            }}>
-              <span style={{ fontSize: 18, flexShrink: 0 }}>{emoji}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {resortName(s.resort_name || s.resort_key)}
-                  {s.is_powder_day && <span style={{ marginLeft: 6, fontSize: 12 }}>❄️</span>}
-                </div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>{dateLabel}</div>
-              </div>
-              {s.vertical_feet > 0 && (
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--color-accent-soft)", flexShrink: 0 }}>+{fmt(s.vertical_feet)} ft</div>
-              )}
-              {canEdit && (
-                <button
-                  onClick={() => { setEditError(""); setEditingSessionId(s.id) }}
-                  title="Edit session"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, width: 28, height: 28, flexShrink: 0, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}
-                >✏️</button>
-              )}
-              <button
-                onClick={() => setShareSession(s)}
-                title="Share this session"
-                aria-label="Share this session"
-                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, width: 28, height: 28, flexShrink: 0, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}
-              >📤</button>
-            </div>
-          )
-        })}
-      </div>
-
-      {editingSession && (
-        <div
-          style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
-          onClick={() => { setEditError(""); setEditingSessionId(null) }}
-        >
-          <div
-            style={{ background: "var(--color-modal-bg)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 480 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: 18, fontWeight: 900, color: "white" }}>✏️ Edit Session</div>
-              <button
-                onClick={() => { setEditError(""); setEditingSessionId(null) }}
-                style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}
-              >✕</button>
-            </div>
-            <SessionEditForm
-              session={editingSession}
-              saving={savingStatsFor === editingSession.id}
-              error={editError}
-              onError={setEditError}
-              onSave={async (fields) => {
-                setSavingStatsFor(editingSession.id)
-                setEditError("")
-                try {
-                  await updateSessionStats(editingSession.id, fields)
-                  await onRefresh?.()
-                  // Only close on success — a failure here is a real, expected
-                  // outcome (renaming onto a date+mountain the user already
-                  // has), so keep the modal open with the reason showing.
-                  setEditingSessionId(null)
-                } catch (e) {
-                  setEditError(e.message || "Could not save this session.")
-                } finally {
-                  setSavingStatsFor(null)
-                }
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {shareSession && (
-        <ShareStatCard
-          profile={{ ...profile, full_name: fullName }}
-          session={shareSession}
-          onClose={() => setShareSession(null)}
-        />
-      )}
-    </div>
-  )
 }
 
 // ── Edit Profile Modal ────────────────────────────────────────────────────────
@@ -563,7 +287,18 @@ function MilestoneModal({ milestone, onShare, onClose }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function ProfilePage({ onLogOut, onTabChange }) {
+/**
+ * Own profile when `userId` is omitted; a read-only view of someone else's
+ * profile when it is supplied (Sprint 34).
+ *
+ * NOTE the naming: `userId` is the profile BEING VIEWED, while `currentUserId`
+ * state is the signed-in viewer. That state used to be called `userId` — it was
+ * renamed when the prop arrived, because a shadowed name here would silently
+ * break the all-time stats fetch rather than error.
+ */
+export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBack, resorts = [] }) {
+  const isOwnProfile = !userId
+
   const [profile, setProfile]         = useState(null)
   const [friends, setFriends]         = useState([])
   const [tripCount, setTripCount]     = useState(0)
@@ -578,9 +313,11 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   const [viewMode, setViewMode]       = useState("season")
   const [historyView, setHistoryView] = useState("list")
   const [allTimeStats, setAllTimeStats] = useState(null)
-  const [userId, setUserId]           = useState(null)
+  const [currentUserId, setCurrentUserId] = useState(null)
   const [milestoneQueue, setMilestoneQueue] = useState([])
   const [shareFromMilestone, setShareFromMilestone] = useState(false)
+  const [profileTab, setProfileTab]   = useState("stats")   // "stats" | "plans"
+  const [notFriends, setNotFriends]   = useState(false)
   const fileInputRef = useRef(null)
 
   const season = getCurrentSeason()
@@ -589,6 +326,43 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
     setLoading(true)
     try {
       const { startYear } = getCurrentSeason()
+
+      if (!isOwnProfile) {
+        // Friend view. getLeaderboard() already returns the signed-in user plus
+        // every accepted friend with 16 season stats each, so a friend's stats
+        // need no new query — and absence from that list IS the not-a-friend
+        // signal.
+        const [prof, board] = await Promise.all([
+          getProfileById(userId),
+          getLeaderboard(startYear).catch(() => []),
+        ])
+        setProfile(prof)
+
+        const row = (board || []).find((r) => r.id === userId)
+        if (!row) {
+          setNotFriends(true)
+          setSeasonStats(null)
+        } else {
+          setNotFriends(false)
+          // Key names must match computeStats() — SeasonStatsCard reads both.
+          setSeasonStats({
+            days:           row.days,
+            vertical:       row.verticalFt,
+            miles:          row.milesSki,
+            powderDays:     row.powderDays,
+            resorts:        row.resorts,
+            topResort:      row.topResort,
+            totalRuns:      row.totalRuns,
+            topSpeed:       row.topSpeed,
+            timeOnMountain: row.timeOnMountain,
+          })
+        }
+        setRecentSessions([])
+        setPriorStats(null)
+        setAllTimeStats(null)
+        return
+      }
+
       const [user, prof, friendData, tripData, sessions, priorSessions] = await Promise.all([
         getCurrentUser(),
         getMyProfile(),
@@ -598,7 +372,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
         getMySessions(startYear - 1).catch(() => []),
       ])
       setProfile(prof)
-      setUserId(user?.id || null)
+      setCurrentUserId(user?.id || null)
       setFriends(Array.isArray(friendData) ? friendData : [])
       const { mine = [], rsvpd = [] } = tripData || {}
       const seen = new Set()
@@ -630,12 +404,12 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [isOwnProfile, userId])
 
   function handleViewModeChange(mode) {
     setViewMode(mode)
-    if (mode === "allTime" && allTimeStats == null && userId) {
-      getAllTimeStats(userId)
+    if (mode === "allTime" && allTimeStats == null && currentUserId) {
+      getAllTimeStats(currentUserId)
         .then((sessions) => setAllTimeStats(computeStats(sessions)))
         .catch(() => {})
     }
@@ -706,14 +480,26 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
   return (
     <div style={{ display: "grid", gap: 14 }}>
 
+      {/* Back to where the viewer came from — friend view only */}
+      {!isOwnProfile && (
+        <button
+          onClick={onBack}
+          style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "8px 14px", color: "white", cursor: "pointer", fontWeight: 700, fontSize: 13, minHeight: 44, justifySelf: "start" }}
+        >
+          ‹ Back
+        </button>
+      )}
+
       {/* Hidden file input for photo upload */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        style={{ display: "none" }}
-        onChange={handlePhotoFileChange}
-      />
+      {isOwnProfile && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={handlePhotoFileChange}
+        />
+      )}
 
       {/* ── Hero ── */}
       <div style={{
@@ -725,11 +511,13 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
       }}>
 
         {/* Sign out — top right */}
-        <button
-          onClick={onLogOut}
-          title="Sign Out"
-          style={{ position: "absolute", top: 14, right: 14, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 15 }}
-        >🚪</button>
+        {isOwnProfile && (
+          <button
+            onClick={onLogOut}
+            title="Sign Out"
+            style={{ position: "absolute", top: 14, right: 14, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 15 }}
+          >🚪</button>
+        )}
 
         {/* Centered photo + name block */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
@@ -737,8 +525,8 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
           {/* Avatar with camera overlay */}
           <div style={{ position: "relative", marginBottom: 14 }}>
             <div
-              onClick={() => !photoUploading && setPhotoMenuOpen(v => !v)}
-              style={{ cursor: photoUploading ? "default" : "pointer", position: "relative" }}
+              onClick={() => isOwnProfile && !photoUploading && setPhotoMenuOpen(v => !v)}
+              style={{ cursor: isOwnProfile && !photoUploading ? "pointer" : "default", position: "relative" }}
             >
               {/* Glowing ring border like Strava */}
               <div style={{
@@ -764,7 +552,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
               </div>
 
               {/* Camera badge */}
-              {!photoUploading && (
+              {isOwnProfile && !photoUploading && (
                 <div style={{
                   position: "absolute", bottom: 2, right: 2,
                   width: 26, height: 26, borderRadius: "50%",
@@ -830,24 +618,31 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
           )}
         </div>
 
-        {/* Stats row — like Instagram/Strava */}
+        {/* Stats row — like Instagram/Strava.
+            Trips and Friends counts come from getAllVisibleTrips/getAcceptedFriends,
+            both of which are scoped to the signed-in user — on someone else's
+            profile they would render a misleading "0", so only Days is shown. */}
         <div style={{ display: "flex", marginTop: 20, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 16 }}>
-          <button
-            onClick={() => onTabChange?.("plans")}
-            style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "center", padding: "4px 0" }}
-          >
-            <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1 }}>{tripCount}</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Trips</div>
-          </button>
-          <div style={{ width: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
-          <button
-            onClick={() => onTabChange?.("friends")}
-            style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "center", padding: "4px 0" }}
-          >
-            <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1 }}>{friends.length}</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Friends</div>
-          </button>
-          <div style={{ width: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
+          {isOwnProfile && (
+            <>
+              <button
+                onClick={() => onTabChange?.("plans")}
+                style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "center", padding: "4px 0" }}
+              >
+                <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1 }}>{tripCount}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Trips</div>
+              </button>
+              <div style={{ width: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
+              <button
+                onClick={() => onTabChange?.("friends")}
+                style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "center", padding: "4px 0" }}
+              >
+                <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1 }}>{friends.length}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Friends</div>
+              </button>
+              <div style={{ width: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
+            </>
+          )}
           <div style={{ flex: 1, textAlign: "center", padding: "4px 0" }}>
             <div style={{ fontSize: 22, fontWeight: 900, color: seasonStats?.days > 0 ? "var(--color-accent-soft)" : "white", lineHeight: 1 }}>{seasonStats?.days ?? "—"}</div>
             <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Days</div>
@@ -855,56 +650,113 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
         </div>
 
         {/* Edit Profile + Share buttons — like Instagram */}
-        <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-          <button
-            onClick={() => setShowEdit(true)}
-            style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "1px solid rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.08)", color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer" }}
-          >
-            Edit Profile
-          </button>
-          {seasonStats?.days > 0 && (
+        {isOwnProfile && (
+          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
             <button
-              onClick={() => setShowShare(true)}
-              style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: "var(--gradient-cta)", color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer" }}
+              onClick={() => setShowEdit(true)}
+              style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "1px solid rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.08)", color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer" }}
             >
-              Share Season
+              Edit Profile
             </button>
-          )}
-        </div>
+            {seasonStats?.days > 0 && (
+              <button
+                onClick={() => setShowShare(true)}
+                style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: "var(--gradient-cta)", color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer" }}
+              >
+                Share Season
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* ── Season Stats ── */}
-      {seasonStats && (
+      {/* ── Stats / Ski Plans sub-tabs ── */}
+      <div style={{
+        display: "flex", gap: 4, background: "rgba(255,255,255,0.04)",
+        border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14,
+        padding: 4, width: "fit-content",
+      }}>
+        {[{ key: "stats", label: "📊 Stats" }, { key: "plans", label: "📅 Ski Plans" }].map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setProfileTab(key)}
+            style={{
+              padding: "8px 16px", borderRadius: 10,
+              background: profileTab === key ? "rgba(255,255,255,0.12)" : "transparent",
+              border: profileTab === key ? "1px solid rgba(255,255,255,0.14)" : "1px solid transparent",
+              color: profileTab === key ? "white" : "rgba(255,255,255,0.5)",
+              fontWeight: profileTab === key ? 800 : 600,
+              fontSize: 13, cursor: "pointer", minHeight: 44,
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {profileTab === "stats" && (
         <>
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <StatsViewToggle viewMode={viewMode} onChange={handleViewModeChange} />
-          </div>
-          {viewMode === "allTime" && allTimeStats == null ? (
-            <div style={{ textAlign: "center", padding: "24px", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
-              Loading all-time stats…
+          {/* Not an accepted friend — stats are gated server-side too, this is
+              just the honest explanation instead of an empty card. */}
+          {notFriends && (
+            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "28px 20px", textAlign: "center", display: "grid", gap: 8, justifyItems: "center" }}>
+              <div style={{ fontSize: 30 }}>🔒</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "white" }}>Season stats are friends-only</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", maxWidth: 280 }}>
+                Add {profile?.first_name || profile?.username || "them"} as a friend to see their days, vertical, and top resort.
+              </div>
             </div>
-          ) : (
-            <SeasonStatsCard
-              stats={viewMode === "allTime" ? allTimeStats : seasonStats}
-              priorStats={viewMode === "season" ? priorStats : null}
-              season={season}
-              viewMode={viewMode}
-            />
+          )}
+
+          {/* ── Season Stats ── */}
+          {seasonStats && !notFriends && (
+            <>
+              {isOwnProfile && (
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <StatsViewToggle viewMode={viewMode} onChange={handleViewModeChange} />
+                </div>
+              )}
+              {isOwnProfile && viewMode === "allTime" && allTimeStats == null ? (
+                <div style={{ textAlign: "center", padding: "24px", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
+                  Loading all-time stats…
+                </div>
+              ) : (
+                <SeasonStatsCard
+                  stats={isOwnProfile && viewMode === "allTime" ? allTimeStats : seasonStats}
+                  priorStats={isOwnProfile && viewMode === "season" ? priorStats : null}
+                  season={season}
+                  viewMode={isOwnProfile ? viewMode : "season"}
+                />
+              )}
+            </>
+          )}
+
+          {/* ── Session History (List / Calendar) ── */}
+          {/* Own profile only: getMySessions is self-scoped, so a friend view has
+              no session rows to render. */}
+          {isOwnProfile && (
+            <>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <HistoryViewToggle viewMode={historyView} onChange={setHistoryView} />
+              </div>
+              {historyView === "list" ? (
+                <RecentSessionsFeed sessions={recentSessions} limit={Infinity} onRefresh={load} profile={profile} fullName={fullName} />
+              ) : (
+                <SeasonCalendar sessions={recentSessions} startYear={season.startYear} />
+              )}
+            </>
           )}
         </>
       )}
 
-      {/* ── Session History (List / Calendar) ── */}
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <HistoryViewToggle viewMode={historyView} onChange={setHistoryView} />
-      </div>
-      {historyView === "list" ? (
-        <RecentSessionsFeed sessions={recentSessions} limit={Infinity} onRefresh={load} profile={profile} fullName={fullName} />
-      ) : (
-        <SeasonCalendar sessions={recentSessions} startYear={season.startYear} />
+      {profileTab === "plans" && (
+        <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, padding: "24px 0" }}>
+          Ski plans calendar — Task 6.
+        </div>
       )}
 
       {/* ── Theme ── */}
+      {isOwnProfile && (
       <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px" }}>
         <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Theme</div>
         <div style={{ display: "flex", gap: 12 }}>
@@ -930,6 +782,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
           })}
         </div>
       </div>
+      )}
 
       {/* ── Season Passes ── */}
       {profile?.ski_passes?.length > 0 && (
@@ -950,7 +803,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
         <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ fontSize: 24 }}>🚗</div>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>My Vehicle</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>{isOwnProfile ? "My Vehicle" : "Vehicle"}</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: "white", marginTop: 2 }}>{profile.vehicle_label}</div>
             {profile.vehicle_seats > 0 && (
               <div style={{ fontSize: 12, color: "var(--color-accent-soft)", marginTop: 2, fontWeight: 700 }}>
@@ -991,16 +844,20 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
 
       {/* ── Connected Apps ── */}
       {/* Last section on the page — extra bottom clearance (mobile only)
-          so it isn't covered by the fixed mobile bottom nav bar. */}
-      <div className="mobile-bottom-clearance">
-        <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-          Connected Apps
+          so it isn't covered by the fixed mobile bottom nav bar.
+          Owner-only: StravaConnect issues OAuth connect/disconnect calls for the
+          signed-in user, so it must never render on someone else's profile. */}
+      {isOwnProfile && (
+        <div className="mobile-bottom-clearance">
+          <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
+            Connected Apps
+          </div>
+          <StravaConnect userId={profile?.id} />
         </div>
-        <StravaConnect userId={profile?.id} />
-      </div>
+      )}
 
-      {/* ── Modals ── */}
-      {showEdit && (
+      {/* ── Modals ── all owner-only ── */}
+      {isOwnProfile && showEdit && (
         <EditProfileModal
           profile={profile}
           onClose={() => setShowEdit(false)}
@@ -1008,7 +865,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
         />
       )}
 
-      {showShare && seasonStats && (
+      {isOwnProfile && showShare && seasonStats && (
         <ShareStatCard
           profile={{ ...profile, full_name: fullName }}
           stats={seasonStats}
@@ -1026,7 +883,7 @@ export default function ProfilePage({ onLogOut, onTabChange }) {
         />
       )}
 
-      {milestoneQueue[0] && !showShare && (
+      {isOwnProfile && milestoneQueue[0] && !showShare && (
         <MilestoneModal
           milestone={milestoneQueue[0]}
           onShare={() => { setShareFromMilestone(true); setShowShare(true) }}
