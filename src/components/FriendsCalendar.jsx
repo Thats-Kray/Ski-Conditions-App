@@ -61,6 +61,7 @@ export default function FriendsCalendar({ currentUser, onOpenTrip, onScopeChange
   const [selectedDay, setSelectedDay] = useState(null)
   const [joiningKey, setJoiningKey] = useState(null)
   const [joinError, setJoinError] = useState(null)
+  const [lastJoinAttempt, setLastJoinAttempt] = useState(null)
 
   const todayKey = localDateKey()
   const currentUserId = currentUser?.id || null
@@ -77,7 +78,15 @@ export default function FriendsCalendar({ currentUser, onOpenTrip, onScopeChange
           // getCrewMembers returns `profile:user_id (...)` with no bare user_id
           // column, so the user id lives at m.profile.id. m.id is the
           // crew_members row id, not a user.
-          const members = await getCrewMembers(c.id).catch(() => [])
+          //
+          // Deliberately no .catch() here: a swallowed rejection would let this
+          // crew's member Set silently resolve empty while Promise.allSettled
+          // reports the whole "crews" loader as fulfilled — no Retry notice, no
+          // console.error, a crew chip that quietly behaves as memberless. Let it
+          // propagate so Promise.all rejects, the outer fn() rejects, and
+          // runStatic's Promise.allSettled marks "crews" failed the same way it
+          // already does when getMyCrews() itself fails.
+          const members = await getCrewMembers(c.id)
           return [c.id, new Set(members.map((m) => m.profile?.id).filter(Boolean))]
         }))
         return { rows: rows || [], pairs }
@@ -155,6 +164,13 @@ export default function FriendsCalendar({ currentUser, onOpenTrip, onScopeChange
     () => new Map(crews.map((c, i) => [c.id, i])),
     [crews]
   )
+  // DayPlanCard's multi-crew footnote reads colorCtx.crewNameById to label anyone
+  // who belongs to two or more selected crews. Built from the same unfiltered
+  // `crews` array as crewIndexById — never a sorted/filtered view of it.
+  const crewNameById = useMemo(
+    () => new Map(crews.map((c) => [c.id, c.name])),
+    [crews]
+  )
   const friendFilterCount = useMemo(
     () => [...selected].filter((k) => k.startsWith("friend:")).length,
     [selected]
@@ -185,8 +201,8 @@ export default function FriendsCalendar({ currentUser, onOpenTrip, onScopeChange
   }), [plans, trips, inScope, currentUserId])
 
   const colorCtx = useMemo(() => ({
-    currentUserId, selectedCrewIds, crewIndexById, crewMemberIds,
-  }), [currentUserId, selectedCrewIds, crewIndexById, crewMemberIds])
+    currentUserId, selectedCrewIds, crewIndexById, crewMemberIds, crewNameById,
+  }), [currentUserId, selectedCrewIds, crewIndexById, crewMemberIds, crewNameById])
 
   // ── Actions ──────────────────────────────────────────────────────────────
   function toggle(key) {
@@ -207,9 +223,11 @@ export default function FriendsCalendar({ currentUser, onOpenTrip, onScopeChange
   async function handleJoin(dateKey, resortKey) {
     setJoiningKey(`${dateKey}|${resortKey}`)
     setJoinError(null)
+    setLastJoinAttempt({ dateKey, resortKey })
     try {
       await joinPlanAtResort(dateKey, resortKey)
       await loadPlans()
+      setLastJoinAttempt(null)
     } catch (err) {
       console.error("[FriendsCalendar] join failed:", err)
       setJoinError(err?.message || "Couldn't save your plan.")
@@ -229,6 +247,7 @@ export default function FriendsCalendar({ currentUser, onOpenTrip, onScopeChange
   }
 
   const nobodyToShow = hasLoaded && friends.length === 0 && crews.length === 0
+  const nothingSelected = selected.size === 0
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
@@ -272,11 +291,22 @@ export default function FriendsCalendar({ currentUser, onOpenTrip, onScopeChange
       {failed.crews && <FailureNotice label="your crews" onRetry={() => runStatic(["crews"])} />}
       {failed.friends && <FailureNotice label="your friends list" onRetry={() => runStatic(["friends"])} />}
       {failed.trips && <FailureNotice label="trips" onRetry={() => runStatic(["trips"])} />}
-      {joinError && <FailureNotice label={`your plan (${joinError})`} onRetry={() => setJoinError(null)} />}
+      {joinError && (
+        <FailureNotice
+          label={`your plan (${joinError})`}
+          onRetry={() => lastJoinAttempt && handleJoin(lastJoinAttempt.dateKey, lastJoinAttempt.resortKey)}
+        />
+      )}
 
       {nobodyToShow && (
         <div style={{ padding: "20px 16px", textAlign: "center", color: "var(--color-text-3)", fontSize: 13 }}>
           Add friends to see where they're skiing.
+        </div>
+      )}
+
+      {nothingSelected && (
+        <div style={{ padding: "20px 16px", textAlign: "center", color: "var(--color-text-3)", fontSize: 13 }}>
+          Pick at least one group above to see plans.
         </div>
       )}
 
