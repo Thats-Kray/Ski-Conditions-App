@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import PlanCalendar from "./PlanCalendar"
 import { localDateKey, monthBounds } from "../lib/calendarDates"
 import {
@@ -44,8 +44,7 @@ function etaToTimeInput(iso) {
 export default function SkiPlansTab({ userId = null, editable = false, resorts = [] }) {
   const [month, setMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1) })
   const [plans, setPlans] = useState([])
-  const [ownerId, setOwnerId] = useState(userId)
-  const [loading, setLoading] = useState(true)
+  const [hasLoaded, setHasLoaded] = useState(false)
   const [loadError, setLoadError] = useState(null)
   const [selectedDate, setSelectedDate] = useState(null)
   const [draftResort, setDraftResort] = useState("")
@@ -55,35 +54,37 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
 
   const todayKey = localDateKey()
 
-  // Whose plans this tab shows. On a friend's profile that's the userId prop; on
-  // your own it's you — which getVisiblePlansInRange can't tell us on its own,
-  // since the range query also returns friends' and crewmates' rows.
+  // Resolve whose plans to show and fetch them in one effect.
+  //
+  // Single effect on purpose: as two, a null result from getCurrentUser() left
+  // ownerId null, the fetch effect early-returned, and `loading` was never
+  // cleared — a permanent "Loading plans...". The finally here always clears it.
+  //
+  // On a friend's profile the owner is the userId prop; on your own it's the
+  // signed-in user, which getVisiblePlansInRange cannot tell us on its own since
+  // the range query also returns friends' and crewmates' rows.
   useEffect(() => {
     let cancelled = false
-    if (userId) { setOwnerId(userId); return }
-    getCurrentUser()
-      .then((u) => { if (!cancelled) setOwnerId(u?.id ?? null) })
-      .catch(() => { if (!cancelled) setOwnerId(null) })
-    return () => { cancelled = true }
-  }, [userId])
+    ;(async () => {
+      setLoadError(null)
+      try {
+        const id = userId || (await getCurrentUser())?.id || null
+        if (cancelled) return
+        if (!id) { setPlans([]); return }
 
-  const fetchPlans = useCallback(() => {
-    const { start, end } = monthBounds(month)
-    return getVisiblePlansInRange(start, end)
-  }, [month])
-
-  useEffect(() => {
-    if (!ownerId) return
-    let cancelled = false
-    setLoading(true); setLoadError(null)
-    fetchPlans()
-      // RLS already scoped these rows to what we may see; narrow to the one
-      // person whose profile this is.
-      .then((rows) => { if (!cancelled) setPlans(rows.filter((p) => p.user_id === ownerId)) })
-      .catch((err) => { if (!cancelled) { setPlans([]); setLoadError(err) } })
-      .finally(() => { if (!cancelled) setLoading(false) })
+        const { start, end } = monthBounds(month)
+        const rows = await getVisiblePlansInRange(start, end)
+        // RLS already scoped these rows to what we may see; narrow to the one
+        // person whose profile this is.
+        if (!cancelled) setPlans(rows.filter((p) => p.user_id === id))
+      } catch (err) {
+        if (!cancelled) { setPlans([]); setLoadError(err) }
+      } finally {
+        if (!cancelled) setHasLoaded(true)
+      }
+    })()
     return () => { cancelled = true }
-  }, [fetchPlans, ownerId])
+  }, [userId, month])
 
   const entriesByDate = new Map()
   for (const p of plans) {
@@ -152,7 +153,10 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
     }
   }
 
-  if (loading) {
+  // Only the first load blocks the tab. Returning the placeholder on a month
+  // change would unmount PlanCalendar, and it would remount with its viewDate
+  // re-initialised to the current month — making it impossible to page forward.
+  if (!hasLoaded) {
     return <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(255,255,255,0.3)", fontSize: 14 }}>Loading plans…</div>
   }
   if (loadError) {
@@ -163,7 +167,7 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
     <div>
       {editable && (
         <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>
-          Tap a day to mark where you&apos;re skiing. Friends can see it on your profile.
+          Tap a day to mark where you&apos;re skiing. Friends and crewmates can see it; mark a day Private to hide it.
         </div>
       )}
 
@@ -190,7 +194,7 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
                     {resortName(selectedPlan.resort_key) || selectedPlan.resort_key}
                   </div>
                   <div style={{ fontSize: 11, color: PLAN_COLOR, fontWeight: 700, marginTop: 2 }}>
-                    {selectedPlan.visibility === "private" ? "🔒 Private" : "👥 Visible to friends"}
+                    {selectedPlan.visibility === "private" ? "🔒 Private" : "👥 Visible to friends & crews"}
                   </div>
                 </div>
               </div>
@@ -216,7 +220,7 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
                 </select>
 
                 <div style={{ display: "flex", gap: 6 }}>
-                  {[{ key: "friends", label: "👥 Friends" }, { key: "private", label: "🔒 Private" }].map(({ key, label }) => (
+                  {[{ key: "friends", label: "👥 Friends & Crews" }, { key: "private", label: "🔒 Private" }].map(({ key, label }) => (
                     <button
                       key={key}
                       onClick={() => setDraftVisibility(key)}

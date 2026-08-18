@@ -28,8 +28,11 @@
 -- every referenced relation at plan time.
 --
 -- KNOWN GAP: daily_plans.group_id and the 'groups' value in the visibility CHECK
--- are left in place (non-destructive). Both are now unreachable. Setting
--- visibility='groups' makes a plan visible to nobody but its owner. Tracked as
+-- are left in place (non-destructive). group_id now points at a dead table. Note
+-- the policy below keys off `visibility <> 'private'`, so a row saved as
+-- visibility='groups' is readable by ALL friends and active crewmates, not by
+-- that group — it is not owner-only. Nothing in the app writes 'groups' (the UI
+-- offers only friends/private) and no live row uses it. Tracked as
 -- ROADMAP.md TASK 18.1.
 --
 -- KNOWN GAP: daily_plans still has no CREATE TABLE migration — it predates
@@ -46,12 +49,18 @@
 --   ALTER TABLE daily_plans ALTER COLUMN status SET DEFAULT 'planning';
 
 -- ── Relationship helpers ────────────────────────────────────────────────────
+--
+-- Both are STABLE, not the default VOLATILE: a VOLATILE function cannot be
+-- inlined and is re-executed for every candidate row inside the RLS qual, which
+-- would defeat the daily_plans_date_range index on the month-range scans the
+-- ski plan calendar issues. STABLE is correct here — neither writes, and both
+-- read only within-statement-consistent data.
 
 -- Accepted friendship in either direction. Reads friend_requests, which is what
 -- the app actually writes (sendFriendRequest/respondToFriendRequest).
 CREATE OR REPLACE FUNCTION public.are_friends(p_other UUID)
 RETURNS BOOLEAN
-LANGUAGE SQL SECURITY DEFINER SET search_path = public AS $$
+LANGUAGE SQL STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT EXISTS (
     SELECT 1 FROM friend_requests
     WHERE status = 'accepted'
@@ -65,7 +74,7 @@ $$;
 -- read access to anyone's plans.
 CREATE OR REPLACE FUNCTION public.shares_crew_with(p_other UUID)
 RETURNS BOOLEAN
-LANGUAGE SQL SECURITY DEFINER SET search_path = public AS $$
+LANGUAGE SQL STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT EXISTS (
     SELECT 1
     FROM crew_members me

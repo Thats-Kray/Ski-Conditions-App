@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { localDateKey } from "./calendarDates";
 
 /* -----------------------------
    Constants
@@ -2126,7 +2127,12 @@ export async function getFriendsLeaderboard() {
   // caller's own rows (the friends RLS policy was dead), so every friend showed
   // 0 days. Now that friends' rows come back, forward-looking planned days would
   // inflate "days on mountain" — a plan for next Saturday is not a day skied.
-  const todayISO = new Date().toISOString().slice(0, 10);
+  //
+  // localDateKey, not toISOString(): ski_date is a plain local DATE, and in
+  // Colorado toISOString() rolls over to tomorrow after ~5-6pm, which would let
+  // tomorrow's planned day count as a day skied — the exact inflation this cap
+  // exists to prevent.
+  const todayISO = localDateKey();
 
   const { data: allPlans, error: plansError } = await supabase
     .from("daily_plans")

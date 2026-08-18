@@ -656,6 +656,32 @@ rows and no code path (the app uses `crews`/`crew_members`). Also fixed:
       and `shares_crew_with()` correctly requires `active` on both sides), but the
       chip's member set and the RLS grant disagree. Filter at the query.
 
+**Whole-branch review caught 8 issues, all fixed the same session** — none were
+visible to any single task's reviewer:
+1. Month navigation on Profile → Ski Plans was dead: the `loading` early-return
+   unmounted `PlanCalendar`, which remounted with its `viewDate` re-initialised
+   to the current month. Fixed with a `hasLoaded` gate so only the first load
+   blocks the tab.
+2. The "👥 All Friends" scope chip returned true for *any* non-self row, so
+   non-friend crewmates appeared under a friends-only lens. Now gated on
+   `getAcceptedFriends()`.
+3. `getFriendsLeaderboard`'s new today-cap used `toISOString()` (UTC), which
+   after ~5-6pm MT advances to tomorrow and counts tomorrow's planned day as a
+   day skied — the exact inflation the cap was added to prevent. Now uses
+   `localDateKey()`.
+4. `are_friends()`/`shares_crew_with()` were VOLATILE, so they could not be
+   inlined and re-ran per candidate row inside the RLS qual, undercutting the new
+   `daily_plans_date_range` index. Both are now `STABLE`.
+5. The UI labelled plans "Visible to friends" while RLS also grants active
+   crewmates. Relabelled "Friends & Crews" rather than narrowing the grant.
+6. `SkiPlansPage`'s calendar kept the previous month's day-detail panel open
+   after navigating.
+7. A null `getCurrentUser()` left the Ski Plans tab in a permanent
+   "Loading plans…".
+8. Migration 032's KNOWN GAP wrongly claimed `visibility='groups'` rows are
+   owner-only; the policy keys off `visibility <> 'private'`, so they are
+   readable by all friends and crewmates. Comment corrected.
+
 **Verification notes:** RLS was proven by impersonating three real accounts in
 Postgres (`set local role authenticated` + `request.jwt.claims`), not by reading
 policy text — migration 030 is the precedent for SQL that reports success and

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import {
   getAllVisibleTrips,
   getCurrentUser,
+  getAcceptedFriends,
   getMyCrews,
   getCrewMembers,
   getVisiblePlansInRange,
@@ -116,7 +117,9 @@ function CalendarView({ myTrips, rsvpdTrips, invitedTrips, friendsTrips, skiPlan
       legend={Object.entries(DOT_COLORS).map(([role, color]) => ({ color, label: DOT_LABELS[role] }))}
       selectedDate={selectedDate}
       onSelectDay={setSelectedDate}
-      onMonthChange={onMonthChange}
+      // Clear the open day panel on month change — otherwise the previous
+      // month's detail stays pinned below a grid that no longer shows that day.
+      onMonthChange={(d) => { setSelectedDate(null); onMonthChange?.(d) }}
       renderDayDetail={(dateKey, entries) => (
         <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px", display: "grid", gap: 10 }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.7)" }}>
@@ -181,6 +184,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
   // ── Shared calendar scope (Sprint 34) ──
   const [crews, setCrews] = useState([])                          // [{ id, name, emoji }]
   const [crewMemberIds, setCrewMemberIds] = useState(new Map())   // crewId -> Set(userId)
+  const [friendIds, setFriendIds] = useState(new Set())           // accepted friends only
   const [scopes, setScopes] = useState(() => new Set(["me", "friends"]))
   const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1) })
   const [visiblePlans, setVisiblePlans] = useState([])
@@ -204,6 +208,9 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
       if (user) {
         await Promise.allSettled([
           loadTrips(),
+          getAcceptedFriends()
+            .then((rows) => setFriendIds(new Set((rows || []).map((f) => f.id))))
+            .catch(() => {}),
           getMyCrews()
             .then(async (rows) => {
               setCrews(rows || [])
@@ -244,7 +251,10 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
 
   const scopedPlans = !currentUser ? [] : visiblePlans.filter((p) => {
     if (p.user_id === currentUser?.id) return scopes.has("me")
-    if (scopes.has("friends")) return true
+    // Must test real friendship: getVisiblePlansInRange returns friends AND
+    // active crewmates, so returning true here would show non-friend crewmates
+    // under a chip that says "All Friends".
+    if (scopes.has("friends") && friendIds.has(p.user_id)) return true
     for (const s of scopes) {
       if (!s.startsWith("crew:")) continue
       if (crewMemberIds.get(s.slice(5))?.has(p.user_id)) return true
