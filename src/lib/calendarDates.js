@@ -27,3 +27,28 @@ export function monthBounds(d) {
   const end = dateKeyOf(d.getFullYear(), d.getMonth(), lastDay)
   return { start, end }
 }
+
+/**
+ * First and last date key of the Sunday–Saturday week containing `d`.
+ *
+ * Sunday-start matches the "Su Mo Tu We Th Fr Sa" header PlanCalendar renders,
+ * so the week view and the month grid never disagree about which column a day
+ * belongs in.
+ *
+ * Built from local date parts for the same reason documented at the top of this
+ * file: toISOString() shifts a day east of Greenwich for every negative-offset
+ * timezone, which is all of Colorado.
+ */
+export function weekBounds(d) {
+  const sunday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay())
+  const saturday = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + 6)
+  return { start: localDateKey(sunday), end: localDateKey(saturday) }
+}
+
+/** The seven date keys of the week containing `d`, Sunday first. */
+export function weekDayKeys(d) {
+  const sunday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay())
+  return Array.from({ length: 7 }, (_, i) =>
+    localDateKey(new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + i))
+  )
+}
