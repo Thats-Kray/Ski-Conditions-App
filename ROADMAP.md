@@ -834,6 +834,28 @@ Last updated 8/13/2026 at 3:49PM
 -~~Profile page should have a tab for "Days I plan to ski" that shows a calendar view. Users can mark which mountains they plan to go to on what days. The purpose of this page is to help people make plans with their friends. People can check their friends calendar to see where people are going this weekend, next weekend, etc. and then make their decision to go to a mountain based on where there friends are skiing.~~ **DONE — Sprint 34.** Profile → "📅 Ski Plans" tab (editable on your own profile, read-only on a friend's), plus crew-filterable scope chips on the Plans tab calendar for the "where is everyone going this weekend?" view.
 -~~Reorganize certain pages in the app. (i.e. Friends and Leaderboard should live on the social page in its own tab, same with the friends list, and the Buddy page - which should be renamed Community instead of Buddy)~~ **DONE — Sprint 32.** Friends/Leaderboard/friends-list were already on the Social page; the Buddy board moved there and was renamed Community.
 
+-**Social tab UI cleanup.** The Social tab layout is messy — it now stacks a 4-way
+sub-tab bar (Leaderboard / Crews / Friends / Community) inside MessagingCenter's own
+Chats/People/Activity shell, so there are two competing levels of navigation before any
+content. Sprint 34 added a fifth surface (full friend profiles) reachable from it. Needs
+a real information-architecture pass, not just spacing tweaks.
+
+-**"Where are my friends skiing" calendar — the flagship view.** Sprint 34 shipped the
+mechanics (per-person plan calendars, crew-filterable scope chips on the Plans tab), but
+the presentation is a first cut and the placement is unresolved. Kyle's read: this is the
+single biggest driver of return visits — the reason someone opens the app midweek is to
+see where everyone is going this weekend and decide from that. Worth doing properly
+rather than incrementally. Open questions to settle in brainstorming:
+  - Where does it live? Its own top-level tab, the Home tab's primary card, or stay
+    inside Plans? Today it is a sub-tab of Plans, which buries it.
+  - Weekend-first framing: "this weekend / next weekend" may matter more than a month
+    grid. The month grid is the planning tool; the weekend view is the *decision* tool.
+  - Grouping: by mountain ("6 people at Copper Saturday") reads better for deciding
+    where to go than by person, which is what the calendar shows today.
+  - Should it surface a nudge — join a friend's day, or start one at that mountain?
+  - Empty state matters enormously here: with nobody planned, the page must still give
+    a reason to come back.
+
 # New Items
 Ski Tracking User Interface. Page for viewing live tracking data.
 -include a home-screen widget that shows live stats on the users as an iphone lock screen widget
