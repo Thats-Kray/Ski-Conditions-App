@@ -56,12 +56,20 @@ friends controls what appears.
 | 7 | **The color rides the person, not the mountain card.** | A mountain can hold skiers from two crews, so a card cannot take one color without an arbitrary tie-break. Avatar rings are unambiguous. Mountain cards use neutral theme surface. |
 | 8 | **"I'm in" writes your own plan from the card.** | Closes the loop: see three friends at Copper, tap once, you are on the list. Read-only would cost four taps and a tab change to act on what you just read. |
 | 9 | **Default view is Week, anchored on the current week.** | Week is the decision tool; month is the planning tool. |
+| 10 | **Trips fold into the mountain cards as a badge.** | Discovered while mapping files: the Plans tab's existing calendar renders trips as well as plans, so a plans-only replacement would be a regression. A trip already carries `resort_key` + `ski_date` — the same shape as a plan — so it groups into the same card rather than sitting beside it. |
 
 ## 4. The design
 
 ### 4.1 Shell
 
-The Plans tab renders `FriendsCalendar` as its primary content. Header controls:
+The Plans tab **already has** `🎿 Trips | 📅 Calendar` sub-tabs (`SkiPlansPage.jsx`
+`SUB_TABS`, ~line 300), defaulting to Trips. Two changes, not a restructure:
+
+1. The default sub-tab flips to **Calendar**.
+2. The Calendar sub-tab's body — today the inline `CalendarView` function at
+   `SkiPlansPage.jsx:97-165` — is replaced by `FriendsCalendar`.
+
+Header controls inside the Calendar sub-tab:
 
 ```
 +--------------------------------------------------+
@@ -70,8 +78,8 @@ The Plans tab renders `FriendsCalendar` as its primary content. Header controls:
 +--------------------------------------------------+
 ```
 
-The existing Plans-tab content (active crew rail, your trips, season calendar) stays,
-below the calendar.
+Everything else on the Plans tab — the create-trip CTA, the active crew rail, the
+trips list on the Trips sub-tab — is untouched.
 
 ### 4.2 Week view
 
@@ -129,13 +137,21 @@ and in the mobile day rows.
 
 ```
 +---------------------------------------+
-| Copper Mountain               3 going |
-| (o)(o)(o)  Nate, Rafe, Gaby           |
+| Copper Mountain               6 going |
+| [ TRIP ] Powder Day                   |
+| (o)(o)(o)(o)(o)(o)                    |
+| Nate, Rafe, Gaby, +3                  |
 |                             [ I'm in ]|
 +---------------------------------------+
 ```
 
 - Neutral theme surface — never a crew color (decision #7).
+- **Trips fold in** (decision #10). A trip at the same resort on the same day merges
+  into that mountain's card, shown as a `TRIP` badge with its title; its going/invited
+  RSVPs count toward the headcount. Tapping the badge opens the existing
+  `TripDetailModal`, exactly as the current calendar's trip entries do. A mountain with
+  no trip simply has no badge.
+- Names truncate to the first three plus `+N`, avatars to six.
 - Each avatar carries a **ring** in its owner's crew color.
 - Tapping a name or avatar opens the existing `UserProfileModal`. Sprint 34's
   `lib/profileNav.js` context already makes this available without prop-drilling.
@@ -214,7 +230,7 @@ A legend renders only the crews currently in view.
 
 | File | Responsibility | Depends on |
 |---|---|---|
-| `lib/calendarGrouping.js` *(new, pure)* | `plans[]` → `Map<dateKey, MountainGroup[]>`, each group sorted by headcount desc | nothing |
+| `lib/calendarGrouping.js` *(new, pure)* | `plans[]` + `trips[]` → `Map<dateKey, MountainGroup[]>`, each group sorted by headcount desc, trips merged into the matching resort group | nothing |
 | `lib/crewColors.js` *(new, pure)* | crew id → theme token; person → ring color, per §4.6 rules | nothing |
 | `lib/calendarDates.js` *(extend)* | add `weekBounds(d)` beside the existing `monthBounds(d)` | nothing |
 | `components/calendar/DayPlanCard.jsx` *(new)* | one mountain: name, headcount, avatar rings, "I'm in" | `crewColors`, `profileNav` |
@@ -247,6 +263,8 @@ Fetches per view change (month nav, week nav, view toggle):
 - `getAcceptedFriends()` — required to gate the `All Friends` chip. Sprint 34 review
   finding #2: without it, any non-self row matched, leaking non-friend crewmates.
 - `getMyCrews()` + `getCrewMembers(id)` per crew — for chips, colors and membership.
+- `getAllVisibleTrips()` — for the trip badges (decision #10). Already called by
+  `SkiPlansPage`; the result is lifted and passed down rather than fetched twice.
 
 Crew membership is cached across date navigation; only the plan range refetches.
 
@@ -317,6 +335,8 @@ this project has used since Sprint 33.
 1. Two accounts, one crew containing one of them, plus a friend outside that crew.
 2. Two different mountains planned on the same day → both cards render, sorted by
    headcount, the busier mountain on top.
+2b. A trip at a resort where someone also has a plan → **one** card with a TRIP badge,
+   not two cards. Tapping the badge opens `TripDetailModal`.
 3. Week ↔ month toggle preserves the anchor date; `Today` returns to the current week.
 4. Month navigation works (Sprint 34 review finding #1: a `loading` early-return that
    unmounts the calendar resets its internal `viewDate` — use the `hasLoaded` gate).
@@ -344,5 +364,6 @@ predictable first), and the pure libs before the components that consume them.
 6. `PlanCalendar.jsx` `renderCellContent` prop + month view wiring
 7. `CalendarFilterSheet.jsx` + chip row
 8. `FriendsCalendar.jsx` orchestrator
-9. Mount in `SkiPlansPage`, delete the old scope chips, rewire `inScope()`
+9. Mount in `SkiPlansPage`: replace the inline `CalendarView`, flip the default
+   sub-tab to Calendar, delete the old scope chips, rewire `inScope()`
 10. "I'm in" write path with field-preserving merge
