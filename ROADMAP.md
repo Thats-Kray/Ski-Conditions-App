@@ -577,7 +577,7 @@ Not code — external console setup in Google Cloud Console and Meta for Develop
 
 ## SECTION 16 — Debt Clearing (Sprint 32)
 
-**Plan:** `sprints/sprint-32-debt-clearing.md` — first sprint run on the Opus-plans/Sonnet-implements model from `Claude Code - Opus Planning Mode.md` rather than all-Opus subagents. One Haiku scout, one Opus plan, four Sonnet implementers (three in parallel), one Sonnet whole-branch review. Reusable agent definitions added at `.claude/agents/{scout,implementer,reviewer,debugger}.md`.
+**Plan:** `sprints/sprint-32-debt-clearing.md` — first sprint run on the Opus-plans/Sonnet-implements model from `Claude Code - Opus Planning Mode.md` rather than all-Opus subagents. One Haiku scout, one Opus plan, four Sonnet implementers (three in parallel), one Sonnet whole-branch review. Reusable agent definitions were added at `.claude/agents/{scout,implementer,reviewer,debugger}.md` during this sprint but **were removed afterward** — `.claude/` is gitignored, so they were never version-controlled, and Kyle briefly reverted to the superpowers flow before settling back on this model for Sprint 33.
 
 - [x] **TASK 15.1** — see Section 15 above.
 - [x] **Ski Buddy Board moved to Social, renamed "🎿 Community"** — removed from the Snow tab's sub-nav (Snow is now exactly 🏔️ Snow / 🗺️ Map / 📋 Board) and added as a 4th section in `FriendsPage.jsx` alongside Leaderboard / Crews / Friends. Label text only — `SkiBuddyBoard`, `ski_buddy_posts`, `skiBuddyOptions.js` and all RPC names are unchanged. Note: the rest of Kyle's nav-reorg note (Friends and Leaderboard living on the Social page) was **already implemented** — scouting found it in place before any work started.
@@ -624,11 +624,11 @@ Not code — external console setup in Google Cloud Console and Meta for Develop
 
 *Last verified against actual code/migrations/git history 2026-08-06 (not just checkbox state — see [[project_2026_08_roadmap_completion]], [[project_2026_08_04_mountain_page_session]], and [[project_2026_08_06_premium_ui_uplift_session]] memory).*
 
-All sprints 1–31 are merged, including Mountain Board (Section 11), the Mountain Page/Krames Butte architecture (Section 12), the Premium UI Uplift redesign (Section 13), the Section 10 theme-switching MVP, the Trust Tier & Verification Infrastructure (Section 14), and the Ski Buddy Board (Section 15) — all implemented and live, including migrations 023–028.
+All sprints 1–33 are merged to `main`, pushed, and live on powdays.app — including Mountain Board (Section 11), the Mountain Page/Krames Butte architecture (Section 12), the Premium UI Uplift redesign (Section 13), the Section 10 theme-switching MVP, Trust Tier & Verification Infrastructure (Section 14), the Ski Buddy Board (Section 15), Debt Clearing (Section 16), and the Strava token exposure fix (Section 17). Migrations 023–031 are all applied to the live Supabase project.
 
-Sprint 32 (Section 16) is **implemented and reviewed but not yet merged** — it sits on branch `sprint-32-debt-clearing` pending a manual visual check. Note that `migrations/029_admin_moderation_release.sql` **is already applied to the live Supabase project**, so the database is ahead of `main` until this branch merges.
+Sprints 32 and 33 were verified on the live app by Kyle on 2026-08-17. Both sprint branches have been deleted (fully merged, nothing unique on them).
 
-Sprint 33 (Section 17) is **implemented, not yet merged** — it sits on branch `sprint-33-profile-token-exposure`. `migrations/030_profile_token_exposure.sql` is **written but deliberately not applied**; it must wait until the frontend build is live and Kyle approves (see Section 17's own notes for why applying it early breaks production).
+**Note on migration 030:** it was applied, but its column-level `REVOKE` was a silent no-op — see Section 17. `migrations/031_profile_token_column_grants.sql` is the migration that actually closed the exposure, verified live via `has_column_privilege`.
 
 | Section | Tasks | Done |
 |---------|-------|------|
@@ -649,8 +649,8 @@ Sprint 33 (Section 17) is **implemented, not yet merged** — it sits on branch 
 | 14 — Trust Tier & Verification Infrastructure | 2 | 1 (Task 14.1, OAuth app credential setup, still open — see task notes) |
 | 15 — Ski Buddy Board | 2 | 2 (Task 15.1 completed in Sprint 32 — see Section 16) |
 | 16 — Debt Clearing (Sprint 32) | 4 | 4 |
-| 17 — Profile Token Exposure (Sprint 33) | 4 | 3 (migration 030 written but deliberately not applied — see task notes) |
-| **Total** | **44** | **41** |
+| 17 — Profile Token Exposure (Sprint 33) | 4 | 4 (migration 030 was a no-op; migration 031 closed it — see task notes) |
+| **Total** | **44** | **42** |
 
 Task 0.2's hex-token cleanup is complete (2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) and `migrations/024_theme_preference.sql` (Section 10) are both applied to the live Supabase project (2026-08-08). Section 10's theme-switching MVP is implemented and its migration is live, but `npm run lint` and a visual pass across all 5 themes haven't been run yet, and full app-wide theming beyond the MVP scope remains unscheduled follow-up work — see Section 10's task notes.
 
@@ -678,6 +678,8 @@ Last updated 8/13/2026 at 3:49PM
 -Improve the Powder Score algorithm
 -Improve the mountain conditions and weather API
 -Improve the Map View and test out Friends locations on each mountain
+-Make Profile page visible to other users. Friends have access to view friends profiles and see their season stats.
+-Profile page should have a tab for "Days I plan to ski" that shows a calendar view. Users can mark which mountains they plan to go to on what days. The purpose of this page is to help people make plans with their friends. People can check their friends calendar to see where people are going this weekend, next weekend, etc. and then make their decision to go to a mountain based on where there friends are skiing.
 -~~Reorganize certain pages in the app. (i.e. Friends and Leaderboard should live on the social page in its own tab, same with the friends list, and the Buddy page - which should be renamed Community instead of Buddy)~~ **DONE — Sprint 32.** Friends/Leaderboard/friends-list were already on the Social page; the Buddy board moved there and was renamed Community.
 
 # New Items
