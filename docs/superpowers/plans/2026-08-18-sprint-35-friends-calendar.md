@@ -1588,7 +1588,7 @@ merged — this task reuses its loader-registry pattern.
 Create `src/components/FriendsCalendar.jsx`:
 
 ```jsx
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import PlanCalendar from "./PlanCalendar"
 import WeekView from "./calendar/WeekView"
 import DayPlanCard from "./calendar/DayPlanCard"
@@ -1596,7 +1596,7 @@ import FilterChipRow from "./calendar/FilterChipRow"
 import CalendarFilterSheet from "./calendar/CalendarFilterSheet"
 import { localDateKey, monthBounds, weekBounds } from "../lib/calendarDates"
 import { groupByDayAndMountain, totalAttendees } from "../lib/calendarGrouping"
-import { crewColor, ringColorFor, NEUTRAL_RING } from "../lib/crewColors"
+import { ringColorFor, NEUTRAL_RING } from "../lib/crewColors"
 import { resortName } from "../lib/resorts"
 import { formatDate } from "../lib/format"
 import {
@@ -1710,12 +1710,20 @@ export default function FriendsCalendar({ currentUser, onOpenTrip, onScopeChange
   // ── Plan range: refetches on every date/view change ──────────────────────
   const { start, end } = viewMode === "week" ? weekBounds(anchor) : monthBounds(anchor)
 
+  // Guards against out-of-order responses: clicking > twice quickly fires two
+  // fetches, and the slower one must not overwrite the newer range's rows.
+  const rangeRef = useRef("")
+
   const loadPlans = useCallback(async () => {
+    const token = `${start}|${end}`
+    rangeRef.current = token
     try {
       const rows = await getVisiblePlansInRange(start, end)
+      if (rangeRef.current !== token) return   // a newer range already won
       setPlans(rows || [])
       setFailed((prev) => { const n = { ...prev }; delete n.plans; return n })
     } catch (err) {
+      if (rangeRef.current !== token) return
       setPlans([])
       console.error("[FriendsCalendar] \"plans\" failed to load:", err)
       setFailed((prev) => ({ ...prev, plans: true }))
@@ -1724,9 +1732,7 @@ export default function FriendsCalendar({ currentUser, onOpenTrip, onScopeChange
 
   useEffect(() => {
     if (!currentUserId) return
-    let cancelled = false
-    loadPlans().then(() => { if (cancelled) return })
-    return () => { cancelled = true }
+    loadPlans()
   }, [currentUserId, loadPlans])
 
   // ── Filtering ────────────────────────────────────────────────────────────
@@ -2019,22 +2025,26 @@ deleting, since the trips list below may still use them: `PlanCalendar`, and pos
 
 - [ ] **Step 3: Delete the plan-range fetch and the calendar-month state**
 
-The month fetch now lives inside `FriendsCalendar`. Delete:
+The month fetch now lives inside `FriendsCalendar`. Delete these two state
+declarations:
 
 ```jsx
   const [calMonth, setCalMonth] = useState(...)
   const [visiblePlans, setVisiblePlans] = useState([])
-  const [scopes, setScopes] = useState(() => new Set(["me", "friends"]))
 ```
 
-and the whole `useEffect` that calls `getVisiblePlansInRange`, and the `scopedPlans`
-computation. Replace the `scopes` state with a value fed from the child:
+along with the whole `useEffect` that calls `getVisiblePlansInRange`, and the
+`scopedPlans` computation (nothing reads it once `CalendarView` is gone).
+
+**Keep `scopes` exactly as it is** — same declaration, same initial value:
 
 ```jsx
-  // Lifted from FriendsCalendar so the Trips list below follows the same filter
-  // the calendar is using — one control for the whole tab, not two.
   const [scopes, setScopes] = useState(() => new Set(["me", "friends"]))
 ```
+
+Its *writer* changes, not its shape. Today the deleted chip row calls `setScopes`;
+from now on `FriendsCalendar` does, through the `onScopeChange` prop wired in Step 4.
+That is what keeps the Trips sub-tab following the same filter as the calendar.
 
 `inScope()`, `mineScoped`, `scopedMyTrips`, `scopedRsvpdTrips`, `scopedInvitedTrips` and
 `scopedFriendsTrips` all stay exactly as they are — they already read `scopes`.
