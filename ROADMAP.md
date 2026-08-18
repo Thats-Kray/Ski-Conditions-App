@@ -704,6 +704,27 @@ visible to any single task's reviewer:
       They are now `'pending'`, matching `inviteToCrewGroup` and the existing
       pending-invites UI.
 
+### TASK 18.5 — Crew invites were never visible to the invitee — ✅ COMPLETE (migration 035)
+- [x] Found while verifying migration 034. `"crew members can view members"` was
+      `USING (my_crew_role(crew_id) IS NOT NULL)`, and `my_crew_role()` only matches
+      `status='active'` — so a **pending** invitee could not SELECT their own
+      `crew_members` row.
+- [x] Two pre-existing consequences, both confirmed against the live database:
+      `getPendingCrewInvites()` filters on `status='pending'`, exactly the rows the
+      policy hid, so it always returned `[]` and the pending-invite UI never had
+      anything to show; and `acceptCrewInvite()` issues `UPDATE ... WHERE`, which
+      must first find its row through the SELECT policy, so it matched nothing and
+      **silently no-opped**.
+- [x] The app never hit this because nobody ever actually accepted an invite — the
+      only way anyone joined a crew was being inserted directly as `'active'` via
+      `createCrew(memberIds)` relying on the column DEFAULT, i.e. force-joining.
+- [x] This is why 034 and 035 belong together: 034 correctly switched invited
+      members to `'pending'`, which without 035 would have made them invisible and
+      unable to accept — turning a latent bug into a visible regression.
+- [x] Fix: you may always SELECT your own membership row, whatever its status.
+      Widens nothing else — you could already read every member of any crew you are
+      active in.
+
 ### TASK 18.4 — `getCrewMembers()` returns pending members
 - [ ] The crew chips on the shared calendar build their member sets from
       `getCrewMembers`, which neither selects nor filters `crew_members.status`, so
@@ -741,6 +762,7 @@ block a real pending crew invitee (`without_guard: true`, `with_active_guard: fa
 
 **Files:** `migrations/032_daily_plans_visibility_fix.sql`,
 `migrations/033_friend_request_consent.sql`, `migrations/034_crew_membership_consent.sql`,
+`migrations/035_crew_pending_invite_visibility.sql`,
 `src/lib/socialApi.js`,
 `src/lib/profileNav.js`, `src/lib/calendarDates.js`, `src/lib/profileStats.js`,
 `src/components/PlanCalendar.jsx`, `src/components/ProfileStats.jsx`,
@@ -779,8 +801,8 @@ Sprints 32 and 33 were verified on the live app by Kyle on 2026-08-17. Both spri
 | 15 — Ski Buddy Board | 2 | 2 (Task 15.1 completed in Sprint 32 — see Section 16) |
 | 16 — Debt Clearing (Sprint 32) | 4 | 4 |
 | 17 — Profile Token Exposure (Sprint 33) | 4 | 4 (migration 030 was a no-op; migration 031 closed it — see task notes) |
-| 18 — Friend Profiles & Ski Plan Calendar (Sprint 34) | 4 | 1 (18.3 SECURITY fix shipped as migration 034; 18.1/18.2/18.4 remain deliberate follow-ups) |
-| **Total** | **48** | **43** |
+| 18 — Friend Profiles & Ski Plan Calendar (Sprint 34) | 5 | 2 (18.3 SECURITY fix as migration 034, 18.5 crew-invite visibility as migration 035; 18.1/18.2/18.4 remain deliberate follow-ups) |
+| **Total** | **49** | **44** |
 
 Task 0.2's hex-token cleanup is complete (2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) and `migrations/024_theme_preference.sql` (Section 10) are both applied to the live Supabase project (2026-08-08). Section 10's theme-switching MVP is implemented and its migration is live, but `npm run lint` and a visual pass across all 5 themes haven't been run yet, and full app-wide theming beyond the MVP scope remains unscheduled follow-up work — see Section 10's task notes.
 
