@@ -19,6 +19,7 @@ import {
 import ShareStatCard from "./ShareStatCard"
 import StravaConnect from "./StravaConnect"
 import SeasonCalendar from "./SeasonCalendar"
+import SkiPlansTab from "./SkiPlansTab"
 import Avatar from "./ui/Avatar"
 import Card from "./ui/Card"
 import Button from "./ui/Button"
@@ -750,9 +751,7 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
       )}
 
       {profileTab === "plans" && (
-        <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, padding: "24px 0" }}>
-          Ski plans calendar — Task 6.
-        </div>
+        <SkiPlansTab userId={userId} editable={isOwnProfile} resorts={resorts} />
       )}
 
       {/* ── Theme ── */}
