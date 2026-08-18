@@ -6,6 +6,7 @@ import OnboardingFlow from "./components/OnboardingFlow"
 import PowderMap from "./components/PowderMap"
 import MessagingCenter from "./components/MessagingCenter"
 import ProfilePage from "./components/ProfilePage"
+import { ProfileNavContext } from "./lib/profileNav"
 import SkiPlansPage from "./components/SkiPlansPage"
 import TripDetailModal from "./components/TripDetailModal"
 import { useNotificationCount } from "./components/NotificationBell"
@@ -912,6 +913,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("home")
   const [conditionsSubTab, setConditionsSubTab] = useState("conditions")
   const [mountainPageResortKey, setMountainPageResortKey] = useState(null)
+  // Full-page read-only view of another user's profile (Sprint 34). Same
+  // takeover pattern as mountainPageResortKey; cleared in handleTabChange.
+  const [viewingProfileId, setViewingProfileId] = useState(null)
   const [passFilter, setPassFilter] = useState("All")
   const [query, setQuery] = useState("")
   const [sortBy, setSortBy] = useState("Powder Score")
@@ -1357,6 +1361,9 @@ export default function App() {
 
   const handleTabChange = (tab) => {
     setMountainPageResortKey(null)
+    // Clear the friend-profile takeover too, or bottom-nav navigation would
+    // leave a stale profile mounted over the tab the user just picked.
+    setViewingProfileId(null)
     setActiveTab(tab)
   }
 
@@ -1423,6 +1430,10 @@ export default function App() {
   }
 
   return (
+    // Provider is deliberately not indented over the tree below — wrapping it
+    // this way keeps the Sprint 34 diff to two lines instead of re-indenting
+    // ~500 lines of JSX.
+    <ProfileNavContext.Provider value={setViewingProfileId}>
     <div
       style={{
         minHeight: "100vh",
@@ -1647,7 +1658,16 @@ export default function App() {
         paddingRight: isMobile ? 14 : 20,
         paddingBottom: isMobile ? undefined : 48,
       }}>
-        {mountainPageResortKey ? (
+        {viewingProfileId ? (
+          /* Takes precedence over MountainPage so a profile opened from inside
+             a mountain page (e.g. its board) actually renders. */
+          <ProfilePage
+            userId={viewingProfileId}
+            onBack={() => setViewingProfileId(null)}
+            onTabChange={handleTabChange}
+            resorts={RESORTS}
+          />
+        ) : mountainPageResortKey ? (
           <MountainPage
             resortKey={mountainPageResortKey}
             resort={mountainPageResort}
@@ -1951,7 +1971,7 @@ export default function App() {
         {activeTab === "profile" && (
           <div style={{ marginTop: 8 }}>
             {currentUser ? (
-              <ProfilePage onLogOut={handleLogOut} onTabChange={setActiveTab} />
+              <ProfilePage onLogOut={handleLogOut} onTabChange={setActiveTab} resorts={RESORTS} />
             ) : (
               <div
                 style={{
@@ -1981,5 +2001,6 @@ export default function App() {
         )}
       </div>
     </div>
+    </ProfileNavContext.Provider>
   )
 }
