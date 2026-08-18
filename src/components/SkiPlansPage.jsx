@@ -5,13 +5,11 @@ import {
   getAcceptedFriends,
   getMyCrews,
   getCrewMembers,
-  getVisiblePlansInRange,
 } from "../lib/socialApi"
-import { monthBounds } from "../lib/calendarDates"
 import TripCard from "./TripCard"
 import CreateTripModal from "./CreateTripModal"
 import TripDetailModal from "./TripDetailModal"
-import PlanCalendar from "./PlanCalendar"
+import FriendsCalendar from "./FriendsCalendar"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { formatDate } from "../lib/format"
 import Avatar from "./ui/Avatar"
@@ -35,8 +33,8 @@ function UpcomingStrip({ trips, invitedTrips, currentUser, onOpen }) {
         {allCards.map((trip) => {
           // Kept literal: feeds hex-alpha-suffix template literals below
           // (`${accent}22`/`44`) — var() references break when concatenated
-          // with a hex alpha suffix (same constraint as DOT_COLORS below,
-          // SKILL_OPTIONS/TYPE_META precedent from Tasks 6/8).
+          // with a hex alpha suffix (same constraint as SKILL_OPTIONS/TYPE_META
+          // precedent from Tasks 6/8).
           const accent = trip._role === "invited" ? "#60a5fa" : "#22c55e"
           const going = (trip.rsvps || []).filter((r) => r.status === "going").length
           return (
@@ -87,87 +85,6 @@ function UpcomingStrip({ trips, invitedTrips, currentUser, onOpen }) {
   )
 }
 
-/* ── Calendar view ─────────────────────────────────────────────────── */
-// Dot colors kept as literal hex: they feed `${color}11`/`33` alpha-suffix
-// template literals below, and var() references break when concatenated with a
-// hex alpha suffix (same constraint as SKILL_OPTIONS / TYPE_META).
-const DOT_COLORS = { mine: "#60a5fa", going: "#22c55e", invited: "#fbbf24", friend: "#a78bfa", daily: "#67e8f9" }
-const DOT_LABELS = { mine: "Your Trip", going: "Going", invited: "Invited", friend: "Friend's Trip", daily: "Check-in" }
-
-function CalendarView({ myTrips, rsvpdTrips, invitedTrips, friendsTrips, skiPlans, currentUserId, onOpenTrip, onMonthChange }) {
-  const [selectedDate, setSelectedDate] = useState(null)
-
-  const entriesByDate = new Map()
-  function addToDate(date, entry) {
-    if (!date) return
-    const key = date.slice(0, 10)
-    if (!entriesByDate.has(key)) entriesByDate.set(key, [])
-    entriesByDate.get(key).push(entry)
-  }
-  myTrips.forEach((t) => addToDate(t.ski_date, { ...t, _role: "mine" }))
-  rsvpdTrips.forEach((t) => addToDate(t.ski_date, { ...t, _role: "going" }))
-  invitedTrips.forEach((t) => addToDate(t.ski_date, { ...t, _role: "invited" }))
-  friendsTrips.forEach((t) => addToDate(t.ski_date, { ...t, _role: "friend" }))
-  skiPlans.forEach((p) => addToDate(p.ski_date, { ...p, _role: "daily" }))
-
-  return (
-    <PlanCalendar
-      entriesByDate={entriesByDate}
-      dotColorFor={(e) => DOT_COLORS[e._role]}
-      legend={Object.entries(DOT_COLORS).map(([role, color]) => ({ color, label: DOT_LABELS[role] }))}
-      selectedDate={selectedDate}
-      onSelectDay={setSelectedDate}
-      // Clear the open day panel on month change — otherwise the previous
-      // month's detail stays pinned below a grid that no longer shows that day.
-      onMonthChange={(d) => { setSelectedDate(null); onMonthChange?.(d) }}
-      renderDayDetail={(dateKey, entries) => (
-        <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px", display: "grid", gap: 10 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.7)" }}>
-            {formatDate(dateKey)}
-          </div>
-          {entries.length === 0 ? (
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.3)" }}>Nothing planned this day.</div>
-          ) : entries.map((t, i) => {
-            const isTrip = Boolean(t.id) && t._role !== "daily"
-            const isSomeoneElsesPlan = t._role === "daily" && t.profile && t.user_id !== currentUserId
-            return (
-              <button
-                key={t.id || i}
-                onClick={() => isTrip && onOpenTrip(t)}
-                style={{
-                  background: `${DOT_COLORS[t._role]}11`,
-                  border: `1px solid ${DOT_COLORS[t._role]}33`,
-                  borderLeft: `3px solid ${DOT_COLORS[t._role]}`,
-                  borderRadius: "0 12px 12px 0",
-                  padding: "10px 14px",
-                  textAlign: "left",
-                  cursor: isTrip ? "pointer" : "default",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
-                <span style={{ fontSize: 18 }}>{resortEmoji(t.resort_key)}</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>
-                    {isSomeoneElsesPlan
-                      ? `${t.profile.first_name || t.profile.username || "Someone"} → ${resortName(t.resort_key) || t.resort_key}`
-                      : (t.title || resortName(t.resort_key) || t.resort_key)}
-                  </div>
-                  <div style={{ fontSize: 11, color: DOT_COLORS[t._role], fontWeight: 700, marginTop: 2 }}>
-                    {DOT_LABELS[t._role]}
-                  </div>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      )}
-    />
-  )
-}
-
-
 /* ── Main page ─────────────────────────────────────────────────────── */
 export default function SkiPlansPage({ onRequireLogin, resorts }) {
   const [currentUser, setCurrentUser] = useState(null)
@@ -179,15 +96,12 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [stripTrip, setStripTrip] = useState(null)
-  const [subTab, setSubTab] = useState("trips")
+  const [subTab, setSubTab] = useState("calendar")
 
   // ── Shared calendar scope (Sprint 34) ──
-  const [crews, setCrews] = useState([])                          // [{ id, name, emoji }]
   const [crewMemberIds, setCrewMemberIds] = useState(new Map())   // crewId -> Set(userId)
   const [friendIds, setFriendIds] = useState(new Set())           // accepted friends only
   const [scopes, setScopes] = useState(() => new Set(["me", "friends"]))
-  const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1) })
-  const [visiblePlans, setVisiblePlans] = useState([])
 
   const loadTrips = useCallback(async () => {
     try {
@@ -213,7 +127,6 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
             .catch(() => {}),
           getMyCrews()
             .then(async (rows) => {
-              setCrews(rows || [])
               const pairs = await Promise.all(
                 (rows || []).map(async (c) => {
                   const members = await getCrewMembers(c.id).catch(() => [])
@@ -233,22 +146,6 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
     init()
   }, [loadTrips])
 
-  // Plans visible to me for the month the calendar is showing. RLS decides who
-  // is included (own + non-private rows of friends/active crewmates); the crew
-  // chips below are a display lens over rows already authorized server-side.
-  useEffect(() => {
-    // Plain guard, no setState here — scopedPlans below already yields [] when
-    // there is no signed-in user, and setting state synchronously in an effect
-    // trips react-hooks/set-state-in-effect.
-    if (!currentUser) return
-    let cancelled = false
-    const { start, end } = monthBounds(calMonth)
-    getVisiblePlansInRange(start, end)
-      .then((rows) => { if (!cancelled) setVisiblePlans(rows) })
-      .catch(() => { if (!cancelled) setVisiblePlans([]) })
-    return () => { cancelled = true }
-  }, [calMonth, currentUser])
-
   // A trip belongs to "me" if I host it, RSVP'd, or was invited; friendsTrips
   // follow the friends/crew chips the same way check-ins do. Without this the
   // chips only filtered check-ins and every trip rendered regardless of scope.
@@ -267,19 +164,6 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
   const scopedInvitedTrips = mineScoped ? invitedTrips : []
   const scopedFriendsTrips = friendsTrips.filter((t) => inScope(t.host_id))
 
-  const scopedPlans = !currentUser ? [] : visiblePlans.filter((p) => {
-    if (p.user_id === currentUser?.id) return scopes.has("me")
-    // Must test real friendship: getVisiblePlansInRange returns friends AND
-    // active crewmates, so returning true here would show non-friend crewmates
-    // under a chip that says "All Friends".
-    if (scopes.has("friends") && friendIds.has(p.user_id)) return true
-    for (const s of scopes) {
-      if (!s.startsWith("crew:")) continue
-      if (crewMemberIds.get(s.slice(5))?.has(p.user_id)) return true
-    }
-    return false
-  })
-
   function handleCreateClick() {
     if (!currentUser) { onRequireLogin?.(); return }
     setShowCreate(true)
@@ -287,10 +171,10 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
 
   const seenIds = new Set()
   const flatTrips = [
-    ...invitedTrips.map((t) => ({ ...t, _isInvited: true })),
-    ...myTrips.map((t) => ({ ...t, _isInvited: false })),
-    ...rsvpdTrips.map((t) => ({ ...t, _isInvited: false })),
-    ...friendsTrips.map((t) => ({ ...t, _isInvited: false })),
+    ...scopedInvitedTrips.map((t) => ({ ...t, _isInvited: true })),
+    ...scopedMyTrips.map((t) => ({ ...t, _isInvited: false })),
+    ...scopedRsvpdTrips.map((t) => ({ ...t, _isInvited: false })),
+    ...scopedFriendsTrips.map((t) => ({ ...t, _isInvited: false })),
   ].filter((t) => {
     if (seenIds.has(t.id) || deletedIds.has(t.id)) return false
     seenIds.add(t.id)
@@ -413,7 +297,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
             </div>
           ) : (
             <div style={{ display: "grid", gap: 16 }}>
-              {invitedTrips.length > 0 && (
+              {scopedInvitedTrips.length > 0 && (
                 <div style={{
                   background: "rgba(96,165,250,0.07)",
                   border: "1px solid rgba(96,165,250,0.25)",
@@ -426,7 +310,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
                   gap: 12,
                 }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: "var(--color-banner-highlight)" }}>
-                    ✉️ You have {invitedTrips.length} trip invite{invitedTrips.length > 1 ? "s" : ""}
+                    ✉️ You have {scopedInvitedTrips.length} trip invite{scopedInvitedTrips.length > 1 ? "s" : ""}
                   </span>
                   <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>Respond below ↓</span>
                 </div>
@@ -451,55 +335,11 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
 
       {/* ── Calendar tab ── */}
       {subTab === "calendar" && (
-        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: "20px 18px" }}>
-
-          {/* Scope chips — "where is this crew skiing this weekend?" */}
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-            {[
-              { key: "me", label: "🙋 Me" },
-              { key: "friends", label: "👥 All Friends" },
-              ...crews.map((c) => ({ key: `crew:${c.id}`, label: `${c.emoji || "🤙"} ${c.name}` })),
-            ].map(({ key, label }) => {
-              const on = scopes.has(key)
-              return (
-                <button
-                  key={key}
-                  onClick={() => setScopes((prev) => {
-                    const next = new Set(prev)
-                    if (next.has(key)) next.delete(key); else next.add(key)
-                    return next
-                  })}
-                  style={{
-                    borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 700,
-                    border: on ? "1px solid rgba(56,189,248,0.5)" : "1px solid rgba(255,255,255,0.12)",
-                    background: on ? "rgba(56,189,248,0.25)" : "transparent",
-                    color: on ? "white" : "rgba(255,255,255,0.5)",
-                    cursor: "pointer", minHeight: 44,
-                  }}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-
-          {scopedPlans.length === 0 && scopedMyTrips.length === 0 && scopedRsvpdTrips.length === 0 && scopedInvitedTrips.length === 0 && scopedFriendsTrips.length === 0 && (
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginBottom: 10 }}>
-              {scopes.size === 0
-                ? "Pick at least one group above to see plans."
-                : "No one in the selected groups has plans this month."}
-            </div>
-          )}
-
-          <CalendarView
-            myTrips={scopedMyTrips}
-            rsvpdTrips={scopedRsvpdTrips}
-            invitedTrips={scopedInvitedTrips}
-            friendsTrips={scopedFriendsTrips}
-            skiPlans={scopedPlans}
-            currentUserId={currentUser?.id}
+        <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 20, padding: "20px 18px" }}>
+          <FriendsCalendar
+            currentUser={currentUser}
             onOpenTrip={setStripTrip}
-            onMonthChange={setCalMonth}
+            onScopeChange={setScopes}
           />
         </div>
       )}
