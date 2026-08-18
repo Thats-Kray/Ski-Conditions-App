@@ -1,9 +1,14 @@
 import { crewColor } from "../../lib/crewColors"
 
-function Chip({ active, tint, onClick, children }) {
+function Chip({ active, tint, onClick, children, isToggle = true }) {
+  const ariaProps = isToggle
+    ? { "aria-pressed": active }
+    : { "aria-haspopup": "dialog" }
+
   return (
     <button
       onClick={onClick}
+      {...ariaProps}
       style={{
         flexShrink: 0, borderRadius: 999, padding: "7px 14px", minHeight: 44,
         fontSize: 12, fontWeight: 700, cursor: "pointer",
@@ -47,7 +52,7 @@ export default function FilterChipRow({ crews = [], selected, onToggle, onOpenSh
           {c.emoji || "🤙"} {c.name}
         </Chip>
       ))}
-      <Chip active={friendFilterCount > 0} onClick={onOpenSheet}>
+      <Chip active={friendFilterCount > 0} onClick={onOpenSheet} isToggle={false}>
         ☰ Filter{friendFilterCount > 0 ? ` (${friendFilterCount})` : ""}
       </Chip>
     </div>
