@@ -620,6 +620,58 @@ Not code — external console setup in Google Cloud Console and Meta for Develop
 
 ---
 
+## SECTION 18 — Friend-Visible Profiles & Ski Plan Calendar (Sprint 34)
+
+From Kyle's Notes: make profiles viewable by friends with their season stats, and
+add a "days I plan to ski" calendar so friends can coordinate where to ski.
+
+**The foundation was broken before any feature work started.** `daily_plans`'
+friend-read RLS policy tested membership in `public.friendships` — a table with
+**0 rows**. The app has always written friendships to `friend_requests` (4
+accepted). The policy could never match, so no user could read any other user's
+plan. Same bug class as `supabase/migrations/20260515_ski_sessions_rls_fix.sql`,
+which fixed `ski_sessions` and missed `daily_plans`. Two shipped features were
+silently degraded by it:
+
+- `TodaysCrew.jsx` never showed a friend — its client-side friend filter ran over
+  rows RLS had already stripped.
+- `getFriendsLeaderboard` reported `daysOnMountain: 0` / `daysTogether: 0` /
+  `topResort: null` for every friend.
+
+A second dead policy read `group_members`; `groups`/`group_members` both have 0
+rows and no code path (the app uses `crews`/`crew_members`). Also fixed:
+`daily_plans.status` defaulted to `'planning'`, a value its own CHECK constraint
+(`planned|driving|arrived`) rejects — every INSERT omitting `status` failed.
+
+### TASK 18.1 — Retire `daily_plans.group_id` and the `'groups'` visibility value
+- [ ] `group_id` FKs to `groups`, which has 0 rows and no code path.
+- [ ] `visibility='groups'` is now unreachable — such a plan is visible to nobody
+      but its owner. Migration 032 left both in place as the non-destructive
+      choice; removing them needs its own migration.
+
+### TASK 18.2 — `getCrewMembers()` returns pending members
+- [ ] The crew chips on the shared calendar include members whose `crew_members.status`
+      is `'pending'`, because `getCrewMembers` neither selects nor filters `status`.
+      Harmless today (RLS still won't return a non-friend pending member's plans,
+      and `shares_crew_with()` correctly requires `active` on both sides), but the
+      chip's member set and the RLS grant disagree. Filter at the query.
+
+**Verification notes:** RLS was proven by impersonating three real accounts in
+Postgres (`set local role authenticated` + `request.jwt.claims`), not by reading
+policy text — migration 030 is the precedent for SQL that reports success and
+does nothing. A user friended to two others saw all 7 plans; a user friended to
+one saw exactly 5 with zero leakage; a plan flipped to `private` disappeared for
+a friend. The `status='active'` guard on `shares_crew_with()` was confirmed to
+block a real pending crew invitee (`without_guard: true`, `with_active_guard: false`).
+
+**Files:** `migrations/032_daily_plans_visibility_fix.sql`, `src/lib/socialApi.js`,
+`src/lib/profileNav.js`, `src/lib/calendarDates.js`, `src/lib/profileStats.js`,
+`src/components/PlanCalendar.jsx`, `src/components/ProfileStats.jsx`,
+`src/components/SkiPlansTab.jsx`, `src/components/ProfilePage.jsx`,
+`src/components/SkiPlansPage.jsx`, `src/components/UserProfileModal.jsx`, `src/App.jsx`
+
+---
+
 ## Progress Summary
 
 *Last verified against actual code/migrations/git history 2026-08-06 (not just checkbox state — see [[project_2026_08_roadmap_completion]], [[project_2026_08_04_mountain_page_session]], and [[project_2026_08_06_premium_ui_uplift_session]] memory).*
@@ -650,7 +702,8 @@ Sprints 32 and 33 were verified on the live app by Kyle on 2026-08-17. Both spri
 | 15 — Ski Buddy Board | 2 | 2 (Task 15.1 completed in Sprint 32 — see Section 16) |
 | 16 — Debt Clearing (Sprint 32) | 4 | 4 |
 | 17 — Profile Token Exposure (Sprint 33) | 4 | 4 (migration 030 was a no-op; migration 031 closed it — see task notes) |
-| **Total** | **44** | **42** |
+| 18 — Friend Profiles & Ski Plan Calendar (Sprint 34) | 2 | 0 (both are follow-ups the sprint deliberately left open — the sprint's own scope shipped) |
+| **Total** | **46** | **42** |
 
 Task 0.2's hex-token cleanup is complete (2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) and `migrations/024_theme_preference.sql` (Section 10) are both applied to the live Supabase project (2026-08-08). Section 10's theme-switching MVP is implemented and its migration is live, but `npm run lint` and a visual pass across all 5 themes haven't been run yet, and full app-wide theming beyond the MVP scope remains unscheduled follow-up work — see Section 10's task notes.
 
@@ -678,8 +731,8 @@ Last updated 8/13/2026 at 3:49PM
 -Improve the Powder Score algorithm
 -Improve the mountain conditions and weather API
 -Improve the Map View and test out Friends locations on each mountain
--Make Profile page visible to other users. Friends have access to view friends profiles and see their season stats.
--Profile page should have a tab for "Days I plan to ski" that shows a calendar view. Users can mark which mountains they plan to go to on what days. The purpose of this page is to help people make plans with their friends. People can check their friends calendar to see where people are going this weekend, next weekend, etc. and then make their decision to go to a mountain based on where there friends are skiing.
+-~~Make Profile page visible to other users. Friends have access to view friends profiles and see their season stats.~~ **DONE — Sprint 34.** Open a friend's profile from the peek modal's "View Full Profile"; season stats reuse the existing `get_leaderboard` RPC and stay friends-only.
+-~~Profile page should have a tab for "Days I plan to ski" that shows a calendar view. Users can mark which mountains they plan to go to on what days. The purpose of this page is to help people make plans with their friends. People can check their friends calendar to see where people are going this weekend, next weekend, etc. and then make their decision to go to a mountain based on where there friends are skiing.~~ **DONE — Sprint 34.** Profile → "📅 Ski Plans" tab (editable on your own profile, read-only on a friend's), plus crew-filterable scope chips on the Plans tab calendar for the "where is everyone going this weekend?" view.
 -~~Reorganize certain pages in the app. (i.e. Friends and Leaderboard should live on the social page in its own tab, same with the friends list, and the Buddy page - which should be renamed Community instead of Buddy)~~ **DONE — Sprint 32.** Friends/Leaderboard/friends-list were already on the Social page; the Buddy board moved there and was renamed Community.
 
 # New Items
