@@ -2882,29 +2882,37 @@ export async function deleteTripMedia(mediaId, storagePath) {
 
 // ── Crew Group Chat ───────────────────────────────────────────────────────────
 
+// Goes through the SECURITY DEFINER create_crew RPC (migration 034) rather than
+// writing crews/crew_members directly. The old client-side version relied on the
+// crew_members INSERT policy branch `user_id = auth.uid()` to seed its own admin
+// row — the same branch that let anyone insert themselves into ANY crew (and
+// status DEFAULTs to 'active', so it was live immediately). That branch is gone;
+// the RPC does both writes atomically instead.
+//
+// Invited members now land as 'pending' rather than the old 'active' default, so
+// creating a crew invites people instead of force-joining them. That matches
+// inviteToCrewGroup and the existing pending-invites UI.
 export async function createCrew({ name, emoji = "⛷️", description = "", inviteOnly = true, memberIds = [] }) {
   const user = await getCurrentUser()
   if (!user) throw new Error("Must be logged in to create a crew.")
 
-  const { data: crew, error: crewErr } = await supabase
-    .from("crews")
-    .insert({ name, emoji, description, created_by: user.id, invite_only: inviteOnly })
-    .select()
-    .single()
-  if (crewErr) throw crewErr
+  const { data, error } = await supabase.rpc("create_crew", {
+    p_name: name,
+    p_emoji: emoji,
+    p_description: description,
+    p_invite_only: inviteOnly,
+    p_member_ids: memberIds,
+  })
 
-  const { error: adminErr } = await supabase
-    .from("crew_members")
-    .insert({ crew_id: crew.id, user_id: user.id, role: "admin" })
-  if (adminErr) throw adminErr
-
-  if (memberIds.length > 0) {
-    await supabase
-      .from("crew_members")
-      .insert(memberIds.map((uid) => ({ crew_id: crew.id, user_id: uid, role: "member" })))
+  if (error) {
+    if (error.message?.includes("CREW_NAME_REQUIRED")) {
+      throw new Error("Give your crew a name.")
+    }
+    throw error
   }
 
-  return crew
+  // RETURNS crews (a composite row); PostgREST hands back the object directly.
+  return Array.isArray(data) ? data[0] : data
 }
 
 export async function getMyCrews() {

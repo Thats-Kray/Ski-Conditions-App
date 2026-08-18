@@ -682,21 +682,27 @@ visible to any single task's reviewer:
    owner-only; the policy keys off `visibility <> 'private'`, so they are
    readable by all friends and crewmates. Comment corrected.
 
-### TASK 18.3 — Close the crew_members self-join hole (SECURITY, open)
-- [ ] `"crew members can insert members"` is `WITH CHECK ((user_id = auth.uid()) OR (my_crew_role(crew_id) IS NOT NULL))`.
-      The first branch lets any signed-in user insert **themselves into any crew_id**,
-      and `"members can update own row"` lets a pending member flip their own
-      `status` to `'active'` — which defeats the `status='active'` guard in
-      `shares_crew_with()` and grants read access to that crew's members' plans.
-- [ ] Not fixed in Sprint 34 on purpose: the `user_id = auth.uid()` branch is what
-      lets a crew's creator insert the first membership row (`my_crew_role` is NULL
-      at that moment), and the self-update **is** the accept-invite flow
-      (`acceptCrewInvite`). Closing it properly needs a SECURITY DEFINER
-      create-crew / join-crew RPC, not a policy tweak.
-- [ ] Lower practical severity than the friend_requests hole that migration 033
-      closed: exploiting it requires knowing a crew UUID, and crew ids are not
-      enumerable (`crews`/`crew_members` SELECT both require membership). The
-      friend path needed only a user id, and `profiles` is world-readable.
+### TASK 18.3 — Close the crew_members self-join hole (SECURITY) — ✅ COMPLETE (migration 034)
+- [x] `"crew members can insert members"` was `WITH CHECK ((user_id = auth.uid()) OR (my_crew_role(crew_id) IS NOT NULL))`.
+      The first branch checked only that you were inserting *yourself* — nothing about
+      the crew — so any signed-in user could insert themselves into **any crew_id**.
+      Worse than first reported: `crew_members.status` DEFAULTs to `'active'`, so the
+      row was live immediately rather than pending, granting `shares_crew_with()` and
+      therefore read access to every member's `daily_plans`.
+- [x] Second path: `"members can update own row"` pinned only `user_id`, so a member
+      of one crew could rewrite `crew_id` to any other crew, or set `role='admin'`.
+      `WITH CHECK` cannot see the pre-update row, so it could not detect either.
+- [x] `public.create_crew(...)` SECURITY DEFINER RPC now performs the crews +
+      creator-membership writes atomically. This is what allowed the permissive
+      INSERT branch to be removed: `createCrew` previously relied on it to seed its
+      own admin row, since `my_crew_role()` is NULL before any member exists.
+- [x] `REVOKE UPDATE` + `GRANT UPDATE (status)` on `crew_members`. `acceptCrewInvite`
+      is the only writer and only sets `status`, so the accept-invite flow is intact
+      while `crew_id` and `role` become unwritable from the client.
+- [x] **Behaviour change, deliberate:** `createCrew(memberIds)` used to insert invited
+      members with the `'active'` default — force-joining them with no invitation.
+      They are now `'pending'`, matching `inviteToCrewGroup` and the existing
+      pending-invites UI.
 
 ### TASK 18.4 — `getCrewMembers()` returns pending members
 - [ ] The crew chips on the shared calendar build their member sets from
@@ -733,7 +739,9 @@ one saw exactly 5 with zero leakage; a plan flipped to `private` disappeared for
 a friend. The `status='active'` guard on `shares_crew_with()` was confirmed to
 block a real pending crew invitee (`without_guard: true`, `with_active_guard: false`).
 
-**Files:** `migrations/032_daily_plans_visibility_fix.sql`, `src/lib/socialApi.js`,
+**Files:** `migrations/032_daily_plans_visibility_fix.sql`,
+`migrations/033_friend_request_consent.sql`, `migrations/034_crew_membership_consent.sql`,
+`src/lib/socialApi.js`,
 `src/lib/profileNav.js`, `src/lib/calendarDates.js`, `src/lib/profileStats.js`,
 `src/components/PlanCalendar.jsx`, `src/components/ProfileStats.jsx`,
 `src/components/SkiPlansTab.jsx`, `src/components/ProfilePage.jsx`,
@@ -771,8 +779,8 @@ Sprints 32 and 33 were verified on the live app by Kyle on 2026-08-17. Both spri
 | 15 — Ski Buddy Board | 2 | 2 (Task 15.1 completed in Sprint 32 — see Section 16) |
 | 16 — Debt Clearing (Sprint 32) | 4 | 4 |
 | 17 — Profile Token Exposure (Sprint 33) | 4 | 4 (migration 030 was a no-op; migration 031 closed it — see task notes) |
-| 18 — Friend Profiles & Ski Plan Calendar (Sprint 34) | 4 | 0 (all four are follow-ups the sprint deliberately left open — the sprint's own scope shipped; 18.3 is a known SECURITY gap) |
-| **Total** | **48** | **42** |
+| 18 — Friend Profiles & Ski Plan Calendar (Sprint 34) | 4 | 1 (18.3 SECURITY fix shipped as migration 034; 18.1/18.2/18.4 remain deliberate follow-ups) |
+| **Total** | **48** | **43** |
 
 Task 0.2's hex-token cleanup is complete (2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) and `migrations/024_theme_preference.sql` (Section 10) are both applied to the live Supabase project (2026-08-08). Section 10's theme-switching MVP is implemented and its migration is live, but `npm run lint` and a visual pass across all 5 themes haven't been run yet, and full app-wide theming beyond the MVP scope remains unscheduled follow-up work — see Section 10's task notes.
 
