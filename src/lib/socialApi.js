@@ -620,13 +620,16 @@ export async function getMySkiPlans() {
 
 
 
-export async function getTodaysVisiblePlans(skiDate) {
-  const user = await getCurrentUser();
-
+// Plans the current user is allowed to see in a date range, inclusive.
+// Visibility is enforced entirely by RLS (migration 032): own rows, plus
+// non-private rows belonging to an accepted friend or an active crewmate.
+// Do NOT re-filter by friendship on the client — the server already did it,
+// and a second filter would silently drop crewmates who aren't friends.
+export async function getVisiblePlansInRange(startDate, endDate) {
   const { data, error } = await supabase
     .from("daily_plans")
     .select(`
-      *,
+      id, user_id, ski_date, resort_key, eta, note, status, visibility, arrived_at,
       profile:profiles (
         id,
         first_name,
@@ -637,19 +640,25 @@ export async function getTodaysVisiblePlans(skiDate) {
         favorite_mountain
       )
     `)
-    .eq("ski_date", skiDate)
-    .order("created_at", { ascending: false });
+    .gte("ski_date", startDate)
+    .lte("ski_date", endDate)
+    .order("ski_date", { ascending: true })
+    // Secondary sort preserves the old getTodaysVisiblePlans ordering, which
+    // HomeDashboard depends on: it renders plans.slice(0, 5), so newest-first
+    // decides which five check-ins appear on the Home card.
+    .order("created_at", { ascending: false })
 
-  if (error) throw error;
+  if (error) throw error
+  return data || []
+}
 
-  const acceptedFriendIds = await getAcceptedFriendIds(user.id);
-
-  return (data || []).filter((plan) => {
-    if (plan.user_id === user.id) return true;
-    if (plan.visibility === "public") return true;
-    if (plan.visibility === "friends" && acceptedFriendIds.has(plan.user_id)) return true;
-    return false;
-  });
+// Kept as a named function because TodaysCrew.jsx, HomeDashboard.jsx and
+// ui/AvatarStatusRail.jsx all call it. Sprint 34 moved visibility enforcement
+// into RLS, so the old client-side friend filter (and its dead
+// visibility === "public" branch — the CHECK only allows friends|groups|private)
+// is gone.
+export async function getTodaysVisiblePlans(skiDate) {
+  return getVisiblePlansInRange(skiDate, skiDate)
 }
 
 export async function markDriving(planId) {
@@ -681,6 +690,17 @@ export async function markArrival(planId) {
 
   if (error) throw error;
   return data;
+}
+
+// Owner-only delete; covered by the existing "users can manage own daily plans"
+// ALL policy, so no RPC is needed.
+export async function deleteDailyPlan(planId) {
+  const { error } = await supabase
+    .from("daily_plans")
+    .delete()
+    .eq("id", planId)
+
+  if (error) throw error
 }
 
 /* -----------------------------
@@ -2102,10 +2122,17 @@ export async function getFriendsLeaderboard() {
 
   if (profilesError) throw profilesError;
 
+  // Sprint 34: cap at today. Before migration 032 this query returned only the
+  // caller's own rows (the friends RLS policy was dead), so every friend showed
+  // 0 days. Now that friends' rows come back, forward-looking planned days would
+  // inflate "days on mountain" — a plan for next Saturday is not a day skied.
+  const todayISO = new Date().toISOString().slice(0, 10);
+
   const { data: allPlans, error: plansError } = await supabase
     .from("daily_plans")
     .select("user_id, ski_date, resort_key")
-    .in("user_id", [user.id, ...friendIdArray]);
+    .in("user_id", [user.id, ...friendIdArray])
+    .lte("ski_date", todayISO);
 
   if (plansError) throw plansError;
 
