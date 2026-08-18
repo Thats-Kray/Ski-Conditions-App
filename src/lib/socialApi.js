@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { localDateKey } from "./calendarDates";
+import { etaToTimeInput } from "./format";
 
 /* -----------------------------
    Constants
@@ -580,6 +581,28 @@ export async function upsertDailyPlan(plan) {
   if (error) throw error
 
   return data
+}
+
+/**
+ * "I'm in" — set my mountain for a day I am looking at on the friends calendar.
+ *
+ * daily_plans is unique on (user_id, ski_date), so joining a mountain IS setting my
+ * plan for that day. No RSVP table, no second concept.
+ *
+ * Reads first and merges, because upsertDailyPlan writes the whole row: without the
+ * spread, tapping "I'm in" on a day I had already planned with an ETA would null the
+ * ETA, the note and the check-in. The eta round-trip needs etaToTimeInput or
+ * buildPlanEta rejects the stored ISO timestamp and writes null anyway.
+ */
+export async function joinPlanAtResort(skiDate, resortKey) {
+  const existing = await getMyDailyPlan(skiDate)
+  return upsertDailyPlan({
+    ...(existing || {}),
+    ski_date: skiDate,
+    resort_key: resortKey,
+    eta: etaToTimeInput(existing?.eta),
+    visibility: existing?.visibility || "friends",
+  })
 }
 
 export async function getMyDailyPlan(skiDate) {
@@ -2959,10 +2982,16 @@ export async function getCrewMembers(crewId) {
   const { data, error } = await supabase
     .from("crew_members")
     .select(`
-      id, role, joined_at,
+      id, role, joined_at, status,
       profile:user_id ( id, full_name, username, avatar_url, skill_level )
     `)
     .eq("crew_id", crewId)
+    // ROADMAP 18.2: without this, invitees who never accepted come back as members.
+    // Latent until Sprint 35 — RLS refuses their rows anyway — but the friends
+    // calendar colors members by crew and counts them in the chip, so a pending
+    // invitee would appear to be in your crew. shares_crew_with() already requires
+    // 'active' on both sides, so this makes the client agree with the database.
+    .eq("status", "active")
   if (error) throw error
   return data || []
 }

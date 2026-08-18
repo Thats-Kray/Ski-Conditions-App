@@ -27,3 +27,19 @@ export function fmt(n) {
   if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k"
   return String(n)
 }
+
+/**
+ * daily_plans.eta is stored as a timestamptz, but upsertDailyPlan re-parses whatever
+ * it is handed through buildPlanEta(), which accepts only "HH:MM" or "H:MM AM/PM" and
+ * returns null for anything else — including an ISO timestamp.
+ *
+ * So any code path that reads a plan and writes it back MUST convert first, or it
+ * silently blanks an ETA the user set. Shared by SkiPlansTab's editor and by
+ * joinPlanAtResort's "I'm in".
+ */
+export function etaToTimeInput(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+}

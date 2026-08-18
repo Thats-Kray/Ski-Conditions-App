@@ -8,7 +8,7 @@ import {
   deleteDailyPlan,
 } from "../lib/socialApi"
 import { resortName, resortEmoji } from "../lib/resorts"
-import { formatDate } from "../lib/format"
+import { formatDate, etaToTimeInput } from "../lib/format"
 
 // Literal hex: feeds `${PLAN_COLOR}11`/`33` alpha-suffix template literals below.
 const PLAN_COLOR = "#67e8f9"
@@ -18,21 +18,6 @@ const fieldStyle = {
   border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10,
   padding: "10px 12px", color: "white", fontSize: 14,
   boxSizing: "border-box", outline: "none", colorScheme: "dark",
-}
-
-/**
- * daily_plans.eta is stored as a timestamptz, but upsertDailyPlan() re-parses
- * whatever it is given through buildPlanEta(), which only accepts "HH:MM" or
- * "H:MM AM/PM" and returns null for anything else — including an ISO timestamp.
- *
- * Without this conversion, editing a day that already has a check-in would
- * silently blank its ETA, because upsertDailyPlan writes the whole row.
- */
-function etaToTimeInput(iso) {
-  if (!iso) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return null
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
 }
 
 /**
