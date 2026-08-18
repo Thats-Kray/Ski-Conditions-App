@@ -2,9 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import {
   getAllVisibleTrips,
   getCurrentUser,
-  getAcceptedFriends,
-  getMyCrews,
-  getCrewMembers,
 } from "../lib/socialApi"
 import TripCard from "./TripCard"
 import CreateTripModal from "./CreateTripModal"
@@ -98,11 +95,6 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
   const [stripTrip, setStripTrip] = useState(null)
   const [subTab, setSubTab] = useState("calendar")
 
-  // ── Shared calendar scope (Sprint 34) ──
-  const [crewMemberIds, setCrewMemberIds] = useState(new Map())   // crewId -> Set(userId)
-  const [friendIds, setFriendIds] = useState(new Set())           // accepted friends only
-  const [scopes, setScopes] = useState(() => new Set(["me", "friends"]))
-
   const loadTrips = useCallback(async () => {
     try {
       const { mine, friends, rsvpd, invited } = await getAllVisibleTrips()
@@ -120,49 +112,12 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
       const user = await getCurrentUser()
       setCurrentUser(user)
       if (user) {
-        await Promise.allSettled([
-          loadTrips(),
-          getAcceptedFriends()
-            .then((rows) => setFriendIds(new Set((rows || []).map((f) => f.id))))
-            .catch(() => {}),
-          getMyCrews()
-            .then(async (rows) => {
-              const pairs = await Promise.all(
-                (rows || []).map(async (c) => {
-                  const members = await getCrewMembers(c.id).catch(() => [])
-                  // The user id lives at m.profile.id — getCrewMembers selects
-                  // `profile:user_id (...)` and returns no bare user_id column;
-                  // m.id is the crew_members row id, not a user.
-                  return [c.id, new Set(members.map((m) => m.profile?.id).filter(Boolean))]
-                })
-              )
-              setCrewMemberIds(new Map(pairs))
-            })
-            .catch(() => {}),
-        ])
+        await loadTrips()
       }
       setLoading(false)
     }
     init()
   }, [loadTrips])
-
-  // A trip belongs to "me" if I host it, RSVP'd, or was invited; friendsTrips
-  // follow the friends/crew chips the same way check-ins do. Without this the
-  // chips only filtered check-ins and every trip rendered regardless of scope.
-  const mineScoped = scopes.has("me")
-  const inScope = (userId) => {
-    if (userId === currentUser?.id) return scopes.has("me")
-    if (scopes.has("friends") && friendIds.has(userId)) return true
-    for (const sc of scopes) {
-      if (!sc.startsWith("crew:")) continue
-      if (crewMemberIds.get(sc.slice(5))?.has(userId)) return true
-    }
-    return false
-  }
-  const scopedMyTrips      = mineScoped ? myTrips : []
-  const scopedRsvpdTrips   = mineScoped ? rsvpdTrips : []
-  const scopedInvitedTrips = mineScoped ? invitedTrips : []
-  const scopedFriendsTrips = friendsTrips.filter((t) => inScope(t.host_id))
 
   function handleCreateClick() {
     if (!currentUser) { onRequireLogin?.(); return }
@@ -171,10 +126,10 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
 
   const seenIds = new Set()
   const flatTrips = [
-    ...scopedInvitedTrips.map((t) => ({ ...t, _isInvited: true })),
-    ...scopedMyTrips.map((t) => ({ ...t, _isInvited: false })),
-    ...scopedRsvpdTrips.map((t) => ({ ...t, _isInvited: false })),
-    ...scopedFriendsTrips.map((t) => ({ ...t, _isInvited: false })),
+    ...invitedTrips.map((t) => ({ ...t, _isInvited: true })),
+    ...myTrips.map((t) => ({ ...t, _isInvited: false })),
+    ...rsvpdTrips.map((t) => ({ ...t, _isInvited: false })),
+    ...friendsTrips.map((t) => ({ ...t, _isInvited: false })),
   ].filter((t) => {
     if (seenIds.has(t.id) || deletedIds.has(t.id)) return false
     seenIds.add(t.id)
@@ -297,7 +252,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
             </div>
           ) : (
             <div style={{ display: "grid", gap: 16 }}>
-              {scopedInvitedTrips.length > 0 && (
+              {invitedTrips.length > 0 && (
                 <div style={{
                   background: "rgba(96,165,250,0.07)",
                   border: "1px solid rgba(96,165,250,0.25)",
@@ -310,7 +265,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
                   gap: 12,
                 }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: "var(--color-banner-highlight)" }}>
-                    ✉️ You have {scopedInvitedTrips.length} trip invite{scopedInvitedTrips.length > 1 ? "s" : ""}
+                    ✉️ You have {invitedTrips.length} trip invite{invitedTrips.length > 1 ? "s" : ""}
                   </span>
                   <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>Respond below ↓</span>
                 </div>
@@ -339,7 +294,6 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
           <FriendsCalendar
             currentUser={currentUser}
             onOpenTrip={setStripTrip}
-            onScopeChange={setScopes}
           />
         </div>
       )}
