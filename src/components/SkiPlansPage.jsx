@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { getAllVisibleTrips, getCurrentUser, getMySkiPlans } from "../lib/socialApi"
+import {
+  getAllVisibleTrips,
+  getCurrentUser,
+  getMyCrews,
+  getCrewMembers,
+  getVisiblePlansInRange,
+} from "../lib/socialApi"
+import { monthBounds } from "../lib/calendarDates"
 import TripCard from "./TripCard"
 import CreateTripModal from "./CreateTripModal"
 import TripDetailModal from "./TripDetailModal"
@@ -165,12 +172,18 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
   const [rsvpdTrips, setRsvpdTrips] = useState([])
   const [friendsTrips, setFriendsTrips] = useState([])
   const [invitedTrips, setInvitedTrips] = useState([])
-  const [skiPlans, setSkiPlans] = useState([])
   const [deletedIds, setDeletedIds] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [stripTrip, setStripTrip] = useState(null)
   const [subTab, setSubTab] = useState("trips")
+
+  // ── Shared calendar scope (Sprint 34) ──
+  const [crews, setCrews] = useState([])                          // [{ id, name, emoji }]
+  const [crewMemberIds, setCrewMemberIds] = useState(new Map())   // crewId -> Set(userId)
+  const [scopes, setScopes] = useState(() => new Set(["me", "friends"]))
+  const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1) })
+  const [visiblePlans, setVisiblePlans] = useState([])
 
   const loadTrips = useCallback(async () => {
     try {
@@ -191,13 +204,53 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
       if (user) {
         await Promise.allSettled([
           loadTrips(),
-          getMySkiPlans().then(setSkiPlans).catch(() => {}),
+          getMyCrews()
+            .then(async (rows) => {
+              setCrews(rows || [])
+              const pairs = await Promise.all(
+                (rows || []).map(async (c) => {
+                  const members = await getCrewMembers(c.id).catch(() => [])
+                  // The user id lives at m.profile.id — getCrewMembers selects
+                  // `profile:user_id (...)` and returns no bare user_id column;
+                  // m.id is the crew_members row id, not a user.
+                  return [c.id, new Set(members.map((m) => m.profile?.id).filter(Boolean))]
+                })
+              )
+              setCrewMemberIds(new Map(pairs))
+            })
+            .catch(() => {}),
         ])
       }
       setLoading(false)
     }
     init()
   }, [loadTrips])
+
+  // Plans visible to me for the month the calendar is showing. RLS decides who
+  // is included (own + non-private rows of friends/active crewmates); the crew
+  // chips below are a display lens over rows already authorized server-side.
+  useEffect(() => {
+    // Plain guard, no setState here — scopedPlans below already yields [] when
+    // there is no signed-in user, and setting state synchronously in an effect
+    // trips react-hooks/set-state-in-effect.
+    if (!currentUser) return
+    let cancelled = false
+    const { start, end } = monthBounds(calMonth)
+    getVisiblePlansInRange(start, end)
+      .then((rows) => { if (!cancelled) setVisiblePlans(rows) })
+      .catch(() => { if (!cancelled) setVisiblePlans([]) })
+    return () => { cancelled = true }
+  }, [calMonth, currentUser])
+
+  const scopedPlans = !currentUser ? [] : visiblePlans.filter((p) => {
+    if (p.user_id === currentUser?.id) return scopes.has("me")
+    if (scopes.has("friends")) return true
+    for (const s of scopes) {
+      if (!s.startsWith("crew:")) continue
+      if (crewMemberIds.get(s.slice(5))?.has(p.user_id)) return true
+    }
+    return false
+  })
 
   function handleCreateClick() {
     if (!currentUser) { onRequireLogin?.(); return }
@@ -371,14 +424,54 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
       {/* ── Calendar tab ── */}
       {subTab === "calendar" && (
         <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: "20px 18px" }}>
+
+          {/* Scope chips — "where is this crew skiing this weekend?" */}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+            {[
+              { key: "me", label: "🙋 Me" },
+              { key: "friends", label: "👥 All Friends" },
+              ...crews.map((c) => ({ key: `crew:${c.id}`, label: `${c.emoji || "🤙"} ${c.name}` })),
+            ].map(({ key, label }) => {
+              const on = scopes.has(key)
+              return (
+                <button
+                  key={key}
+                  onClick={() => setScopes((prev) => {
+                    const next = new Set(prev)
+                    if (next.has(key)) next.delete(key); else next.add(key)
+                    return next
+                  })}
+                  style={{
+                    borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 700,
+                    border: on ? "1px solid rgba(56,189,248,0.5)" : "1px solid rgba(255,255,255,0.12)",
+                    background: on ? "rgba(56,189,248,0.25)" : "transparent",
+                    color: on ? "white" : "rgba(255,255,255,0.5)",
+                    cursor: "pointer", minHeight: 44,
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+
+          {scopedPlans.length === 0 && (
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginBottom: 10 }}>
+              {scopes.size === 0
+                ? "Pick at least one group above to see plans."
+                : "No one in the selected groups has plans this month."}
+            </div>
+          )}
+
           <CalendarView
             myTrips={myTrips}
             rsvpdTrips={rsvpdTrips}
             invitedTrips={invitedTrips}
             friendsTrips={friendsTrips}
-            skiPlans={skiPlans}
+            skiPlans={scopedPlans}
             currentUserId={currentUser?.id}
             onOpenTrip={setStripTrip}
+            onMonthChange={setCalMonth}
           />
         </div>
       )}
