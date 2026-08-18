@@ -15,6 +15,7 @@ export default function PlanCalendar({
   legend = [],
   onSelectDay,
   renderDayDetail,
+  renderCellContent,
   selectedDate = null,
   initialMonth,
   onMonthChange,
@@ -110,7 +111,7 @@ export default function PlanCalendar({
                 flexDirection: "column",
                 alignItems: "center",
                 gap: 4,
-                minHeight: 46,
+                minHeight: renderCellContent ? 78 : 46,
               }}
             >
               <span style={{
@@ -124,13 +125,15 @@ export default function PlanCalendar({
               }}>
                 {day}
               </span>
-              {dotColors.length > 0 && (
-                <div style={{ display: "flex", gap: 2, flexWrap: "wrap", justifyContent: "center" }}>
-                  {dotColors.map((color) => (
-                    <div key={color} style={{ width: 6, height: 6, borderRadius: "50%", background: color }} />
-                  ))}
-                </div>
-              )}
+              {renderCellContent
+                ? renderCellContent(key, dayEntries)
+                : dotColors.length > 0 && (
+                    <div style={{ display: "flex", gap: 2, flexWrap: "wrap", justifyContent: "center" }}>
+                      {dotColors.map((color) => (
+                        <div key={color} style={{ width: 6, height: 6, borderRadius: "50%", background: color }} />
+                      ))}
+                    </div>
+                  )}
             </button>
           )
         })}
