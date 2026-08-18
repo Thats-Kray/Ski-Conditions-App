@@ -89,7 +89,7 @@ export default function DayPlanCard({
           const crewNames = badges
             .map((id) => colorCtx.crewNameById?.get?.(id))
             .filter(Boolean)
-          const crewPart = crewNames.length > 1 ? ` · ${crewNames.join(", ")}` : ""
+          const crewPart = badges.length > 1 && crewNames.length > 0 ? ` · ${crewNames.join(", ")}` : ""
           const displayTitle = (a.profile?.full_name || a.profile?.username || "Someone") + crewPart
           return (
             <button
@@ -121,9 +121,9 @@ export default function DayPlanCard({
       {!compact && attendees.some((a) => crewBadgesFor(a.userId, colorCtx).length > 1) && (
         <div style={{ display: "grid", gap: 2 }}>
           {attendees
-            .filter((a) => crewBadgesFor(a.userId, colorCtx).length > 1)
             .map((a) => {
               const badges = crewBadgesFor(a.userId, colorCtx)
+              if (badges.length < 2) return null
               const crewNames = badges
                 .map((id) => colorCtx.crewNameById?.get?.(id))
                 .filter(Boolean)
