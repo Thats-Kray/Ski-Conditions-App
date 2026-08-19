@@ -220,3 +220,43 @@ test("omitting isVisible leaves trip RSVP grouping unchanged", () => {
   })
   assert.equal(out.get("2026-08-22")[0].attendees.length, 2, "host + RSVP-er, same as before isVisible existed")
 })
+
+test("the Open group sorts last even when it has the most people", () => {
+  const out = groupByDayAndMountain({
+    plans: [
+      p("u1", "2026-08-22", "open", "Amy"),
+      p("u2", "2026-08-22", "open", "Ben"),
+      p("u3", "2026-08-22", "open", "Cal"),
+      p("u4", "2026-08-22", "open", "Dee"),
+      p("u5", "2026-08-22", "coppermountain", "Eve"),
+    ],
+    trips: [], currentUserId: "me",
+  })
+  const groups = out.get("2026-08-22")
+  assert.deepEqual(groups.map((g) => g.resortKey), ["coppermountain", "open"])
+  assert.equal(groups[1].attendees.length, 4, "Open still holds everyone, it just sorts last")
+})
+
+test("Open sorts last against several mountains, which keep their headcount order", () => {
+  const out = groupByDayAndMountain({
+    plans: [
+      p("u1", "2026-08-22", "open", "Amy"),
+      p("u2", "2026-08-22", "vail", "Ben"),
+      p("u3", "2026-08-22", "coppermountain", "Cal"),
+      p("u4", "2026-08-22", "coppermountain", "Dee"),
+    ],
+    trips: [], currentUserId: "me",
+  })
+  assert.deepEqual(
+    out.get("2026-08-22").map((g) => g.resortKey),
+    ["coppermountain", "vail", "open"]
+  )
+})
+
+test("a day of only Open still returns the group", () => {
+  const out = groupByDayAndMountain({
+    plans: [p("u1", "2026-08-22", "open", "Amy")],
+    trips: [], currentUserId: "me",
+  })
+  assert.deepEqual(out.get("2026-08-22").map((g) => g.resortKey), ["open"])
+})

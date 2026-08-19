@@ -10,7 +10,7 @@
  * is what makes it unit-testable without a browser.
  */
 
-import { normalizeResortKey } from "./resorts.js"
+import { normalizeResortKey, OPEN_RESORT_KEY } from "./resorts.js"
 
 /** ski_date can arrive as a date or a timestamp. Always key on the date part. */
 function dayKey(skiDate) {
@@ -92,9 +92,16 @@ export function groupByDayAndMountain({ plans = [], trips = [], currentUserId = 
     // Busiest mountain first — this is the single most important sort in the
     // feature, because it is literally the answer. Ties break on resortKey so the
     // order does not jitter between renders.
-    groups.sort((a, b) =>
-      b.attendees.length - a.attendees.length || a.resortKey.localeCompare(b.resortKey)
-    )
+    //
+    // "Open — no preference" is pinned below every real mountain regardless of its
+    // headcount. The top card is supposed to answer "where should we go", and
+    // available people are not a where (spec decision #5).
+    groups.sort((a, b) => {
+      const aOpen = a.resortKey === OPEN_RESORT_KEY
+      const bOpen = b.resortKey === OPEN_RESORT_KEY
+      if (aOpen !== bOpen) return aOpen ? 1 : -1
+      return b.attendees.length - a.attendees.length || a.resortKey.localeCompare(b.resortKey)
+    })
     out.set(day, groups)
   }
   return out
