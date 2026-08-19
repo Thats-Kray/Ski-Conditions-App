@@ -294,6 +294,10 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
           <FriendsCalendar
             currentUser={currentUser}
             onOpenTrip={setStripTrip}
+            trips={flatTrips}
+            loading={loading}
+            onRequireLogin={onRequireLogin}
+            onPlanADay={() => { setSubTab("trips"); handleCreateClick() }}
           />
         </div>
       )}

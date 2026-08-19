@@ -10,6 +10,8 @@
  * is what makes it unit-testable without a browser.
  */
 
+import { normalizeResortKey } from "./resorts.js"
+
 /** ski_date can arrive as a date or a timestamp. Always key on the date part. */
 function dayKey(skiDate) {
   return (skiDate || "").slice(0, 10)
@@ -24,13 +26,18 @@ function displayName(profile) {
  * @param {Array} input.plans   rows from getVisiblePlansInRange()
  * @param {Array} input.trips   enriched rows from getAllVisibleTrips()
  * @param {string|null} input.currentUserId
+ * @param {(userId: string) => boolean} [input.isVisible] optional display-scope
+ *   predicate applied to trip hosts and trip RSVP-ers (plans are expected to
+ *   already be pre-filtered by the caller). The signed-in user always passes
+ *   regardless of the predicate. Omitted entirely, behavior is unchanged.
  * @returns {Map<string, Array>} date key → MountainGroup[], busiest mountain first
  */
-export function groupByDayAndMountain({ plans = [], trips = [], currentUserId = null }) {
+export function groupByDayAndMountain({ plans = [], trips = [], currentUserId = null, isVisible = null }) {
   // day key → resort key → { resortKey, byUser: Map, trip }
   const days = new Map()
 
-  function bucket(day, resortKey) {
+  function bucket(day, resortKeyRaw) {
+    const resortKey = normalizeResortKey(resortKeyRaw)
     if (!day || !resortKey) return null
     if (!days.has(day)) days.set(day, new Map())
     const byResort = days.get(day)
@@ -38,6 +45,12 @@ export function groupByDayAndMountain({ plans = [], trips = [], currentUserId = 
       byResort.set(resortKey, { resortKey, byUser: new Map(), trip: null })
     }
     return byResort.get(resortKey)
+  }
+
+  // The signed-in user always passes — a filter chip should never be able to hide
+  // you from your own calendar.
+  function passes(userId) {
+    return !isVisible || userId === currentUserId || isVisible(userId)
   }
 
   for (const plan of plans) {
@@ -52,13 +65,14 @@ export function groupByDayAndMountain({ plans = [], trips = [], currentUserId = 
     // Last trip wins if two land on the same resort and day — vanishingly rare,
     // and the badge only has room for one.
     g.trip = trip
-    if (trip.host_id && !g.byUser.has(trip.host_id)) {
+    if (trip.host_id && passes(trip.host_id) && !g.byUser.has(trip.host_id)) {
       g.byUser.set(trip.host_id, { userId: trip.host_id, profile: trip.host_profile || null })
     }
     for (const rsvp of trip.rsvps || []) {
       // "maybe" and "out" are not attendance. A headcount that counts maybes is
       // a lie, and this whole view is a counting exercise.
       if (rsvp.status !== "going") continue
+      if (!passes(rsvp.user_id)) continue
       if (g.byUser.has(rsvp.user_id)) continue
       g.byUser.set(rsvp.user_id, { userId: rsvp.user_id, profile: rsvp.profile || null })
     }

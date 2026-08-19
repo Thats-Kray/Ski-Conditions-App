@@ -29,6 +29,15 @@ export function monthBounds(d) {
 }
 
 /**
+ * The Sunday that starts the week containing `d`, as a JS Date. Shared by
+ * weekBounds and weekDayKeys so the two never disagree about which day a week
+ * starts on.
+ */
+function sundayOf(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay())
+}
+
+/**
  * First and last date key of the Sunday–Saturday week containing `d`.
  *
  * Sunday-start matches the "Su Mo Tu We Th Fr Sa" header PlanCalendar renders,
@@ -40,14 +49,14 @@ export function monthBounds(d) {
  * timezone, which is all of Colorado.
  */
 export function weekBounds(d) {
-  const sunday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay())
+  const sunday = sundayOf(d)
   const saturday = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + 6)
   return { start: localDateKey(sunday), end: localDateKey(saturday) }
 }
 
 /** The seven date keys of the week containing `d`, Sunday first. */
 export function weekDayKeys(d) {
-  const sunday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay())
+  const sunday = sundayOf(d)
   return Array.from({ length: 7 }, (_, i) =>
     localDateKey(new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + i))
   )

@@ -323,7 +323,7 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
     try {
       const [msgs, mems] = await Promise.all([
         getCrewMessages(initialCrew.id),
-        getCrewMembers(initialCrew.id),
+        getCrewMembers(initialCrew.id, { includePending: true }),
       ])
       setMessages(msgs)
       setMembers(mems)
@@ -349,7 +349,7 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
         event: "*", schema: "public",
         table: "crew_members", filter: `crew_id=eq.${initialCrew.id}`,
       }, () => {
-        getCrewMembers(initialCrew.id).then(setMembers).catch(() => {})
+        getCrewMembers(initialCrew.id, { includePending: true }).then(setMembers).catch(() => {})
       })
       .subscribe()
 
@@ -406,7 +406,7 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
   async function handleInvite(friendId) {
     try {
       await inviteToCrewGroup(crew.id, friendId)
-      const mems = await getCrewMembers(crew.id)
+      const mems = await getCrewMembers(crew.id, { includePending: true })
       setMembers(mems)
       setShowInvite(false)
     } catch (e) {
@@ -514,8 +514,9 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
               const p = m.profile
               const name = p?.full_name || p?.username || "?"
               const isMe = p?.id === currentUserId
+              const isPending = m.status !== "active"
               return (
-                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, opacity: isPending ? 0.7 : 1 }}>
                   <div onClick={() => !isMe && setViewingUserId(p?.id)} style={{ cursor: isMe ? "default" : "pointer" }}>
                     <Avatar profile={p} size={28} />
                   </div>
@@ -523,6 +524,7 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
                     <span style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{name}</span>
                     {isMe && <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>you</span>}
                     {m.role === "admin" && <span style={{ fontSize: 10, color: "var(--color-warning)", fontWeight: 800, marginLeft: 6, background: "rgba(251,191,36,0.15)", borderRadius: 4, padding: "1px 5px" }}>Admin</span>}
+                    {isPending && <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 800, marginLeft: 6, background: "rgba(255,255,255,0.08)", borderRadius: 4, padding: "1px 5px" }}>Invited</span>}
                   </div>
                   {isAdmin && !isMe && (
                     <button

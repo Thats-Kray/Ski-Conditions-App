@@ -2978,20 +2978,35 @@ export async function getPendingCrewInvites() {
   return (data || []).filter((r) => r.crew).map((r) => r.crew)
 }
 
-export async function getCrewMembers(crewId) {
-  const { data, error } = await supabase
+/**
+ * @param {string} crewId
+ * @param {Object} [opts]
+ * @param {boolean} [opts.includePending=false] include rows with status !== 'active'.
+ *
+ * Defaults to active-only (ROADMAP 18.2): the friends calendar colors members by
+ * crew and counts them in the chip, so a pending invitee must not appear to be in
+ * your crew there. That is the real reason for the filter — NOT "RLS refuses their
+ * rows anyway" (a prior version of this comment claimed that; it is wrong).
+ * Migration 035's SELECT policy is `user_id = auth.uid() OR my_crew_role(crew_id)
+ * IS NOT NULL`, and the second branch returns every row of a crew you are active
+ * in, pending included — so active members already see pending rows at the RLS
+ * layer, and this filter is the only thing hiding them.
+ *
+ * CrewGroupChat needs the opposite: an admin managing invites has to see pending
+ * rows to confirm an invite landed, to exclude already-invited friends from the
+ * invite picker (avoiding the unique (crew_id, user_id) constraint), and to revoke
+ * a pending invite. Pass { includePending: true } there.
+ */
+export async function getCrewMembers(crewId, { includePending = false } = {}) {
+  let query = supabase
     .from("crew_members")
     .select(`
       id, role, joined_at, status,
       profile:user_id ( id, full_name, username, avatar_url, skill_level )
     `)
     .eq("crew_id", crewId)
-    // ROADMAP 18.2: without this, invitees who never accepted come back as members.
-    // Latent until Sprint 35 — RLS refuses their rows anyway — but the friends
-    // calendar colors members by crew and counts them in the chip, so a pending
-    // invitee would appear to be in your crew. shares_crew_with() already requires
-    // 'active' on both sides, so this makes the client agree with the database.
-    .eq("status", "active")
+  if (!includePending) query = query.eq("status", "active")
+  const { data, error } = await query
   if (error) throw error
   return data || []
 }

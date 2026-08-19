@@ -11,7 +11,7 @@ import { dateKeyOf, localDateKey } from "../lib/calendarDates"
  */
 export default function PlanCalendar({
   entriesByDate,
-  dotColorFor,
+  dotColorFor = () => "transparent",
   legend = [],
   onSelectDay,
   renderDayDetail,
@@ -85,7 +85,10 @@ export default function PlanCalendar({
           const has = dayEntries.length > 0
 
           // Dedupe dots by color so three plans at one resort render one dot.
-          const dotColors = [...new Set(dayEntries.map(dotColorFor))].slice(0, 3)
+          // Skipped entirely when the caller supplies renderCellContent — the
+          // caller owns cell rendering in that case, and dotColorFor may not even
+          // be meaningful for its data shape.
+          const dotColors = renderCellContent ? [] : [...new Set(dayEntries.map(dotColorFor))].slice(0, 3)
 
           return (
             <button

@@ -10,11 +10,11 @@ import { ringColorFor, NEUTRAL_RING } from "../lib/crewColors"
 import { resortName } from "../lib/resorts"
 import { formatDate } from "../lib/format"
 import {
-  getVisiblePlansInRange, getAllVisibleTrips, getAcceptedFriends,
+  getVisiblePlansInRange, getAcceptedFriends,
   getMyCrews, getCrewMembers, joinPlanAtResort,
 } from "../lib/socialApi"
 
-function FailureNotice({ label, onRetry }) {
+function FailureNotice({ label, message, onRetry, onDismiss }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
@@ -22,17 +22,34 @@ function FailureNotice({ label, onRetry }) {
       borderRadius: 12, padding: "10px 14px", fontSize: 12, color: "var(--color-text-1)",
       marginBottom: 10,
     }}>
-      <span>Couldn't load {label}.</span>
-      <button
-        onClick={onRetry}
-        style={{
-          background: "transparent", border: "1px solid var(--color-danger)", borderRadius: 8,
-          color: "var(--color-text-1)", padding: "6px 12px", fontSize: 12, fontWeight: 800,
-          cursor: "pointer", minHeight: 44,
-        }}
-      >
-        Retry
-      </button>
+      <span>{message || `Couldn't load ${label}.`}</span>
+      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            style={{
+              background: "transparent", border: "1px solid var(--color-danger)", borderRadius: 8,
+              color: "var(--color-text-1)", padding: "6px 12px", fontSize: 12, fontWeight: 800,
+              cursor: "pointer", minHeight: 44,
+            }}
+          >
+            Retry
+          </button>
+        )}
+        {onDismiss && (
+          <button
+            onClick={onDismiss}
+            aria-label="Dismiss"
+            style={{
+              background: "transparent", border: "none",
+              color: "var(--color-text-1)", padding: "6px 10px", fontSize: 16, fontWeight: 800,
+              cursor: "pointer", minHeight: 44, lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -43,15 +60,21 @@ function FailureNotice({ label, onRetry }) {
  * Owns fetching, filter state and view mode. Everything it renders is a dumb
  * component fed from two pure modules (calendarGrouping, crewColors), which is what
  * lets the grouping and color rules be unit-tested without a browser.
+ *
+ * Trips are NOT fetched here. SkiPlansPage already owns the trip fetch/refresh
+ * loop (create/RSVP modals call its loadTrips), so this component takes the
+ * flattened mine+friends+rsvpd+invited array as a prop — one fetch, one place
+ * that refreshes it, and the calendar's headcounts update the moment a modal closes.
  */
-export default function FriendsCalendar({ currentUser, onOpenTrip, onScopeChange }) {
+export default function FriendsCalendar({
+  currentUser, onOpenTrip, trips = [], loading = false, onRequireLogin, onPlanADay,
+}) {
   const [viewMode, setViewMode] = useState("week")   // "week" | "month"
   const [anchor, setAnchor] = useState(() => new Date())
   const [selected, setSelected] = useState(() => new Set(["me", "friends"]))
   const [sheetOpen, setSheetOpen] = useState(false)
 
   const [plans, setPlans] = useState([])
-  const [trips, setTrips] = useState([])
   const [friends, setFriends] = useState([])
   const [crews, setCrews] = useState([])
   const [crewMemberIds, setCrewMemberIds] = useState(new Map())
@@ -69,9 +92,7 @@ export default function FriendsCalendar({ currentUser, onOpenTrip, onScopeChange
   // ── Static blocks: load once, cached across date navigation ──────────────
   const STATIC_LOADERS = useMemo(() => [
     { key: "friends", label: "your friends list", fn: getAcceptedFriends, apply: (v) => setFriends(v || []), fallback: [] },
-    { key: "trips", label: "trips", fn: getAllVisibleTrips, fallback: { mine: [], friends: [], rsvpd: [], invited: [] },
-      apply: (v) => setTrips([...(v.mine || []), ...(v.friends || []), ...(v.rsvpd || []), ...(v.invited || [])]) },
-    { key: "crews", label: "your crews", fallback: [],
+    { key: "crews", label: "your crews", fallback: { rows: [], pairs: [] },
       fn: async () => {
         const rows = await getMyCrews()
         const pairs = await Promise.all((rows || []).map(async (c) => {
@@ -192,13 +213,24 @@ export default function FriendsCalendar({ currentUser, onOpenTrip, onScopeChange
     return false
   }, [currentUserId, selected, friendIds, selectedCrewIds, crewMemberIds])
 
-  useEffect(() => { onScopeChange?.(selected) }, [selected, onScopeChange])
-
   const groupsByDay = useMemo(() => groupByDayAndMountain({
     plans: plans.filter((p) => inScope(p.user_id)),
-    trips: trips.filter((t) => inScope(t.host_id)),
+    // Scoping on host alone would drop a trip you RSVP'd going to unless its host
+    // is separately in scope, and would hide invites from non-friend hosts under
+    // every chip. "me" also has to cover the trip's own host/RSVP fields, not just
+    // membership tests, because a host or RSVP-er is not necessarily a friend or
+    // crewmate (Sprint 35 review finding #2).
+    trips: trips.filter((t) =>
+      inScope(t.host_id) ||
+      (selected.has("me") && (t.host_id === currentUserId || t.my_rsvp_status === "going" || t._isInvited))
+    ),
     currentUserId,
-  }), [plans, trips, inScope, currentUserId])
+    // Applies to trip hosts/RSVP-ers only — plans are already pre-filtered above.
+    // Without this, a trip that survives the filter still contributes every one of
+    // its "going" RSVPs to the headcount, even people in no selected crew (Sprint
+    // 35 review finding #7).
+    isVisible: inScope,
+  }), [plans, trips, inScope, currentUserId, selected])
 
   const colorCtx = useMemo(() => ({
     currentUserId, selectedCrewIds, crewIndexById, crewMemberIds, crewNameById,
@@ -238,29 +270,61 @@ export default function FriendsCalendar({ currentUser, onOpenTrip, onScopeChange
 
   const rangeLabel = anchor.toLocaleDateString(undefined, { month: "long", year: "numeric" })
 
+  // "Not known yet" — currentUser starts null and fills in asynchronously, so
+  // without this a signed-in user sees the signed-out copy flash before their
+  // session resolves.
+  if (loading) {
+    return (
+      <div style={{ textAlign: "center", padding: "48px 0", color: "var(--color-text-3)", fontSize: 14 }}>
+        Loading calendar…
+      </div>
+    )
+  }
+
   if (!currentUserId) {
     return (
-      <div style={{ padding: 24, textAlign: "center", color: "var(--color-text-3)", fontSize: 14 }}>
-        Sign in to see where your friends are skiing.
+      <div style={{
+        borderRadius: 24, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+        padding: "48px 28px", textAlign: "center", display: "grid", gap: 16, justifyItems: "center",
+      }}>
+        <div style={{ fontSize: 38 }}>📅</div>
+        <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>Sign in to see where your friends are skiing</div>
+        <button
+          onClick={() => onRequireLogin?.()}
+          style={{ background: "var(--gradient-cta)", color: "white", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}
+        >
+          Sign In
+        </button>
       </div>
     )
   }
 
   const nobodyToShow = hasLoaded && friends.length === 0 && crews.length === 0
   const nothingSelected = selected.size === 0
+  // Spec §4.7's third empty state: friends/crews exist, at least one chip is
+  // selected, and the fetch has settled — but nobody has a plan in the visible
+  // range. Distinct from the two above; do not merge them.
+  const nobodyPlanned = hasLoaded && !nobodyToShow && !nothingSelected && groupsByDay.size === 0
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <button onClick={() => { setAnchor(new Date()); setSelectedDay(null) }} style={navBtn}>Today</button>
-          <button onClick={() => shiftAnchor(-1)} aria-label="Previous" style={navBtn}>‹</button>
-          <div style={{ fontWeight: 900, fontSize: 15, color: "var(--color-text-1)", minWidth: 130, textAlign: "center" }}>
-            {rangeLabel}
+        {/* Month mode's day grid owns its own Today/‹/›/label nav (PlanCalendar's
+            internal viewDate). Rendering a second set here that drives `anchor`
+            independently is what caused the grid-goes-blank bug: the two navigators
+            could disagree about which month was showing. Week mode has no such
+            internal navigator, so it keeps this row. */}
+        {viewMode === "week" ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button onClick={() => { setAnchor(new Date()); setSelectedDay(null) }} style={navBtn}>Today</button>
+            <button onClick={() => shiftAnchor(-1)} aria-label="Previous" style={navBtn}>‹</button>
+            <div style={{ fontWeight: 900, fontSize: 15, color: "var(--color-text-1)", minWidth: 130, textAlign: "center" }}>
+              {rangeLabel}
+            </div>
+            <button onClick={() => shiftAnchor(1)} aria-label="Next" style={navBtn}>›</button>
           </div>
-          <button onClick={() => shiftAnchor(1)} aria-label="Next" style={navBtn}>›</button>
-        </div>
+        ) : <div />}
         <div style={{ display: "flex", gap: 4 }}>
           {["week", "month"].map((m) => (
             <button
@@ -290,11 +354,11 @@ export default function FriendsCalendar({ currentUser, onOpenTrip, onScopeChange
       {failed.plans && <FailureNotice label="this week's plans" onRetry={loadPlans} />}
       {failed.crews && <FailureNotice label="your crews" onRetry={() => runStatic(["crews"])} />}
       {failed.friends && <FailureNotice label="your friends list" onRetry={() => runStatic(["friends"])} />}
-      {failed.trips && <FailureNotice label="trips" onRetry={() => runStatic(["trips"])} />}
       {joinError && (
         <FailureNotice
-          label={`your plan (${joinError})`}
+          message={`Couldn't save your plan (${joinError})`}
           onRetry={() => lastJoinAttempt && handleJoin(lastJoinAttempt.dateKey, lastJoinAttempt.resortKey)}
+          onDismiss={() => setJoinError(null)}
         />
       )}
 
@@ -310,17 +374,36 @@ export default function FriendsCalendar({ currentUser, onOpenTrip, onScopeChange
         </div>
       )}
 
+      {nobodyPlanned && (
+        <div style={{ padding: "20px 16px", textAlign: "center", display: "grid", gap: 12, justifyItems: "center" }}>
+          <div style={{ color: "var(--color-text-3)", fontSize: 13 }}>
+            Nobody's planned a day {viewMode === "week" ? "this week" : "this month"} yet.
+          </div>
+          <button
+            onClick={() => onPlanADay?.()}
+            style={{
+              background: "var(--gradient-cta)", color: "white", border: "none", borderRadius: 12,
+              padding: "10px 20px", fontSize: 13, fontWeight: 900, cursor: "pointer", minHeight: 44,
+            }}
+          >
+            + Plan a day
+          </button>
+        </div>
+      )}
+
       {viewMode === "week" ? (
-        <WeekView
-          anchorDate={anchor}
-          groupsByDay={groupsByDay}
-          colorCtx={colorCtx}
-          currentUserId={currentUserId}
-          todayKey={todayKey}
-          joiningKey={joiningKey}
-          onJoin={handleJoin}
-          onOpenTrip={onOpenTrip}
-        />
+        !nobodyPlanned && (
+          <WeekView
+            anchorDate={anchor}
+            groupsByDay={groupsByDay}
+            colorCtx={colorCtx}
+            currentUserId={currentUserId}
+            todayKey={todayKey}
+            joiningKey={joiningKey}
+            onJoin={handleJoin}
+            onOpenTrip={onOpenTrip}
+          />
+        )
       ) : (
         <PlanCalendar
           entriesByDate={groupsByDay}
