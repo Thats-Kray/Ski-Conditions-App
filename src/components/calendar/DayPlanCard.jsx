@@ -1,4 +1,4 @@
-import { resortName, resortEmoji } from "../../lib/resorts"
+import { resortName, resortEmoji, OPEN_RESORT_KEY } from "../../lib/resorts"
 import { ringColorFor, crewBadgesFor } from "../../lib/crewColors"
 import { useProfileNav } from "../../lib/profileNav"
 import Avatar from "../ui/Avatar"
@@ -31,11 +31,19 @@ function shortName(profile) {
  */
 export default function DayPlanCard({
   group, colorCtx, currentUserId, canJoin = false, joining = false,
-  onJoin, onOpenTrip, compact = false,
+  onJoin, onOpenTrip, compact = false, myResortKey = null, onEditPlan,
 }) {
   const openProfile = useProfileNav()
   const { resortKey, attendees, trip } = group
   const alreadyIn = attendees.some((a) => a.userId === currentUserId)
+  const isOpenGroup = resortKey === OPEN_RESORT_KEY
+  // daily_plans is UNIQUE (user_id, ski_date), so joining a second mountain moves
+  // the plan rather than adding one. The button has to say so before the tap, not
+  // leave the user to discover it after.
+  const switchingFrom = !alreadyIn && myResortKey && myResortKey !== resortKey
+    ? resortName(myResortKey)
+    : null
+  const joinLabel = switchingFrom ? `Switch from ${switchingFrom}` : "I'm in"
   const shown = attendees.slice(0, MAX_AVATARS)
   const overflow = attendees.length - shown.length
   const names = attendees.slice(0, MAX_NAMES).map((a) => shortName(a.profile)).join(", ")
@@ -61,7 +69,7 @@ export default function DayPlanCard({
           {resortEmoji(resortKey)} {resortName(resortKey) || resortKey}
         </div>
         <div style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-3)", flexShrink: 0 }}>
-          {attendees.length} going
+          {attendees.length} {isOpenGroup ? "free" : "going"}
         </div>
       </div>
 
@@ -159,12 +167,27 @@ export default function DayPlanCard({
             cursor: joining ? "wait" : "pointer", opacity: joining ? 0.6 : 1,
           }}
         >
-          {joining ? "Joining…" : "I'm in"}
+          {joining ? "Saving…" : joinLabel}
         </button>
       )}
       {alreadyIn && (
-        <div style={{ justifySelf: "end", fontSize: 11, fontWeight: 800, color: "var(--color-success)" }}>
-          ✓ You're in
+        <div style={{ justifySelf: "end", display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 11, fontWeight: 800, color: "var(--color-success)" }}>
+            ✓ You&apos;re in
+          </span>
+          {onEditPlan && !compact && (
+            <button
+              onClick={onEditPlan}
+              style={{
+                background: "transparent", border: "1px solid var(--color-border)",
+                borderRadius: 10, padding: "8px 12px", minHeight: 44,
+                fontSize: 12, fontWeight: 700, color: "var(--color-text-2)",
+                cursor: "pointer",
+              }}
+            >
+              Add ETA
+            </button>
+          )}
         </div>
       )}
     </div>
