@@ -59,6 +59,19 @@ export const RESORT_ACCENTS = {
 }
 
 /**
+ * "I'm skiing that day, I don't care where." daily_plans.resort_key is NOT NULL,
+ * so this is a real sentinel value rather than an absent one.
+ *
+ * Deliberately NOT a member of RESORT_NAMES/RESORT_EMOJI: Object.keys(RESORT_NAMES)
+ * builds the mountain dropdowns in MountainBoard, PostSkiBuddyForm and SkiBuddyBoard,
+ * and "Open" is not a mountain you can post a buddy request for. The helpers below
+ * special-case it so display works everywhere without polluting those pickers.
+ */
+export const OPEN_RESORT_KEY = "open"
+export const OPEN_RESORT_LABEL = "Open — no preference"
+export const OPEN_RESORT_EMOJI = "✳️"
+
+/**
  * Collapses either form of a resort identifier onto the canonical resortKey:
  * a display name ("Beaver Creek", as ski_sessions.resort_name stores it for
  * real logged sessions) and an already-normalized key ("beavercreek", as trip
@@ -73,10 +86,13 @@ export function normalizeResortKey(key) {
 export function resortName(key) {
   if (!key) return ""
   const k = normalizeResortKey(key)
+  if (k === OPEN_RESORT_KEY) return OPEN_RESORT_LABEL
   return RESORT_NAMES[k] || key
 }
 
 export function resortEmoji(key) {
   if (!key) return "⛷️"
-  return RESORT_EMOJI[normalizeResortKey(key)] || "⛷️"
+  const k = normalizeResortKey(key)
+  if (k === OPEN_RESORT_KEY) return OPEN_RESORT_EMOJI
+  return RESORT_EMOJI[k] || "⛷️"
 }

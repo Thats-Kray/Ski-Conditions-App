@@ -5,6 +5,7 @@ import {
   markArrival,
   markDriving,
 } from "../lib/socialApi"
+import { resortName } from "../lib/resorts"
 import UserProfileModal from "./UserProfileModal"
 
 function formatPlanTime(isoString) {
@@ -35,27 +36,6 @@ function statusLabel(status) {
   if (status === "done") return "Done"
   if (status === "cancelled") return "Cancelled"
   return status || "Unknown"
-}
-
-function prettifyResortKey(key) {
-  if (!key) return "Unknown resort"
-
-  const map = {
-    vail: "Vail",
-    beavercreek: "Beaver Creek",
-    breckenridge: "Breckenridge",
-    keystone: "Keystone",
-    crestedbutte: "Crested Butte",
-    telluride: "Telluride",
-    winterpark: "Winter Park",
-    coppermountain: "Copper Mountain",
-    arapahoebasin: "Arapahoe Basin",
-    steamboat: "Steamboat",
-    eldora: "Eldora",
-    aspensnowmass: "Aspen Snowmass",
-  }
-
-  return map[key] || key
 }
 
 function displayNameForPlan(plan, currentUser) {
@@ -320,7 +300,7 @@ export default function TodaysCrew() {
                     {displayNameForPlan(plan, user)}
                   </div>
                   <div style={{ fontSize: 13, color: "rgba(255,255,255,0.72)" }}>
-                    {prettifyResortKey(plan.resort_key)}
+                    {resortName(plan.resort_key) || "Unknown resort"}
                   </div>
                 </div>
 
