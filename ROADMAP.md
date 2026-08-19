@@ -834,6 +834,52 @@ Task 1.3 required no sprint (already fully implemented — see the task's own no
 
 
 # Kyle's Notes for future roadmap items
+
+## Sprint 36 — The Ski Plan Editor (DONE)
+
+Came out of Kyle's live testing of Sprint 35 on powdays.app. Four problems, all at the
+moment a plan is recorded, all fixed:
+
+- **Joining a friend's mountain silently moved an existing plan.** `daily_plans` is
+  `UNIQUE (user_id, ski_date)`, so one plan per day is enforced by the schema and joining
+  genuinely relocates you — the behavior was right, the button was not. It now reads
+  **"Switch from Vail"** instead of "I'm in" when a tap would move you.
+- **Nothing ever asked for an ETA.** The plan editor now offers one, optional, with four
+  presets (First chair 08:30 / 9:00 / 10:00 / Afternoon 13:00) and a time field.
+- **The editor rendered below the calendar and went unnoticed.** It is now a modal over the
+  calendar — bottom sheet on mobile, centered dialog on desktop.
+- **No way to say "skiing, no preference."** Added **"Open — no preference"**, a real
+  `resort_key` sentinel (the column is `NOT NULL`). Its card is pinned below every real
+  mountain regardless of headcount and reads "N free" — the top card answers "where should
+  we go", and available people are not a where.
+
+**ETAs snap to 15-minute increments** via `snapToQuarterHour()` applied on save.
+`<input type="time" step="900">` alone is not enough: iOS Safari's time wheel ignores
+`step`, so a phone could otherwise store 8:07.
+
+**Do not add `open` to `RESORT_NAMES`.** `Object.keys(RESORT_NAMES)` builds the mountain
+dropdowns in `MountainBoard`, `PostSkiBuddyForm` and `SkiBuddyBoard`; the sentinel there
+would offer "Open — no preference" as a mountain you can post a buddy request for. It is
+special-cased inside `resortName`/`resortEmoji` instead, and `src/lib/resorts.test.js`
+carries a test asserting it stays out of both maps.
+
+Also retired `TodaysCrew`'s local `prettifyResortKey`, a hardcoded duplicate of
+`RESORT_NAMES` that predated the sprint.
+
+Spec: `docs/superpowers/specs/2026-08-18-plan-editor-design.md`.
+Plan: `docs/superpowers/plans/2026-08-18-sprint-36-plan-editor.md`.
+
+### TASK 19.1 — Per-crew ski plan visibility (OPEN, scoped as Sprint 37)
+- [ ] Kyle's ask: when setting visibility, choose **all friends** or **multi-select specific
+      crews** — "people might want to hide where they're going from some people or groups."
+- [ ] Needs a migration and new RLS policies, which is why it was split out of Sprint 36.
+- [ ] **The trap is already documented.** Migration 032's own comments note the policy keys
+      off `visibility <> 'private'`, so **any** non-private value is readable by all friends
+      and active crewmates. A naive `visibility='crews'` row would leak to everyone — the
+      exact thing the feature exists to prevent.
+- [ ] Retiring `daily_plans.group_id` and the dead `'groups'` visibility value (TASK 18.1)
+      belongs with this migration.
+
 Instructions: When asked "what can we work on next?" refer to this list for potential items to add to the next sprint development.
 
 Last updated 8/13/2026 at 3:49PM
