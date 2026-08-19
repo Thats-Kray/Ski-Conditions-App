@@ -43,3 +43,29 @@ export function etaToTimeInput(iso) {
   if (Number.isNaN(d.getTime())) return null
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
 }
+
+/**
+ * Rounds an "HH:MM" string to the nearest quarter hour.
+ *
+ * `<input type="time" step="900">` gives a 15-minute stepper on desktop, but iOS
+ * Safari's time wheel ignores `step` — so a phone can still hand us "08:07". This
+ * is the actual guarantee, applied on save rather than trusted from the input.
+ *
+ * Returns null for null/unparseable input so clearing an ETA stays possible.
+ */
+export function snapToQuarterHour(hhmm) {
+  if (!hhmm) return null
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm).trim())
+  if (!m) return null
+
+  let hour = Number(m[1])
+  const minute = Number(m[2])
+  if (hour > 23 || minute > 59) return null
+
+  let snapped = Math.round(minute / 15) * 15
+  if (snapped === 60) {
+    snapped = 0
+    hour = (hour + 1) % 24     // 23:53 becomes 00:00, never hour 24
+  }
+  return `${String(hour).padStart(2, "0")}:${String(snapped).padStart(2, "0")}`
+}
