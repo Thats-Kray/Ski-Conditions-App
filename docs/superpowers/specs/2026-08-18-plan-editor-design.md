@@ -33,7 +33,7 @@ all about the moment a user actually *records* a plan:
 | 1 | **Editing moves into a modal**, opened by tapping a day on your own Ski Plans calendar. | An editor below the fold is an editor users don't find. A friend's calendar is unchanged — there is nothing to edit, so its read-only summary stays inline. |
 | 2 | **ETA is optional**, with four one-tap presets plus a time field. | Requiring it would block the ordinary case of knowing the day before the time, and people would type a fake time to get past the gate — worse than no time at all. |
 | 3 | **ETA snaps to 15-minute increments.** | Kyle's call. `step="900"` handles the desktop stepper; a pure `snapToQuarterHour()` on save handles iOS Safari, whose time wheel ignores `step`. |
-| 4 | **"Open" is a real resort_key sentinel (`"open"`)**, not null. | `resort_key` is `NOT NULL` in the schema. A sentinel keeps the column honest and avoids a migration. |
+| 4 | **"Open" is a real resort_key sentinel (`"open"`)**, not null. | `resort_key` is `NOT NULL` in the schema. A sentinel keeps the column honest and avoids a migration. Audited: no consumer resolves a plan's resort to coordinates or weather, and both shared lookup helpers already fall back safely — see §3.3. |
 | 5 | **The Open card is pinned below every real mountain**, regardless of headcount. | Mountain cards sort by headcount because the top card answers "where should we go". Open is not a destination — it is available people. Letting four open users outrank three at Copper would make the layout lie in the one place it must not. |
 | 6 | **The join button states what it will actually do.** `I'm in` when the day is free, `Switch from Vail` when it isn't. | The action was already correct; only its label was dishonest. This is the smallest change that fixes what surprised the user. |
 | 7 | **The `note` column stays unused.** | Nothing in the app renders it. Adding a field that writes to a surface nobody reads is write-only work. |
@@ -105,13 +105,34 @@ after every real mountain, whatever the counts are. Everything else — avatars,
 the join button — behaves identically, so marking yourself free is the same gesture as
 joining a mountain.
 
-**This is the riskiest item in the sprint, and the risk is outside the calendar.**
-`daily_plans.resort_key` is read by `TodaysCrew`, `HomeDashboard`, `ui/AvatarStatusRail`,
-and anything that resolves a resort to coordinates, weather or a mountain page. A value
-that is not a real resort could render blank, or throw. The plan therefore carries an
-explicit task to **audit every consumer of `resort_key` and decide per call site** whether
-Open renders, is skipped, or is filtered out — before the option is exposed in the UI, not
-after.
+**Blast radius, audited against the code rather than assumed.** An earlier draft of this
+spec called Open the riskiest item in the sprint. That was wrong, and the correction is
+recorded here so the plan is not built around a phantom risk.
+
+Six components read `daily_plans`: `FriendsCalendar`, `FriendsPage`, `HomeDashboard`,
+`SkiPlansTab`, `TodaysCrew`, `ui/AvatarStatusRail`. Of those, three display the resort, and
+**none resolve a plan's `resort_key` to coordinates, weather, or a mountain page** — those
+surfaces are driven by the Snow tab's own resort selection, not by anyone's plan. There is
+no crash path.
+
+The shared helpers already degrade safely for an unrecognised key:
+
+```js
+resortName(key)  => RESORT_NAMES[normalizeResortKey(key)] || key   // raw string, no throw
+resortEmoji(key) => RESORT_EMOJI[normalizeResortKey(key)] || "⛷️"  // fallback, no throw
+```
+
+So adding `open` to `RESORT_NAMES` and `RESORT_EMOJI` makes every call site that routes
+through those helpers render "Open — no preference" with no further change.
+
+**One call site does not route through them.** `TodaysCrew.jsx:40` carries
+`prettifyResortKey`, a local hardcoded duplicate of `RESORT_NAMES`. It predates this sprint
+and is the only place that would show a raw `open`. The fix is to delete the duplicate and
+call the shared `resortName()` — a targeted improvement to code this sprint already touches,
+not a new abstraction.
+
+The plan still carries a verification step confirming Open renders correctly on Today's
+Crew, Home and the avatar rail. It is a check, not an investigation.
 
 ### 3.4 Honest join / switch labeling
 
@@ -133,7 +154,8 @@ point into the modal.
 | File | Responsibility |
 |---|---|
 | `src/lib/format.js` | *modify* — add `snapToQuarterHour(hhmm)` |
-| `src/lib/resorts.js` | *modify* — `OPEN_RESORT_KEY`, name/emoji, `normalizeResortKey` passthrough |
+| `src/lib/resorts.js` | *modify* — `OPEN_RESORT_KEY`, add `open` to `RESORT_NAMES`/`RESORT_EMOJI` |
+| `src/components/TodaysCrew.jsx` | *modify* — delete the local `prettifyResortKey` map, call shared `resortName()` |
 | `src/lib/calendarGrouping.js` | *modify* — pin the Open group last within each day |
 | `src/components/PlanEditorModal.jsx` | *new* — the modal of §3.1 |
 | `src/components/SkiPlansTab.jsx` | *modify* — tap a day opens the modal; drop the inline editor |
@@ -176,8 +198,8 @@ browser work:
 6. `Remove day` deletes the plan; the day empties.
 7. Choose **Open** → the day shows an Open card on the friends calendar, **below** a real
    mountain that has fewer people on it.
-8. Every surface listed in §3.3 renders an Open plan without blanking or throwing —
-   Today's Crew, Home, the avatar rail.
+8. An Open plan renders as "Open — no preference" on Today's Crew, the Home dashboard and
+   the avatar rail — the three surfaces outside the calendar that display a plan's resort.
 9. With a plan at Vail on Saturday, a Copper card reads `Switch from Vail`; tapping it moves
    you, **and your ETA survives**.
 10. With no plan that day, the same card reads `I'm in`.
