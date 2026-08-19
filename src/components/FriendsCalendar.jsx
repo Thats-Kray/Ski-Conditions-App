@@ -192,18 +192,8 @@ export default function FriendsCalendar({
 
   // Your own plan per date, for the join button's Switch label and for opening the
   // editor on a day you already planned. Built from `plans`, which already covers
-  // the visible range.
-  const myResortByDate = useMemo(() => {
-    const m = new Map()
-    if (!currentUserId) return m
-    for (const p of plans) {
-      if (p.user_id !== currentUserId) continue
-      const key = (p.ski_date || "").slice(0, 10)
-      if (key) m.set(key, p.resort_key)
-    }
-    return m
-  }, [plans, currentUserId])
-
+  // the visible range. Callers that only need the resort key read
+  // `myPlanByDate.get(dateKey)?.resort_key` rather than a second parallel map.
   const myPlanByDate = useMemo(() => {
     const m = new Map()
     if (!currentUserId) return m
@@ -480,7 +470,7 @@ export default function FriendsCalendar({
             joiningKey={joiningKey}
             onJoin={handleJoin}
             onOpenTrip={onOpenTrip}
-            myResortByDate={myResortByDate}
+            myPlanByDate={myPlanByDate}
             onEditPlan={(dateKey) => { setEditorError(null); setEditorDate(dateKey) }}
           />
         )
@@ -544,7 +534,7 @@ export default function FriendsCalendar({
                   joining={joiningKey === `${dateKey}|${g.resortKey}`}
                   onJoin={(resortKey) => handleJoin(dateKey, resortKey)}
                   onOpenTrip={onOpenTrip}
-                  myResortKey={myResortByDate.get(dateKey) || null}
+                  myResortKey={myPlanByDate.get(dateKey)?.resort_key ?? null}
                   onEditPlan={() => { setEditorError(null); setEditorDate(dateKey) }}
                 />
               ))}

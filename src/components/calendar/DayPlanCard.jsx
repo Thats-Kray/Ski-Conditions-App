@@ -175,7 +175,7 @@ export default function DayPlanCard({
           <span style={{ fontSize: 11, fontWeight: 800, color: "var(--color-success)" }}>
             ✓ You&apos;re in
           </span>
-          {onEditPlan && !compact && (
+          {onEditPlan && !compact && canJoin && (
             <button
               onClick={onEditPlan}
               style={{

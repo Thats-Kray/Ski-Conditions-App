@@ -18,7 +18,7 @@ function dayNumber(dateKey) {
  */
 export default function WeekView({
   anchorDate, groupsByDay, colorCtx, currentUserId, todayKey,
-  joiningKey, onJoin, onOpenTrip, myResortByDate, onEditPlan,
+  joiningKey, onJoin, onOpenTrip, myPlanByDate, onEditPlan,
 }) {
   const isMobile = useMobile()
   const keys = weekDayKeys(anchorDate)
@@ -42,7 +42,7 @@ export default function WeekView({
       onJoin={(resortKey) => onJoin?.(day.key, resortKey)}
       onOpenTrip={onOpenTrip}
       compact={compact}
-      myResortKey={myResortByDate?.get(day.key) || null}
+      myResortKey={myPlanByDate?.get(day.key)?.resort_key ?? null}
       onEditPlan={onEditPlan ? () => onEditPlan(day.key) : undefined}
     />
   )
