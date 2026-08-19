@@ -10,6 +10,7 @@ import {
 } from "../lib/socialApi"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { formatDate } from "../lib/format"
+import { buildPlanUpsert } from "../lib/planUpsert"
 
 // Literal hex: feeds `${PLAN_COLOR}11`/`33` alpha-suffix template literals below.
 const PLAN_COLOR = "#67e8f9"
@@ -92,18 +93,15 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
     setBusy(true); setSaveError(null)
     const previous = plans
     try {
-      // upsertDailyPlan writes the whole row (onConflict user_id,ski_date), so
-      // every field we omit is written as null. Carry the check-in fields forward
-      // or editing a day you already checked into would wipe them.
-      const saved = await upsertDailyPlan({
-        ski_date: selectedDate,
-        resort_key: resortKey,
+      // buildPlanUpsert carries status/note/arrived_at forward from the existing
+      // row (and resets status/arrived_at if the mountain changed) — upsertDailyPlan
+      // writes the whole row, so anything omitted here would be written as null.
+      const saved = await upsertDailyPlan(buildPlanUpsert(selectedPlan, {
+        skiDate: selectedDate,
+        resortKey,
         visibility,
         eta,                                   // already snapped by the modal
-        status: selectedPlan?.status || "planned",
-        note: selectedPlan?.note ?? null,
-        arrived_at: selectedPlan?.arrived_at ?? null,
-      })
+      }))
       setPlans((prev) => [
         ...prev.filter((p) => (p.ski_date || "").slice(0, 10) !== selectedDate),
         saved,
@@ -195,6 +193,21 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
               <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
                 Past days can&apos;t be edited here — log a session from the Leaderboard instead.
               </div>
+            )}
+
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => setEditorOpen(true)}
+                style={{
+                  justifySelf: "start", background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.16)", borderRadius: 10,
+                  padding: "8px 14px", minHeight: 44, fontSize: 12, fontWeight: 700,
+                  color: "rgba(255,255,255,0.8)", cursor: "pointer",
+                }}
+              >
+                Edit plan
+              </button>
             )}
           </div>
         )}

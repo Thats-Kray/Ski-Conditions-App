@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { localDateKey } from "./calendarDates";
-import { etaToTimeInput } from "./format";
+import { OPEN_RESORT_KEY } from "./resorts";
+import { buildPlanUpsert } from "./planUpsert";
 
 /* -----------------------------
    Constants
@@ -589,20 +590,18 @@ export async function upsertDailyPlan(plan) {
  * daily_plans is unique on (user_id, ski_date), so joining a mountain IS setting my
  * plan for that day. No RSVP table, no second concept.
  *
- * Reads first and merges, because upsertDailyPlan writes the whole row: without the
- * spread, tapping "I'm in" on a day I had already planned with an ETA would null the
- * ETA, the note and the check-in. The eta round-trip needs etaToTimeInput or
- * buildPlanEta rejects the stored ISO timestamp and writes null anyway.
+ * Reads first and merges via buildPlanUpsert(), because upsertDailyPlan writes the
+ * whole row: without the merge, tapping "I'm in" on a day I had already planned
+ * with an ETA would null the ETA, the note and the check-in. buildPlanUpsert also
+ * resets status/arrived_at when the mountain actually changes — moving to a
+ * different mountain cannot leave you marked as having arrived at the old one.
  */
 export async function joinPlanAtResort(skiDate, resortKey) {
   const existing = await getMyDailyPlan(skiDate)
-  return upsertDailyPlan({
-    ...(existing || {}),
-    ski_date: skiDate,
-    resort_key: resortKey,
-    eta: etaToTimeInput(existing?.eta),
-    visibility: existing?.visibility || "friends",
-  })
+  return upsertDailyPlan(buildPlanUpsert(existing, {
+    skiDate,
+    resortKey,
+  }))
 }
 
 export async function getMyDailyPlan(skiDate) {
@@ -2184,11 +2183,22 @@ export async function getFriendsLeaderboard() {
   const leaderboard = (profiles || []).map((friend) => {
     const friendPlans = (allPlans || []).filter((plan) => plan.user_id === friend.id);
 
+    // "Open — no preference" is still a day skied, so it stays in daysOnMountain.
+    // It is not a mountain, so it must not decide anyone's topResort, and two
+    // people who both said "Open" the same day did not necessarily ski together
+    // — so OPEN_RESORT_KEY rows are excluded below from both resortCounts and
+    // the daysTogether match sets.
     const daysOnMountain = new Set(friendPlans.map((plan) => plan.ski_date)).size;
 
-    const myDayResortSet = new Set(myPlans.map((plan) => `${plan.ski_date}__${plan.resort_key}`));
+    const myDayResortSet = new Set(
+      myPlans
+        .filter((plan) => plan.resort_key !== OPEN_RESORT_KEY)
+        .map((plan) => `${plan.ski_date}__${plan.resort_key}`)
+    );
     const friendDayResortSet = new Set(
-      friendPlans.map((plan) => `${plan.ski_date}__${plan.resort_key}`)
+      friendPlans
+        .filter((plan) => plan.resort_key !== OPEN_RESORT_KEY)
+        .map((plan) => `${plan.ski_date}__${plan.resort_key}`)
     );
 
     let daysTogether = 0;
@@ -2198,6 +2208,7 @@ export async function getFriendsLeaderboard() {
 
     const resortCounts = {};
     for (const plan of friendPlans) {
+      if (plan.resort_key === OPEN_RESORT_KEY) continue;
       const key = plan.resort_key || "Unknown";
       resortCounts[key] = (resortCounts[key] || 0) + 1;
     }

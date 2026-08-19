@@ -42,10 +42,10 @@ function SectionLabel({ children }) {
  */
 export default function PlanEditorModal({
   dateKey, plan = null, resorts = [], busy = false, error = null,
-  onSave, onRemove, onClose,
+  defaultResortKey = null, onSave, onRemove, onClose,
 }) {
   const isMobile = useMobile()
-  const [resortKey, setResortKey] = useState(plan?.resort_key || "")
+  const [resortKey, setResortKey] = useState(plan?.resort_key || defaultResortKey || "")
   const [eta, setEta] = useState(() => etaToTimeInput(plan?.eta) || "")
   const [visibility, setVisibility] = useState(plan?.visibility || "friends")
 
@@ -82,11 +82,11 @@ export default function PlanEditorModal({
           {formatDate(dateKey)}
         </div>
         <button
-          onClick={onClose}
+          onClick={busy ? undefined : onClose}
           aria-label="Close"
           style={{
             background: "none", border: "none", color: "var(--color-text-3)",
-            fontSize: 22, cursor: "pointer", minHeight: 44, minWidth: 44,
+            fontSize: 22, cursor: busy ? "default" : "pointer", minHeight: 44, minWidth: 44,
           }}
         >
           ×
@@ -229,7 +229,7 @@ export default function PlanEditorModal({
 
   return (
     <div
-      onClick={onClose}
+      onClick={busy ? undefined : onClose}
       style={{
         position: "fixed", inset: 0, zIndex: 1000,
         background: "rgba(0,0,0,0.55)",

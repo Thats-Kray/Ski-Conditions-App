@@ -28,10 +28,18 @@ function shortName(profile) {
  * @param {Function} props.onJoin
  * @param {Function} props.onOpenTrip
  * @param {boolean} props.compact
+ * @param {string|null} props.myResortKey - the signed-in user's own resort_key for
+ *   this date, if any, so the join button can say "Switch from X" honestly.
+ * @param {Function} [props.onEditPlan] - called with this card's resortKey when the
+ *   "Add ETA"/"Edit plan" affordance is tapped, so the caller can seed the plan
+ *   editor with the mountain the user actually clicked from.
+ * @param {boolean} [props.myPlanHasEta] - whether the signed-in user's plan for
+ *   this date already has an ETA set, purely to choose the affordance's label.
  */
 export default function DayPlanCard({
   group, colorCtx, currentUserId, canJoin = false, joining = false,
   onJoin, onOpenTrip, compact = false, myResortKey = null, onEditPlan,
+  myPlanHasEta = false,
 }) {
   const openProfile = useProfileNav()
   const { resortKey, attendees, trip } = group
@@ -177,7 +185,7 @@ export default function DayPlanCard({
           </span>
           {onEditPlan && !compact && canJoin && (
             <button
-              onClick={onEditPlan}
+              onClick={() => onEditPlan(resortKey)}
               style={{
                 background: "transparent", border: "1px solid var(--color-border)",
                 borderRadius: 10, padding: "8px 12px", minHeight: 44,
@@ -185,7 +193,7 @@ export default function DayPlanCard({
                 cursor: "pointer",
               }}
             >
-              Add ETA
+              {myPlanHasEta ? "Edit plan" : "Add ETA"}
             </button>
           )}
         </div>

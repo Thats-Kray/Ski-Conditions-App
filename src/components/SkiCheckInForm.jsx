@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { getCurrentUser, getMyDailyPlan, upsertDailyPlan } from "../lib/socialApi"
+import { buildPlanUpsert } from "../lib/planUpsert"
+import { resortName, OPEN_RESORT_KEY, OPEN_RESORT_LABEL, OPEN_RESORT_EMOJI } from "../lib/resorts"
 
 function formatPlanTime(isoString) {
   if (!isoString) return "No ETA"
@@ -62,11 +64,6 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
     load()
   }, [today])
 
-  const selectedResort = useMemo(
-    () => resorts.find((r) => r.resortKey === resortKey),
-    [resorts, resortKey]
-  )
-
   async function handleSubmit(e) {
     e.preventDefault()
     setMessage("")
@@ -77,15 +74,17 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
         throw new Error("Please sign in first.")
       }
 
-      const etaIso = eta ? new Date(`${today}T${eta}:00`).toISOString() : null
-
-    await upsertDailyPlan({
-      ski_date: new Date().toISOString().slice(0, 10),
-      resort_key: selectedResort?.resortKey || selectedResort,
-      status: "planned",
-      visibility: "friends",
-      note,
-    })
+      // Read the existing row and merge through buildPlanUpsert rather than
+      // writing a hardcoded status/visibility: upsertDailyPlan writes the whole
+      // row, so a naive payload here would silently blank any ETA already set
+      // and un-private a plan the user marked Private in the plan editor.
+      const existing = await getMyDailyPlan(today)
+      await upsertDailyPlan(buildPlanUpsert(existing, {
+        skiDate: today,
+        resortKey,
+        eta: eta || undefined, // only override when the user actually set one
+        note: note || null,
+      }))
 
       setHasPlan(true)
       setIsEditing(false)
@@ -132,7 +131,7 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
             }}
           >
             <div style={{ fontSize: 18, fontWeight: 900 }}>
-              {selectedResort?.name || "No resort selected"}
+              {resortName(resortKey) || "No resort selected"}
             </div>
 
             <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>
@@ -184,6 +183,8 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
                 {r.name}
               </option>
             ))}
+            {/* Added here, not to RESORT_NAMES — see resorts.js for why. */}
+            <option value={OPEN_RESORT_KEY}>{OPEN_RESORT_EMOJI} {OPEN_RESORT_LABEL}</option>
           </select>
 
           <input

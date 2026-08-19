@@ -1,0 +1,115 @@
+import { test } from "node:test"
+import assert from "node:assert/strict"
+import { buildPlanUpsert } from "./planUpsert.js"
+
+const isoEta = (h, m) => new Date(2026, 0, 15, h, m, 0).toISOString()
+
+test("existing = null produces sane defaults", () => {
+  const result = buildPlanUpsert(null, { skiDate: "2026-01-15", resortKey: "vail" })
+  assert.deepEqual(result, {
+    ski_date: "2026-01-15",
+    resort_key: "vail",
+    eta: null,
+    visibility: "friends",
+    status: "planned",
+    note: null,
+    arrived_at: null,
+  })
+})
+
+test("an omitted field is carried forward and never nulled", () => {
+  const existing = {
+    ski_date: "2026-01-15",
+    resort_key: "vail",
+    eta: isoEta(8, 30),
+    visibility: "private",
+    status: "arrived",
+    note: "meet at gondola",
+    arrived_at: "2026-01-15T15:00:00.000Z",
+  }
+  // Caller only wants to touch visibility; everything else must ride along.
+  const result = buildPlanUpsert(existing, { visibility: "friends" })
+
+  assert.equal(result.ski_date, "2026-01-15")
+  assert.equal(result.resort_key, "vail")
+  assert.equal(result.eta, "08:30")
+  assert.equal(result.visibility, "friends")
+  assert.equal(result.status, "arrived")
+  assert.equal(result.note, "meet at gondola")
+  assert.equal(result.arrived_at, "2026-01-15T15:00:00.000Z")
+})
+
+test("an ISO eta on existing round-trips to HH:MM when eta is omitted", () => {
+  const existing = { resort_key: "vail", eta: isoEta(14, 5) }
+  const result = buildPlanUpsert(existing, { resortKey: "vail" })
+  assert.equal(result.eta, "14:05")
+})
+
+test("an explicit null eta clears it, even when existing had one", () => {
+  const existing = { resort_key: "vail", eta: isoEta(9, 0) }
+  const result = buildPlanUpsert(existing, { resortKey: "vail", eta: null })
+  assert.equal(result.eta, null)
+})
+
+test("an explicit HH:MM eta is used as-is", () => {
+  const existing = { resort_key: "vail", eta: isoEta(9, 0) }
+  const result = buildPlanUpsert(existing, { resortKey: "vail", eta: "11:45" })
+  assert.equal(result.eta, "11:45")
+})
+
+test("a resort change resets status and arrived_at", () => {
+  const existing = {
+    resort_key: "vail",
+    status: "arrived",
+    arrived_at: "2026-01-15T15:00:00.000Z",
+    eta: isoEta(8, 30),
+    visibility: "friends",
+    note: "carpooling",
+  }
+  const result = buildPlanUpsert(existing, { resortKey: "coppermountain" })
+
+  assert.equal(result.resort_key, "coppermountain")
+  assert.equal(result.status, "planned")
+  assert.equal(result.arrived_at, null)
+  // Switching mountains must not silently wipe the ETA/note/visibility too.
+  assert.equal(result.eta, "08:30")
+  assert.equal(result.visibility, "friends")
+  assert.equal(result.note, "carpooling")
+})
+
+test("a same-resort save preserves status and arrived_at", () => {
+  const existing = {
+    resort_key: "vail",
+    status: "arrived",
+    arrived_at: "2026-01-15T15:00:00.000Z",
+  }
+  const result = buildPlanUpsert(existing, { resortKey: "vail", visibility: "private" })
+
+  assert.equal(result.status, "arrived")
+  assert.equal(result.arrived_at, "2026-01-15T15:00:00.000Z")
+})
+
+test("resortKey omitted falls back to existing.resort_key and does not count as a change", () => {
+  const existing = { resort_key: "vail", status: "arrived", arrived_at: "2026-01-15T15:00:00.000Z" }
+  const result = buildPlanUpsert(existing, { visibility: "friends" })
+
+  assert.equal(result.resort_key, "vail")
+  assert.equal(result.status, "arrived")
+  assert.equal(result.arrived_at, "2026-01-15T15:00:00.000Z")
+})
+
+test("note omitted falls back to existing note, then null", () => {
+  const withNote = buildPlanUpsert({ resort_key: "vail", note: "hello" }, { resortKey: "vail" })
+  assert.equal(withNote.note, "hello")
+
+  const withoutNote = buildPlanUpsert(null, { skiDate: "2026-01-15", resortKey: "vail" })
+  assert.equal(withoutNote.note, null)
+})
+
+test("visibility omitted falls back to existing.visibility, then friends", () => {
+  const withVisibility = buildPlanUpsert({ resort_key: "vail", visibility: "private" }, { resortKey: "vail" })
+  assert.equal(withVisibility.visibility, "private")
+
+  const withoutVisibility = buildPlanUpsert(null, { skiDate: "2026-01-15", resortKey: "vail" })
+  assert.equal(withoutVisibility.visibility, "friends")
+})

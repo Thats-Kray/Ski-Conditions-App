@@ -43,7 +43,8 @@ export default function WeekView({
       onOpenTrip={onOpenTrip}
       compact={compact}
       myResortKey={myPlanByDate?.get(day.key)?.resort_key ?? null}
-      onEditPlan={onEditPlan ? () => onEditPlan(day.key) : undefined}
+      myPlanHasEta={Boolean(myPlanByDate?.get(day.key)?.eta)}
+      onEditPlan={onEditPlan ? (resortKey) => onEditPlan(day.key, resortKey) : undefined}
     />
   )
 

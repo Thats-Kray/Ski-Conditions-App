@@ -44,8 +44,8 @@ function displayNameForPlan(plan, currentUser) {
   }
 
   return (
-    plan?.profiles?.full_name ||
-    plan?.profiles?.username ||
+    plan?.profile?.full_name ||
+    plan?.profile?.username ||
     "Skier"
   )
 }
@@ -61,7 +61,7 @@ function initialsFromName(name) {
 
 function Avatar({ plan, currentUser }) {
   const displayName = displayNameForPlan(plan, currentUser)
-  const avatarUrl = plan?.profiles?.avatar_url
+  const avatarUrl = plan?.profile?.avatar_url
 
   return (
     <div

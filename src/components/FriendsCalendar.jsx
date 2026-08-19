@@ -10,6 +10,7 @@ import { groupByDayAndMountain, totalAttendees } from "../lib/calendarGrouping"
 import { ringColorFor, NEUTRAL_RING } from "../lib/crewColors"
 import { resortName } from "../lib/resorts"
 import { formatDate } from "../lib/format"
+import { buildPlanUpsert } from "../lib/planUpsert"
 import {
   getVisiblePlansInRange, getAcceptedFriends,
   getMyCrews, getCrewMembers, joinPlanAtResort, upsertDailyPlan,
@@ -95,6 +96,7 @@ export default function FriendsCalendar({
   const [joinError, setJoinError] = useState(null)
   const [lastJoinAttempt, setLastJoinAttempt] = useState(null)
   const [editorDate, setEditorDate] = useState(null)
+  const [editorSeedResort, setEditorSeedResort] = useState(null)
   const [editorError, setEditorError] = useState(null)
   const [editorBusy, setEditorBusy] = useState(false)
 
@@ -300,19 +302,18 @@ export default function FriendsCalendar({
     setEditorBusy(true); setEditorError(null)
     const existing = myPlanByDate.get(editorDate) || null
     try {
-      // upsertDailyPlan writes the whole row, so status/note/arrived_at must be
-      // carried forward or editing a day you already checked into would wipe them.
-      await upsertDailyPlan({
-        ski_date: editorDate,
-        resort_key: resortKey,
+      // buildPlanUpsert carries status/note/arrived_at forward from the existing
+      // row (and resets status/arrived_at if the mountain changed) — upsertDailyPlan
+      // writes the whole row, so anything omitted here would be written as null.
+      await upsertDailyPlan(buildPlanUpsert(existing, {
+        skiDate: editorDate,
+        resortKey,
         visibility,
         eta,                                   // already snapped by the modal
-        status: existing?.status || "planned",
-        note: existing?.note ?? null,
-        arrived_at: existing?.arrived_at ?? null,
-      })
+      }))
       await loadPlans()
       setEditorDate(null)
+      setEditorSeedResort(null)
     } catch (err) {
       console.error("[FriendsCalendar] plan save failed:", err)
       setEditorError(err?.message || "Couldn't save that plan.")
@@ -471,7 +472,9 @@ export default function FriendsCalendar({
             onJoin={handleJoin}
             onOpenTrip={onOpenTrip}
             myPlanByDate={myPlanByDate}
-            onEditPlan={(dateKey) => { setEditorError(null); setEditorDate(dateKey) }}
+            onEditPlan={(dateKey, resortKey) => {
+              setEditorError(null); setEditorDate(dateKey); setEditorSeedResort(resortKey)
+            }}
           />
         )
       ) : (
@@ -535,7 +538,10 @@ export default function FriendsCalendar({
                   onJoin={(resortKey) => handleJoin(dateKey, resortKey)}
                   onOpenTrip={onOpenTrip}
                   myResortKey={myPlanByDate.get(dateKey)?.resort_key ?? null}
-                  onEditPlan={() => { setEditorError(null); setEditorDate(dateKey) }}
+                  myPlanHasEta={Boolean(myPlanByDate.get(dateKey)?.eta)}
+                  onEditPlan={(resortKey) => {
+                    setEditorError(null); setEditorDate(dateKey); setEditorSeedResort(resortKey)
+                  }}
                 />
               ))}
             </div>
@@ -561,8 +567,9 @@ export default function FriendsCalendar({
           resorts={resorts}
           busy={editorBusy}
           error={editorError}
+          defaultResortKey={editorSeedResort}
           onSave={handleEditorSave}
-          onClose={() => setEditorDate(null)}
+          onClose={() => { setEditorDate(null); setEditorSeedResort(null) }}
         />
       )}
     </div>
