@@ -649,7 +649,9 @@ rows and no code path (the app uses `crews`/`crew_members`). Also fixed:
       but its owner. Migration 032 left both in place as the non-destructive
       choice; removing them needs its own migration.
 
-### TASK 18.2 — `getCrewMembers()` returns pending members
+### TASK 18.2 — ~~`getCrewMembers()` returns pending members~~
+**DONE — Sprint 35.** `getCrewMembers` now takes `{ includePending = false }`; it filters to `status = 'active'` by default so the friends calendar cannot color or count a pending invitee into a crew, while `CrewGroupChat` passes `includePending: true` and renders pending rows with an "Invited" pill. The Sprint 34 note that RLS already hid these rows was **wrong** — migration 035's policy returns every row of a crew you are active in, pending included, which is why an unconditional filter regressed the invite flow.
+
 - [ ] The crew chips on the shared calendar include members whose `crew_members.status`
       is `'pending'`, because `getCrewMembers` neither selects nor filters `status`.
       Harmless today (RLS still won't return a non-friend pending member's plans,
@@ -737,7 +739,9 @@ visible to any single task's reviewer:
       Widens nothing else — you could already read every member of any crew you are
       active in.
 
-### TASK 18.4 — `getCrewMembers()` returns pending members
+### TASK 18.4 — ~~`getCrewMembers()` returns pending members~~ (duplicate of 18.2)
+**DONE — Sprint 35.** `getCrewMembers` now takes `{ includePending = false }`; it filters to `status = 'active'` by default so the friends calendar cannot color or count a pending invitee into a crew, while `CrewGroupChat` passes `includePending: true` and renders pending rows with an "Invited" pill. The Sprint 34 note that RLS already hid these rows was **wrong** — migration 035's policy returns every row of a crew you are active in, pending included, which is why an unconditional filter regressed the invite flow.
+
 - [ ] The crew chips on the shared calendar build their member sets from
       `getCrewMembers`, which neither selects nor filters `crew_members.status`, so
       a pending invitee is attributed to a crew they never joined. Cosmetic while
@@ -845,6 +849,13 @@ Last updated 8/13/2026 at 3:49PM
 -~~Make Profile page visible to other users. Friends have access to view friends profiles and see their season stats.~~ **DONE — Sprint 34.** Open a friend's profile from the peek modal's "View Full Profile"; season stats reuse the existing `get_leaderboard` RPC and stay friends-only.
 -~~Profile page should have a tab for "Days I plan to ski" that shows a calendar view. Users can mark which mountains they plan to go to on what days. The purpose of this page is to help people make plans with their friends. People can check their friends calendar to see where people are going this weekend, next weekend, etc. and then make their decision to go to a mountain based on where there friends are skiing.~~ **DONE — Sprint 34.** Profile → "📅 Ski Plans" tab (editable on your own profile, read-only on a friend's), plus crew-filterable scope chips on the Plans tab calendar for the "where is everyone going this weekend?" view.
 -~~Reorganize certain pages in the app. (i.e. Friends and Leaderboard should live on the social page in its own tab, same with the friends list, and the Buddy page - which should be renamed Community instead of Buddy)~~ **DONE — Sprint 32.** Friends/Leaderboard/friends-list were already on the Social page; the Buddy board moved there and was renamed Community.
+
+-~~**The "where are my friends skiing" calendar as a flagship view.**~~ **DONE — Sprint 35.**
+The Plans tab now opens on a calendar that groups each day by **mountain** with the people
+going ("Copper — 6 going"), filterable by crew or individual friend, with one-tap "I'm in"
+to join. Week view is the decision tool (7 columns on desktop, stacked day rows on mobile);
+month view is the planning tool. Trips fold into the matching mountain card as a badge.
+Spec: `docs/superpowers/specs/2026-08-18-friends-calendar-design.md`.
 
 -**Social tab UI cleanup.** The Social tab layout is messy — it now stacks a 4-way
 sub-tab bar (Leaderboard / Crews / Friends / Community) inside MessagingCenter's own
