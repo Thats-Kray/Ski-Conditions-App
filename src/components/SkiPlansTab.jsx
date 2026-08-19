@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import PlanCalendar from "./PlanCalendar"
+import PlanEditorModal from "./PlanEditorModal"
 import { localDateKey, monthBounds } from "../lib/calendarDates"
 import {
   getCurrentUser,
@@ -8,17 +9,10 @@ import {
   deleteDailyPlan,
 } from "../lib/socialApi"
 import { resortName, resortEmoji } from "../lib/resorts"
-import { formatDate, etaToTimeInput } from "../lib/format"
+import { formatDate } from "../lib/format"
 
 // Literal hex: feeds `${PLAN_COLOR}11`/`33` alpha-suffix template literals below.
 const PLAN_COLOR = "#67e8f9"
-
-const fieldStyle = {
-  width: "100%", background: "rgba(255,255,255,0.06)",
-  border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10,
-  padding: "10px 12px", color: "white", fontSize: 14,
-  boxSizing: "border-box", outline: "none", colorScheme: "dark",
-}
 
 /**
  * "Days I plan to ski" — a month calendar of one person's daily_plans.
@@ -32,8 +26,7 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
   const [hasLoaded, setHasLoaded] = useState(false)
   const [loadError, setLoadError] = useState(null)
   const [selectedDate, setSelectedDate] = useState(null)
-  const [draftResort, setDraftResort] = useState("")
-  const [draftVisibility, setDraftVisibility] = useState("friends")
+  const [editorOpen, setEditorOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [saveError, setSaveError] = useState(null)
 
@@ -88,25 +81,26 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
   function handleSelectDay(key) {
     setSelectedDate(key)
     setSaveError(null)
-    const existing = key ? plans.find((p) => (p.ski_date || "").slice(0, 10) === key) : null
-    setDraftResort(existing?.resort_key || "")
-    setDraftVisibility(existing?.visibility || "friends")
+    // Past days and a friend's calendar stay read-only — the summary below the
+    // grid is all there is to show.
+    const isPastDay = key ? key < todayKey : false
+    setEditorOpen(Boolean(key) && editable && !isPastDay)
   }
 
-  async function handleSave() {
-    if (!draftResort || !selectedDate) return
+  async function handleSave({ resortKey, eta, visibility }) {
+    if (!resortKey || !selectedDate) return
     setBusy(true); setSaveError(null)
     const previous = plans
     try {
       // upsertDailyPlan writes the whole row (onConflict user_id,ski_date), so
-      // every field we omit is written as null. Carry the check-in fields
-      // forward or editing a day you already checked into would wipe them.
+      // every field we omit is written as null. Carry the check-in fields forward
+      // or editing a day you already checked into would wipe them.
       const saved = await upsertDailyPlan({
         ski_date: selectedDate,
-        resort_key: draftResort,
-        visibility: draftVisibility,
+        resort_key: resortKey,
+        visibility,
+        eta,                                   // already snapped by the modal
         status: selectedPlan?.status || "planned",
-        eta: etaToTimeInput(selectedPlan?.eta),
         note: selectedPlan?.note ?? null,
         arrived_at: selectedPlan?.arrived_at ?? null,
       })
@@ -114,6 +108,7 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
         ...prev.filter((p) => (p.ski_date || "").slice(0, 10) !== selectedDate),
         saved,
       ])
+      setEditorOpen(false)
     } catch (err) {
       setPlans(previous)
       setSaveError(err?.message || "Couldn't save that plan. Try again.")
@@ -129,7 +124,7 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
     setPlans((prev) => prev.filter((p) => p.id !== selectedPlan.id))
     try {
       await deleteDailyPlan(selectedPlan.id)
-      setDraftResort("")
+      setEditorOpen(false)
     } catch (err) {
       setPlans(previous)
       setSaveError(err?.message || "Couldn't remove that plan. Try again.")
@@ -158,7 +153,8 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
 
       {editable && (
         <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>
-          Tap a day to mark where you&apos;re skiing. Friends and crewmates can see it; mark a day Private to hide it.
+          Tap a day to set where and when you&apos;re skiing. Friends and crewmates can see it;
+          mark a day Private to hide it.
         </div>
       )}
 
@@ -195,76 +191,6 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
               <div style={{ fontSize: 13, color: "rgba(255,255,255,0.3)" }}>No plans this day.</div>
             )}
 
-            {canEdit && (
-              <>
-                <select
-                  value={draftResort}
-                  onChange={(e) => setDraftResort(e.target.value)}
-                  style={fieldStyle}
-                  disabled={busy}
-                  aria-label="Mountain"
-                >
-                  <option value="">Pick a mountain…</option>
-                  {resorts.map((r) => (
-                    <option key={r.resortKey} value={r.resortKey}>{r.name}</option>
-                  ))}
-                </select>
-
-                <div style={{ display: "flex", gap: 6 }}>
-                  {[{ key: "friends", label: "👥 Friends & Crews" }, { key: "private", label: "🔒 Private" }].map(({ key, label }) => (
-                    <button
-                      key={key}
-                      onClick={() => setDraftVisibility(key)}
-                      disabled={busy}
-                      style={{
-                        flex: 1, padding: "8px 0", borderRadius: 999, fontSize: 12, fontWeight: 700,
-                        border: draftVisibility === key ? "1px solid rgba(56,189,248,0.5)" : "1px solid rgba(255,255,255,0.12)",
-                        background: draftVisibility === key ? "rgba(56,189,248,0.25)" : "transparent",
-                        color: draftVisibility === key ? "white" : "rgba(255,255,255,0.5)",
-                        cursor: busy ? "default" : "pointer", minHeight: 44,
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                {saveError && (
-                  <div style={{ fontSize: 12, color: "var(--color-danger)" }}>{saveError}</div>
-                )}
-
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    onClick={handleSave}
-                    disabled={busy || !draftResort}
-                    style={{
-                      flex: 1, padding: "11px 0", borderRadius: 12, border: "none",
-                      background: draftResort ? "var(--gradient-cta)" : "rgba(255,255,255,0.08)",
-                      color: "white", fontWeight: 800, fontSize: 14,
-                      cursor: busy || !draftResort ? "default" : "pointer",
-                      opacity: busy ? 0.6 : 1, minHeight: 44,
-                    }}
-                  >
-                    {busy ? "Saving…" : selectedPlan ? "Update Plan" : "Save Plan"}
-                  </button>
-                  {selectedPlan && (
-                    <button
-                      onClick={handleRemove}
-                      disabled={busy}
-                      style={{
-                        padding: "11px 16px", borderRadius: 12,
-                        border: "1px solid var(--color-danger)", background: "var(--color-danger-bg)",
-                        color: "var(--color-danger)", fontWeight: 800, fontSize: 14,
-                        cursor: busy ? "default" : "pointer", minHeight: 44,
-                      }}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
-
             {editable && isPast && (
               <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
                 Past days can&apos;t be edited here — log a session from the Leaderboard instead.
@@ -273,6 +199,19 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
           </div>
         )}
       />
+
+      {editorOpen && selectedDate && (
+        <PlanEditorModal
+          dateKey={selectedDate}
+          plan={selectedPlan}
+          resorts={resorts}
+          busy={busy}
+          error={saveError}
+          onSave={handleSave}
+          onRemove={selectedPlan ? handleRemove : undefined}
+          onClose={() => setEditorOpen(false)}
+        />
+      )}
     </div>
   )
 }
