@@ -73,6 +73,13 @@ export default function FriendsCalendar({
   const [anchor, setAnchor] = useState(() => new Date())
   const [selected, setSelected] = useState(() => new Set(["me", "friends"]))
   const [sheetOpen, setSheetOpen] = useState(false)
+  // Bumped by month-mode's Today button to force PlanCalendar to remount and
+  // reseed its internal viewDate from the freshly-reset anchor. This is a
+  // deliberate, occasional reset — not the continuous two-navigator desync that
+  // month mode's outer ‹/›/label caused, which is why those stay hidden while
+  // Today does not. Stable between resets, so PlanCalendar's own ‹/› keep
+  // working against the same mounted instance and its state is not lost.
+  const [monthResetKey, setMonthResetKey] = useState(0)
 
   const [plans, setPlans] = useState([])
   const [friends, setFriends] = useState([])
@@ -310,11 +317,13 @@ export default function FriendsCalendar({
     <div style={{ display: "grid", gap: 12 }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-        {/* Month mode's day grid owns its own Today/‹/›/label nav (PlanCalendar's
-            internal viewDate). Rendering a second set here that drives `anchor`
-            independently is what caused the grid-goes-blank bug: the two navigators
-            could disagree about which month was showing. Week mode has no such
-            internal navigator, so it keeps this row. */}
+        {/* Month mode's day grid owns its own ‹/›/label nav (PlanCalendar's internal
+            viewDate). Rendering a second continuously-driven set here — advancing
+            `anchor` on every click independent of that internal state — is what
+            caused the grid-goes-blank bug, so ‹/›/label stay hidden in month mode.
+            Today is different: it's a one-shot reset, not incremental, so it can
+            reseed the child safely by remounting it (via monthResetKey) rather than
+            fighting over live navigation state. */}
         {viewMode === "week" ? (
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <button onClick={() => { setAnchor(new Date()); setSelectedDay(null) }} style={navBtn}>Today</button>
@@ -324,7 +333,20 @@ export default function FriendsCalendar({
             </div>
             <button onClick={() => shiftAnchor(1)} aria-label="Next" style={navBtn}>›</button>
           </div>
-        ) : <div />}
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button
+              onClick={() => {
+                setAnchor(new Date())
+                setSelectedDay(null)
+                setMonthResetKey((k) => k + 1)
+              }}
+              style={navBtn}
+            >
+              Today
+            </button>
+          </div>
+        )}
         <div style={{ display: "flex", gap: 4 }}>
           {["week", "month"].map((m) => (
             <button
@@ -406,6 +428,7 @@ export default function FriendsCalendar({
         )
       ) : (
         <PlanCalendar
+          key={monthResetKey}
           entriesByDate={groupsByDay}
           dotColorFor={() => NEUTRAL_RING}
           selectedDate={selectedDay}
