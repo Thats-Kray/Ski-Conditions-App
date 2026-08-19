@@ -298,6 +298,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
             loading={loading}
             onRequireLogin={onRequireLogin}
             onPlanADay={() => { setSubTab("trips"); handleCreateClick() }}
+            resorts={resorts}
           />
         </div>
       )}

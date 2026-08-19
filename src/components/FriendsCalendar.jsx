@@ -4,6 +4,7 @@ import WeekView from "./calendar/WeekView"
 import DayPlanCard from "./calendar/DayPlanCard"
 import FilterChipRow from "./calendar/FilterChipRow"
 import CalendarFilterSheet from "./calendar/CalendarFilterSheet"
+import PlanEditorModal from "./PlanEditorModal"
 import { localDateKey, monthBounds, weekBounds } from "../lib/calendarDates"
 import { groupByDayAndMountain, totalAttendees } from "../lib/calendarGrouping"
 import { ringColorFor, NEUTRAL_RING } from "../lib/crewColors"
@@ -11,7 +12,7 @@ import { resortName } from "../lib/resorts"
 import { formatDate } from "../lib/format"
 import {
   getVisiblePlansInRange, getAcceptedFriends,
-  getMyCrews, getCrewMembers, joinPlanAtResort,
+  getMyCrews, getCrewMembers, joinPlanAtResort, upsertDailyPlan,
 } from "../lib/socialApi"
 
 function FailureNotice({ label, message, onRetry, onDismiss }) {
@@ -68,6 +69,7 @@ function FailureNotice({ label, message, onRetry, onDismiss }) {
  */
 export default function FriendsCalendar({
   currentUser, onOpenTrip, trips = [], loading = false, onRequireLogin, onPlanADay,
+  resorts = [],
 }) {
   const [viewMode, setViewMode] = useState("week")   // "week" | "month"
   const [anchor, setAnchor] = useState(() => new Date())
@@ -92,6 +94,9 @@ export default function FriendsCalendar({
   const [joiningKey, setJoiningKey] = useState(null)
   const [joinError, setJoinError] = useState(null)
   const [lastJoinAttempt, setLastJoinAttempt] = useState(null)
+  const [editorDate, setEditorDate] = useState(null)
+  const [editorError, setEditorError] = useState(null)
+  const [editorBusy, setEditorBusy] = useState(false)
 
   const todayKey = localDateKey()
   const currentUserId = currentUser?.id || null
@@ -184,6 +189,31 @@ export default function FriendsCalendar({
 
   // ── Filtering ────────────────────────────────────────────────────────────
   const friendIds = useMemo(() => new Set(friends.map((f) => f.id)), [friends])
+
+  // Your own plan per date, for the join button's Switch label and for opening the
+  // editor on a day you already planned. Built from `plans`, which already covers
+  // the visible range.
+  const myResortByDate = useMemo(() => {
+    const m = new Map()
+    if (!currentUserId) return m
+    for (const p of plans) {
+      if (p.user_id !== currentUserId) continue
+      const key = (p.ski_date || "").slice(0, 10)
+      if (key) m.set(key, p.resort_key)
+    }
+    return m
+  }, [plans, currentUserId])
+
+  const myPlanByDate = useMemo(() => {
+    const m = new Map()
+    if (!currentUserId) return m
+    for (const p of plans) {
+      if (p.user_id !== currentUserId) continue
+      const key = (p.ski_date || "").slice(0, 10)
+      if (key) m.set(key, p)
+    }
+    return m
+  }, [plans, currentUserId])
   const selectedCrewIds = useMemo(
     () => crews.map((c) => c.id).filter((id) => selected.has(`crew:${id}`)),
     [crews, selected]
@@ -272,6 +302,32 @@ export default function FriendsCalendar({
       setJoinError(err?.message || "Couldn't save your plan.")
     } finally {
       setJoiningKey(null)
+    }
+  }
+
+  async function handleEditorSave({ resortKey, eta, visibility }) {
+    if (!editorDate) return
+    setEditorBusy(true); setEditorError(null)
+    const existing = myPlanByDate.get(editorDate) || null
+    try {
+      // upsertDailyPlan writes the whole row, so status/note/arrived_at must be
+      // carried forward or editing a day you already checked into would wipe them.
+      await upsertDailyPlan({
+        ski_date: editorDate,
+        resort_key: resortKey,
+        visibility,
+        eta,                                   // already snapped by the modal
+        status: existing?.status || "planned",
+        note: existing?.note ?? null,
+        arrived_at: existing?.arrived_at ?? null,
+      })
+      await loadPlans()
+      setEditorDate(null)
+    } catch (err) {
+      console.error("[FriendsCalendar] plan save failed:", err)
+      setEditorError(err?.message || "Couldn't save that plan.")
+    } finally {
+      setEditorBusy(false)
     }
   }
 
@@ -424,6 +480,8 @@ export default function FriendsCalendar({
             joiningKey={joiningKey}
             onJoin={handleJoin}
             onOpenTrip={onOpenTrip}
+            myResortByDate={myResortByDate}
+            onEditPlan={(dateKey) => { setEditorError(null); setEditorDate(dateKey) }}
           />
         )
       ) : (
@@ -486,6 +544,8 @@ export default function FriendsCalendar({
                   joining={joiningKey === `${dateKey}|${g.resortKey}`}
                   onJoin={(resortKey) => handleJoin(dateKey, resortKey)}
                   onOpenTrip={onOpenTrip}
+                  myResortKey={myResortByDate.get(dateKey) || null}
+                  onEditPlan={() => { setEditorError(null); setEditorDate(dateKey) }}
                 />
               ))}
             </div>
@@ -501,6 +561,18 @@ export default function FriendsCalendar({
           selected={selected}
           onToggle={toggle}
           onClose={() => setSheetOpen(false)}
+        />
+      )}
+
+      {editorDate && (
+        <PlanEditorModal
+          dateKey={editorDate}
+          plan={myPlanByDate.get(editorDate) || null}
+          resorts={resorts}
+          busy={editorBusy}
+          error={editorError}
+          onSave={handleEditorSave}
+          onClose={() => setEditorDate(null)}
         />
       )}
     </div>
