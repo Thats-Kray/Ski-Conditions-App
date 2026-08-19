@@ -122,8 +122,35 @@ resortName(key)  => RESORT_NAMES[normalizeResortKey(key)] || key   // raw string
 resortEmoji(key) => RESORT_EMOJI[normalizeResortKey(key)] || "⛷️"  // fallback, no throw
 ```
 
-So adding `open` to `RESORT_NAMES` and `RESORT_EMOJI` makes every call site that routes
-through those helpers render "Open — no preference" with no further change.
+**But `open` must NOT be added to `RESORT_NAMES`.** A second pass over that map's consumers
+found `Object.keys(RESORT_NAMES)` is used to *build resort dropdowns* in three places —
+`MountainBoard.jsx:164`, `PostSkiBuddyForm.jsx:117`, `SkiBuddyBoard.jsx:293`. Adding the
+sentinel there would offer "Open — no preference" as a selectable mountain when posting to
+the Community board, which is nonsense.
+
+`RESORT_NAMES` therefore stays exactly what it is: the canonical list of real mountains.
+The sentinel is handled inside the display helpers instead, ahead of the map lookup:
+
+```js
+export const OPEN_RESORT_KEY = "open"
+export const OPEN_RESORT_LABEL = "Open — no preference"
+
+export function resortName(key) {
+  if (!key) return ""
+  const k = normalizeResortKey(key)
+  if (k === OPEN_RESORT_KEY) return OPEN_RESORT_LABEL
+  return RESORT_NAMES[k] || key
+}
+```
+
+Display gets the friendly label everywhere; every picker built from `Object.keys()` stays
+clean. Only the plan editor's own dropdown adds Open explicitly, because it is the one
+place the option should exist.
+
+A handful of components (`TripCard`, `TripDetailModal`, `ModerationQueue`, `SkiBuddyBoard`)
+read `RESORT_NAMES[key] || key` directly rather than through `resortName()`. They are not a
+concern: all four render `ski_trips` or buddy-board rows, and the sentinel only ever reaches
+`daily_plans`.
 
 **One call site does not route through them.** `TodaysCrew.jsx:40` carries
 `prettifyResortKey`, a local hardcoded duplicate of `RESORT_NAMES`. It predates this sprint
@@ -154,7 +181,7 @@ point into the modal.
 | File | Responsibility |
 |---|---|
 | `src/lib/format.js` | *modify* — add `snapToQuarterHour(hhmm)` |
-| `src/lib/resorts.js` | *modify* — `OPEN_RESORT_KEY`, add `open` to `RESORT_NAMES`/`RESORT_EMOJI` |
+| `src/lib/resorts.js` | *modify* — `OPEN_RESORT_KEY`/`OPEN_RESORT_LABEL`, handled inside `resortName`/`resortEmoji` — **not** added to `RESORT_NAMES` |
 | `src/components/TodaysCrew.jsx` | *modify* — delete the local `prettifyResortKey` map, call shared `resortName()` |
 | `src/lib/calendarGrouping.js` | *modify* — pin the Open group last within each day |
 | `src/components/PlanEditorModal.jsx` | *new* — the modal of §3.1 |
@@ -200,6 +227,9 @@ browser work:
    mountain that has fewer people on it.
 8. An Open plan renders as "Open — no preference" on Today's Crew, the Home dashboard and
    the avatar rail — the three surfaces outside the calendar that display a plan's resort.
+8b. **Open does NOT appear** in the mountain dropdowns on the Community board's post form,
+   the buddy-board filter, or the Mountain board. Those are built from
+   `Object.keys(RESORT_NAMES)` and must stay real mountains only.
 9. With a plan at Vail on Saturday, a Copper card reads `Switch from Vail`; tapping it moves
    you, **and your ETA survives**.
 10. With no plan that day, the same card reads `I'm in`.
