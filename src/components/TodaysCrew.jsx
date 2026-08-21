@@ -119,11 +119,25 @@ export default function TodaysCrew() {
     setLoading(true)
     setMessage("")
 
+    // getCurrentUser() throws for a logged-out visitor rather than resolving null,
+    // and Home is reachable anonymously via browse mode (App.jsx onBrowse). Treat
+    // any auth failure as "logged out" structurally — matching on the error's text
+    // would silently stop working the moment that message is reworded.
+    let currentUser = null
     try {
-      const currentUser = await getCurrentUser()
+      currentUser = await getCurrentUser()
+    } catch {
       if (isCancelled()) return
-      setUser(currentUser)
+      setUser(null)
+      setPlans([])
+      setLoading(false)
+      return
+    }
 
+    if (isCancelled()) return
+    setUser(currentUser)
+
+    try {
       const visiblePlans = await getTodaysVisiblePlans(today)
       if (isCancelled()) return
 
@@ -136,19 +150,9 @@ export default function TodaysCrew() {
       setPlans(sorted)
     } catch (err) {
       if (isCancelled()) return
-      // getCurrentUser() throws rather than resolving null when there's no session
-      // (see AvatarStatusRail.jsx for the same pattern) — this component is mounted
-      // on Home, which browse-mode visitors reach while logged out, so a bare
-      // "Not authenticated." must not surface as a user-facing message. Log it for
-      // diagnosis and fall back to the signed-out empty state; only genuine load
-      // failures for a signed-in user should ever reach `message`.
-      if (err.message === "Not authenticated.") {
-        console.error(err)
-        setUser(null)
-        setPlans([])
-      } else {
-        setMessage(err.message || "Could not load today's crew.")
-      }
+      // A genuine load failure for a signed-in user still gets a real message.
+      console.error("[TodaysCrew] failed to load today's plans:", err)
+      setMessage(err.message || "Could not load today's crew.")
     } finally {
       if (!isCancelled()) setLoading(false)
     }
