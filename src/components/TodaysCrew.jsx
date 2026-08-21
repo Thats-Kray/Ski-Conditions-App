@@ -111,20 +111,21 @@ export default function TodaysCrew() {
   // than taking [0] — the sort only guarantees position when the user has a plan at all.
   const myPlan = plans.find((p) => p.user_id === user?.id) || null
 
-  async function loadPlans() {
+  // isCancelled defaults to a no-op so the Refresh button and the post-mutation
+  // reload (handleMarkDriving/handleMarkArrived) behave exactly as before; only the
+  // mount effect below passes a real one, matching the `cancelled` pattern already
+  // used by AvatarStatusRail.jsx and CheckInTodayCta in HomeDashboard.jsx.
+  async function loadPlans(isCancelled = () => false) {
     setLoading(true)
     setMessage("")
 
     try {
       const currentUser = await getCurrentUser()
+      if (isCancelled()) return
       setUser(currentUser)
 
-      if (!currentUser) {
-        setPlans([])
-        return
-      }
-
       const visiblePlans = await getTodaysVisiblePlans(today)
+      if (isCancelled()) return
 
       const sorted = [...visiblePlans].sort((a, b) => {
         if (a.user_id === currentUser.id) return -1
@@ -134,9 +135,22 @@ export default function TodaysCrew() {
 
       setPlans(sorted)
     } catch (err) {
-      setMessage(err.message || "Could not load today's crew.")
+      if (isCancelled()) return
+      // getCurrentUser() throws rather than resolving null when there's no session
+      // (see AvatarStatusRail.jsx for the same pattern) — this component is mounted
+      // on Home, which browse-mode visitors reach while logged out, so a bare
+      // "Not authenticated." must not surface as a user-facing message. Log it for
+      // diagnosis and fall back to the signed-out empty state; only genuine load
+      // failures for a signed-in user should ever reach `message`.
+      if (err.message === "Not authenticated.") {
+        console.error(err)
+        setUser(null)
+        setPlans([])
+      } else {
+        setMessage(err.message || "Could not load today's crew.")
+      }
     } finally {
-      setLoading(false)
+      if (!isCancelled()) setLoading(false)
     }
   }
 
@@ -173,7 +187,9 @@ export default function TodaysCrew() {
   }
 
   useEffect(() => {
-    loadPlans()
+    let cancelled = false
+    loadPlans(() => cancelled)
+    return () => { cancelled = true }
   }, [])
 
   return (
