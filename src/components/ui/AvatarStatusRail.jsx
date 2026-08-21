@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react"
 import { getCurrentUser, getTodaysVisiblePlans } from "../../lib/socialApi"
 import UserProfileModal from "../UserProfileModal"
+import { localDateKey } from "../../lib/calendarDates"
 
 function statusColor(status) {
   if (status === "arrived") return "var(--color-success)"
@@ -30,7 +31,9 @@ export default function AvatarStatusRail() {
   const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(true)
   const [viewingUserId, setViewingUserId] = useState(null)
-  const today = new Date().toISOString().slice(0, 10)
+  // Local date key, not UTC — this rail needs to agree with TodaysCrew on what
+  // "today" means, or the avatar row and the crew list disagree after ~5pm Mountain.
+  const today = localDateKey()
 
   useEffect(() => {
     let cancelled = false

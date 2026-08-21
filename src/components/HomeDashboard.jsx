@@ -23,6 +23,7 @@ import ScoreRing from "./ui/ScoreRing"
 import SnowStat from "./ui/SnowStat"
 import HeroPhotoHeader from "./ui/HeroPhotoHeader"
 import { MountainIcon } from "./ui/NavIcons"
+import { localDateKey } from "../lib/calendarDates"
 
 // Generic scenic photo behind the "Ready to ski?" hero — shown whenever no
 // specific open resort's own photo is available (e.g. offseason), so the
@@ -306,7 +307,9 @@ function WhosSkiingTodayCard({ currentUser, onTabChange, refreshKey }) {
 
   useEffect(() => {
     let cancelled = false
-    const today = new Date().toISOString().slice(0, 10)
+    // Local date key, not UTC — this feeds the same "who's skiing today" widget
+    // TodaysCrew shows, and a UTC key would show tomorrow's plans after ~5pm Mountain.
+    const today = localDateKey()
     getTodaysVisiblePlans(today)
       .then((rows) => { if (!cancelled) setPlans(rows || []) })
       .catch(() => { if (!cancelled) setPlans([]) })
@@ -372,7 +375,9 @@ function CheckInTodayCta({ resorts, currentUser, onCheckedIn }) {
   useEffect(() => {
     if (!currentUser) { setHasChecked(true); return } // logged-out: hide the CTA entirely
     let cancelled = false
-    const today = new Date().toISOString().slice(0, 10)
+    // Local date key, not UTC — this decides whether the check-in CTA still shows,
+    // and a UTC key would look up tomorrow's (nonexistent) plan after ~5pm Mountain.
+    const today = localDateKey()
     getMyDailyPlan(today)
       // Hide only once the user has actually arrived — not merely because a plan exists.
       // Sprint 36 gave plans an ETA and a visibility setting, so "I have a plan today"

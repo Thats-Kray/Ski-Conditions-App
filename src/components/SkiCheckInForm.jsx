@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { getCurrentUser, getMyDailyPlan, upsertDailyPlan } from "../lib/socialApi"
 import { buildPlanUpsert } from "../lib/planUpsert"
 import { resortName, OPEN_RESORT_KEY, OPEN_RESORT_LABEL, OPEN_RESORT_EMOJI } from "../lib/resorts"
+import { localDateKey } from "../lib/calendarDates"
 
 function formatPlanTime(isoString) {
   if (!isoString) return "No ETA"
@@ -21,7 +22,9 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
   const [hasPlan, setHasPlan] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
 
-  const today = new Date().toISOString().slice(0, 10)
+  // Local date key, not UTC — this is the ski_date the check-in below gets written
+  // to, and after ~5pm Mountain a UTC key would write the plan to tomorrow.
+  const today = localDateKey()
 
   useEffect(() => {
     async function load() {
