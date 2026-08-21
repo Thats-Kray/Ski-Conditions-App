@@ -14,6 +14,7 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
   const [resortKey, setResortKey] = useState("")
   const [eta, setEta] = useState("")
   const [note, setNote] = useState("")
+  const [status, setStatus] = useState("planned")
   const [message, setMessage] = useState("")
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
@@ -48,6 +49,7 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
             setEta(`${hh}:${mm}`)
           }
           setNote(existingPlan.note || "")
+          setStatus(existingPlan.status || "planned")
           setHasPlan(true)
           setIsEditing(false)
         } else {
@@ -84,6 +86,9 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
         resortKey,
         eta: eta || undefined, // only override when the user actually set one
         note: note || null,
+        status,
+        // A real UTC instant, not a date key — arrived_at is a timestamptz.
+        arrivedAt: status === "arrived" ? new Date().toISOString() : undefined,
       }))
 
       setHasPlan(true)
@@ -187,19 +192,71 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
             <option value={OPEN_RESORT_KEY}>{OPEN_RESORT_EMOJI} {OPEN_RESORT_LABEL}</option>
           </select>
 
-          <input
-            type="time"
-            value={eta}
-            onChange={(e) => setEta(e.target.value)}
-            style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              color: "white",
-              padding: "10px 12px",
-              borderRadius: 12,
-              outline: "none",
-            }}
-          />
+          <div style={{ display: "grid", gap: 6 }}>
+            <div style={{
+              fontSize: 10, fontWeight: 800, letterSpacing: 1,
+              color: "var(--color-text-3)", textTransform: "uppercase",
+            }}>
+              Where are you?
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {[
+                { key: "planned", label: "Not left yet" },
+                { key: "driving", label: "🚗 Driving" },
+                { key: "arrived", label: "⛷️ Arrived" },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setStatus(key)}
+                  disabled={loading}
+                  aria-pressed={status === key}
+                  style={{
+                    flex: 1, padding: "10px 0", borderRadius: 999, fontSize: 12, fontWeight: 700,
+                    border: status === key
+                      ? "1px solid var(--color-accent)"
+                      : "1px solid var(--color-border)",
+                    background: status === key ? "var(--color-accent-dim)" : "transparent",
+                    color: status === key ? "var(--color-text-1)" : "var(--color-text-3)",
+                    cursor: loading ? "default" : "pointer", minHeight: 44,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {status !== "arrived" && (
+            <div style={{ display: "grid", gap: 6 }}>
+              <div style={{
+                fontSize: 10, fontWeight: 800, letterSpacing: 1,
+                color: "var(--color-text-3)", textTransform: "uppercase",
+              }}>
+                {status === "driving" ? "When will you get there?" : "When are you planning to arrive?"}
+              </div>
+
+              <input
+                type="time"
+                value={eta}
+                onChange={(e) => setEta(e.target.value)}
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  color: "white",
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  outline: "none",
+                }}
+              />
+
+              {status === "planned" && eta && (
+                <div style={{ fontSize: 11, color: "var(--color-text-3)" }}>
+                  Still arriving around {eta}? Update it if that has changed.
+                </div>
+              )}
+            </div>
+          )}
 
           <textarea
             value={note}
