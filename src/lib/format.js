@@ -45,6 +45,27 @@ export function etaToTimeInput(iso) {
 }
 
 /**
+ * A stored ETA (timestamptz ISO instant) as a short wall-clock time: "9:00 AM".
+ *
+ * This exact function existed three times as a module-local `formatPlanTime` — in
+ * TodaysCrew, SkiCheckInForm and PowderMap — and the copies had already drifted on
+ * the empty case: two returned the string "No ETA", one returned null.
+ *
+ * The shared version returns null and lets each caller supply its own fallback
+ * text, because "No ETA" is a UI decision and this is a formatter. Callers that
+ * want the label write `formatEtaShort(x) ?? "No ETA"`.
+ *
+ * Note this is the OUTPUT side. etaToTimeInput() above is the input side — same
+ * column, different target format, and they are not interchangeable.
+ */
+export function formatEtaShort(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+}
+
+/**
  * Rounds an "HH:MM" string to the nearest quarter hour.
  *
  * `<input type="time" step="900">` gives a 15-minute stepper on desktop, but iOS

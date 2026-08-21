@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { etaToTimeInput, snapToQuarterHour } from "./format.js"
+import { etaToTimeInput, snapToQuarterHour, formatEtaShort } from "./format.js"
 
 test("an ISO timestamp round-trips to a zero-padded HH:MM local time", () => {
   const d = new Date(2026, 0, 15, 14, 5, 0) // 2:05 PM local
@@ -61,4 +61,29 @@ test("snapToQuarterHour returns null for empty or unparseable input", () => {
   assert.equal(snapToQuarterHour("not a time"), null)
   assert.equal(snapToQuarterHour("25:00"), null)
   assert.equal(snapToQuarterHour("08:99"), null)
+})
+
+test("formatEtaShort renders a stored ETA as a wall-clock time", () => {
+  const iso = new Date(2026, 7, 22, 9, 0, 0).toISOString()
+  // Locale-dependent punctuation, so assert on the parts rather than the exact
+  // string — "9:00 AM" on en-US, "09:00" elsewhere.
+  const out = formatEtaShort(iso)
+  assert.match(out, /\b0?9[:.]00\b/)
+})
+
+test("formatEtaShort keeps the minutes on a half-hour ETA", () => {
+  assert.match(formatEtaShort(new Date(2026, 7, 22, 8, 45, 0).toISOString()), /\b0?8[:.]45\b/)
+})
+
+test("formatEtaShort returns null rather than a label for a missing ETA", () => {
+  // Returning null, not "No ETA": the three component copies this replaces
+  // disagreed on the empty case, so the shared helper stays neutral and each
+  // caller supplies its own fallback text.
+  assert.equal(formatEtaShort(null), null)
+  assert.equal(formatEtaShort(undefined), null)
+  assert.equal(formatEtaShort(""), null)
+})
+
+test("formatEtaShort returns null for an unparseable value", () => {
+  assert.equal(formatEtaShort("not a date"), null)
 })

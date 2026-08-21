@@ -1,5 +1,7 @@
 import { resortName, resortEmoji, OPEN_RESORT_KEY } from "../../lib/resorts"
 import { ringColorFor, crewBadgesFor } from "../../lib/crewColors"
+import { earliestEta } from "../../lib/calendarGrouping"
+import { formatEtaShort } from "../../lib/format"
 import { useProfileNav } from "../../lib/profileNav"
 import Avatar from "../ui/Avatar"
 
@@ -56,6 +58,7 @@ export default function DayPlanCard({
   const overflow = attendees.length - shown.length
   const names = attendees.slice(0, MAX_NAMES).map((a) => shortName(a.profile)).join(", ")
   const nameOverflow = attendees.length - Math.min(attendees.length, MAX_NAMES)
+  const groupEta = formatEtaShort(earliestEta(attendees))
 
   return (
     <div
@@ -76,8 +79,26 @@ export default function DayPlanCard({
         }}>
           {resortEmoji(resortKey)} {resortName(resortKey) || resortKey}
         </div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-3)", flexShrink: 0 }}>
-          {attendees.length} {isOpenGroup ? "free" : "going"}
+        <div style={{ flexShrink: 0, textAlign: "right" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-3)" }}>
+            {attendees.length} {isOpenGroup ? "free" : "going"}
+          </div>
+          {/* First chair. Sprint 36 let people set an ETA and then showed it
+              nowhere; this is the output side. The EARLIEST of the group, not any
+              one person's — it answers "when is everyone on the hill", which is
+              the decision the calendar exists to support.
+
+              Rendered only when somebody actually set one, so a card for a day of
+              undecided people keeps its original two-line shape. One extra line
+              that never wraps, which is what survives the 7-column desktop grid. */}
+          {groupEta && (
+            <div style={{
+              fontSize: 10, fontWeight: 700, color: "var(--color-text-2)",
+              whiteSpace: "nowrap", marginTop: 1,
+            }}>
+              from {groupEta}
+            </div>
+          )}
         </div>
       </div>
 

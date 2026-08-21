@@ -3,12 +3,7 @@ import { getCurrentUser, getMyDailyPlan, upsertDailyPlan } from "../lib/socialAp
 import { buildPlanUpsert } from "../lib/planUpsert"
 import { resortName, OPEN_RESORT_KEY, OPEN_RESORT_LABEL, OPEN_RESORT_EMOJI } from "../lib/resorts"
 import { localDateKey } from "../lib/calendarDates"
-
-function formatPlanTime(isoString) {
-  if (!isoString) return "No ETA"
-  const d = new Date(isoString)
-  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-}
+import { formatEtaShort } from "../lib/format"
 
 export default function SkiCheckInForm({ resorts, onSaved }) {
   const [user, setUser] = useState(null)
@@ -154,7 +149,7 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
             </div>
 
             <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>
-              ETA: {eta ? formatPlanTime(new Date(`${today}T${eta}:00`).toISOString()) : "No ETA"}
+              ETA: {(eta && formatEtaShort(new Date(`${today}T${eta}:00`).toISOString())) || "No ETA"}
             </div>
 
             <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>

@@ -1,11 +1,14 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { groupByDayAndMountain, totalAttendees } from "./calendarGrouping.js"
+import { groupByDayAndMountain, totalAttendees, earliestEta } from "./calendarGrouping.js"
 
-const p = (user_id, ski_date, resort_key, full_name) => ({
-  id: `plan-${user_id}-${ski_date}`, user_id, ski_date, resort_key,
+const p = (user_id, ski_date, resort_key, full_name, eta = null) => ({
+  id: `plan-${user_id}-${ski_date}`, user_id, ski_date, resort_key, eta,
   profile: { id: user_id, full_name, username: full_name.toLowerCase(), avatar_url: null },
 })
+
+// A local-time ISO instant, the shape daily_plans.eta comes back as.
+const at = (hh, mm = 0) => new Date(2026, 7, 22, hh, mm, 0).toISOString()
 
 test("groups one day's plans by mountain", () => {
   const out = groupByDayAndMountain({
@@ -259,4 +262,63 @@ test("a day of only Open still returns the group", () => {
     trips: [], currentUserId: "me",
   })
   assert.deepEqual(out.get("2026-08-22").map((g) => g.resortKey), ["open"])
+})
+
+// ── ETA on the calendar (TASK 19.3) ──────────────────────────────────────────
+
+test("an attendee carries the eta from their plan row", () => {
+  const out = groupByDayAndMountain({
+    plans: [p("u1", "2026-08-22", "coppermountain", "Nate", at(9))],
+  })
+  const [group] = out.get("2026-08-22")
+  assert.equal(group.attendees[0].eta, at(9))
+})
+
+test("an attendee with no eta gets null, not undefined", () => {
+  const out = groupByDayAndMountain({
+    plans: [p("u1", "2026-08-22", "coppermountain", "Nate")],
+  })
+  const [group] = out.get("2026-08-22")
+  assert.equal(group.attendees[0].eta, null)
+  assert.ok("eta" in group.attendees[0], "the key must exist so callers read it uniformly")
+})
+
+test("trip-derived attendees have a null eta", () => {
+  // Hosts and RSVPs come from ski_trips, which carries no per-person ETA.
+  const out = groupByDayAndMountain({
+    trips: [{
+      id: "t1", ski_date: "2026-08-22", resort_key: "vail", host_id: "h1",
+      host_profile: { id: "h1", full_name: "Kyle" },
+      rsvps: [{ user_id: "u9", status: "going", profile: { id: "u9", full_name: "Gaby" } }],
+    }],
+  })
+  const [group] = out.get("2026-08-22")
+  assert.deepEqual(group.attendees.map((a) => a.eta), [null, null])
+})
+
+test("earliestEta returns the earliest of several", () => {
+  assert.equal(earliestEta([{ eta: at(10, 30) }, { eta: at(8, 45) }, { eta: at(9, 15) }]), at(8, 45))
+})
+
+test("earliestEta ignores attendees with no eta", () => {
+  assert.equal(earliestEta([{ eta: null }, { eta: at(9) }, { eta: null }]), at(9))
+})
+
+test("earliestEta returns null when nobody set one", () => {
+  // The card renders no ETA line at all in this case, so null is the signal.
+  assert.equal(earliestEta([{ eta: null }, { eta: null }]), null)
+  assert.equal(earliestEta([]), null)
+})
+
+test("earliestEta compares instants, not strings", () => {
+  // Lexicographic ordering of ISO strings only holds when the offset format is
+  // identical. These two are an hour apart but sort the wrong way as strings.
+  const later = "2026-08-22T15:00:00.000Z"
+  const earlier = "2026-08-22T14:00:00+00:00"
+  assert.equal(earliestEta([{ eta: later }, { eta: earlier }]), earlier)
+})
+
+test("earliestEta skips an unparseable eta rather than throwing", () => {
+  assert.equal(earliestEta([{ eta: "not a date" }, { eta: at(9) }]), at(9))
+  assert.equal(earliestEta([{ eta: "not a date" }]), null)
 })

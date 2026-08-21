@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import UserProfileModal from "./UserProfileModal"
 import { useLiveFriendLocations } from "../lib/useLiveFriendLocations"
+import { formatEtaShort } from "../lib/format"
 
 function scoreColor(score) {
   if (score == null) return "var(--rating-slate)"  // no data
@@ -20,12 +21,6 @@ function markerRadius(count) {
   if (count >= 4) return 14
   if (count >= 2) return 11
   return 9
-}
-
-function formatPlanTime(isoString) {
-  if (!isoString) return null
-  const d = new Date(isoString)
-  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
 }
 
 function displayName(person) {
@@ -55,7 +50,7 @@ function avatarFallback(name) {
 // app-theme tokens which are calibrated for the dark app chrome.
 function SkierRow({ person, onViewProfile }) {
   const name = displayName(person)
-  const eta = formatPlanTime(person.eta)
+  const eta = formatEtaShort(person.eta)
 
   return (
     <div

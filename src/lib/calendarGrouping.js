@@ -56,7 +56,13 @@ export function groupByDayAndMountain({ plans = [], trips = [], currentUserId = 
   for (const plan of plans) {
     const g = bucket(dayKey(plan.ski_date), plan.resort_key)
     if (!g) continue
-    g.byUser.set(plan.user_id, { userId: plan.user_id, profile: plan.profile || null })
+    // eta rides along so the card can show when this group is getting there.
+    // getVisiblePlansInRange already selects it; it used to be dropped right here.
+    g.byUser.set(plan.user_id, {
+      userId: plan.user_id,
+      profile: plan.profile || null,
+      eta: plan.eta || null,
+    })
   }
 
   for (const trip of trips) {
@@ -65,8 +71,10 @@ export function groupByDayAndMountain({ plans = [], trips = [], currentUserId = 
     // Last trip wins if two land on the same resort and day — vanishingly rare,
     // and the badge only has room for one.
     g.trip = trip
+    // Trip attendance carries no per-person ETA — ski_trips has a departure time
+    // for the trip, not for each person. null keeps the attendee shape uniform.
     if (trip.host_id && passes(trip.host_id) && !g.byUser.has(trip.host_id)) {
-      g.byUser.set(trip.host_id, { userId: trip.host_id, profile: trip.host_profile || null })
+      g.byUser.set(trip.host_id, { userId: trip.host_id, profile: trip.host_profile || null, eta: null })
     }
     for (const rsvp of trip.rsvps || []) {
       // "maybe" and "out" are not attendance. A headcount that counts maybes is
@@ -74,7 +82,7 @@ export function groupByDayAndMountain({ plans = [], trips = [], currentUserId = 
       if (rsvp.status !== "going") continue
       if (!passes(rsvp.user_id)) continue
       if (g.byUser.has(rsvp.user_id)) continue
-      g.byUser.set(rsvp.user_id, { userId: rsvp.user_id, profile: rsvp.profile || null })
+      g.byUser.set(rsvp.user_id, { userId: rsvp.user_id, profile: rsvp.profile || null, eta: null })
     }
   }
 
@@ -112,4 +120,37 @@ export function totalAttendees(groups = []) {
   const ids = new Set()
   for (const g of groups) for (const a of g.attendees) ids.add(a.userId)
   return ids.size
+}
+
+/**
+ * The earliest ETA among a mountain's attendees, or null if nobody set one.
+ *
+ * This is what the card shows — "Copper, 6 going, from 8:45". First chair is the
+ * decision-relevant number: it tells you when the group is actually on the hill,
+ * which one person's arbitrary time does not.
+ *
+ * Compares instants via getTime(), NOT the ISO strings. daily_plans.eta is a
+ * timestamptz and PostgREST is not obliged to hand back a consistent offset
+ * format, so "…T15:00:00.000Z" and "…T14:00:00+00:00" sort the wrong way as
+ * strings while being an hour apart as instants.
+ *
+ * An unparseable value is skipped rather than thrown on: one bad row should not
+ * blank the ETA line for everyone else on the mountain.
+ *
+ * @param {Array<{eta: string|null}>} attendees
+ * @returns {string|null} the winning attendee's eta, unchanged, for formatting
+ */
+export function earliestEta(attendees = []) {
+  let bestIso = null
+  let bestMs = Infinity
+
+  for (const a of attendees) {
+    if (!a?.eta) continue
+    const ms = new Date(a.eta).getTime()
+    if (Number.isNaN(ms) || ms >= bestMs) continue
+    bestMs = ms
+    bestIso = a.eta
+  }
+
+  return bestIso
 }

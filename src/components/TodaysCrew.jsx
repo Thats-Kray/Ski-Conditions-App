@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { formatEtaShort } from "../lib/format"
 import {
   getCurrentUser,
   getTodaysVisiblePlans,
@@ -8,12 +9,6 @@ import {
 import { resortName } from "../lib/resorts"
 import { localDateKey } from "../lib/calendarDates"
 import UserProfileModal from "./UserProfileModal"
-
-function formatPlanTime(isoString) {
-  if (!isoString) return "No ETA"
-  const d = new Date(isoString)
-  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-}
 
 function statusColor(status) {
   // "arrived"/"done"/unknown intentionally avoid the numerically-exact --rating-mint/
@@ -356,9 +351,9 @@ export default function TodaysCrew() {
               </div>
 
               <div style={{ fontSize: 12, color: "rgba(255,255,255,0.62)" }}>
-                ETA: {formatPlanTime(plan.eta)}
+                ETA: {formatEtaShort(plan.eta) ?? "No ETA"}
                 {plan.arrived_at
-                  ? ` · Arrived ${formatPlanTime(plan.arrived_at)}`
+                  ? ` · Arrived ${formatEtaShort(plan.arrived_at) ?? "No ETA"}`
                   : ""}
               </div>
 
