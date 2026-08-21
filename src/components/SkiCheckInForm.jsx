@@ -95,7 +95,10 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
         eta: eta || undefined, // only override when the user actually set one
         note: note || null,
         status,
-        // A real UTC instant, not a date key — arrived_at is a timestamptz.
+        // A real UTC instant, not a date key — arrived_at is a timestamptz. For the
+        // non-arrived cases this is explicitly undefined (carry forward / let
+        // buildPlanUpsert's status-arrived invariant null it out) rather than
+        // omitting the key — self-documenting instead of relying on a distant rule.
         arrivedAt: status === "arrived" ? new Date().toISOString() : undefined,
       }))
 

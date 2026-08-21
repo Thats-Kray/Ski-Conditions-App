@@ -689,6 +689,10 @@ export async function markDriving(planId) {
     .from("daily_plans")
     .update({
       status: "driving",
+      // arrived_at is only meaningful when status === "arrived" — clear it here so
+      // switching Arrived -> Driving doesn't leave a stale arrival stamp beside
+      // your name in Today's Crew.
+      arrived_at: null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", planId)

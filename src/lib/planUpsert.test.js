@@ -168,3 +168,46 @@ test("arrivedAt can be explicitly cleared", () => {
   assert.equal(out.status, "driving")
   assert.equal(out.arrived_at, null)
 })
+
+// Invariant: arrived_at is only meaningful when status === "arrived". Any write
+// that leaves status planned/driving must clear it — regardless of how the
+// caller got there (explicit status, carried-forward arrivedAt, or an explicit
+// but contradictory arrivedAt).
+test("switching an existing arrived plan to driving clears arrived_at", () => {
+  const existing = { resort_key: "vail", status: "arrived", arrived_at: "2026-08-21T15:00:00.000Z" }
+  const out = buildPlanUpsert(existing, { resortKey: "vail", status: "driving" })
+  assert.equal(out.status, "driving")
+  assert.equal(out.arrived_at, null)
+})
+
+test("switching an existing arrived plan to planned clears arrived_at", () => {
+  const existing = { resort_key: "vail", status: "arrived", arrived_at: "2026-08-21T15:00:00.000Z" }
+  const out = buildPlanUpsert(existing, { resortKey: "vail", status: "planned" })
+  assert.equal(out.status, "planned")
+  assert.equal(out.arrived_at, null)
+})
+
+test("an explicit arrivedAt passed alongside a non-arrived status is discarded", () => {
+  const existing = { resort_key: "vail", status: "planned", arrived_at: null }
+  const out = buildPlanUpsert(existing, {
+    resortKey: "vail",
+    status: "driving",
+    arrivedAt: "2026-08-21T15:00:00.000Z",
+  })
+  assert.equal(out.status, "driving")
+  assert.equal(out.arrived_at, null)
+})
+
+test("a plan that stays arrived keeps its timestamp", () => {
+  const existing = { resort_key: "vail", status: "arrived", arrived_at: "2026-08-21T15:00:00.000Z" }
+  const out = buildPlanUpsert(existing, { resortKey: "vail", status: "arrived" })
+  assert.equal(out.status, "arrived")
+  assert.equal(out.arrived_at, "2026-08-21T15:00:00.000Z")
+})
+
+test("carrying status forward (caller omits status) on an arrived plan keeps the timestamp", () => {
+  const existing = { resort_key: "vail", status: "arrived", arrived_at: "2026-08-21T15:00:00.000Z" }
+  const out = buildPlanUpsert(existing, { resortKey: "vail" })
+  assert.equal(out.status, "arrived")
+  assert.equal(out.arrived_at, "2026-08-21T15:00:00.000Z")
+})

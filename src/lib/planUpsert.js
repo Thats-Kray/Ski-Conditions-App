@@ -33,6 +33,12 @@ import { etaToTimeInput } from "./format.js"
  *   Omitted falls back to existing.arrived_at (null default) — UNLESS resortKey
  *   differs from the existing row's resort_key AND the caller passed no explicit
  *   status, in which case it resets to null alongside status.
+ *   Invariant, enforced last and unconditionally: arrived_at is only meaningful
+ *   when the row's *final resolved* status is "arrived". Whatever the rules above
+ *   produce — carried forward, explicitly passed, even an explicit non-null value —
+ *   is discarded (forced to null) if the resolved status isn't "arrived". This is
+ *   deliberate: an explicit arrivedAt alongside a non-arrived status is a
+ *   contradictory call and the invariant wins, with no escape hatch.
  *
  * @param {object|null} existing - current daily_plans row, or null
  * @param {object} fields
@@ -72,6 +78,11 @@ export function buildPlanUpsert(existing, { skiDate, resortKey, eta, visibility,
     : (explicitStatus ? (existing?.arrived_at ?? null)
                       : (resortChanged ? null : (existing?.arrived_at ?? null)))
 
+  // Invariant: arrived_at is only meaningful when the resolved status is "arrived".
+  // Gate the value the rules above produced on the final status, unconditionally —
+  // no writer gets to opt out of this.
+  const arrivedFinal = statusOut === "arrived" ? arrivedOut : null
+
   return {
     ski_date,
     resort_key,
@@ -79,6 +90,6 @@ export function buildPlanUpsert(existing, { skiDate, resortKey, eta, visibility,
     visibility: visibilityOut,
     status: statusOut,
     note: noteOut,
-    arrived_at: arrivedOut,
+    arrived_at: arrivedFinal,
   }
 }
