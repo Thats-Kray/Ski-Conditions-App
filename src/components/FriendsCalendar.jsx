@@ -5,6 +5,8 @@ import DayPlanCard from "./calendar/DayPlanCard"
 import FilterChipRow from "./calendar/FilterChipRow"
 import CalendarFilterSheet from "./calendar/CalendarFilterSheet"
 import PlanEditorModal from "./PlanEditorModal"
+import FailureNotice from "./ui/FailureNotice"
+import { runLoaders, mergeFailed, selectLoaders } from "../lib/loaderRegistry"
 import { localDateKey, monthBounds, weekBounds } from "../lib/calendarDates"
 import { groupByDayAndMountain, totalAttendees } from "../lib/calendarGrouping"
 import { ringColorFor, NEUTRAL_RING } from "../lib/crewColors"
@@ -16,45 +18,6 @@ import {
   getMyCrews, getCrewMembers, joinPlanAtResort, upsertDailyPlan,
 } from "../lib/socialApi"
 
-function FailureNotice({ label, message, onRetry, onDismiss }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-      background: "var(--color-danger-bg)", border: "1px solid var(--color-danger)",
-      borderRadius: 12, padding: "10px 14px", fontSize: 12, color: "var(--color-text-1)",
-      marginBottom: 10,
-    }}>
-      <span>{message || `Couldn't load ${label}.`}</span>
-      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-        {onRetry && (
-          <button
-            onClick={onRetry}
-            style={{
-              background: "transparent", border: "1px solid var(--color-danger)", borderRadius: 8,
-              color: "var(--color-text-1)", padding: "6px 12px", fontSize: 12, fontWeight: 800,
-              cursor: "pointer", minHeight: 44,
-            }}
-          >
-            Retry
-          </button>
-        )}
-        {onDismiss && (
-          <button
-            onClick={onDismiss}
-            aria-label="Dismiss"
-            style={{
-              background: "transparent", border: "none",
-              color: "var(--color-text-1)", padding: "6px 10px", fontSize: 16, fontWeight: 800,
-              cursor: "pointer", minHeight: 44, lineHeight: 1,
-            }}
-          >
-            ×
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
 
 /**
  * "Where is everyone skiing this weekend?" — the friends calendar.
@@ -131,27 +94,10 @@ export default function FriendsCalendar({
   ], [])
 
   const runStatic = useCallback(async (subset) => {
-    const list = subset ? STATIC_LOADERS.filter((l) => subset.includes(l.key)) : STATIC_LOADERS
-    const results = await Promise.allSettled(list.map((l) => l.fn()))
-    const nowFailed = {}
-    results.forEach((res, i) => {
-      const loader = list[i]
-      if (res.status === "fulfilled") {
-        loader.apply(res.value ?? loader.fallback)
-      } else {
-        loader.apply(loader.fallback)
-        nowFailed[loader.key] = true
-        // Keep the real error reachable. The UI shows friendly copy, but during
-        // beta the raw PostgREST message is what makes a bug diagnosable — that is
-        // how the 2026-08-18 stale-bundle 403 was traced in minutes.
-        console.error(`[FriendsCalendar] "${loader.key}" failed to load:`, res.reason)
-      }
-    })
-    setFailed((prev) => {
-      const next = { ...prev }
-      list.forEach((l) => { delete next[l.key] })
-      return { ...next, ...nowFailed }
-    })
+    const list = selectLoaders(STATIC_LOADERS, subset)
+    const { values, failed: nowFailed } = await runLoaders(list, { logPrefix: "FriendsCalendar" })
+    list.forEach((l) => l.apply(values.get(l.key)))
+    setFailed((prev) => mergeFailed(prev, list.map((l) => l.key), nowFailed.keys()))
   }, [STATIC_LOADERS])
 
   useEffect(() => {

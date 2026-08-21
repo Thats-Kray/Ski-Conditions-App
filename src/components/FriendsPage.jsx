@@ -28,6 +28,8 @@ import { DateMatchmakerComposer, DatePollCard } from "./DateMatchmaker";
 import { resortName, resortEmoji as getResortEmoji } from "../lib/resorts";
 import { formatDate } from "../lib/format";
 import Avatar from "./ui/Avatar";
+import FailureNotice from "./ui/FailureNotice";
+import { runLoaders, mergeFailed, selectLoaders } from "../lib/loaderRegistry";
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -188,6 +190,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
   const [skiPlans, setSkiPlans]               = useState([])
   const [friendsWeekend, setFriendsWeekend]   = useState([])
   const [loadingPage, setLoadingPage]         = useState(true)
+  const [failed, setFailed]                   = useState({}) // loader key -> true
   const [searching, setSearching]             = useState(false)
   const [workingId, setWorkingId]             = useState(null)
   const [toast, setToast]                     = useState(null) // { type: "success"|"error", text }
@@ -210,36 +213,59 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
     setTimeout(() => setToast(null), 3000)
   }
 
-  async function loadPageData() {
-    setLoadingPage(true)
-    try {
-      const [incoming, outgoing, accepted, leaderboardData, receivedCrewInvites, sentCrewInvites, mySkiPlans, friendsTrips, pingData, pollData] = await Promise.all([
-        getIncomingFriendRequests(),
-        getOutgoingFriendRequests(),
-        getAcceptedFriends(),
-        getFriendsLeaderboard(),
-        getReceivedCrewInvites(),
-        getSentCrewInvites(),
-        getMySkiPlans(),
-        getFriendsUpcomingTrips(),
-        getMyPings().catch(() => ({ sent: [], received: [] })),
-        getMyDatePolls().catch(() => ({ created: [], received: [] })),
-      ])
-      setIncomingRequests(incoming || [])
-      setOutgoingRequests(outgoing || [])
-      setAcceptedFriends(accepted || [])
-      setLeaderboard(leaderboardData || [])
-      setReceivedInvites(receivedCrewInvites || [])
-      setSentInvites(sentCrewInvites || [])
-      setSkiPlans(mySkiPlans || [])
-      setFriendsWeekend(friendsTrips || [])
-      setPings(pingData || { sent: [], received: [] })
-      setDatePolls(pollData || { created: [], received: [] })
-    } catch (e) {
-      showToast("error", e.message || "Failed to load.")
-    } finally {
-      setLoadingPage(false)
-    }
+  /**
+   * The page's ten data blocks, as loader descriptors.
+   *
+   * These were ten calls in a single Promise.all. Because Promise.all is all-or-
+   * nothing, ONE rejection skipped all ten setters and left nine healthy sections
+   * rendering as empty behind a toast that vanished after three seconds — which is
+   * exactly what a stale-bundle 403 on `profiles` did to the whole Social tab on
+   * 2026-08-18.
+   *
+   * Note that pings and datePolls no longer carry a `.catch(() => ...)`. Those
+   * swallows meant those two blocks failed with no toast, no console line and no
+   * visible difference from "you have no pings". The fallback below produces the
+   * same empty state, but the failure is also recorded and surfaced.
+   *
+   * The setters are stable across renders, so rebuilding this array per call costs
+   * nothing and avoids a memo whose deps could drift.
+   */
+  function pageLoaders() {
+    return [
+      { key: "incoming",     label: "your friend requests",        fn: getIncomingFriendRequests, fallback: [], apply: setIncomingRequests },
+      { key: "outgoing",     label: "your sent requests",          fn: getOutgoingFriendRequests, fallback: [], apply: setOutgoingRequests },
+      { key: "friends",      label: "your friends list",           fn: getAcceptedFriends,        fallback: [], apply: setAcceptedFriends },
+      { key: "leaderboard",  label: "the leaderboard",             fn: getFriendsLeaderboard,     fallback: [], apply: setLeaderboard },
+      { key: "crewInvites",  label: "your crew invites",           fn: getReceivedCrewInvites,    fallback: [], apply: setReceivedInvites },
+      { key: "sentInvites",  label: "the invites you sent",        fn: getSentCrewInvites,        fallback: [], apply: setSentInvites },
+      { key: "skiPlans",     label: "your ski plans",              fn: getMySkiPlans,             fallback: [], apply: setSkiPlans },
+      { key: "friendsTrips", label: "your friends' upcoming trips", fn: getFriendsUpcomingTrips,  fallback: [], apply: setFriendsWeekend },
+      { key: "pings",        label: "your ski pings",              fn: getMyPings,                fallback: { sent: [], received: [] },    apply: setPings },
+      { key: "datePolls",    label: "your date polls",             fn: getMyDatePolls,            fallback: { created: [], received: [] }, apply: setDatePolls },
+    ]
+  }
+
+  /**
+   * @param {string[]} [subset] loader keys to reload; omit to reload everything.
+   *
+   * Array.isArray guards the case where this is ever wired as `onClick={loadPageData}`
+   * — React would hand it a click event as `subset`, and it would silently reload
+   * nothing. That exact mistake shipped once already (onClick={loadPlans} feeding a
+   * click event into a new parameter), so it is cheap to make impossible here.
+   */
+  async function loadPageData(subset) {
+    const keys = Array.isArray(subset) ? subset : null
+    const list = selectLoaders(pageLoaders(), keys)
+
+    // Only the full load owns the page-level spinner; a single-block retry should
+    // not blank the nine sections that are fine.
+    if (!keys) setLoadingPage(true)
+
+    const { values, failed: nowFailed } = await runLoaders(list, { logPrefix: "FriendsPage" })
+    list.forEach((l) => l.apply(values.get(l.key)))
+    setFailed((prev) => mergeFailed(prev, list.map((l) => l.key), nowFailed.keys()))
+
+    if (!keys) setLoadingPage(false)
   }
 
   useEffect(() => { loadPageData() }, [])
@@ -395,6 +421,21 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
           </button>
         ))}
       </div>
+
+      {/* ── Per-block load failures ──
+          One row per block that failed, each with its own Retry. Persistent by
+          design: the old 3-second toast disappeared while the empty section it
+          explained stayed on screen, so a broken tab looked identical to an
+          empty one. */}
+      {pageLoaders()
+        .filter((l) => failed[l.key])
+        .map((l) => (
+          <FailureNotice
+            key={l.key}
+            label={l.label}
+            onRetry={() => loadPageData([l.key])}
+          />
+        ))}
 
       {/* ── Toast ── */}
       {toast && (
