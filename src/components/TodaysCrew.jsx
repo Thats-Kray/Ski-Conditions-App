@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   getCurrentUser,
   getTodaysVisiblePlans,
@@ -102,6 +102,14 @@ export default function TodaysCrew() {
   const [driving, setDriving] = useState(false)
   const [viewingUserId, setViewingUserId] = useState(null)
 
+  // Component-lifetime cancellation flag. A ref, not a loadPlans() parameter — the
+  // Refresh button below is wired as onClick={loadPlans}, and React passes the click
+  // SyntheticEvent as the first argument to any handler; a parameter-shaped cancel
+  // predicate would receive that event instead of a function and throw. Reading
+  // cancelledRef.current instead means every call site behaves the same regardless of
+  // how it's invoked.
+  const cancelledRef = useRef(false)
+
   // Local date parts, never toISOString() — after ~5pm Mountain Time UTC has already
   // rolled over and this component would show tomorrow's crew all evening. Same
   // constraint documented at the top of lib/calendarDates.js.
@@ -111,11 +119,11 @@ export default function TodaysCrew() {
   // than taking [0] — the sort only guarantees position when the user has a plan at all.
   const myPlan = plans.find((p) => p.user_id === user?.id) || null
 
-  // isCancelled defaults to a no-op so the Refresh button and the post-mutation
-  // reload (handleMarkDriving/handleMarkArrived) behave exactly as before; only the
-  // mount effect below passes a real one, matching the `cancelled` pattern already
-  // used by AvatarStatusRail.jsx and CheckInTodayCta in HomeDashboard.jsx.
-  async function loadPlans(isCancelled = () => false) {
+  // useCallback (dep: today) gives loadPlans a stable identity across renders — so it
+  // can be listed honestly in the mount effect's dependency array below without the
+  // effect re-running on every render (it only gets a new reference if `today` itself
+  // changes, e.g. a tab left open across local midnight).
+  const loadPlans = useCallback(async () => {
     setLoading(true)
     setMessage("")
 
@@ -127,19 +135,19 @@ export default function TodaysCrew() {
     try {
       currentUser = await getCurrentUser()
     } catch {
-      if (isCancelled()) return
+      if (cancelledRef.current) return
       setUser(null)
       setPlans([])
       setLoading(false)
       return
     }
 
-    if (isCancelled()) return
+    if (cancelledRef.current) return
     setUser(currentUser)
 
     try {
       const visiblePlans = await getTodaysVisiblePlans(today)
-      if (isCancelled()) return
+      if (cancelledRef.current) return
 
       const sorted = [...visiblePlans].sort((a, b) => {
         if (a.user_id === currentUser.id) return -1
@@ -149,14 +157,14 @@ export default function TodaysCrew() {
 
       setPlans(sorted)
     } catch (err) {
-      if (isCancelled()) return
+      if (cancelledRef.current) return
       // A genuine load failure for a signed-in user still gets a real message.
       console.error("[TodaysCrew] failed to load today's plans:", err)
       setMessage(err.message || "Could not load today's crew.")
     } finally {
-      if (!isCancelled()) setLoading(false)
+      if (!cancelledRef.current) setLoading(false)
     }
-  }
+  }, [today])
 
   async function handleMarkDriving() {
     setDriving(true)
@@ -191,10 +199,10 @@ export default function TodaysCrew() {
   }
 
   useEffect(() => {
-    let cancelled = false
-    loadPlans(() => cancelled)
-    return () => { cancelled = true }
-  }, [])
+    cancelledRef.current = false // reset on mount; React StrictMode double-mounts
+    loadPlans()
+    return () => { cancelledRef.current = true }
+  }, [loadPlans])
 
   return (
     <div
