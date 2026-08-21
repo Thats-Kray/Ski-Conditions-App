@@ -6,6 +6,7 @@ import {
   markDriving,
 } from "../lib/socialApi"
 import { resortName } from "../lib/resorts"
+import { localDateKey } from "../lib/calendarDates"
 import UserProfileModal from "./UserProfileModal"
 
 function formatPlanTime(isoString) {
@@ -101,7 +102,14 @@ export default function TodaysCrew() {
   const [driving, setDriving] = useState(false)
   const [viewingUserId, setViewingUserId] = useState(null)
 
-  const today = new Date().toISOString().slice(0, 10)
+  // Local date parts, never toISOString() — after ~5pm Mountain Time UTC has already
+  // rolled over and this component would show tomorrow's crew all evening. Same
+  // constraint documented at the top of lib/calendarDates.js.
+  const today = localDateKey()
+
+  // plans is sorted with the signed-in user first (loadPlans), but find by id rather
+  // than taking [0] — the sort only guarantees position when the user has a plan at all.
+  const myPlan = plans.find((p) => p.user_id === user?.id) || null
 
   async function loadPlans() {
     setLoading(true)
@@ -137,7 +145,8 @@ export default function TodaysCrew() {
     setMessage("")
 
     try {
-      await markDriving(today)
+      if (!myPlan) { setMessage("Set today's plan first."); return }
+      await markDriving(myPlan.id)
       await loadPlans()
       setMessage("Drive safe.")
     } catch (err) {
@@ -152,7 +161,8 @@ export default function TodaysCrew() {
     setMessage("")
 
     try {
-      await markArrival(today)
+      if (!myPlan) { setMessage("Set today's plan first."); return }
+      await markArrival(myPlan.id)
       await loadPlans()
       setMessage("Marked as arrived.")
     } catch (err) {

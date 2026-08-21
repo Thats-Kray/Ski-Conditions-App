@@ -11,6 +11,7 @@ import {
 } from "../lib/socialApi"
 import CreateTripModal from "./CreateTripModal"
 import SkiCheckInForm from "./SkiCheckInForm"
+import TodaysCrew from "./TodaysCrew"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { timeAgo, formatDate } from "../lib/format"
 import Avatar from "./ui/Avatar"
@@ -373,7 +374,10 @@ function CheckInTodayCta({ resorts, currentUser, onCheckedIn }) {
     let cancelled = false
     const today = new Date().toISOString().slice(0, 10)
     getMyDailyPlan(today)
-      .then((plan) => { if (!cancelled) setHasChecked(!!plan) })
+      // Hide only once the user has actually arrived — not merely because a plan exists.
+      // Sprint 36 gave plans an ETA and a visibility setting, so "I have a plan today"
+      // is no longer a reason to remove the only entry point for editing it.
+      .then((plan) => { if (!cancelled) setHasChecked(plan?.status === "arrived") })
       .catch(() => { if (!cancelled) setHasChecked(false) })
     return () => { cancelled = true }
   }, [currentUser])
@@ -852,6 +856,11 @@ export default function HomeDashboard({ resorts, currentUser, onTabChange, onSta
 
       {/* Check In Today CTA */}
       <CheckInTodayCta resorts={resorts} currentUser={currentUser} onCheckedIn={handleCheckedIn} />
+
+      {/* Today's Crew — who's on the mountain right now */}
+      <Card>
+        <TodaysCrew />
+      </Card>
 
       {/* 3-card feed */}
       <TodaysBestMountainCard resorts={resorts} onTabChange={onTabChange} />
