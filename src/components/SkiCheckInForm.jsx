@@ -59,7 +59,10 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
           setNote(existingPlan.note || "")
           setStatus(existingPlan.status || "planned")
           setHasPlan(true)
-          setIsEditing(false)
+          // Edit mode, not the read-only summary. Tapping "Check In Today" is the
+          // user asking to set their status and ETA, so land them on the controls
+          // that do it. The summary stays reachable via Cancel.
+          setIsEditing(true)
         } else {
           setHasPlan(false)
           setIsEditing(true)
