@@ -1,4 +1,5 @@
 import { supabase } from "./supabase"
+import { localDateKey } from "./calendarDates"
 import { getCurrentUser, getAcceptedFriends } from "./socialApi"
 import { computeSegmentStats, computeSessionSummary } from "./useGpsTracker"
 
@@ -72,7 +73,17 @@ export async function getMySessions(startYear) {
   const user = await getCurrentUser()
   if (!user) return []
   const { from, to } = seasonDateRange(startYear)
-  const today = new Date().toISOString().slice(0, 10)
+
+  // localDateKey(), not toISOString().slice(0,10). This value is the "has this day
+  // actually happened yet" cap, applied twice below: to the hosted-trips query and to
+  // the client-side filter over merged trip entries. A UTC key becomes tomorrow's date
+  // after ~5pm Mountain, so every evening a trip scheduled for TOMORROW passed the cap
+  // and counted as a day skied.
+  //
+  // And it did not stop at the display: the entries that pass are background-upserted
+  // into ski_sessions further down, so the phantom day was persisted. Same bug, same
+  // reasoning as getFriendsLeaderboard in socialApi.js, which was fixed in Sprint 34.
+  const today = localDateKey()
 
   // Fetch logged sessions + past trip attendance in parallel
   const [{ data: sessions, error }, { data: rsvps }, { data: hosted }] = await Promise.all([

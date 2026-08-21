@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { getLeaderboard, getPublicLeaderboard, getMySessions, logSkiDay, updateSessionStats, deleteSkiDay, getCurrentSeason, getLeaderboardReactions, addLeaderboardReaction } from "../lib/leaderboardApi"
 import { logActivityOnce } from "../lib/socialApi"
+import { localDateKey } from "../lib/calendarDates"
 import Avatar from "./ui/Avatar"
 import SessionStatsForm from "./SessionStatsForm"
 import ResortPicker from "./ui/ResortPicker"
@@ -27,7 +28,9 @@ const RANK_MEDALS = ["🥇", "🥈", "🥉"]
 const REACTION_EMOJIS = ["🎿", "❄️", "🔥", "👑"]
 
 function LogDayModal({ onClose, onLogged }) {
-  const today = new Date().toISOString().split("T")[0]
+  // Seeds the date input. A UTC key pre-filled TOMORROW for anyone logging an
+  // evening session, which is when people actually log the day they just skied.
+  const today = localDateKey()
   const [resort, setResort]       = useState("")
   const [date, setDate]           = useState(today)
   const [isPowder, setIsPowder]   = useState(false)

@@ -284,7 +284,7 @@ export async function getSkiBuddyPosts(filters = {}) {
     .from("ski_buddy_posts")
     .select("*")
     .in("status", ["open", "filled"])
-    .gte("ski_date", new Date().toISOString().slice(0, 10))
+    .gte("ski_date", localDateKey())
     .order("ski_date", { ascending: true })
 
   if (filters.passType) query = query.eq("pass_type", filters.passType)
@@ -547,7 +547,7 @@ export async function upsertDailyPlan(plan) {
 
   const skiDate =
     plan?.ski_date ||
-    new Date().toISOString().slice(0, 10)
+    localDateKey()
 
   if (!skiDate) {
     throw new Error("Missing ski date.")
@@ -1494,7 +1494,7 @@ export async function getAllVisibleTrips() {
   const user = await getCurrentUser()
   if (!user) return { mine: [], friends: [], rsvpd: [], invited: [] }
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localDateKey()
   const friendIds = await getAcceptedFriendIds(user.id)
   const friendIdArray = [...friendIds]
 
@@ -1567,7 +1567,7 @@ export async function getAllVisibleTrips() {
 // Inline session auto-log — avoids circular import with leaderboardApi
 function autoLogSessionForTrip(userId, resortKey, skiDate, tripId) {
   if (!resortKey || !skiDate) return
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localDateKey()
   if (skiDate > today) return
   supabase
     .from("ski_sessions")
@@ -2370,10 +2370,10 @@ export async function getFriendsUpcomingTrips() {
 
   const friendIdArray = [...friendIds]
   const today = new Date()
-  const todayKey = today.toISOString().slice(0, 10)
+  const todayKey = localDateKey(today)
   const twoWeeksOut = new Date(today)
   twoWeeksOut.setDate(twoWeeksOut.getDate() + 14)
-  const maxDateKey = twoWeeksOut.toISOString().slice(0, 10)
+  const maxDateKey = localDateKey(twoWeeksOut)
 
   const [friendsTripsRes, friendProfilesRes, rsvpRes] = await Promise.all([
     // Trips hosted by friends
@@ -2477,10 +2477,10 @@ export async function getFriendUpcomingTripsByResort() {
 
   const friendIdArray = [...friendIds]
   const today = new Date()
-  const todayKey = today.toISOString().slice(0, 10)
+  const todayKey = localDateKey(today)
   const weekOut = new Date(today)
   weekOut.setDate(weekOut.getDate() + 7)
-  const maxDateKey = weekOut.toISOString().slice(0, 10)
+  const maxDateKey = localDateKey(weekOut)
 
   const [friendsTripsRes, friendProfilesRes, rsvpRes] = await Promise.all([
     // Trips hosted by friends
@@ -2562,13 +2562,13 @@ export async function getFriendUpcomingTripsByResort() {
 // relying on an unverified join shape.
 export async function getResortVibeData() {
   const today = new Date()
-  const todayStr = today.toISOString().slice(0, 10)
+  const todayStr = localDateKey(today)
   const weekAgo = new Date(today)
   weekAgo.setDate(weekAgo.getDate() - 7)
-  const weekAgoStr = weekAgo.toISOString().slice(0, 10)
+  const weekAgoStr = localDateKey(weekAgo)
   const weekAhead = new Date(today)
   weekAhead.setDate(weekAhead.getDate() + 7)
-  const weekAheadStr = weekAhead.toISOString().slice(0, 10)
+  const weekAheadStr = localDateKey(weekAhead)
 
   const [{ data: checkins, error: checkinErr }, { data: upcomingTrips, error: tripErr }] = await Promise.all([
     supabase.from("daily_plans").select("resort_key").gte("ski_date", weekAgoStr).lte("ski_date", todayStr),
@@ -3469,7 +3469,7 @@ export async function getMountainEvents(resortKey, limit = 20) {
     .from("mountain_events")
     .select("*")
     .eq("resort_key", resortKey)
-    .gte("event_date", new Date().toISOString().slice(0, 10))
+    .gte("event_date", localDateKey())
     .order("event_date", { ascending: true })
     .limit(limit)
   if (error) throw error

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import SnowfallBackground from "./components/SnowfallBackground"
 import { useMobile } from "./lib/useMobile"
+import { localDateKey } from "./lib/calendarDates"
 import AuthForm from "./components/AuthForm"
 import OnboardingFlow from "./components/OnboardingFlow"
 import PowderMap from "./components/PowderMap"
@@ -948,7 +949,9 @@ export default function App() {
   const tracker = useGpsTracker()
 
   async function handleSessionStart(resortName) {
-    const today = new Date().toISOString().slice(0, 10)
+    // Writes ski_sessions.session_date. A UTC key would log an evening session as
+    // tomorrow — night skiing starts after the UTC rollover in Mountain Time.
+    const today = localDateKey()
     // Create the ski_sessions row before starting GPS (we need the ID)
     const session = await logSkiDay({ resortName, sessionDate: today })
     tracker.startTracking()
@@ -1089,7 +1092,7 @@ export default function App() {
 
   async function loadSkierIntel() {
     try {
-      const today = new Date().toISOString().slice(0, 10)
+      const today = localDateKey()
 
       const [counts, details] = await Promise.all([
         getResortSkierCounts(today),
@@ -1217,7 +1220,7 @@ export default function App() {
   useEffect(() => {
     const weekAgo = new Date()
     weekAgo.setDate(weekAgo.getDate() - 7)
-    getResortActivityCounts(weekAgo.toISOString().slice(0, 10))
+    getResortActivityCounts(localDateKey(weekAgo))
       .then((rows) => {
         // ski_sessions.resort_name holds display names ("Beaver Creek") for
         // real logged sessions but raw resort keys ("beavercreek") for

@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { createTrip, addCarpool, getMyProfile } from "../lib/socialApi"
 import { useMobile } from "../lib/useMobile"
+import { localDateKey } from "../lib/calendarDates"
 
 // decorative per-entity color, independent of theme palette
 const RESORTS = [
@@ -78,7 +79,9 @@ export default function CreateTripModal({ onClose, onCreated }) {
 
   const selectedResort = RESORTS.find((r) => r.key === resortKey)
   const accent = selectedResort?.accent || "var(--color-accent-soft)"
-  const minDate = new Date().toISOString().slice(0, 10)
+  // Floor for the <input type="date">. A UTC key would forbid picking TODAY after
+  // ~5pm Mountain — the exact time somebody plans tomorrow's trip.
+  const minDate = localDateKey()
 
   function selectResort(key) {
     setResortKey(key)

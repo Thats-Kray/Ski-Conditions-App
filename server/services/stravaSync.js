@@ -36,12 +36,26 @@ function mpsToMph(mps) {
 //     Strava is intentionally not persisted
 // Mapping here targets the real schema so upserts don't fail with
 // "column does not exist".
+/**
+ * The YYYY-MM-DD key for a Strava activity, in the athlete's OWN timezone.
+ *
+ * `start_date` is UTC; `start_date_local` is the same instant shifted into the
+ * timezone the activity was recorded in. Slicing `start_date` filed an evening run
+ * under tomorrow's date for anyone west of Greenwich — the same class of bug as the
+ * toISOString().slice() sweep in src/, arriving from a different direction.
+ *
+ * Falls back to start_date only if Strava omits the local field, which it should not.
+ */
+function activityDateKey(activity) {
+  return (activity.start_date_local || activity.start_date || "").slice(0, 10)
+}
+
 function activityToSession(activity, userId) {
   return {
     user_id:             userId,
     // Strava doesn't provide resort name — user can update later
     resort_name:         "Strava Import",
-    session_date:        activity.start_date.slice(0, 10),
+    session_date:        activityDateKey(activity),
     notes:               activity.name || null,
     strava_activity_id:  activity.id,
     vertical_feet:       metersToFeet(activity.total_elevation_gain),
@@ -109,7 +123,7 @@ export async function previewSyncableActivities(userId) {
       candidates.push({
         stravaActivityId: activity.id,
         name:             activity.name || "Strava Activity",
-        date:             activity.start_date.slice(0, 10),
+        date:             activityDateKey(activity),
         verticalFeet:     metersToFeet(activity.total_elevation_gain),
         milesSkied:       metersToMiles(activity.distance),
         topSpeedMph:      mpsToMph(activity.max_speed),

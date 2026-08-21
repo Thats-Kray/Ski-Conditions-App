@@ -2,6 +2,7 @@ import { useState } from "react"
 import { createSkiBuddyPost } from "../lib/socialApi"
 import { RIDING_STYLES, PASS_TYPES, CARPOOL_STATUSES } from "../lib/skiBuddyOptions"
 import { RESORT_NAMES, RESORT_EMOJI } from "../lib/resorts"
+import { localDateKey } from "../lib/calendarDates"
 
 const fieldLabelStyle = {
   fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)",
@@ -24,9 +25,12 @@ function chipStyle(active) {
   }
 }
 
-const todayISO = new Date().toISOString().slice(0, 10)
-
 export default function PostSkiBuddyForm({ onClose, onCreated }) {
+  // Computed per render, not at module scope. This was a module-level const, which
+  // froze it at first import — so the floor went stale for anyone who left the app
+  // open across midnight, on top of the UTC rollover localDateKey() fixes.
+  const todayISO = localDateKey()
+
   const [passType, setPassType] = useState("")
   const [resortKey, setResortKey] = useState("")
   const [skiDate, setSkiDate] = useState("")
