@@ -5,11 +5,16 @@ import { etaToTimeInput } from "./format.js"
  * over whatever the existing row already has.
  *
  * upsertDailyPlan() writes the WHOLE row (onConflict: "user_id,ski_date"), so any
- * field missing from its payload is written as null. There are now four writers
- * (SkiPlansTab, FriendsCalendar, joinPlanAtResort, SkiCheckInForm) that need this
- * merge, and the logic was duplicated verbatim in two of them before this module
- * existed — exactly the kind of drift that let SkiCheckInForm blank an ETA and
- * un-private a Private plan. One function, one set of rules.
+ * field missing from its payload is written as null. There are now FIVE writers
+ * (SkiPlansTab, FriendsCalendar, joinPlanAtResort, SkiCheckInForm, respondToCrewInvite)
+ * that need this merge, and the logic was duplicated verbatim in two of them before
+ * this module existed — exactly the kind of drift that let SkiCheckInForm blank an ETA
+ * and un-private a Private plan. One function, one set of rules.
+ *
+ * That census used to say "four". respondToCrewInvite was missing from it and was also
+ * the one writer still doing a raw .upsert() — it wrote an illegal visibility, omitted
+ * onConflict, and blew away note/eta/arrived_at, undetected, because the list of writers
+ * was wrong. If you add a sixth writer, add it here too.
  *
  * `existing` is the current daily_plans row, or null when there isn't one yet.
  *
@@ -21,7 +26,9 @@ import { etaToTimeInput } from "./format.js"
  *   which rejects the ISO timestamp the database returns and would otherwise
  *   silently null it out. An explicit `null` is a real clear-the-ETA request and
  *   stays null. An "HH:MM" string is used as-is.
- * - visibility: omitted falls back to existing.visibility, then "friends".
+ * - visibility: omitted falls back to existing.visibility, then "friends". An explicit
+ *   value outside VALID_VISIBILITIES THROWS — see the constant's comment for why this
+ *   one validates loudly where status falls back quietly.
  * - note: omitted falls back to existing.note, then null.
  * - status: an explicit value (one of VALID_STATUSES) wins outright — including over
  *   the resort-change reset below. Omitted, or an unrecognised value, falls back to
@@ -55,12 +62,23 @@ import { etaToTimeInput } from "./format.js"
 // Anything else must never reach the database.
 const VALID_STATUSES = ["planned", "driving", "arrived"]
 
+// daily_plans.visibility has its own CHECK constraint. Unlike status, an unrecognised
+// value here THROWS rather than falling back: falling back to existing/"friends" on a
+// plan the user marked Private would silently un-private their day, and a silent
+// privacy change is a worse failure than a loud error.
+const VALID_VISIBILITIES = ["friends", "groups", "private"]
+
 export function buildPlanUpsert(existing, { skiDate, resortKey, eta, visibility, note, status, arrivedAt } = {}) {
   const ski_date = skiDate !== undefined ? skiDate : existing?.ski_date
   const resort_key = resortKey !== undefined ? resortKey : existing?.resort_key
 
   const etaOut = eta !== undefined ? eta : (etaToTimeInput(existing?.eta) ?? null)
 
+  if (visibility !== undefined && !VALID_VISIBILITIES.includes(visibility)) {
+    throw new Error(
+      `Invalid plan visibility "${visibility}". Expected one of: ${VALID_VISIBILITIES.join(", ")}.`
+    )
+  }
   const visibilityOut = visibility !== undefined ? visibility : (existing?.visibility || "friends")
   const noteOut = note !== undefined ? note : (existing?.note ?? null)
 

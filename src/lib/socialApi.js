@@ -1110,34 +1110,10 @@ export async function getSentCrewInvites() {
 }
 
 
-function buildEtaFromInvite(skiDate, departureTime) {
-  if (!skiDate || !departureTime) return null
-
-  const trimmed = String(departureTime).trim()
-  const match = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
-
-  if (!match) return null
-
-  let hours = Number(match[1])
-  const minutes = Number(match[2])
-  const meridiem = match[3].toUpperCase()
-
-  if (meridiem === "AM") {
-    if (hours === 12) hours = 0
-  } else if (meridiem === "PM") {
-    if (hours !== 12) hours += 12
-  }
-
-  const [year, month, day] = skiDate.split("-").map(Number)
-
-  if (!year || !month || !day) return null
-
-  const date = new Date(year, month - 1, day, hours, minutes, 0)
-
-  if (Number.isNaN(date.getTime())) return null
-
-  return date.toISOString()
-}
+// buildEtaFromInvite() used to live here, duplicating buildPlanEta() with a narrower
+// regex (it required an AM/PM suffix and rejected a bare "09:00"). respondToCrewInvite
+// was its only caller and now passes departure_time straight to buildPlanEta via
+// buildPlanUpsert, which handles both formats. Deleted rather than kept "just in case".
 
 export async function respondToCrewInvite(inviteId, status) {
   const user = await getCurrentUser()
@@ -1166,37 +1142,50 @@ export async function respondToCrewInvite(inviteId, status) {
     throw new Error("You can only respond to invites sent to you.")
   }
 
-  const now = new Date().toISOString()
+  // Write the plan BEFORE flipping the invite, not after.
+  //
+  // The old order flipped the invite to "accepted" first and then wrote the plan. The
+  // write threw a 23514 every single time (it sent visibility:"public", which the CHECK
+  // does not allow), which left the user with an accepted invite, no plan, and no way to
+  // retry from the UI — the invite no longer showed as pending. Writing the plan first
+  // means a failure leaves the invite pending and the whole action is retryable.
+  if (status === "accepted" && existing.ski_date && existing.resort_key) {
+    const existingPlan = await getMyDailyPlan(existing.ski_date)
+
+    // Merge, do not overwrite. This is the fifth daily_plans writer and was the last one
+    // doing a raw .upsert() — no onConflict (so it collided with the (user_id, ski_date)
+    // unique constraint) and no merge (so it blanked any ETA, note or check-in already on
+    // that day). buildPlanUpsert is the one funnel; see src/lib/planUpsert.js.
+    //
+    // departure_time is passed straight through as `eta`: buildPlanEta accepts "H:MM AM/PM"
+    // natively, so there is nothing to convert. Passing an ISO instant here would be
+    // silently discarded — buildPlanEta returns null for ISO.
+    //
+    // Both eta and note fall back to `undefined`, not null, when the invite carries no
+    // departure time or message. undefined carries the user's existing value forward;
+    // null would clear it. Accepting an invite must not erase an ETA you already set.
+    //
+    // visibility is deliberately NOT passed: buildPlanUpsert carries the existing value
+    // forward. Accepting a crew invite must never un-private a day you marked Private.
+    await upsertDailyPlan(buildPlanUpsert(existingPlan, {
+      skiDate: existing.ski_date,
+      resortKey: existing.resort_key,
+      eta: existing.departure_time || undefined,
+      note: existing.message || undefined,
+    }))
+  }
 
   const { data: updatedInvite, error: updateError } = await supabase
     .from("crew_invites")
     .update({
       status,
-      updated_at: now,
+      updated_at: new Date().toISOString(),
     })
     .eq("id", inviteId)
     .select()
     .single()
 
   if (updateError) throw updateError
-
-  if (status === "accepted") {
-    const eta = buildEtaFromInvite(existing.ski_date, existing.departure_time)
-
-    const { error: planError } = await supabase
-      .from("daily_plans")
-      .upsert({
-        user_id: user.id,
-        ski_date: existing.ski_date,
-        resort_key: existing.resort_key,
-        eta,
-        status: "planned",
-        visibility: "public",
-        note: existing.message || null,
-      })
-
-    if (planError) throw planError
-  }
 
   return updatedInvite
 }

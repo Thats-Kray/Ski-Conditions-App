@@ -114,6 +114,33 @@ test("visibility omitted falls back to existing.visibility, then friends", () =>
   assert.equal(withoutVisibility.visibility, "friends")
 })
 
+test("every value the visibility CHECK allows passes through", () => {
+  for (const v of ["friends", "groups", "private"]) {
+    const out = buildPlanUpsert(null, { skiDate: "2026-01-15", resortKey: "vail", visibility: v })
+    assert.equal(out.visibility, v)
+  }
+})
+
+test("an illegal visibility throws instead of reaching the database", () => {
+  // respondToCrewInvite passed visibility:"public" for months. The CHECK constraint
+  // rejected it with a 23514 every time, AFTER the invite row had already been
+  // flipped to accepted. Catching it here turns a confusing Postgres error into a
+  // clear one, and stops any future writer inventing a fourth value.
+  assert.throws(
+    () => buildPlanUpsert(null, { skiDate: "2026-01-15", resortKey: "vail", visibility: "public" }),
+    /visibility/i
+  )
+})
+
+test("an illegal visibility throws rather than silently falling back", () => {
+  // Falling back would be the dangerous failure: a bad value on a plan the user
+  // marked Private would resolve to "friends" and quietly un-private their day.
+  assert.throws(
+    () => buildPlanUpsert({ resort_key: "vail", visibility: "private" }, { resortKey: "vail", visibility: "public" }),
+    /visibility/i
+  )
+})
+
 test("status is carried forward when the caller omits it", () => {
   const out = buildPlanUpsert(
     { resort_key: "vail", status: "driving", arrived_at: null },
