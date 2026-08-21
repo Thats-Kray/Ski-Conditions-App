@@ -869,6 +869,50 @@ Also retired `TodaysCrew`'s local `prettifyResortKey`, a hardcoded duplicate of
 Spec: `docs/superpowers/specs/2026-08-18-plan-editor-design.md`.
 Plan: `docs/superpowers/plans/2026-08-18-sprint-36-plan-editor.md`.
 
+## Sprint 36 post-merge repairs — Today's Crew (DONE, 2026-08-21)
+
+Kyle tested Sprint 36 live and reported two symptoms. Investigation found **four** root causes,
+three of them older than the sprint:
+
+- **`TodaysCrew` was mounted by nothing since 2026-08-01.** Commit `013c4af` said
+  "(moved to Home)" and only deleted 22 lines from `SkiPlansPage` — it never added anything to
+  Home. Three weeks orphaned, taking `markArrival`/`markDriving` with it, since nothing else
+  calls them.
+- **Its status buttons passed a date where the API wants a plan uuid** (`.eq("id", planId)`),
+  so every click would have thrown Postgres `22P02`. Unobservable while unmounted.
+- **It derived "today" from `toISOString()`**, so after ~5pm Mountain it would show tomorrow's
+  crew all evening.
+- **Home's check-in button hid whenever a plan existed**, which removed the only entry point to
+  the check-in form exactly when Sprint 36 gave it something worth editing. Now hides only once
+  `status === 'arrived'`.
+
+Mounting it then exposed a fifth: anonymous browse-mode visitors saw a raw `"Not authenticated."`
+on the public Home page, because `getCurrentUser()` throws rather than resolving null. Detected
+structurally now, not by matching the error's text.
+
+**Also shipped the same day:**
+
+- **Check-in sets your status.** Three states — not left yet / driving / arrived. ETA hides for
+  arrived; a `planned` check-in with an existing ETA prompts to confirm it.
+  `buildPlanUpsert` gained an optional explicit `status`/`arrivedAt`.
+- **`arrived_at` is now an invariant, not a field.** It is cleared whenever the resolved status
+  is not `arrived`, enforced inside `buildPlanUpsert` so it holds for all four writers. This also
+  fixed `markDriving`, which set the status and left a stale arrival stamp.
+- **The "today loop" agrees on what today is.** `TodaysCrew`, `SkiCheckInForm`,
+  `AvatarStatusRail` and both `HomeDashboard` date keys now use `localDateKey()`. Before this they
+  disagreed after 5pm: checking in wrote tomorrow's row while Today's Crew read today.
+
+**Two process notes worth keeping.** A fix dispatched without the scoped re-review shipped a
+`TypeError` that stalled Today's Crew's Refresh button — `onClick={loadPlans}` passed React's
+click event into a new cancel-predicate parameter. And a fix reported as working was inert: it
+changed a `useState` default that the load effect immediately overrode. The grep that "proved"
+nothing overrode it searched for `isEditing`, which is case-sensitive and cannot match
+`setIsEditing`.
+
+---
+
+# Sprint 37 — queued
+
 ### TASK 19.1 — Per-crew ski plan visibility (OPEN, scoped as Sprint 37)
 - [ ] Kyle's ask: when setting visibility, choose **all friends** or **multi-select specific
       crews** — "people might want to hide where they're going from some people or groups."
@@ -879,6 +923,59 @@ Plan: `docs/superpowers/plans/2026-08-18-sprint-36-plan-editor.md`.
       exact thing the feature exists to prevent.
 - [ ] Retiring `daily_plans.group_id` and the dead `'groups'` visibility value (TASK 18.1)
       belongs with this migration.
+
+### TASK 19.2 — Sweep the remaining UTC date keys (OPEN)
+- [ ] **18 sites** still derive a `YYYY-MM-DD` key from `new Date().toISOString().slice(0, 10)`,
+      which returns the **UTC** date and rolls over to tomorrow after ~5pm Mountain.
+- [ ] Locations: `src/lib/socialApi.js` (11), `src/App.jsx` (3), `src/lib/leaderboardApi.js` (1),
+      `src/components/CreateTripModal.jsx` (1), `src/components/PostSkiBuddyForm.jsx` (1),
+      plus one doc comment that is not a call site.
+- [ ] `leaderboardApi.js:75` is the most consequential — it caps "days on mountain" at today, so
+      every evening it counts tomorrow as skied. Sprint 34 fixed this exact bug in one place and
+      the rest were never swept.
+- [ ] `localDateKey()` from `src/lib/calendarDates.js` is the fix. Deliberately **not** bundled
+      into the 2026-08-21 repairs: a 20-site sweep through the data layer carries regression risk
+      that does not belong attached to a hotfix.
+
+### TASK 19.3 — Display the ETA on the calendar (OPEN)
+- [ ] Sprint 36 solved the **input** and not the **output**: a user can set an arrival time, and
+      nothing on any calendar card shows it. `groupByDayAndMountain` builds attendees as
+      `{ userId, profile }` with no `eta`.
+- [ ] "6 at Copper Saturday, Kyle at 9:00" is the payload the whole feature exists to deliver.
+      Arguably the highest user-visible value left in the backlog.
+
+### TASK 19.4 — Crew colors collapse in three of five themes (OPEN, needs Kyle's call)
+- [ ] The six crew slots all derive from the active theme's accent tokens, so they reskin for
+      free — but in Sunset they resolve to six oranges, and Purple/Teal collapse similarly.
+- [ ] Crew color is the entire basis of the "whose plans am I looking at" read, so it works in
+      two themes and mushes in three.
+- [ ] Fixing it means reserving 2-3 colors that stay distinct across every theme, which breaks
+      the pure-theme-token rule `crewColors.js` is built on. **Kyle's decision, still open.**
+
+### TASK 19.5 — Escape-to-close and focus trap on the modals (OPEN)
+- [ ] Neither `PlanEditorModal` nor `CalendarFilterSheet` closes on Escape, and neither traps
+      focus. Fine on a phone; awkward on desktop, where a keyboard user can open the plan editor
+      and not close it without a mouse.
+
+### TASK 19.6 — `respondToCrewInvite` writes an illegal visibility (OPEN)
+- [ ] `socialApi.js:1191` upserts `visibility: "public"`, but the live CHECK constraint allows
+      only `friends | groups | private`. Accepting a crew invite that carries a ski date
+      therefore always throws `23514` — **after** the invite row has already been flipped to
+      accepted, so the user is left in an inconsistent state.
+- [ ] It also upserts with no `onConflict`, so even a legal visibility would collide with the
+      `(user_id, ski_date)` unique constraint.
+- [ ] Pre-existing and entirely unrelated to Sprints 35/36. Found during the Sprint 36 review.
+
+### TASK 19.7 — `FriendsPage` per-block load resilience (OPEN, planned but never executed)
+- [ ] `FriendsPage.loadPageData()` still awaits ten calls in a single `Promise.all`, so one
+      rejection blanks the entire Social tab — exactly what happened on 2026-08-18.
+- [ ] Fully specified as Task 1 of
+      `docs/superpowers/plans/2026-08-18-sprint-35-social-tab-and-calendar.md` and **never
+      implemented**. The loader-registry pattern it describes now exists in `FriendsCalendar`
+      and can be copied.
+- [ ] Do **not** "fix" this with a blanket `.catch(() => [])` — that trades a loud failure for a
+      silent one, and the loud failure is what made the 2026-08-18 bug findable.
+
 
 Instructions: When asked "what can we work on next?" refer to this list for potential items to add to the next sprint development.
 
