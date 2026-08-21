@@ -911,70 +911,102 @@ nothing overrode it searched for `isEditing`, which is case-sensitive and cannot
 
 ---
 
-# Sprint 37 — queued
+# Sprint 37 — SHIPPED 2026-08-21 (6 of 7; 19.1 deferred to Sprint 38)
 
-### TASK 19.1 — Per-crew ski plan visibility (OPEN, scoped as Sprint 37)
-- [ ] Kyle's ask: when setting visibility, choose **all friends** or **multi-select specific
-      crews** — "people might want to hide where they're going from some people or groups."
-- [ ] Needs a migration and new RLS policies, which is why it was split out of Sprint 36.
-- [ ] **The trap is already documented.** Migration 032's own comments note the policy keys
-      off `visibility <> 'private'`, so **any** non-private value is readable by all friends
-      and active crewmates. A naive `visibility='crews'` row would leak to everyone — the
-      exact thing the feature exists to prevent.
-- [ ] Retiring `daily_plans.group_id` and the dead `'groups'` visibility value (TASK 18.1)
-      belongs with this migration.
+Six of the seven queued items shipped. Tests 75 → 107, lint held at 88, build clean.
+Each task is one commit, so any of them can be bisected or reverted independently.
 
-### TASK 19.2 — Sweep the remaining UTC date keys (OPEN)
-- [ ] **18 sites** still derive a `YYYY-MM-DD` key from `new Date().toISOString().slice(0, 10)`,
-      which returns the **UTC** date and rolls over to tomorrow after ~5pm Mountain.
-- [ ] Locations: `src/lib/socialApi.js` (11), `src/App.jsx` (3), `src/lib/leaderboardApi.js` (1),
-      `src/components/CreateTripModal.jsx` (1), `src/components/PostSkiBuddyForm.jsx` (1),
-      plus one doc comment that is not a call site.
-- [ ] `leaderboardApi.js:75` is the most consequential — it caps "days on mountain" at today, so
-      every evening it counts tomorrow as skied. Sprint 34 fixed this exact bug in one place and
-      the rest were never swept.
-- [ ] `localDateKey()` from `src/lib/calendarDates.js` is the fix. Deliberately **not** bundled
-      into the 2026-08-21 repairs: a 20-site sweep through the data layer carries regression risk
-      that does not belong attached to a hotfix.
+### TASK 19.6 — `respondToCrewInvite` wrote an illegal visibility — DONE (`6794a04`)
+- Was the **fifth** `daily_plans` writer and the only one still doing a raw `.upsert()`:
+  `visibility:"public"` (rejected by the CHECK, 23514, every time), no `onConflict`, no
+  merge. And it flipped the invite to accepted BEFORE the failing write, so the user was
+  left with an accepted invite, no plan, and no pending invite to retry from.
+- Now merges through `buildPlanUpsert()` and writes the plan FIRST. `buildPlanUpsert`
+  validates `visibility` and **throws** on an unknown value — it deliberately does not
+  fall back, because falling back on a Private plan would silently un-private the day.
+- `buildEtaFromInvite` deleted; `buildPlanEta` already accepted the same format and more.
+- The doc comment's "four writers" census is what let this hide. It now says five.
 
-### TASK 19.3 — Display the ETA on the calendar (OPEN)
-- [ ] Sprint 36 solved the **input** and not the **output**: a user can set an arrival time, and
-      nothing on any calendar card shows it. `groupByDayAndMountain` builds attendees as
-      `{ userId, profile }` with no `eta`.
-- [ ] "6 at Copper Saturday, Kyle at 9:00" is the payload the whole feature exists to deliver.
-      Arguably the highest user-visible value left in the backlog.
+### TASK 19.2 — UTC date keys — DONE (`e43b2fc`)
+- All 19 sites now use `localDateKey()`. Plus a 20th nobody had listed:
+  `server/services/stravaSync.js` sliced Strava's UTC `start_date` with `start_date_local`
+  sitting right beside it.
+- `leaderboardApi` was worse than logged: the entries passing its "today" cap are
+  **background-upserted into `ski_sessions`**, so every evening it persisted tomorrow's
+  trip as a day already skied. Data corruption, not display.
+- `PostSkiBuddyForm`'s floor was a module-level const, frozen at import — stale across
+  midnight regardless of timezone. Moved into the component.
+- **A `no-restricted-syntax` lint rule now bans the pattern.** Verified it flagged exactly
+  19 before the sweep and 0 after. This is the part that stops a 21st site.
+- Also added `.claude` to `globalIgnores`: `npm run lint` was reporting **1076** problems
+  by linting worktrees' minified `dist/` bundles. It now reports the real 88.
 
-### TASK 19.4 — Crew colors collapse in three of five themes (OPEN, needs Kyle's call)
-- [ ] The six crew slots all derive from the active theme's accent tokens, so they reskin for
-      free — but in Sunset they resolve to six oranges, and Purple/Teal collapse similarly.
-- [ ] Crew color is the entire basis of the "whose plans am I looking at" read, so it works in
-      two themes and mushes in three.
-- [ ] Fixing it means reserving 2-3 colors that stay distinct across every theme, which breaks
-      the pure-theme-token rule `crewColors.js` is built on. **Kyle's decision, still open.**
+### TASK 19.7 — `FriendsPage` load resilience — DONE (`ef35fa8`)
+- Ten calls in one `Promise.all` meant one rejection blanked all ten sections.
+- The registry pattern was extracted from `FriendsCalendar` (where it was inline and
+  therefore untested) into **`src/lib/loaderRegistry.js`, 13 tests**. `FriendsCalendar`
+  was refactored onto it, which is what proves the extraction is faithful.
+- `FailureNotice` lifted to `src/components/ui/`. Toast → persistent per-block notices
+  with per-block Retry.
+- The `.catch(() => ...)` swallows on pings/datePolls are gone — same empty state, but
+  the failure is now recorded instead of invisible.
 
-### TASK 19.5 — Escape-to-close and focus trap on the modals (OPEN)
-- [ ] Neither `PlanEditorModal` nor `CalendarFilterSheet` closes on Escape, and neither traps
-      focus. Fine on a phone; awkward on desktop, where a keyboard user can open the plan editor
-      and not close it without a mouse.
+### TASK 19.3 — ETA on the calendar — DONE (`64f876a`)
+- Cards show the group's **earliest** ETA: "Copper — 6 going / from 8:45". First chair is
+  the decision-relevant number. Hidden entirely when nobody set one.
+- `earliestEta()` compares **instants**, not ISO strings — `eta` is a timestamptz and
+  offset formats are not guaranteed consistent, so string ordering is a latent bug.
+- Collapsed a triplicate: `formatPlanTime` existed three times verbatim and had already
+  drifted on the empty case. `formatEtaShort()` in `src/lib/format.js` replaces all three.
 
-### TASK 19.6 — `respondToCrewInvite` writes an illegal visibility (OPEN)
-- [ ] `socialApi.js:1191` upserts `visibility: "public"`, but the live CHECK constraint allows
-      only `friends | groups | private`. Accepting a crew invite that carries a ski date
-      therefore always throws `23514` — **after** the invite row has already been flipped to
-      accepted, so the user is left in an inconsistent state.
-- [ ] It also upserts with no `onConflict`, so even a legal visibility would collide with the
-      `(user_id, ski_date)` unique constraint.
-- [ ] Pre-existing and entirely unrelated to Sprints 35/36. Found during the Sprint 36 review.
+### TASK 19.5 — Escape + focus trap — DONE (`bc472b8`)
+- New `src/lib/useDismissableLayer.js`. There was no prior art anywhere in `src/` — zero
+  occurrences of `keydown`/`Escape` in the whole codebase.
+- `CalendarFilterSheet` also had neither `role="dialog"` nor `aria-modal`. Both added.
+- **Not unit-testable** — `node --test` runs over `src/lib` with no DOM. Needs hands-on
+  keyboard verification in a desktop browser.
+- `UserProfileModal` still lacks it; left deliberately out of scope.
 
-### TASK 19.7 — `FriendsPage` per-block load resilience (OPEN, planned but never executed)
-- [ ] `FriendsPage.loadPageData()` still awaits ten calls in a single `Promise.all`, so one
-      rejection blanks the entire Social tab — exactly what happened on 2026-08-18.
-- [ ] Fully specified as Task 1 of
-      `docs/superpowers/plans/2026-08-18-sprint-35-social-tab-and-calendar.md` and **never
-      implemented**. The loader-registry pattern it describes now exists in `FriendsCalendar`
-      and can be copied.
-- [ ] Do **not** "fix" this with a blanket `.catch(() => [])` — that trades a loud failure for a
-      silent one, and the loud failure is what made the 2026-08-18 bug findable.
+### TASK 19.4 — crew colors — DONE (`0c404b4`), Kyle chose the fixed palette
+- Six fixed hues (~40° minimum separation) replacing the `var(--color-accent-*)` tokens
+  that collapsed to six oranges in Base Lodge and six violets in Aurora Peak.
+- Affordable only because all five themes are dark. **If a light theme is ever added,
+  recheck these** — the tests encode the thresholds and will say so.
+- `NEUTRAL_RING` moved too: it was the theme's own accent at 45% alpha, i.e. orange in
+  Base Lodge, so an unaffiliated friend looked like a member of the orange crew.
+- The constraints are now **asserted with real color math** (hue separation, WCAG
+  contrast) in plain JS, no new deps. `CREW_COLOR_VARS` → `CREW_COLORS`.
+
+---
+
+# Sprint 38 — queued
+
+### TASK 19.1 — Per-crew ski plan visibility (OPEN)
+- [ ] Kyle's ask: when setting visibility, choose **all friends** or **multi-select
+      specific crews** — "people might want to hide where they're going from some people
+      or groups."
+- [ ] Split out of Sprint 37 deliberately: it is the only item that rewrites a production
+      RLS policy and a CHECK constraint on live user data, and bundling that with 19
+      unrelated date-key edits would make a live failure hard to bisect.
+- [ ] **The trap, confirmed verbatim in migration 032's own comments (`032:30-36`):** the
+      SELECT policy at `032:101-109` keys off `visibility <> 'private'` — a **blacklist of
+      one value**. ANY new value is automatically readable by every friend and active
+      crewmate, which is the exact thing the feature exists to prevent.
+- [ ] **Recommended storage: a `visible_crew_ids uuid[]` column, NOT a join table.** A
+      `daily_plan_crews` table forces a two-table write, which breaks the invariant that
+      every plan write goes through one whole-row `buildPlanUpsert()`, and would need a
+      SECURITY DEFINER RPC to stay atomic (`create_crew` at `034:53-96` is the precedent).
+      An array column keeps the write single-row and `buildPlanUpsert` unchanged — one
+      more field in the merge, with a reset rule shaped like the existing `arrived_at`
+      invariant at `planUpsert.js:85`. Bounded set, no recursion risk, unit-testable.
+- [ ] Migration 037 must also: rewrite the policy as a **whitelist**; add `'crews'` and
+      drop `'groups'` from the CHECK (**the constraint has no name in the repo** —
+      `daily_plans` predates `migrations/001` — so use a `DO` block that looks it up in
+      `pg_constraint`); drop the dead `group_id` column (TASK 18.1, confirmed zero readers
+      in `src/`); add ONE `STABLE SECURITY DEFINER SET search_path = public` helper and
+      **never an inline `EXISTS` on another RLS-protected relation**, which is why
+      `20260515_crew_rls_fix.sql` and `022_fix_kramesbutte_rls_auth_users.sql` exist; and
+      revoke from `anon` as well as `authenticated`, per migration 036's lesson.
 
 
 Instructions: When asked "what can we work on next?" refer to this list for potential items to add to the next sprint development.
