@@ -113,3 +113,58 @@ test("visibility omitted falls back to existing.visibility, then friends", () =>
   const withoutVisibility = buildPlanUpsert(null, { skiDate: "2026-01-15", resortKey: "vail" })
   assert.equal(withoutVisibility.visibility, "friends")
 })
+
+test("status is carried forward when the caller omits it", () => {
+  const out = buildPlanUpsert(
+    { resort_key: "vail", status: "driving", arrived_at: null },
+    { skiDate: "2026-08-21", resortKey: "vail" }
+  )
+  assert.equal(out.status, "driving")
+})
+
+test("an explicit status is used", () => {
+  const out = buildPlanUpsert(
+    { resort_key: "vail", status: "planned", arrived_at: null },
+    { skiDate: "2026-08-21", resortKey: "vail", status: "arrived", arrivedAt: "2026-08-21T16:30:00.000Z" }
+  )
+  assert.equal(out.status, "arrived")
+  assert.equal(out.arrived_at, "2026-08-21T16:30:00.000Z")
+})
+
+test("an invalid status falls back instead of reaching the CHECK constraint", () => {
+  const out = buildPlanUpsert(
+    { resort_key: "vail", status: "driving", arrived_at: null },
+    { skiDate: "2026-08-21", resortKey: "vail", status: "teleporting" }
+  )
+  assert.equal(out.status, "driving")
+})
+
+test("an explicit status overrides the resort-change reset", () => {
+  // Changing mountain normally resets status to planned. Saying "I'm arrived" in the
+  // same breath is deliberate, so it wins.
+  const out = buildPlanUpsert(
+    { resort_key: "vail", status: "arrived", arrived_at: "2026-08-21T15:00:00.000Z" },
+    { skiDate: "2026-08-21", resortKey: "coppermountain", status: "arrived", arrivedAt: "2026-08-21T17:00:00.000Z" }
+  )
+  assert.equal(out.resort_key, "coppermountain")
+  assert.equal(out.status, "arrived")
+  assert.equal(out.arrived_at, "2026-08-21T17:00:00.000Z")
+})
+
+test("a resort change with no explicit status still resets status and arrival", () => {
+  const out = buildPlanUpsert(
+    { resort_key: "vail", status: "arrived", arrived_at: "2026-08-21T15:00:00.000Z" },
+    { skiDate: "2026-08-21", resortKey: "coppermountain" }
+  )
+  assert.equal(out.status, "planned")
+  assert.equal(out.arrived_at, null)
+})
+
+test("arrivedAt can be explicitly cleared", () => {
+  const out = buildPlanUpsert(
+    { resort_key: "vail", status: "arrived", arrived_at: "2026-08-21T15:00:00.000Z" },
+    { skiDate: "2026-08-21", resortKey: "vail", status: "driving", arrivedAt: null }
+  )
+  assert.equal(out.status, "driving")
+  assert.equal(out.arrived_at, null)
+})

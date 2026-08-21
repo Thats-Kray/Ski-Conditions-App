@@ -23,11 +23,16 @@ import { etaToTimeInput } from "./format.js"
  *   stays null. An "HH:MM" string is used as-is.
  * - visibility: omitted falls back to existing.visibility, then "friends".
  * - note: omitted falls back to existing.note, then null.
- * - status / arrived_at: never taken directly from the caller. They fall back to
- *   existing.status ("planned" default) / existing.arrived_at (null default) —
- *   UNLESS resortKey differs from the existing row's resort_key, in which case
- *   both reset (status -> "planned", arrived_at -> null). Moving to a different
- *   mountain cannot leave you marked as having arrived at the old one.
+ * - status: an explicit value (one of VALID_STATUSES) wins outright — including over
+ *   the resort-change reset below. Omitted, or an unrecognised value, falls back to
+ *   existing.status ("planned" default) — UNLESS resortKey differs from the existing
+ *   row's resort_key, in which case it resets to "planned". Moving to a different
+ *   mountain cannot leave you marked as having arrived at the old one, unless the
+ *   caller is explicitly telling us they arrived at the new one.
+ * - arrived_at: an explicit value (including `null`, to clear it) wins outright.
+ *   Omitted falls back to existing.arrived_at (null default) — UNLESS resortKey
+ *   differs from the existing row's resort_key AND the caller passed no explicit
+ *   status, in which case it resets to null alongside status.
  *
  * @param {object|null} existing - current daily_plans row, or null
  * @param {object} fields
@@ -36,9 +41,15 @@ import { etaToTimeInput } from "./format.js"
  * @param {string|null} [fields.eta] - "HH:MM", null to clear, or omit to carry forward
  * @param {string} [fields.visibility]
  * @param {string|null} [fields.note]
+ * @param {string} [fields.status] - "planned" | "driving" | "arrived"; anything else is ignored
+ * @param {string|null} [fields.arrivedAt] - ISO instant, null to clear, or omit to carry forward
  * @returns {{ ski_date: string, resort_key: string, eta: string|null, visibility: string, status: string, note: string|null, arrived_at: string|null }}
  */
-export function buildPlanUpsert(existing, { skiDate, resortKey, eta, visibility, note } = {}) {
+// daily_plans.status has a CHECK constraint allowing exactly these three values.
+// Anything else must never reach the database.
+const VALID_STATUSES = ["planned", "driving", "arrived"]
+
+export function buildPlanUpsert(existing, { skiDate, resortKey, eta, visibility, note, status, arrivedAt } = {}) {
   const ski_date = skiDate !== undefined ? skiDate : existing?.ski_date
   const resort_key = resortKey !== undefined ? resortKey : existing?.resort_key
 
@@ -47,17 +58,27 @@ export function buildPlanUpsert(existing, { skiDate, resortKey, eta, visibility,
   const visibilityOut = visibility !== undefined ? visibility : (existing?.visibility || "friends")
   const noteOut = note !== undefined ? note : (existing?.note ?? null)
 
+  const explicitStatus = VALID_STATUSES.includes(status) ? status : null
   const resortChanged = Boolean(existing) && existing.resort_key !== resort_key
-  const status = resortChanged ? "planned" : (existing?.status || "planned")
-  const arrived_at = resortChanged ? null : (existing?.arrived_at ?? null)
+
+  // A resort change normally clears status and arrival — you cannot have arrived at a
+  // mountain you are no longer going to. But an explicit status is the user telling us
+  // directly, so it outranks the inference.
+  const statusOut = explicitStatus
+    ?? (resortChanged ? "planned" : (existing?.status || "planned"))
+
+  const arrivedOut = arrivedAt !== undefined
+    ? arrivedAt
+    : (explicitStatus ? (existing?.arrived_at ?? null)
+                      : (resortChanged ? null : (existing?.arrived_at ?? null)))
 
   return {
     ski_date,
     resort_key,
     eta: etaOut,
     visibility: visibilityOut,
-    status,
+    status: statusOut,
     note: noteOut,
-    arrived_at,
+    arrived_at: arrivedOut,
   }
 }
