@@ -816,6 +816,9 @@ function MobileHomeDashboard({ resorts, currentUser, onTabChange, onStartSession
       <AddToHomeScreenNudge currentUser={currentUser} sessionActive={sessionActive} />
       <OffseasonBanner />
       <CheckInTodayCta resorts={resorts} currentUser={currentUser} onCheckedIn={onCheckedIn} />
+      <Card>
+        <TodaysCrew />
+      </Card>
       <TodaysBestMountainCard resorts={resorts} onTabChange={onTabChange} />
       <NextTripCard currentUser={currentUser} onTabChange={onTabChange} />
       <WhosSkiingTodayCard currentUser={currentUser} onTabChange={onTabChange} refreshKey={crewRefreshKey} />
