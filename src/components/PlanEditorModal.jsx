@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useMobile } from "../lib/useMobile"
+import { useDismissableLayer } from "../lib/useDismissableLayer"
 import { formatDate, etaToTimeInput, snapToQuarterHour } from "../lib/format"
 import { OPEN_RESORT_KEY, OPEN_RESORT_LABEL, OPEN_RESORT_EMOJI } from "../lib/resorts"
 
@@ -45,6 +46,9 @@ export default function PlanEditorModal({
   defaultResortKey = null, onSave, onRemove, onClose,
 }) {
   const isMobile = useMobile()
+  // enabled: !busy — Escape must no-op mid-save, matching the backdrop and the X
+  // button, which already do. The focus trap stays on regardless.
+  const panelRef = useDismissableLayer({ onClose, enabled: !busy })
   const [resortKey, setResortKey] = useState(plan?.resort_key || defaultResortKey || "")
   const [eta, setEta] = useState(() => etaToTimeInput(plan?.eta) || "")
   const [visibility, setVisibility] = useState(plan?.visibility || "friends")
@@ -62,6 +66,7 @@ export default function PlanEditorModal({
 
   const panel = (
     <div
+      ref={panelRef}
       onClick={(e) => e.stopPropagation()}
       role="dialog"
       aria-modal="true"

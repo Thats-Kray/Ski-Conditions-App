@@ -1,5 +1,6 @@
 import { crewColor } from "../../lib/crewColors"
 import { useMobile } from "../../lib/useMobile"
+import { useDismissableLayer } from "../../lib/useDismissableLayer"
 import Avatar from "../ui/Avatar"
 
 function Row({ checked, tint, onToggle, children }) {
@@ -42,10 +43,17 @@ export default function CalendarFilterSheet({
   crews = [], crewMemberIds, friends = [], selected, onToggle, onClose,
 }) {
   const isMobile = useMobile()
+  const panelRef = useDismissableLayer({ onClose })
 
   const panel = (
     <div
+      ref={panelRef}
       onClick={(e) => e.stopPropagation()}
+      // This sheet had neither role="dialog" nor aria-modal, so a screen reader
+      // announced it as a plain div and never trapped its virtual cursor.
+      role="dialog"
+      aria-modal="true"
+      aria-label="Filter the calendar by crew or friend"
       style={{
         background: "var(--color-modal-bg)",
         border: "1px solid var(--color-border)",
