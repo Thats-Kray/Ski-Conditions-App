@@ -20,7 +20,12 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
   const [hasPlan, setHasPlan] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
+  // Opens straight into the editable form rather than a read-only summary. This
+  // component is only ever mounted by tapping "Check In Today", and the point of
+  // that tap is to set your status and ETA — making the user press "Edit Today's
+  // Plan" first put the actual controls one tap further away than the button that
+  // opened them. The summary is still reachable via Cancel.
+  const [isEditing, setIsEditing] = useState(true)
 
   // Local date key, not UTC — this is the ski_date the check-in below gets written
   // to, and after ~5pm Mountain a UTC key would write the plan to tomorrow.
