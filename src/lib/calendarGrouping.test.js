@@ -322,3 +322,128 @@ test("earliestEta skips an unparseable eta rather than throwing", () => {
   assert.equal(earliestEta([{ eta: "not a date" }, { eta: at(9) }]), at(9))
   assert.equal(earliestEta([{ eta: "not a date" }]), null)
 })
+
+// ── Parties: same mountain, separate groups (Sprint 38) ──────────────────────
+//
+// Kyle, 2026-08-25: "multiple groups will go to the same mountain, but they typically stay
+// with their core crew, then link up." Being at Copper together is not being in a group
+// together, and the card has to stop implying it is.
+
+const member = (user_id, ski_date, party_id, owner_id = "owner1") => ({
+  user_id, ski_date, party_id, party: { id: party_id, owner_id, name: null },
+})
+
+test("attendees carry the party they belong to that day", () => {
+  const out = groupByDayAndMountain({
+    plans: [p("u1", "2026-08-22", "coppermountain", "Nate")],
+    partyMembers: [member("u1", "2026-08-22", "pA")],
+  })
+  assert.equal(out.get("2026-08-22")[0].attendees[0].partyId, "pA")
+})
+
+test("an attendee in no party has a null partyId", () => {
+  const out = groupByDayAndMountain({
+    plans: [p("u1", "2026-08-22", "coppermountain", "Nate")],
+  })
+  assert.equal(out.get("2026-08-22")[0].attendees[0].partyId, null)
+})
+
+test("membership is matched on user AND date, never user alone", () => {
+  // The security rule this mirrors is date-scoped, and so is the display: being in someone's
+  // party on Saturday must not group you with them on Sunday.
+  const out = groupByDayAndMountain({
+    plans: [
+      p("u1", "2026-08-22", "coppermountain", "Nate"),
+      p("u1", "2026-08-23", "coppermountain", "Nate"),
+    ],
+    partyMembers: [member("u1", "2026-08-22", "pA")],
+  })
+  assert.equal(out.get("2026-08-22")[0].attendees[0].partyId, "pA")
+  assert.equal(out.get("2026-08-23")[0].attendees[0].partyId, null, "Sunday is a different day")
+})
+
+test("two parties at one mountain are two groups, not one crowd", () => {
+  const out = groupByDayAndMountain({
+    plans: [
+      p("u1", "2026-08-22", "coppermountain", "Nate"),
+      p("u2", "2026-08-22", "coppermountain", "Rafe"),
+      p("u3", "2026-08-22", "coppermountain", "Gaby"),
+    ],
+    partyMembers: [
+      member("u1", "2026-08-22", "pA", "u1"),
+      member("u2", "2026-08-22", "pA", "u1"),
+      member("u3", "2026-08-22", "pB", "u3"),
+    ],
+  })
+  const [copper] = out.get("2026-08-22")
+  assert.equal(copper.attendees.length, 3, "the mountain headcount still counts everyone")
+  assert.equal(copper.parties.length, 2)
+  assert.deepEqual(copper.parties.map((g) => g.partyId), ["pA", "pB"])
+  assert.deepEqual(copper.parties.map((g) => g.attendees.length), [2, 1])
+})
+
+test("parties are sorted biggest first, ties broken on id so order never jitters", () => {
+  const out = groupByDayAndMountain({
+    plans: ["u1", "u2", "u3", "u4"].map((u, i) =>
+      p(u, "2026-08-22", "coppermountain", `Skier${i}`)),
+    partyMembers: [
+      member("u1", "2026-08-22", "pZ", "u1"),
+      member("u2", "2026-08-22", "pA", "u2"),
+      member("u3", "2026-08-22", "pA", "u2"),
+      member("u4", "2026-08-22", "pZ", "u1"),
+    ],
+  })
+  assert.deepEqual(out.get("2026-08-22")[0].parties.map((g) => g.partyId), ["pA", "pZ"])
+})
+
+test("unaffiliated skiers are listed apart from every party", () => {
+  const out = groupByDayAndMountain({
+    plans: [
+      p("u1", "2026-08-22", "coppermountain", "Nate"),
+      p("u2", "2026-08-22", "coppermountain", "Rafe"),
+    ],
+    partyMembers: [member("u1", "2026-08-22", "pA", "u1")],
+  })
+  const [copper] = out.get("2026-08-22")
+  assert.deepEqual(copper.parties.map((g) => g.partyId), ["pA"])
+  assert.deepEqual(copper.solo.map((a) => a.userId), ["u2"])
+})
+
+test("a day with no parties at all reports every skier as solo", () => {
+  const out = groupByDayAndMountain({
+    plans: [
+      p("u1", "2026-08-22", "coppermountain", "Nate"),
+      p("u2", "2026-08-22", "coppermountain", "Rafe"),
+    ],
+  })
+  const [copper] = out.get("2026-08-22")
+  assert.deepEqual(copper.parties, [])
+  assert.equal(copper.solo.length, 2)
+})
+
+test("a party spanning two mountains appears at each, with only its own people", () => {
+  // Members can split up on the day. The party is who you are with, not where you ended up.
+  const out = groupByDayAndMountain({
+    plans: [
+      p("u1", "2026-08-22", "coppermountain", "Nate"),
+      p("u2", "2026-08-22", "vail", "Rafe"),
+    ],
+    partyMembers: [
+      member("u1", "2026-08-22", "pA", "u1"),
+      member("u2", "2026-08-22", "pA", "u1"),
+    ],
+  })
+  const day = out.get("2026-08-22")
+  const copper = day.find((g) => g.resortKey === "coppermountain")
+  const vail = day.find((g) => g.resortKey === "vail")
+  assert.deepEqual(copper.parties.map((g) => g.attendees.map((a) => a.userId)), [["u1"]])
+  assert.deepEqual(vail.parties.map((g) => g.attendees.map((a) => a.userId)), [["u2"]])
+})
+
+test("a party group exposes its owner so the card can name it", () => {
+  const out = groupByDayAndMountain({
+    plans: [p("u1", "2026-08-22", "coppermountain", "Nate")],
+    partyMembers: [member("u1", "2026-08-22", "pA", "owner9")],
+  })
+  assert.equal(out.get("2026-08-22")[0].parties[0].ownerId, "owner9")
+})

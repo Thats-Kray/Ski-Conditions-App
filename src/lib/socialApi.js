@@ -995,6 +995,10 @@ export async function createCrewInvite(inviteeId, invite) {
     resort_key: invite.resort_key,
     ski_date: invite.ski_date,
     departure_time: invite.departure_time || null,
+    // 'invite' = I am asking you to ski with me. 'request' = I am asking to join YOUR party.
+    // Same table, same accept path; only the direction of the ask differs. See migration 038's
+    // header for why one function handles both.
+    kind: invite.kind === "request" ? "request" : "invite",
     seats_available: Number.isFinite(Number(invite.seats_available))
       ? Number(invite.seats_available)
       : 0,
@@ -1010,6 +1014,10 @@ export async function createCrewInvite(inviteeId, invite) {
     .eq("invitee_id", inviteeId)
     .eq("resort_key", invite.resort_key)
     .eq("ski_date", invite.ski_date)
+    // kind must be part of the match. Without it, asking to join someone's party would
+    // overwrite an invite they had already sent you for the same mountain and day, silently
+    // turning their invitation into your request.
+    .eq("kind", payload.kind)
     .maybeSingle()
 
   if (existingError) throw existingError
@@ -1149,7 +1157,13 @@ export async function respondToCrewInvite(inviteId, status) {
   // does not allow), which left the user with an accepted invite, no plan, and no way to
   // retry from the UI — the invite no longer showed as pending. Writing the plan first
   // means a failure leaves the invite pending and the whole action is retryable.
-  if (status === "accepted" && existing.ski_date && existing.resort_key) {
+  // 'request' means THEY asked to join MY party, so I am the approver. Approving must not
+  // touch my own plan — I already have one, and rewriting it with the requester's chosen
+  // resort would move me to their mountain. Only an 'invite' (someone asking me to come ski
+  // with them) sets my plan.
+  const isRequest = existing.kind === "request"
+
+  if (status === "accepted" && !isRequest && existing.ski_date && existing.resort_key) {
     const existingPlan = await getMyDailyPlan(existing.ski_date)
 
     // Merge, do not overwrite. This is the fifth daily_plans writer and was the last one
@@ -1175,19 +1189,105 @@ export async function respondToCrewInvite(inviteId, status) {
     }))
   }
 
-  const { data: updatedInvite, error: updateError } = await supabase
-    .from("crew_invites")
-    .update({
-      status,
-      updated_at: new Date().toISOString(),
+  // Accepting wires up the party AND flips the invite, atomically, inside accept_plan_party().
+  // It handles both directions from one authorization rule (the caller must be invitee_id) —
+  // see migration 038. Declining is just a status change; there is no party to build.
+  if (status === "accepted") {
+    const { error: partyError } = await supabase.rpc("accept_plan_party", {
+      p_invite_id: inviteId,
     })
+    if (partyError) throw partyError
+  } else {
+    const { error: updateError } = await supabase
+      .from("crew_invites")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", inviteId)
+    if (updateError) throw updateError
+  }
+
+  const { data: updatedInvite, error: readError } = await supabase
+    .from("crew_invites")
+    .select("*")
     .eq("id", inviteId)
-    .select()
     .single()
 
-  if (updateError) throw updateError
+  if (readError) throw readError
 
   return updatedInvite
+}
+
+/* -----------------------------
+   Plan parties — who you are skiing WITH, as opposed to where
+----------------------------- */
+
+/**
+ * Ask to join someone's party for a day.
+ *
+ * This does NOT set your ski plan and does not put you anywhere. Going to the same mountain
+ * is always yours to decide (use upsertDailyPlan / joinPlanAtResort for that); this is only
+ * the request to ski WITH them, which is theirs to approve.
+ */
+export async function requestToJoinParty(ownerId, { skiDate, resortKey, message } = {}) {
+  return createCrewInvite(ownerId, {
+    ski_date: skiDate,
+    resort_key: resortKey,
+    message,
+    kind: "request",
+  })
+}
+
+/** Pending requests other people have sent ME, awaiting my approval. */
+export async function getIncomingPartyRequests() {
+  const user = await getCurrentUser()
+  if (!user) return []
+
+  const { data, error } = await supabase
+    .from("crew_invites")
+    .select("*")
+    .eq("invitee_id", user.id)
+    .eq("kind", "request")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+
+  if (error) throw error
+  return data || []
+}
+
+/**
+ * Party membership for a date range, for the calendar.
+ *
+ * Returned separately from plans rather than embedded on them: membership lives in its own
+ * table precisely so upsertDailyPlan cannot touch it (see migration 037's header), and a
+ * PostgREST embed would tie the two back together.
+ *
+ * RLS returns only parties you are in, so this is the set you are allowed to see grouped.
+ */
+export async function getMyPartyMembershipsInRange(startDate, endDate) {
+  const user = await getCurrentUser()
+  if (!user) return []
+
+  const { data, error } = await supabase
+    .from("plan_party_members")
+    .select("party_id, user_id, ski_date, party:plan_parties ( id, owner_id, name )")
+    .gte("ski_date", startDate)
+    .lte("ski_date", endDate)
+
+  if (error) throw error
+  return data || []
+}
+
+/** Leave the group you are skiing with on a day. Your ski plan is untouched. */
+export async function leaveParty(skiDate) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("You must be logged in to leave a party.")
+
+  const { error } = await supabase
+    .from("plan_party_members")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("ski_date", skiDate)
+
+  if (error) throw error
 }
 
 

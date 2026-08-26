@@ -32,7 +32,32 @@ function displayName(profile) {
  *   regardless of the predicate. Omitted entirely, behavior is unchanged.
  * @returns {Map<string, Array>} date key → MountainGroup[], busiest mountain first
  */
-export function groupByDayAndMountain({ plans = [], trips = [], currentUserId = null, isVisible = null }) {
+/**
+ * user+day -> party, from plan_party_members rows.
+ *
+ * Keyed on BOTH user and date, never user alone. Party membership is per day: skiing with
+ * someone on Saturday says nothing about Sunday, and a user-only key would silently merge
+ * every day they ever shared. That mirrors the RLS rule exactly — in_my_party(other, DATE) —
+ * so display and authorization cannot drift apart.
+ */
+function partyIndex(partyMembers) {
+  const byUserDay = new Map()
+  for (const m of partyMembers) {
+    const day = dayKey(m.ski_date)
+    if (!day || !m.user_id || !m.party_id) continue
+    byUserDay.set(`${m.user_id}|${day}`, {
+      partyId: m.party_id,
+      ownerId: m.party?.owner_id ?? null,
+      name: m.party?.name ?? null,
+    })
+  }
+  return byUserDay
+}
+
+export function groupByDayAndMountain({
+  plans = [], trips = [], currentUserId = null, isVisible = null, partyMembers = [],
+}) {
+  const parties = partyIndex(partyMembers)
   // day key → resort key → { resortKey, byUser: Map, trip }
   const days = new Map()
 
@@ -53,8 +78,14 @@ export function groupByDayAndMountain({ plans = [], trips = [], currentUserId = 
     return !isVisible || userId === currentUserId || isVisible(userId)
   }
 
+  /** The party this person is in on this day, or an empty shape if none. */
+  function partyFor(userId, day) {
+    return parties.get(`${userId}|${day}`) || { partyId: null, ownerId: null, name: null }
+  }
+
   for (const plan of plans) {
-    const g = bucket(dayKey(plan.ski_date), plan.resort_key)
+    const day = dayKey(plan.ski_date)
+    const g = bucket(day, plan.resort_key)
     if (!g) continue
     // eta rides along so the card can show when this group is getting there.
     // getVisiblePlansInRange already selects it; it used to be dropped right here.
@@ -62,11 +93,13 @@ export function groupByDayAndMountain({ plans = [], trips = [], currentUserId = 
       userId: plan.user_id,
       profile: plan.profile || null,
       eta: plan.eta || null,
+      ...partyFor(plan.user_id, day),
     })
   }
 
   for (const trip of trips) {
-    const g = bucket(dayKey(trip.ski_date), trip.resort_key)
+    const day = dayKey(trip.ski_date)
+    const g = bucket(day, trip.resort_key)
     if (!g) continue
     // Last trip wins if two land on the same resort and day — vanishingly rare,
     // and the badge only has room for one.
@@ -74,7 +107,10 @@ export function groupByDayAndMountain({ plans = [], trips = [], currentUserId = 
     // Trip attendance carries no per-person ETA — ski_trips has a departure time
     // for the trip, not for each person. null keeps the attendee shape uniform.
     if (trip.host_id && passes(trip.host_id) && !g.byUser.has(trip.host_id)) {
-      g.byUser.set(trip.host_id, { userId: trip.host_id, profile: trip.host_profile || null, eta: null })
+      g.byUser.set(trip.host_id, {
+        userId: trip.host_id, profile: trip.host_profile || null, eta: null,
+        ...partyFor(trip.host_id, day),
+      })
     }
     for (const rsvp of trip.rsvps || []) {
       // "maybe" and "out" are not attendance. A headcount that counts maybes is
@@ -82,21 +118,46 @@ export function groupByDayAndMountain({ plans = [], trips = [], currentUserId = 
       if (rsvp.status !== "going") continue
       if (!passes(rsvp.user_id)) continue
       if (g.byUser.has(rsvp.user_id)) continue
-      g.byUser.set(rsvp.user_id, { userId: rsvp.user_id, profile: rsvp.profile || null, eta: null })
+      g.byUser.set(rsvp.user_id, {
+        userId: rsvp.user_id, profile: rsvp.profile || null, eta: null,
+        ...partyFor(rsvp.user_id, day),
+      })
     }
   }
 
   const out = new Map()
   for (const [day, byResort] of days) {
-    const groups = [...byResort.values()].map((g) => ({
-      resortKey: g.resortKey,
-      trip: g.trip,
-      attendees: [...g.byUser.values()].sort((a, b) => {
+    const groups = [...byResort.values()].map((g) => {
+      const attendees = [...g.byUser.values()].sort((a, b) => {
         if (a.userId === currentUserId) return -1
         if (b.userId === currentUserId) return 1
         return displayName(a.profile).localeCompare(displayName(b.profile))
-      }),
-    }))
+      })
+
+      // Same mountain, separate groups. `attendees` stays the full mountain headcount —
+      // "9 going to Copper" is still true and callers that only want the count are
+      // unaffected — while `parties` and `solo` say WHO is actually together.
+      //
+      // A party is partitioned per mountain, not per day: if half a party ends up at Vail,
+      // each card shows only the members who are actually there.
+      const byParty = new Map()
+      const solo = []
+      for (const a of attendees) {
+        if (!a.partyId) { solo.push(a); continue }
+        if (!byParty.has(a.partyId)) {
+          byParty.set(a.partyId, { partyId: a.partyId, ownerId: a.ownerId, name: a.name, attendees: [] })
+        }
+        byParty.get(a.partyId).attendees.push(a)
+      }
+
+      // Biggest group first, ties broken on partyId so the order cannot jitter between
+      // renders — the same reasoning as the mountain sort below.
+      const parties = [...byParty.values()].sort(
+        (a, b) => b.attendees.length - a.attendees.length || a.partyId.localeCompare(b.partyId)
+      )
+
+      return { resortKey: g.resortKey, trip: g.trip, attendees, parties, solo }
+    })
     // Busiest mountain first — this is the single most important sort in the
     // feature, because it is literally the answer. Ties break on resortKey so the
     // order does not jitter between renders.

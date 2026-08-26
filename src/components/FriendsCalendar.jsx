@@ -14,7 +14,7 @@ import { resortName } from "../lib/resorts"
 import { formatDate } from "../lib/format"
 import { buildPlanUpsert } from "../lib/planUpsert"
 import {
-  getVisiblePlansInRange, getAcceptedFriends,
+  getVisiblePlansInRange, getAcceptedFriends, getMyPartyMembershipsInRange,
   getMyCrews, getCrewMembers, joinPlanAtResort, upsertDailyPlan,
 } from "../lib/socialApi"
 
@@ -48,6 +48,7 @@ export default function FriendsCalendar({
   const [monthResetKey, setMonthResetKey] = useState(0)
 
   const [plans, setPlans] = useState([])
+  const [partyMembers, setPartyMembers] = useState([])
   const [friends, setFriends] = useState([])
   const [crews, setCrews] = useState([])
   const [crewMemberIds, setCrewMemberIds] = useState(new Map())
@@ -118,13 +119,22 @@ export default function FriendsCalendar({
     const token = `${start}|${end}`
     rangeRef.current = token
     try {
-      const rows = await getVisiblePlansInRange(start, end)
+      // Fetched together so the calendar never renders plans against a stale party map,
+      // which would briefly show people grouped with the wrong crew. Party membership lives
+      // in its own table (migration 037) rather than on daily_plans, so it is a second query
+      // by design, not an oversight.
+      const [rows, memberships] = await Promise.all([
+        getVisiblePlansInRange(start, end),
+        getMyPartyMembershipsInRange(start, end),
+      ])
       if (rangeRef.current !== token) return   // a newer range already won
       setPlans(rows || [])
+      setPartyMembers(memberships || [])
       setFailed((prev) => { const n = { ...prev }; delete n.plans; return n })
     } catch (err) {
       if (rangeRef.current !== token) return
       setPlans([])
+      setPartyMembers([])
       console.error("[FriendsCalendar] \"plans\" failed to load:", err)
       setFailed((prev) => ({ ...prev, plans: true }))
     }
@@ -189,6 +199,7 @@ export default function FriendsCalendar({
   }, [currentUserId, selected, friendIds, selectedCrewIds, crewMemberIds])
 
   const groupsByDay = useMemo(() => groupByDayAndMountain({
+    partyMembers,
     plans: plans.filter((p) => inScope(p.user_id)),
     // Scoping on host alone would drop a trip you RSVP'd going to unless its host
     // is separately in scope, and would hide invites from non-friend hosts under
@@ -205,7 +216,7 @@ export default function FriendsCalendar({
     // its "going" RSVPs to the headcount, even people in no selected crew (Sprint
     // 35 review finding #7).
     isVisible: inScope,
-  }), [plans, trips, inScope, currentUserId, selected])
+  }), [plans, partyMembers, trips, inScope, currentUserId, selected])
 
   const colorCtx = useMemo(() => ({
     currentUserId, selectedCrewIds, crewIndexById, crewMemberIds, crewNameById,
