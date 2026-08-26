@@ -83,11 +83,63 @@ export function normalizeResortKey(key) {
   return String(key).trim().toLowerCase().replace(/\s+/g, "")
 }
 
+/**
+ * Resorts the manual "log a day" picker offers that are NOT Colorado day-trip mountains.
+ *
+ * Deliberately a SEPARATE map from RESORT_NAMES. RESORT_NAMES drives the pickers for "where
+ * are you skiing today" (plan editor, check-in, the calendar), which are Colorado-only by
+ * design — Whistler has no business appearing there. These only need to exist so that a
+ * logged day at one of them can be DISPLAYED.
+ *
+ * Why display names are needed at all: as of migration 039, ski_sessions.resort_name is stored
+ * as a normalised key, so that a day both checked into and manually logged is one row rather
+ * than 'vail' and 'Vail' counting as two ski days. Without an entry here, that normalisation
+ * would render "Whistler Blackcomb" as "whistlerblackcomb" on the leaderboard.
+ *
+ * Keys are what normalizeResortKey() produces: lowercased, whitespace stripped.
+ */
+export const OUT_OF_REGION_RESORT_NAMES = {
+  parkcity:          "Park City",
+  heavenly:          "Heavenly",
+  northstar:         "Northstar",
+  kirkwood:          "Kirkwood",
+  stowe:             "Stowe",
+  whistlerblackcomb: "Whistler Blackcomb",
+  snowbird:          "Snowbird",
+  alta:              "Alta",
+  parkcitymountain:  "Park City Mountain",
+  mammothmountain:   "Mammoth Mountain",
+  bigsky:            "Big Sky",
+  jacksonhole:       "Jackson Hole",
+  taos:              "Taos",
+  sunvalley:         "Sun Valley",
+  squawvalley:       "Squaw Valley",
+  laketahoe:         "Lake Tahoe",
+  palisadestahoe:    "Palisades Tahoe",
+  loveland:          "Loveland",
+  monarch:           "Monarch",
+  wolfcreek:         "Wolf Creek",
+  sunlight:          "Sunlight",
+  powderhorn:        "Powderhorn",
+}
+
+/**
+ * Every label the manual logger's ResortPicker offers, Colorado and beyond.
+ *
+ * ResortPicker used to hardcode its own list. Sourcing it here means a resort cannot be added
+ * to the picker without also getting a display name — resorts.test.js asserts exactly that,
+ * so the failure shows up as a red test rather than a lowercase key on someone's leaderboard.
+ */
+export const PICKER_RESORT_LABELS = [
+  ...Object.values(RESORT_NAMES),
+  ...Object.values(OUT_OF_REGION_RESORT_NAMES),
+]
+
 export function resortName(key) {
   if (!key) return ""
   const k = normalizeResortKey(key)
   if (k === OPEN_RESORT_KEY) return OPEN_RESORT_LABEL
-  return RESORT_NAMES[k] || key
+  return RESORT_NAMES[k] || OUT_OF_REGION_RESORT_NAMES[k] || key
 }
 
 export function resortEmoji(key) {

@@ -1,14 +1,11 @@
 import { useState } from "react"
+import { PICKER_RESORT_LABELS } from "../../lib/resorts"
 
-const RESORT_NAMES = [
-  "Vail", "Beaver Creek", "Breckenridge", "Keystone", "Park City",
-  "Heavenly", "Northstar", "Kirkwood", "Stowe", "Whistler Blackcomb",
-  "Telluride", "Arapahoe Basin", "Winter Park", "Steamboat", "Copper Mountain",
-  "Crested Butte", "Eldora", "Aspen Snowmass", "Snowbird", "Alta",
-  "Park City Mountain", "Mammoth Mountain", "Big Sky", "Jackson Hole",
-  "Taos", "Sun Valley", "Squaw Valley", "Lake Tahoe", "Palisades Tahoe",
-  "Loveland", "Monarch", "Wolf Creek", "Sunlight", "Powderhorn",
-]
+// Sourced from resorts.js rather than hardcoded here. This list used to be its own copy, so a
+// resort could be offered for logging with no display name anywhere — and since migration 039
+// stores logged days as normalised keys, that surfaces as "whistlerblackcomb" on the
+// leaderboard. resorts.test.js now asserts every label here has a display name.
+const RESORT_NAMES = PICKER_RESORT_LABELS
 
 const inputStyle = {
   width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",

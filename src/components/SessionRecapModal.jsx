@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { runsToGpx, gpxDownload } from "../lib/gpxExport"
+import { resortName } from "../lib/resorts"
 import ShareStatCard from "./ShareStatCard"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -19,7 +20,7 @@ function formatMinutes(min) {
 }
 
 function buildShareText(session) {
-  const parts = [`Just skied ${session.resort_name || "the mountain"}!`]
+  const parts = [`Just skied ${resortName(session.resort_name) || "the mountain"}!`]
   if (session.runs_logged != null) parts.push(`${session.runs_logged} runs,`)
   if (session.top_speed_mph != null) parts.push(`${session.top_speed_mph} mph top speed,`)
   if (session.time_on_mountain_min != null) parts.push(`${formatMinutes(session.time_on_mountain_min)} on mountain`)
@@ -164,7 +165,7 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
         </div>
 
         <div style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginBottom: 20 }}>
-          {session.resort_name} · {formatSessionDate(session.session_date)}
+          {resortName(session.resort_name)} · {formatSessionDate(session.session_date)}
         </div>
 
         {/* Stat tiles */}

@@ -1,5 +1,6 @@
 import { supabase } from "./supabase"
 import { localDateKey } from "./calendarDates"
+import { normalizeResortKey } from "./resorts"
 import { getCurrentUser, getAcceptedFriends } from "./socialApi"
 import { computeSegmentStats, computeSessionSummary } from "./useGpsTracker"
 
@@ -32,10 +33,17 @@ export async function logSkiDay({ resortName, sessionDate, isPowderDay = false, 
   const user = await getCurrentUser()
   if (!user) throw new Error("Must be logged in to log a ski day.")
 
+  // Normalise to a key on the way in. ski_sessions is UNIQUE on
+  // (user_id, session_date, resort_name), so 'Vail' and 'vail' are DIFFERENT rows — and
+  // check-ins, trips and Strava all write keys. Storing the picker's display name here is
+  // what let one day at one mountain become two ski days. Migration 039 normalised the
+  // existing rows; this stops new ones drifting straight back.
+  const resortKey = normalizeResortKey(resortName)
+
   const { data, error } = await supabase
     .from("ski_sessions")
     .upsert(
-      { user_id: user.id, resort_name: resortName, session_date: sessionDate, is_powder_day: isPowderDay, notes, trip_id: tripId },
+      { user_id: user.id, resort_name: resortKey, session_date: sessionDate, is_powder_day: isPowderDay, notes, trip_id: tripId },
       { onConflict: "user_id,session_date,resort_name" }
     )
     .select()

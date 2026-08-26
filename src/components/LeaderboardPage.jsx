@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react"
 import { getLeaderboard, getPublicLeaderboard, getMySessions, logSkiDay, updateSessionStats, deleteSkiDay, getCurrentSeason, getLeaderboardReactions, addLeaderboardReaction } from "../lib/leaderboardApi"
 import { logActivityOnce } from "../lib/socialApi"
 import { localDateKey } from "../lib/calendarDates"
+import { resortName } from "../lib/resorts"
 import Avatar from "./ui/Avatar"
 import SessionStatsForm from "./SessionStatsForm"
 import ResortPicker from "./ui/ResortPicker"
@@ -105,7 +106,7 @@ function LogDayModal({ onClose, onLogged }) {
         {step === "stats" ? (
           <div style={{ display: "grid", gap: 14 }}>
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginTop: -10 }}>
-              Nice — {savedSession?.resort_name || "your day"} is logged. Want to add stats now?
+              Nice — {resortName(savedSession?.resort_name) || "your day"} is logged. Want to add stats now?
             </div>
             {statsError && <div style={{ fontSize: 13, color: "var(--color-danger)", padding: "8px 12px", background: "rgba(248,113,113,0.1)", borderRadius: 8 }}>{statsError}</div>}
             <SessionStatsForm
@@ -405,7 +406,10 @@ export default function LeaderboardPage() {
           {mySessions.map((s) => (
             <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{s.resort_name}</div>
+                {/* resort_name is a normalised key as of migration 039 ('vail'), so it has to
+                    go through resortName(). Trip-derived rows were already keys and had been
+                    rendering as "arapahoebasin" here long before that. */}
+                <div style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{resortName(s.resort_name)}</div>
                 <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
                   {new Date(s.session_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   {s.is_powder_day && " · ❄️ Powder"}
