@@ -827,7 +827,7 @@ Sprints 32 and 33 were verified on the live app by Kyle on 2026-08-17. Both spri
 | 16 — Debt Clearing (Sprint 32) | 4 | 4 |
 | 17 — Profile Token Exposure (Sprint 33) | 4 | 4 (migration 030 was a no-op; migration 031 closed it — see task notes) |
 | 18 — Friend Profiles & Ski Plan Calendar (Sprint 34) | 6 | 5 (18.1 closed by migration 037; 18.2/18.4 shipped Sprint 35; 18.3 migration 034; 18.5 migration 035. **Only 18.6 `anon` grants remains open.**) |
-| 19 — Sprint 37 correctness & ETA | 7 | 6 (**19.1 per-crew visibility still open** — re-scoped, now migration 042) |
+| 19 — Sprint 37 correctness & ETA | 7 | 6 (**19.1 per-crew visibility still open** — re-scoped, now migration **044**) |
 | 20 — Sprints 38-40: parties, arrivals, trip authorization | 3 | 3 (migrations 037-041) |
 | **Total** | **60** | **53** |
 
@@ -993,7 +993,7 @@ Each task is one commit, so any of them can be bisected or reverted independentl
 
 ---
 
-# Sprints 38-40 — SHIPPED 2026-08-25 (migrations 037-041)
+# Sprints 38-40 — SHIPPED 2026-08-25/26 (migrations 037-043)
 
 _Recorded 2026-08-25 during backlog grooming. All of this shipped in one day and none of it
 was written down at the time — the rationale below was recovered from commit bodies before it
@@ -1093,14 +1093,46 @@ handler. Lint caught it as "already defined." One new error was a real bug, not 
 
 # OPEN — the queue
 
-### TASK 19.1 — Per-crew ski plan visibility (OPEN) — **Size: M** — migration **042**
+## Migration 042 — a trip's chat and contents belong to the trip
+
+Kyle, live testing: uninvited "Interested" users could read a trip's private chat. It was never
+the Interested flow. **Seven** tables carried `SELECT USING (true)` — `trip_comments`,
+`trip_updates`, `trip_polls`, `trip_poll_votes`, `trip_carpools`, `trip_carpool_riders`,
+`trip_rsvps` — so every trip's chat was readable by every user in the app. `trip_carpools`
+INSERT was `WITH CHECK (true)`: anyone could add a car to any trip.
+
+`trip_media` and `trip_recaps` were **already** scoped correctly. The right pattern was in the
+schema the whole time and had simply not been applied to the rest — which is why the fix was
+found by enumerating every table with a `trip_id` rather than by fixing the one reported.
+
+Rule: content is for host / going-or-maybe / invited. Explicitly **not** `kind='request'` —
+being Interested is asking to join and must not come with the keys. `trip_rsvps` is
+deliberately looser (host, friend-of-host, participant) so "6 going" still renders for friends.
+
+## Migration 043 — notifications for invites and approvals
+
+Widened `notifications.type` (it would have thrown `23514` on the first new notification — the
+TASK 19.6 failure again) and added `target_type`/`target_id`, with **`target_id` as TEXT**
+because plan notifications are keyed by a DATE, not a UUID. Existing trip rows backfilled.
+
+The bell already had `onOpenTrip`/`onTabChange` and click-to-navigate logic — but was mounted
+only inside the Social tab, and mounted **without** those props. Now in the top nav, with the
+unread badge also on the mobile profile avatar. No notification per crew vote (Kyle's call).
+
+A turned-down request says **"full"**, not "declined", and the host's optional note goes to the
+requester's **message inbox** as a DM, not into the notification body — a note starts a
+conversation and a notification is a dead end.
+
+### TASK 19.1 — Per-crew ski plan visibility (OPEN) — **Size: M** — migration **044**
 
 **Re-scoped 2026-08-25. This is smaller than it used to be.** Migration 037 already
 restructured the SELECT policy from a blacklist into a whitelist, which was the dangerous
 part. `037:42-43` says so verbatim: *"this does NOT add the 'crews' visibility value or
 visible_crew_ids (TASK 19.1). The policy is restructured as a whitelist so 19.1 is one extra
 OR branch later."* The old blacklist-trap and `group_id` bullets here are resolved; the old
-text said "Migration 037 must also…", but **037 through 041 are all taken — this is 042.**
+text said "Migration 037 must also…", but **037 through 043 are all taken — this is 044.**
+That number has now moved twice. Check `migrations/` for the highest file before
+writing it; do not trust this line.
 
 - [ ] **Kyle's ask:** when setting visibility, choose **all friends** or **multi-select
       specific crews** — "people might want to hide where they're going from some people or
@@ -1116,7 +1148,7 @@ text said "Migration 037 must also…", but **037 through 041 are all taken — 
       RLS-protected relation** — that is why `20260515_crew_rls_fix.sql` and
       `022_fix_kramesbutte_rls_auth_users.sql` had to exist, and **migration 041 broke this
       exact rule again on its first attempt** (incident #5 above). This trap has now fired
-      three times; treat it as the single most likely way 042 goes wrong.
+      three times; treat it as the single most likely way 044 goes wrong.
 - [ ] **Test the SUCCESS case, not just denials.** See the policy-test warning above — 041's
       breakage was invisible to every denial assertion.
 - [ ] Revoke from `anon` as well as `authenticated` (migration 036's lesson).
@@ -1164,7 +1196,7 @@ and it's still out: verified 2026-08-25, the file has zero `keydown`/`Escape` ha
 Two competing lineages and nothing declares which is authoritative: `migrations/` (001-041,
 sequential, no gaps) and `supabase/migrations/` (15 date-named `20260515_*` files). Decide,
 note it in one line at the top of both directories. Cheap now; a real trap for whoever writes
-042 without knowing.
+044 without knowing.
 
 ### TASK 20.2 — Dead-table cleanup — **Size: XS**
 
@@ -1210,7 +1242,7 @@ if `socialApi.js` is being split anyway.
 | Sprint | Contents | Size |
 |---|---|---|
 | **42** | TASK 1.1-T component test harness + first 3 suites | M |
-| **43** | TASK 19.1 per-crew visibility (migration 042, **alone**) | M |
+| **43** | TASK 19.1 per-crew visibility (migration 044, **alone**) | M |
 | **44** | Social tab IA — **design session first**, then implementation | L |
 | **45** | TASK 18.6 `anon` grants audit + revoke | M |
 | **46** | Debt bundle: 20.2, 20.3, 20.4 + deferred minors | S |
