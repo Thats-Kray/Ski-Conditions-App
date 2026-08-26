@@ -9,7 +9,6 @@ import {
   declineCrewInvite,
   createCrew,
   getAcceptedFriends,
-  getMyTripConversations,
   getDMConversations,
   markDMsRead,
   getIncomingFriendRequests,
@@ -17,7 +16,6 @@ import {
 import { CrewChatView } from "./CrewGroupChat"
 import FriendsPage from "./FriendsPage"
 import ActivityFeed from "./ActivityFeed"
-import TripChatView, { tripDisplayName } from "./TripChatView"
 import DirectMessageView from "./DirectMessageView"
 import { timeAgo } from "../lib/format"
 import Avatar from "./ui/Avatar"
@@ -269,7 +267,7 @@ function EmptyChat() {
       <div style={{ fontSize: 52 }}>💬</div>
       <div style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>Select a conversation</div>
       <div style={{ fontSize: 13, textAlign: "center", lineHeight: 1.6, maxWidth: 260 }}>
-        Select a ski plan or crew chat from the sidebar.
+        Select a direct message or crew chat from the sidebar.
       </div>
     </div>
   )
@@ -281,10 +279,8 @@ export default function MessagingCenter() {
   const isMobile = useMobile()
   const [panel, setPanel] = useState("chats")        // "chats" | "people"
   const [selectedCrew, setSelectedCrew] = useState(null)
-  const [selectedTrip, setSelectedTrip] = useState(null)
   const [selectedDM,   setSelectedDM]   = useState(null)
   const [conversations, setConversations] = useState([])
-  const [tripConversations, setTripConversations] = useState([])
   const [dmConversations, setDmConversations] = useState([])
   const [pendingInvites, setPendingInvites] = useState([])
   const [currentUser, setCurrentUser] = useState(null)
@@ -303,11 +299,10 @@ export default function MessagingCenter() {
       const user = await getCurrentUser()
       setCurrentUser(user)
 
-      const [crews, pending, friendList, trips, dms, friendRequests] = await Promise.all([
+      const [crews, pending, friendList, dms, friendRequests] = await Promise.all([
         getMyCrews(),
         getPendingCrewInvites(),
         getAcceptedFriends(),
-        getMyTripConversations(user.id),
         getDMConversations().catch(() => []),
         getIncomingFriendRequests().catch(() => []),
       ])
@@ -342,46 +337,6 @@ export default function MessagingCenter() {
         setConversations(enriched)
       } else {
         setConversations([])
-      }
-
-      // ── Trip conversations ──
-      if (trips.length > 0) {
-        const tripIds = trips.map(t => t.id)
-        const { data: recentComments, error: commentErr } = await supabase
-          .from("trip_comments")
-          .select("trip_id, content, user_id, created_at")
-          .in("trip_id", tripIds)
-          .order("created_at", { ascending: false })
-          .limit(Math.min(tripIds.length * 6, 120))
-        if (commentErr) console.error("[PowderDays] MessagingCenter trip_comments fetch:", commentErr)
-
-        const lastCommentMap = {}
-        for (const c of (recentComments || [])) {
-          if (!lastCommentMap[c.trip_id]) lastCommentMap[c.trip_id] = c
-        }
-
-        // Enrich last comment previews with sender names
-        const senderIds = [...new Set(Object.values(lastCommentMap).map(c => c.user_id))]
-        let senderMap = {}
-        if (senderIds.length) {
-          const { data: senders } = await supabase
-            .from("profiles").select("id, full_name, username").in("id", senderIds)
-          senderMap = Object.fromEntries((senders || []).map(p => [p.id, p]))
-        }
-
-        const enrichedTrips = trips.map(trip => {
-          const lastComment = lastCommentMap[trip.id]
-            ? { ...lastCommentMap[trip.id], profile: senderMap[lastCommentMap[trip.id].user_id] || null }
-            : null
-          const lastRead = getLastRead("trip_" + trip.id)
-          const unread = lastComment && (!lastRead || new Date(lastComment.created_at) > new Date(lastRead))
-          return { ...trip, lastComment, unread }
-        }).sort((a, b) =>
-          new Date(b.lastComment?.created_at || b.ski_date) - new Date(a.lastComment?.created_at || a.ski_date)
-        )
-        setTripConversations(enrichedTrips)
-      } else {
-        setTripConversations([])
       }
     } catch (e) {
       console.warn("MessagingCenter load error:", e)
@@ -422,25 +377,6 @@ export default function MessagingCenter() {
         })
       })
       .on("postgres_changes", {
-        event: "INSERT", schema: "public", table: "trip_comments",
-      }, (payload) => {
-        const tripId = payload.new?.trip_id
-        if (!tripId) return
-        setTripConversations(prev => {
-          const inList = prev.some(t => t.id === tripId)
-          if (!inList) { loadInbox(); return prev }
-          const updated = prev.map(t => {
-            if (t.id !== tripId) return t
-            const newComment = { ...payload.new, profile: null }
-            return { ...t, lastComment: newComment, unread: t.id !== selectedTrip?.id }
-          })
-          return updated.sort((a, b) =>
-            new Date(b.lastComment?.created_at || b.ski_date) -
-            new Date(a.lastComment?.created_at || a.ski_date)
-          )
-        })
-      })
-      .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "direct_messages",
       }, (payload) => {
         const msg = payload.new
@@ -463,7 +399,7 @@ export default function MessagingCenter() {
       .subscribe()
 
     return () => { if (channelRef.current) supabase.removeChannel(channelRef.current) }
-  }, [currentUser, loadInbox, selectedCrew?.id, selectedTrip?.id])
+  }, [currentUser, loadInbox, selectedCrew?.id])
 
   async function handleAcceptInvite(crew) {
     setAcceptingId(crew.id)
@@ -492,16 +428,6 @@ export default function MessagingCenter() {
     markRead(crew.id)
     setConversations(prev => prev.map(c => c.id === crew.id ? { ...c, unread: false } : c))
     setSelectedCrew(crew)
-    setSelectedTrip(null)
-    setSelectedDM(null)
-    setPanel("chats")
-  }
-
-  function openTrip(trip) {
-    markRead("trip_" + trip.id)
-    setTripConversations(prev => prev.map(t => t.id === trip.id ? { ...t, unread: false } : t))
-    setSelectedTrip(trip)
-    setSelectedCrew(null)
     setSelectedDM(null)
     setPanel("chats")
   }
@@ -511,7 +437,6 @@ export default function MessagingCenter() {
     setDmConversations(prev => prev.map(d => d.partnerId === dm.partnerId ? { ...d, unread: false } : d))
     setSelectedDM(dm)
     setSelectedCrew(null)
-    setSelectedTrip(null)
     setPanel("chats")
   }
 
@@ -520,10 +445,9 @@ export default function MessagingCenter() {
     openDM(existing || { partnerId: friend.id, partner: friend, lastMessage: null, unread: false })
   }
 
-  // Merge crews, trips, and DMs into a single list sorted by most recent activity
+  // Merge crews and DMs into a single list sorted by most recent activity
   const allConversations = [
     ...conversations.map(c => ({ _type: "crew", _ts: new Date(c.lastMessage?.created_at || c.created_at).getTime(), ...c })),
-    ...tripConversations.map(t => ({ _type: "trip", _ts: new Date(t.lastComment?.created_at || t.ski_date).getTime(), ...t })),
     ...dmConversations.map(d => ({ _type: "dm", _ts: new Date(d.lastMessage?.created_at || 0).getTime(), ...d })),
   ].sort((a, b) => b._ts - a._ts)
 
@@ -531,10 +455,10 @@ export default function MessagingCenter() {
     ? allConversations.filter(c => c.unread)
     : allConversations
 
-  const totalUnread = conversations.filter(c => c.unread).length + tripConversations.filter(t => t.unread).length + dmConversations.filter(d => d.unread).length + pendingInvites.length
+  const totalUnread = conversations.filter(c => c.unread).length + dmConversations.filter(d => d.unread).length + pendingInvites.length
 
   // Layout: on mobile show sidebar OR chat, never both
-  const hasActiveConv = !!(selectedCrew || selectedTrip || selectedDM)
+  const hasActiveConv = !!(selectedCrew || selectedDM)
   const showSidebar = !isMobile || !hasActiveConv
   const showMainPanel = !isMobile || hasActiveConv
 
@@ -615,7 +539,7 @@ export default function MessagingCenter() {
             ].map(({ key, label, badge }) => (
               <button
                 key={key}
-                onClick={() => { setPanel(key); if (isMobile) { setSelectedCrew(null); setSelectedTrip(null) } }}
+                onClick={() => { setPanel(key); if (isMobile) { setSelectedCrew(null) } }}
                 style={{
                   flex: 1, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer",
                   background: panel === key ? "rgba(96,165,250,0.18)" : "transparent",
@@ -722,17 +646,6 @@ export default function MessagingCenter() {
                   <div style={{ padding: "24px 16px", textAlign: "center", color: "rgba(255,255,255,0.25)", fontSize: 13 }}>Loading…</div>
                 ) : displayedAll.length > 0 ? (
                   displayedAll.map(conv => {
-                    if (conv._type === "trip") {
-                      return (
-                        <ConversationRow
-                          key={`trip-${conv.id}`}
-                          crew={{ id: conv.id, name: tripDisplayName(conv), emoji: "🎿", lastMessage: conv.lastComment ? { ...conv.lastComment, is_system: false } : null }}
-                          unread={conv.unread}
-                          active={selectedTrip?.id === conv.id}
-                          onOpen={() => openTrip(conv)}
-                        />
-                      )
-                    }
                     if (conv._type === "dm") {
                       const partnerName = conv.partner?.full_name || conv.partner?.username || "Friend"
                       const lastMsg = conv.lastMessage
@@ -791,7 +704,7 @@ export default function MessagingCenter() {
                   <div style={{ padding: "32px 20px", textAlign: "center" }}>
                     <div style={{ fontSize: 36, marginBottom: 10 }}>💬</div>
                     <div style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", lineHeight: 1.5 }}>
-                      {filter === "unread" ? "No unread conversations." : "No chats yet. Create a crew or plan a ski trip to get started."}
+                      {filter === "unread" ? "No unread conversations." : "No chats yet. Create a crew to get started."}
                     </div>
                     {filter === "all" && (
                       <button
@@ -876,12 +789,6 @@ export default function MessagingCenter() {
               partnerId={selectedDM.partnerId}
               currentUser={currentUser}
               onBack={isMobile ? () => setSelectedDM(null) : null}
-            />
-          ) : selectedTrip ? (
-            <TripChatView
-              trip={selectedTrip}
-              currentUser={currentUser}
-              onBack={isMobile ? () => setSelectedTrip(null) : null}
             />
           ) : selectedCrew ? (
             <CrewChatView
