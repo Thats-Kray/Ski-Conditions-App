@@ -558,6 +558,12 @@ function TabButton({ active, onClick, children }) {
 export default function App() {
   const isMobile = useMobile()
   const [activeTab, setActiveTab] = useState("home")
+  // Read-only mirror of TodayScreen's own conditionsSubTab state (reported up via
+  // onSubTabChange). TodayScreen owns the real state; App.jsx only needs to know its
+  // current value so the header's Refresh button + description can stay inline with
+  // the title, exactly where they rendered before Task 2 moved the sub-tab switcher
+  // into TodayScreen.
+  const [dashboardSubTab, setDashboardSubTab] = useState("conditions")
   const [mountainPageResortKey, setMountainPageResortKey] = useState(null)
   // Full-page read-only view of another user's profile (Sprint 34). Same
   // takeover pattern as mountainPageResortKey; cleared in handleTabChange.
@@ -1387,12 +1393,32 @@ export default function App() {
 
           {/* Right: actions */}
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {/* The dashboard's Refresh button used to render here. It moved into
-                TodayScreen.jsx (Task 2 of the IA restructure) because its visibility
-                depends on conditionsSubTab, which now lives entirely inside that
-                component instead of on App.jsx. */}
+            {/* conditionsSubTab itself lives inside TodayScreen now (Task 2) — App.jsx
+                only gets a read-only mirror of it (dashboardSubTab, via onSubTabChange)
+                so this button can stay inline with the title, exactly where it was. */}
+            {activeTab === "dashboard" && dashboardSubTab === "conditions" && (
+              <button
+                onClick={refresh}
+                disabled={loading}
+                style={{
+                  background: loading ? "rgba(255,255,255,0.12)" : "var(--gradient-primary)",
+                  color: "white", border: "none", padding: isMobile ? "10px 12px" : "10px 16px",
+                  borderRadius: 12, fontWeight: 800, cursor: loading ? "not-allowed" : "pointer",
+                  fontSize: 13, boxShadow: "0 6px 20px rgba(56,189,248,0.22)",
+                }}
+              >
+                {loading ? "…" : isMobile ? "⟳" : "Refresh"}
+              </button>
+            )}
           </div>
         </header>
+
+        {/* Dashboard description — only shown on conditions sub-tab */}
+        {activeTab === "dashboard" && dashboardSubTab === "conditions" && (
+          <p style={{ margin: "0 0 20px", color: "rgba(255,255,255,0.55)", fontSize: 14, maxWidth: 680, lineHeight: 1.6 }}>
+            Resort snow, NWS forecasts, terrain metrics, and live COtrip travel conditions — blended into one morning ski decision engine.
+          </p>
+        )}
 
         {error && (
           <div style={{ background: "rgba(255,0,0,0.12)", border: "1px solid rgba(255,0,0,0.25)", padding: 12, borderRadius: 14, color: "var(--color-danger)", marginBottom: 16 }}>
@@ -1435,7 +1461,7 @@ export default function App() {
             topEpic={topEpic}
             topIkon={topIkon}
             setMountainPageResortKey={setMountainPageResortKey}
-            isMobile={isMobile}
+            onSubTabChange={setDashboardSubTab}
           />
         )}
 

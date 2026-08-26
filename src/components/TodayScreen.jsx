@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import PowderMap from "./PowderMap"
 import MountainBoard from "./MountainBoard"
 import Badge, { TIER_COLORS } from "./ui/Badge"
@@ -387,6 +387,13 @@ function LeaderCard({ title, icon, resort }) {
 // restructure). `conditionsSubTab` is pure UI state that belonged here, not
 // on App.jsx — everything else is threaded through as props with the exact
 // names App.jsx already used, so this is a relocation, not a rewrite.
+//
+// App.jsx's shared header still renders the Refresh button and the dashboard
+// description paragraph inline with the title (their original position) —
+// both need to know whether the sub-tab is "conditions", so `onSubTabChange`
+// reports this component's conditionsSubTab up to App.jsx as a read-only
+// mirror. App.jsx never sets it back down; TodayScreen remains the one
+// source of truth for the sub-tab itself.
 export default function TodayScreen({
   rows,
   passFilter,
@@ -410,40 +417,19 @@ export default function TodayScreen({
   topEpic,
   topIkon,
   setMountainPageResortKey,
-  isMobile,
+  onSubTabChange,
 }) {
   const [conditionsSubTab, setConditionsSubTab] = useState("conditions")
 
+  // Report the current sub-tab to App.jsx on mount and on every change, so its
+  // header (Refresh button + description) can stay in sync without owning
+  // this state itself.
+  useEffect(() => {
+    onSubTabChange?.(conditionsSubTab)
+  }, [conditionsSubTab, onSubTabChange])
+
   return (
     <>
-      {/* Refresh action — used to live in App.jsx's shared header, to the
-          right of the "Colorado Snow Conditions" title. It moved down here
-          because its visibility is gated on conditionsSubTab, which now
-          lives only inside this component. */}
-      {conditionsSubTab === "conditions" && (
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-          <button
-            onClick={refresh}
-            disabled={loading}
-            style={{
-              background: loading ? "rgba(255,255,255,0.12)" : "var(--gradient-primary)",
-              color: "white", border: "none", padding: isMobile ? "10px 12px" : "10px 16px",
-              borderRadius: 12, fontWeight: 800, cursor: loading ? "not-allowed" : "pointer",
-              fontSize: 13, boxShadow: "0 6px 20px rgba(56,189,248,0.22)",
-            }}
-          >
-            {loading ? "…" : isMobile ? "⟳" : "Refresh"}
-          </button>
-        </div>
-      )}
-
-      {/* Dashboard description — only shown on conditions sub-tab */}
-      {conditionsSubTab === "conditions" && (
-        <p style={{ margin: "0 0 20px", color: "rgba(255,255,255,0.55)", fontSize: 14, maxWidth: 680, lineHeight: 1.6 }}>
-          Resort snow, NWS forecasts, terrain metrics, and live COtrip travel conditions — blended into one morning ski decision engine.
-        </p>
-      )}
-
       {/* Sub-tab switcher */}
       <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
         {[
