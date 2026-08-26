@@ -419,6 +419,8 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
   const [interestState, setInterestState] = useState(null)
   const [votingId, setVotingId] = useState(null)
   const [requestError, setRequestError] = useState(null)
+  const [decliningId, setDecliningId] = useState(null)
+  const [declineNote, setDeclineNote] = useState("")
 
   const resortKey = initialTrip.resort_key
   const accent = RESORT_ACCENTS[resortKey] || "var(--color-accent-soft)"
@@ -498,11 +500,12 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
     }
   }
 
-  async function handleDecideRequest(requestId, decision) {
+  async function handleDecideRequest(requestId, decision, note = null) {
     setVotingId(requestId)
     try {
       if (decision === "approve") await approveTripRequest(requestId)
-      else await declineTripRequest(requestId)
+      else await declineTripRequest(requestId, note)
+      setDecliningId(null)
       await Promise.all([loadRequests(), fetchDetail()])
       onUpdate?.()
     } catch (e) {
@@ -1397,7 +1400,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
                           Add to the crew
                         </button>
                         <button
-                          onClick={() => handleDecideRequest(r.id, "decline")}
+                          onClick={() => { setDecliningId(r.id); setDeclineNote("") }}
                           disabled={votingId === r.id}
                           style={{
                             padding: "8px 12px", borderRadius: 10, border: "none",
@@ -1405,8 +1408,53 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
                             fontWeight: 800, fontSize: 12, cursor: "pointer", minHeight: 36,
                           }}
                         >
-                          Not this time
+                          Full
                         </button>
+                      </div>
+                    )}
+
+                    {/* Saying "full" opens the note first rather than declining on the tap.
+                        Declining immediately would mean the note could never be written, and
+                        this is the one message in the app that lands as a small rejection —
+                        a line from the host is worth the extra step. Optional: Send works
+                        empty and falls back to standard wording. */}
+                    {isHost && decliningId === r.id && (
+                      <div style={{ display: "grid", gap: 6 }}>
+                        <textarea
+                          value={declineNote}
+                          onChange={(e) => setDeclineNote(e.target.value)}
+                          placeholder="Add a note (optional) — goes to their inbox"
+                          rows={2}
+                          style={{
+                            width: "100%", boxSizing: "border-box", resize: "none",
+                            background: "rgba(255,255,255,0.06)", color: "white",
+                            border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10,
+                            padding: "8px 10px", fontSize: 13, outline: "none", fontFamily: "inherit",
+                          }}
+                        />
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button
+                            onClick={() => handleDecideRequest(r.id, "decline", declineNote)}
+                            disabled={votingId === r.id}
+                            style={{
+                              flex: 1, padding: "8px 12px", borderRadius: 10, border: "none",
+                              background: "rgba(255,255,255,0.14)", color: "white",
+                              fontWeight: 800, fontSize: 12, cursor: "pointer", minHeight: 36,
+                            }}
+                          >
+                            {votingId === r.id ? "Sending…" : "Send"}
+                          </button>
+                          <button
+                            onClick={() => setDecliningId(null)}
+                            style={{
+                              padding: "8px 12px", borderRadius: 10, border: "none",
+                              background: "transparent", color: "rgba(255,255,255,0.45)",
+                              fontWeight: 700, fontSize: 12, cursor: "pointer", minHeight: 36,
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

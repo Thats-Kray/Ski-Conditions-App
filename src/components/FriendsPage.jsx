@@ -253,7 +253,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
       if (decision === "approve") await approveTripRequest(inviteId)
       else await declineTripRequest(inviteId)
       await loadPageData(["tripRequests"])
-      showToast("success", decision === "approve" ? "They're on the trip." : "Request declined.")
+      showToast("success", decision === "approve" ? "They're on the trip." : "Let them know it's full.")
     } catch (e) {
       showToast("error", e.message || "Couldn't respond to that request.")
     } finally {
@@ -502,6 +502,10 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
                 >
                   Approve
                 </button>
+                {/* "Full", matching the trip's own INTERESTED section. No note field here on
+                    purpose: this inbox is a quick triage surface, and a host who wants to say
+                    something can open the trip. The message still sends, with the standard
+                    wording. */}
                 <button
                   onClick={() => handleTripRequest(r.id, "decline")}
                   disabled={workingId === r.id}
@@ -511,7 +515,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
                     fontWeight: 700, fontSize: 13, cursor: "pointer",
                   }}
                 >
-                  Decline
+                  Full
                 </button>
               </div>
             </div>

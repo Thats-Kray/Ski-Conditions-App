@@ -1827,8 +1827,11 @@ async function notifyRequestDecision(invite, decision) {
     await insertNotification({
       userId: invite.invitee_id,
       type: decision === "approved" ? "trip_request_approved" : "trip_request_declined",
-      title: decision === "approved" ? `You're in for ${where}` : `Not this time for ${where}`,
-      body: decision === "approved" ? "Tap to see the crew and the details." : null,
+      // "Full", not "declined" — see declineTripRequest for why the wording matters here.
+      title: decision === "approved" ? `You're in for ${where}` : `${where} is full`,
+      body: decision === "approved"
+        ? "Tap to see the crew and the details."
+        : "The host sent you a message.",
       tripId: invite.trip_id,
     })
   } catch (e) {
@@ -1916,7 +1919,18 @@ export async function voteOnTripRequest(requestId, vote) {
   return data
 }
 
-export async function declineTripRequest(inviteId) {
+/**
+ * Turn someone down, optionally with a word from the host.
+ *
+ * The wording is "full", not "declined". A trip fills up; that is a fact about the car and the
+ * condo, not a verdict on the person — and this is the one notification in the app that lands
+ * on somebody as a small rejection. The note exists so a host can soften it or explain.
+ *
+ * The note goes to the requester's MESSAGE INBOX as a DM from the host, not into the
+ * notification body. A note is the start of a conversation ("next time for sure") and the
+ * inbox is where they can actually reply; a notification is a dead end.
+ */
+export async function declineTripRequest(inviteId, note = null) {
   const { data: invite } = await supabase
     .from("trip_invites").select("trip_id, invitee_id").eq("id", inviteId).single()
 
@@ -1927,6 +1941,30 @@ export async function declineTripRequest(inviteId) {
   if (error) throw error
 
   notifyRequestDecision(invite, "declined").catch(() => {})
+  sendDeclineMessage(invite, note).catch(() => {})
+}
+
+async function sendDeclineMessage(invite, note) {
+  if (!invite?.invitee_id || !invite?.trip_id) return
+  try {
+    const user = await getCurrentUser()
+    // Declining your own request would DM yourself. Cannot normally happen — the host is not
+    // the requester — but a self-message is a confusing artefact if it ever does.
+    if (!user || user.id === invite.invitee_id) return
+
+    const { data: trip } = await supabase
+      .from("ski_trips").select("title, resort_key, ski_date").eq("id", invite.trip_id).single()
+    const where = trip?.title || resortName(trip?.resort_key) || "that trip"
+
+    const trimmed = (note || "").trim()
+    const body = trimmed
+      ? `${where} on ${formatDate(trip?.ski_date)} is full — ${trimmed}`
+      : `${where} on ${formatDate(trip?.ski_date)} is full. Catch you on the next one.`
+
+    await sendDM(invite.invitee_id, body)
+  } catch (e) {
+    console.warn("sendDeclineMessage failed:", e)
+  }
 }
 
 /**
