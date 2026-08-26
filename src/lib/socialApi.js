@@ -1751,6 +1751,86 @@ export async function approveTripRequest(inviteId) {
   return data
 }
 
+/**
+ * Everyone who has marked themselves Interested in one trip, with the crew's votes.
+ *
+ * Members advise, the host decides — so this returns the tally rather than a verdict. There is
+ * deliberately no "enough yes votes means they're in" rule anywhere; admission only ever
+ * happens when the host calls approveTripRequest().
+ *
+ * RLS (migration 041) already limits both the requests and the votes to people on the trip,
+ * and hides votes from the person being voted on.
+ */
+export async function getTripRequestsForTrip(tripId) {
+  const user = await getCurrentUser()
+  if (!user || !tripId) return []
+
+  const { data: requests, error } = await supabase
+    .from("trip_invites")
+    .select("*")
+    .eq("trip_id", tripId)
+    .eq("kind", "request")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true })
+
+  if (error) throw error
+  if (!requests || requests.length === 0) return []
+
+  const ids = requests.map((r) => r.id)
+
+  // Profiles fetched separately: trip_invites.invitee_id references auth.users, not profiles,
+  // so PostgREST has no relationship to embed through.
+  const [{ data: votes, error: voteError }, { data: profiles, error: profileError }] =
+    await Promise.all([
+      supabase.from("trip_request_votes").select("request_id, voter_id, vote").in("request_id", ids),
+      supabase
+        .from("profiles")
+        .select("id, full_name, username, avatar_url")
+        .in("id", [...new Set(requests.map((r) => r.invitee_id).filter(Boolean))]),
+    ])
+
+  if (voteError) throw voteError
+  if (profileError) throw profileError
+
+  const byId = new Map((profiles || []).map((p) => [p.id, p]))
+
+  return requests.map((r) => {
+    const mine = (votes || []).filter((v) => v.request_id === r.id)
+    return {
+      ...r,
+      requester_profile: byId.get(r.invitee_id) || null,
+      yesVotes: mine.filter((v) => v.vote === "yes").length,
+      noVotes: mine.filter((v) => v.vote === "no").length,
+      myVote: mine.find((v) => v.voter_id === user.id)?.vote || null,
+    }
+  })
+}
+
+/**
+ * Vote on someone who wants in. Members only, never the requester — enforced in the policy,
+ * not just here. Voting again replaces your previous vote rather than adding a second.
+ */
+export async function voteOnTripRequest(requestId, vote) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("You must be logged in to vote.")
+  if (!["yes", "no"].includes(vote)) throw new Error("Invalid vote.")
+
+  const { data, error } = await supabase
+    .from("trip_request_votes")
+    .upsert(
+      { request_id: requestId, voter_id: user.id, vote },
+      { onConflict: "request_id,voter_id" }
+    )
+    .select()
+    .single()
+
+  if (error?.code === "42501" || /row-level security/i.test(error?.message || "")) {
+    throw new Error("Only people already on this trip can vote.")
+  }
+  if (error) throw error
+  return data
+}
+
 export async function declineTripRequest(inviteId) {
   const { error } = await supabase
     .from("trip_invites")

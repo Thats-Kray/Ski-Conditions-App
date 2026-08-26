@@ -1,6 +1,11 @@
 import { useEffect, useState, useRef } from "react"
 import { useMobile } from "../lib/useMobile"
 import {
+  requestToJoinTrip,
+  getTripRequestsForTrip,
+  voteOnTripRequest,
+  approveTripRequest,
+  declineTripRequest,
   getTripDetail,
   rsvpWithMessage,
   cancelTripRsvp,
@@ -408,6 +413,12 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
   const [mediaUploading, setMediaUploading] = useState(false)
   const [mediaCaption, setMediaCaption] = useState("")
   const mediaFileRef = useRef(null)
+  const [tripRequests, setTripRequests] = useState([])
+  // null until an RSVP is actually refused, then "needed" | "sending" | "sent" | "failed".
+  const [needsApproval, setNeedsApproval] = useState(false)
+  const [interestState, setInterestState] = useState(null)
+  const [votingId, setVotingId] = useState(null)
+  const [requestError, setRequestError] = useState(null)
 
   const resortKey = initialTrip.resort_key
   const accent = RESORT_ACCENTS[resortKey] || "var(--color-accent-soft)"
@@ -420,7 +431,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
   const effectiveThemeKey = storedThemeKey !== "default" ? storedThemeKey : (autoThemeFromWeather(wxData) || "default")
   const theme = THEMES[effectiveThemeKey] || THEMES.default
 
-  useEffect(() => { fetchDetail() }, [])
+  useEffect(() => { fetchDetail(); loadRequests() }, [])
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [trip?.comments?.length])
   useEffect(() => {
     if (!isPast) return
@@ -458,6 +469,50 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
     return () => { cancelled = true }
   }, [resortKey])
 
+  /**
+   * Who has marked themselves Interested, with the crew's votes.
+   *
+   * Fetched separately from getTripDetail and deliberately not allowed to break it: RLS
+   * (migration 041) hides these from anyone not on the trip, so a non-member opening the modal
+   * gets an empty list, and that is not an error worth blanking the whole modal over.
+   */
+  async function loadRequests() {
+    try {
+      setTripRequests(await getTripRequestsForTrip(initialTrip.id))
+    } catch (e) {
+      console.error("[TripDetailModal] interested list failed to load:", e)
+      setTripRequests([])
+    }
+  }
+
+  async function handleRequestVote(requestId, vote) {
+    setVotingId(requestId)
+    try {
+      await voteOnTripRequest(requestId, vote)
+      await loadRequests()
+    } catch (e) {
+      console.error("[TripDetailModal] vote failed:", e)
+      setRequestError(e.message || "Couldn't record that vote.")
+    } finally {
+      setVotingId(null)
+    }
+  }
+
+  async function handleDecideRequest(requestId, decision) {
+    setVotingId(requestId)
+    try {
+      if (decision === "approve") await approveTripRequest(requestId)
+      else await declineTripRequest(requestId)
+      await Promise.all([loadRequests(), fetchDetail()])
+      onUpdate?.()
+    } catch (e) {
+      console.error("[TripDetailModal] decision failed:", e)
+      setRequestError(e.message || "Couldn't respond to that request.")
+    } finally {
+      setVotingId(null)
+    }
+  }
+
   async function fetchDetail() {
     try {
       const detail = await getTripDetail(initialTrip.id)
@@ -487,7 +542,12 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
       const data = await rsvpWithMessage(initialTrip.id, "going", { message: rsvpMessage, gifUrl: rsvpGifUrl, plusOnes: rsvpPlusOnes })
       if (rsvpRideStatus) await updateRideStatus(initialTrip.id, rsvpRideStatus)
       setMyRsvp(data); setPendingStatus(null); setRsvpRideStatus(null); await fetchDetail(); onUpdate?.()
-    } catch (e) { console.warn(e) }
+    } catch (e) {
+      // Uninvited: migration 040 refuses the write. This used to console.warn and leave the
+      // button spinning back to its old state with no explanation at all.
+      if (e?.code === "NEEDS_TRIP_APPROVAL") { setPendingStatus(null); setNeedsApproval(true) }
+      else console.warn(e)
+    }
     finally { setRsvpLoading(false) }
   }
 
@@ -497,7 +557,10 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
     try {
       const data = await rsvpWithMessage(initialTrip.id, status, {})
       setMyRsvp(data); setPendingStatus(null); await fetchDetail(); onUpdate?.()
-    } catch (e) { console.warn(e) }
+    } catch (e) {
+      if (e?.code === "NEEDS_TRIP_APPROVAL") { setPendingStatus(null); setNeedsApproval(true) }
+      else console.warn(e)
+    }
     finally { setRsvpLoading(false) }
   }
 
@@ -1189,6 +1252,47 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
             </div>
           )}
 
+          {/* Refused RSVP → the way in. Shown only after the write is actually refused, so
+              anyone invited or already going never sees it. */}
+          {needsApproval && (
+            <div style={{
+              marginBottom: 14, padding: "12px 14px", borderRadius: 12,
+              background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
+              display: "grid", gap: 8,
+            }}>
+              {interestState === "sent" ? (
+                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.75)" }}>
+                  ✓ You&apos;re marked Interested. The crew can vouch for you and the host decides.
+                </span>
+              ) : (
+                <>
+                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.75)" }}>
+                    This trip is invite-only. Mark yourself Interested and the host can add you.
+                  </span>
+                  {interestState === "failed" && (
+                    <span style={{ fontSize: 12, color: "var(--color-danger)" }}>Couldn&apos;t send that. Try again.</span>
+                  )}
+                  <button
+                    onClick={async () => {
+                      setInterestState("sending")
+                      try { await requestToJoinTrip(initialTrip.id); setInterestState("sent"); await loadRequests() }
+                      catch (err) { console.error("[TripDetailModal] interest failed:", err); setInterestState("failed") }
+                    }}
+                    disabled={interestState === "sending"}
+                    style={{
+                      justifySelf: "start", padding: "8px 16px", borderRadius: 999, minHeight: 40,
+                      background: "var(--gradient-cta)", border: "none", color: "white",
+                      fontWeight: 900, fontSize: 13,
+                      cursor: interestState === "sending" ? "wait" : "pointer",
+                    }}
+                  >
+                    {interestState === "sending" ? "Sending…" : "Interested"}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Going list */}
           {goingRsvps.length === 0 ? (
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", paddingBottom: 4 }}>No one's in yet — be the first!</div>
@@ -1219,6 +1323,95 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
               <span style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", fontWeight: 700 }}>
                 Can't make it: {cantRsvps.map((r) => (r.profile?.full_name || r.profile?.username || "?").split(" ")[0]).join(", ")}
               </span>
+            </div>
+          )}
+
+          {/* Interested — people asking to join.
+              Members advise, the host decides. The vote count is shown to everyone on the
+              trip, but only the host gets Approve/Decline: there is no vote threshold that
+              admits anyone by itself, by design. */}
+          {tripRequests.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.32)", marginBottom: 8 }}>
+                INTERESTED ({tripRequests.length})
+              </div>
+              {requestError && (
+                <div style={{ fontSize: 12, color: "var(--color-danger)", marginBottom: 8 }}>{requestError}</div>
+              )}
+              <div style={{ display: "grid", gap: 8 }}>
+                {tripRequests.map((r) => (
+                  <div key={r.id} style={{
+                    display: "grid", gap: 8, padding: "10px 12px", borderRadius: 12,
+                    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <Avatar profile={r.requester_profile} size={28} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>
+                          {r.requester_profile?.full_name || r.requester_profile?.username || "Someone"}
+                        </div>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>
+                          {r.yesVotes} in favor{r.noVotes > 0 ? ` · ${r.noVotes} against` : ""}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Members vote. The requester never sees this block — RLS keeps them out
+                        of the list entirely until they are approved. */}
+                    {(isGoing || isHost) && !isPast && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {[
+                          { v: "yes", label: r.myVote === "yes" ? "✓ You're in favor" : "Vouch for them" },
+                          { v: "no", label: r.myVote === "no" ? "✓ You voted no" : "No" },
+                        ].map(({ v, label }) => (
+                          <button
+                            key={v}
+                            onClick={() => handleRequestVote(r.id, v)}
+                            disabled={votingId === r.id}
+                            style={{
+                              padding: "6px 12px", borderRadius: 999, minHeight: 32, fontSize: 11, fontWeight: 800,
+                              cursor: votingId === r.id ? "wait" : "pointer",
+                              background: r.myVote === v ? "rgba(255,255,255,0.14)" : "transparent",
+                              border: `1px solid ${r.myVote === v ? "var(--color-accent)" : "rgba(255,255,255,0.16)"}`,
+                              color: r.myVote === v ? "white" : "rgba(255,255,255,0.6)",
+                            }}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* The host has the final say, whatever the crew voted. */}
+                    {isHost && !isPast && (
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          onClick={() => handleDecideRequest(r.id, "approve")}
+                          disabled={votingId === r.id}
+                          style={{
+                            flex: 1, padding: "8px 12px", borderRadius: 10, border: "none",
+                            background: "var(--color-success-strong)", color: "var(--color-bg)",
+                            fontWeight: 900, fontSize: 12, cursor: "pointer", minHeight: 36,
+                          }}
+                        >
+                          Add to the crew
+                        </button>
+                        <button
+                          onClick={() => handleDecideRequest(r.id, "decline")}
+                          disabled={votingId === r.id}
+                          style={{
+                            padding: "8px 12px", borderRadius: 10, border: "none",
+                            background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)",
+                            fontWeight: 800, fontSize: 12, cursor: "pointer", minHeight: 36,
+                          }}
+                        >
+                          Not this time
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

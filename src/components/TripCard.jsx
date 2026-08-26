@@ -530,12 +530,12 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
             }}
           >
             {askState === "sent" ? (
-              <span>✓ Asked to join — {hostFirstName} will get back to you.</span>
+              <span>✓ You're marked Interested — {hostFirstName} and the crew will weigh in.</span>
             ) : askState === "failed" ? (
               <span style={{ color: "var(--color-danger)" }}>Couldn&apos;t send that request.</span>
             ) : (
               <>
-                <span>You need {hostFirstName}&apos;s OK to join.</span>
+                <span>{hostFirstName} approves who joins. Mark yourself Interested.</span>
                 <button
                   onClick={handleAskToJoin}
                   disabled={askState === "sending"}
@@ -547,7 +547,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
                     cursor: askState === "sending" ? "wait" : "pointer",
                   }}
                 >
-                  {askState === "sending" ? "Asking…" : "Ask to join"}
+                  {askState === "sending" ? "Sending…" : "Interested"}
                 </button>
               </>
             )}
