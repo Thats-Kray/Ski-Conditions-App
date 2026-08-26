@@ -41,7 +41,7 @@ function shortName(profile) {
 export default function DayPlanCard({
   group, colorCtx, currentUserId, canJoin = false, joining = false,
   onJoin, onOpenTrip, compact = false, myResortKey = null, onEditPlan,
-  myPlanHasEta = false,
+  myPlanHasEta = false, onAskToJoin, askingPartyId = null, askedPartyIds,
 }) {
   const openProfile = useProfileNav()
   const { resortKey, attendees, trip } = group
@@ -53,7 +53,26 @@ export default function DayPlanCard({
   const switchingFrom = !alreadyIn && myResortKey && myResortKey !== resortKey
     ? resortName(myResortKey)
     : null
-  const joinLabel = switchingFrom ? `Switch from ${switchingFrom}` : "I'm in"
+  // "I'm also going", not "I'm in". This button sets YOUR plan for this mountain; it does not
+  // put you in anyone's group. "I'm in" was read as joining the people on the card — which is
+  // exactly the confusion that prompted parties — and the label was the lie, not the code.
+  const joinLabel = switchingFrom ? `Switch from ${switchingFrom}` : "I'm also going"
+
+  const { parties = [], solo = [] } = group
+  // Which of these groups I am in, if any. Only meaningful when I am on this mountain.
+  const myPartyId = attendees.find((a) => a.userId === currentUserId)?.partyId ?? null
+
+  function partyLabel(g) {
+    if (g.name) return g.name
+    const owner = g.attendees.find((a) => a.userId === g.ownerId)
+    if (owner) return `${shortName(owner.profile)}'s group`
+    // The owner is in this party but skiing a different mountain today.
+    return "Group"
+  }
+
+  function canAsk(g) {
+    return Boolean(canJoin && currentUserId && g.partyId !== myPartyId && g.ownerId !== currentUserId)
+  }
   const shown = attendees.slice(0, MAX_AVATARS)
   const overflow = attendees.length - shown.length
   const names = attendees.slice(0, MAX_NAMES).map((a) => shortName(a.profile)).join(", ")
@@ -153,6 +172,63 @@ export default function DayPlanCard({
       <div style={{ fontSize: 11, color: "var(--color-text-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {names}{nameOverflow > 0 ? `, +${nameOverflow}` : ""}
       </div>
+
+      {/* Groups — who is actually skiing TOGETHER.
+          Being at the same mountain is not being in the same group: several crews ski Copper
+          on a Saturday and stay with their own people, linking up by asking. The mountain
+          headcount above still counts everyone; this says who is with whom.
+          Hidden when compact — the desktop week column has no room, and the day detail is
+          where you decide who to ask. */}
+      {!compact && parties.length > 0 && (
+        <div style={{ display: "grid", gap: 4 }}>
+          {parties.map((g) => (
+            <div
+              key={g.partyId}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
+                background: "var(--color-surface)", border: "1px solid var(--color-border)",
+                borderRadius: 10, padding: "6px 8px",
+              }}
+            >
+              <span style={{
+                fontSize: 11, fontWeight: 700, color: "var(--color-text-1)",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>
+                {g.partyId === myPartyId ? "👥 Your group" : `👥 ${partyLabel(g)}`}
+                <span style={{ color: "var(--color-text-3)", fontWeight: 600 }}>
+                  {" · "}{g.attendees.length}
+                </span>
+              </span>
+              {canAsk(g) && askedPartyIds?.has?.(g.partyId) && (
+                <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, color: "var(--color-text-3)" }}>
+                  Asked
+                </span>
+              )}
+              {canAsk(g) && !askedPartyIds?.has?.(g.partyId) && (
+                <button
+                  onClick={() => onAskToJoin?.(g)}
+                  disabled={askingPartyId === g.partyId}
+                  style={{
+                    flexShrink: 0, background: "transparent",
+                    border: "1px solid var(--color-accent)", borderRadius: 999,
+                    padding: "5px 10px", fontSize: 11, fontWeight: 800,
+                    color: "var(--color-accent)", minHeight: 32,
+                    cursor: askingPartyId === g.partyId ? "wait" : "pointer",
+                    opacity: askingPartyId === g.partyId ? 0.6 : 1,
+                  }}
+                >
+                  {askingPartyId === g.partyId ? "Asking…" : "Ask to join"}
+                </button>
+              )}
+            </div>
+          ))}
+          {solo.length > 0 && (
+            <div style={{ fontSize: 10, color: "var(--color-text-3)" }}>
+              {solo.length} not in a group
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Crew badges footnote — only when !compact, and only for multi-crew attendees */}
       {!compact && attendees.some((a) => crewBadgesFor(a.userId, colorCtx).length > 1) && (

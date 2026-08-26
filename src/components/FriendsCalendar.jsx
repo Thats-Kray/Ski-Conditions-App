@@ -14,7 +14,7 @@ import { resortName } from "../lib/resorts"
 import { formatDate } from "../lib/format"
 import { buildPlanUpsert } from "../lib/planUpsert"
 import {
-  getVisiblePlansInRange, getAcceptedFriends, getMyPartyMembershipsInRange,
+  getVisiblePlansInRange, getAcceptedFriends, getMyPartyMembershipsInRange, requestToJoinParty,
   getMyCrews, getCrewMembers, joinPlanAtResort, upsertDailyPlan,
 } from "../lib/socialApi"
 
@@ -58,6 +58,12 @@ export default function FriendsCalendar({
   const [selectedDay, setSelectedDay] = useState(null)
   const [joiningKey, setJoiningKey] = useState(null)
   const [joinError, setJoinError] = useState(null)
+  const [askingPartyId, setAskingPartyId] = useState(null)
+  const [askError, setAskError] = useState(null)
+  // Local so the button can say "Asked" immediately. Requests live in crew_invites and are
+  // not part of the calendar fetch; refetching the whole range to flip one label would be a
+  // lot of work for a confirmation.
+  const [askedPartyIds, setAskedPartyIds] = useState(() => new Set())
   const [lastJoinAttempt, setLastJoinAttempt] = useState(null)
   const [editorDate, setEditorDate] = useState(null)
   const [editorSeedResort, setEditorSeedResort] = useState(null)
@@ -254,6 +260,25 @@ export default function FriendsCalendar({
     }
   }
 
+  /**
+   * Ask to ski WITH a group. Deliberately does not touch your plan: where you ski is yours to
+   * decide (that is the "I'm also going" button), and who you ski with is theirs to approve.
+   */
+  async function handleAskToJoin(dateKey, resortKey, party) {
+    if (!party?.ownerId) return
+    setAskingPartyId(party.partyId)
+    setAskError(null)
+    try {
+      await requestToJoinParty(party.ownerId, { skiDate: dateKey, resortKey })
+      setAskedPartyIds((prev) => new Set(prev).add(party.partyId))
+    } catch (err) {
+      console.error("[FriendsCalendar] ask to join failed:", err)
+      setAskError(err?.message || "Couldn't send your request.")
+    } finally {
+      setAskingPartyId(null)
+    }
+  }
+
   async function handleEditorSave({ resortKey, eta, visibility }) {
     if (!editorDate) return
     setEditorBusy(true); setEditorError(null)
@@ -387,6 +412,12 @@ export default function FriendsCalendar({
           onDismiss={() => setJoinError(null)}
         />
       )}
+      {askError && (
+        <FailureNotice
+          message={`Couldn't send your request (${askError})`}
+          onDismiss={() => setAskError(null)}
+        />
+      )}
 
       {nobodyToShow && (
         <div style={{ padding: "20px 16px", textAlign: "center", color: "var(--color-text-3)", fontSize: 13 }}>
@@ -432,6 +463,9 @@ export default function FriendsCalendar({
             onEditPlan={(dateKey, resortKey) => {
               setEditorError(null); setEditorDate(dateKey); setEditorSeedResort(resortKey)
             }}
+            onAskToJoin={handleAskToJoin}
+            askingPartyId={askingPartyId}
+            askedPartyIds={askedPartyIds}
           />
         )
       ) : (
@@ -499,6 +533,9 @@ export default function FriendsCalendar({
                   onEditPlan={(resortKey) => {
                     setEditorError(null); setEditorDate(dateKey); setEditorSeedResort(resortKey)
                   }}
+                  onAskToJoin={(party) => handleAskToJoin(dateKey, g.resortKey, party)}
+                  askingPartyId={askingPartyId}
+                  askedPartyIds={askedPartyIds}
                 />
               ))}
             </div>

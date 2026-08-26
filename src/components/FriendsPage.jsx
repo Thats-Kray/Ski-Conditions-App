@@ -136,6 +136,13 @@ function WeekendPlanner({ days }) {
 
 function CrewInviteCard({ invite, onAccept, onDecline, working }) {
   const profile = invite.inviter_profile
+  // Both directions land in this same inbox, because both are crew_invites rows addressed to
+  // me. Without this the copy is inverted and actively misleading: someone asking to join YOUR
+  // day would read as them inviting you to theirs.
+  const isRequest = invite.kind === "request"
+  const headline = isRequest
+    ? `${getDisplayName(profile)} asked to join your day`
+    : `${getDisplayName(profile)} invited you to ski`
   return (
     <div style={{
       borderRadius: 14, padding: "12px 14px",
@@ -145,7 +152,7 @@ function CrewInviteCard({ invite, onAccept, onDecline, working }) {
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
         <Avatar profile={profile} size={34} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{getDisplayName(profile)} invited you to ski</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{headline}</div>
           <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 1 }}>
             {formatResortName(invite.resort_key)} · {formatDate(invite.ski_date)}
           </div>
@@ -160,7 +167,7 @@ function CrewInviteCard({ invite, onAccept, onDecline, working }) {
         <div style={{ display: "flex", gap: 6 }}>
           <button onClick={() => onAccept(invite.id)} disabled={working === invite.id}
             style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-            Accept
+            {isRequest ? "Approve" : "Accept"}
           </button>
           <button onClick={() => onDecline(invite.id)} disabled={working === invite.id}
             style={{ padding: "7px 12px", borderRadius: 8, border: "none", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
