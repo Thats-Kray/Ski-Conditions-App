@@ -348,8 +348,8 @@ export default function SkiPlansPage({ onRequireLogin, resorts, focusDate = null
   }).sort((a, b) => (a.ski_date || "").localeCompare(b.ski_date || ""))
 
   const SUB_TABS = [
+    { key: "calendar", label: "📅 Days" },
     { key: "trips",    label: "🎿 Trips" },
-    { key: "calendar", label: "📅 Calendar" },
   ]
 
   return (
