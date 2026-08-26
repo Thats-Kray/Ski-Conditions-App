@@ -15,6 +15,7 @@ import ActiveSessionBar from "./components/ActiveSessionBar"
 import SessionRecapModal from "./components/SessionRecapModal"
 import MountainPage from "./components/MountainPage"
 import TodayScreen from "./components/TodayScreen"
+import TrackScreen from "./components/TrackScreen"
 import {
   getAcceptedFriends,
   getCurrentUser,
@@ -32,14 +33,16 @@ import {
 import { flushSessionToSupabase, logSkiDay } from "./lib/leaderboardApi"
 import { useGpsTracker } from "./lib/useGpsTracker"
 import HeroBannerStrip from "./components/ui/HeroBannerStrip"
-import { HomeIcon, SnowIcon, PlansIcon, SocialIcon, ProfileIcon } from "./components/ui/NavIcons"
+import { SnowIcon, PlansIcon, TrackIcon, SocialIcon, ProfileIcon } from "./components/ui/NavIcons"
 
+// Keyed by the five tab keys shipped in Task 7 (today/plans/track/crew/me).
+// HomeIcon is no longer imported — the `home` tab was retired in Task 6.
 const NAV_ICONS = {
-  home: HomeIcon,
-  dashboard: SnowIcon,
+  today: SnowIcon,
   plans: PlansIcon,
-  friends: SocialIcon,
-  profile: ProfileIcon,
+  track: TrackIcon,
+  crew: SocialIcon,
+  me: ProfileIcon,
 }
 
 import { supabase, authHeaders } from "./lib/supabase"
@@ -367,11 +370,11 @@ function AuthGate({ icon, title, desc, onSignIn, onSignUp }) {
 }
 
 const BOTTOM_TABS = [
-  { key: "home",      label: "Home" },
-  { key: "dashboard", label: "Snow" },
-  { key: "plans",     label: "Plans" },
-  { key: "friends",   label: "Social" },
-  { key: "profile",   label: "Profile" },
+  { key: "today", label: "Today" },
+  { key: "plans", label: "Plans" },
+  { key: "track", label: "Track" },
+  { key: "crew",  label: "Crew" },
+  { key: "me",    label: "Me" },
 ]
 
 const TOP_TABS = BOTTOM_TABS
@@ -395,8 +398,8 @@ function BottomNav({ activeTab, onTabChange, currentProfile, notifCount }) {
     <nav className="bottom-nav">
       {BOTTOM_TABS.map(({ key, label }) => {
         const isActive = activeTab === key
-        const isProfile = key === "profile"
-        const isSocial = key === "friends"
+        const isProfile = key === "me"
+        const isSocial = key === "crew"
         const Icon = NAV_ICONS[key]
         return (
           <button
@@ -469,8 +472,8 @@ function TopNav({ activeTab, onTabChange, currentProfile, notifCount, currentUse
         <div style={{ display: "flex", gap: 4 }}>
           {TOP_TABS.map(({ key, label }) => {
             const isActive = activeTab === key
-            const isProfile = key === "profile"
-            const isSocial = key === "friends"
+            const isProfile = key === "me"
+            const isSocial = key === "crew"
             const Icon = NAV_ICONS[key]
             return (
               <button
@@ -556,13 +559,13 @@ function TabButton({ active, onClick, children }) {
 
 export default function App() {
   const isMobile = useMobile()
-  const [activeTab, setActiveTab] = useState("home")
+  const [activeTab, setActiveTab] = useState("today")
   // Read-only mirror of TodayScreen's own conditionsSubTab state (reported up via
   // onSubTabChange). TodayScreen owns the real state; App.jsx only needs to know its
   // current value so the header's Refresh button + description can stay inline with
   // the title, exactly where they rendered before Task 2 moved the sub-tab switcher
   // into TodayScreen.
-  const [dashboardSubTab, setDashboardSubTab] = useState("conditions")
+  const [todaySubTab, setTodaySubTab] = useState("conditions")
   const [mountainPageResortKey, setMountainPageResortKey] = useState(null)
   // Full-page read-only view of another user's profile (Sprint 34). Same
   // takeover pattern as mountainPageResortKey; cleared in handleTabChange.
@@ -859,7 +862,7 @@ export default function App() {
   
       setCurrentUser(null)
       setCurrentProfile(null)
-      setActiveTab("dashboard")
+      setActiveTab("today")
     } catch (err) {
       console.error("Logout failed:", err)
       alert(err.message || "Failed to log out.")
@@ -977,13 +980,14 @@ export default function App() {
 
   // Deep-link: Strava OAuth redirects back to `/?strava_connected=true` or
   // `?strava_error=...` (this app has no client-side router, so the backend
-  // redirects to root). Jump straight to Profile so the params are visible
-  // and StravaConnect's own effect can read/clear them and show the toast —
-  // this effect only switches tabs, it doesn't touch the query string itself.
+  // redirects to root). Jump straight to Me — where StravaConnect renders —
+  // so the params are visible and StravaConnect's own effect can read/clear
+  // them and show the toast. This effect only switches tabs, it doesn't touch
+  // the query string itself.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get("strava_connected") || params.get("strava_error")) {
-      setActiveTab("profile")
+      setActiveTab("me")
     }
   }, [])
 
@@ -1359,24 +1363,16 @@ export default function App() {
           />
         ) : (
           <>
-        {activeTab !== "home" && (
+        {/* Suppressed on Track, which inherited HomeDashboard's own full-bleed
+            "Ready to ski?" hero (same /hero-mountain.jpg) — the old `home` tab
+            hid this strip for exactly that reason. */}
+        {activeTab !== "track" && (
           <HeroBannerStrip photoPath="/hero-mountain.jpg" />
         )}
-        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: activeTab === "dashboard" ? 20 : 16 }}>
+        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: activeTab === "today" ? 20 : 16 }}>
           {/* Left: branding */}
           <div>
-            {activeTab === "home" ? (
-              <div>
-                {!isMobile && (
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", padding: "5px 10px", borderRadius: 999, fontSize: 11, color: "rgba(255,255,255,0.65)", marginBottom: 8 }}>
-                    ❄️ Welcome back
-                  </div>
-                )}
-                <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 30, fontWeight: 900, letterSpacing: -0.5 }}>
-                  {isMobile ? "PowderDays" : "PowderDays Dashboard"}
-                </h1>
-              </div>
-            ) : activeTab === "dashboard" ? (
+            {activeTab === "today" ? (
               <div>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", padding: "5px 10px", borderRadius: 999, fontSize: 11, color: "rgba(255,255,255,0.65)", marginBottom: 8 }}>
                   ❄️ Morning Decision Engine
@@ -1393,9 +1389,9 @@ export default function App() {
           {/* Right: actions */}
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {/* conditionsSubTab itself lives inside TodayScreen now (Task 2) — App.jsx
-                only gets a read-only mirror of it (dashboardSubTab, via onSubTabChange)
+                only gets a read-only mirror of it (todaySubTab, via onSubTabChange)
                 so this button can stay inline with the title, exactly where it was. */}
-            {activeTab === "dashboard" && dashboardSubTab === "conditions" && (
+            {activeTab === "today" && todaySubTab === "conditions" && (
               <button
                 onClick={refresh}
                 disabled={loading}
@@ -1412,8 +1408,8 @@ export default function App() {
           </div>
         </header>
 
-        {/* Dashboard description — only shown on conditions sub-tab */}
-        {activeTab === "dashboard" && dashboardSubTab === "conditions" && (
+        {/* Today-tab description — only shown on the conditions sub-tab */}
+        {activeTab === "today" && todaySubTab === "conditions" && (
           <p style={{ margin: "0 0 20px", color: "rgba(255,255,255,0.55)", fontSize: 14, maxWidth: 680, lineHeight: 1.6 }}>
             Resort snow, NWS forecasts, terrain metrics, and live COtrip travel conditions — blended into one morning ski decision engine.
           </p>
@@ -1425,7 +1421,7 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === "dashboard" && (
+        {activeTab === "today" && (
           <TodayScreen
             rows={rows}
             passFilter={passFilter}
@@ -1449,12 +1445,21 @@ export default function App() {
             topEpic={topEpic}
             topIkon={topIkon}
             setMountainPageResortKey={setMountainPageResortKey}
-            onSubTabChange={setDashboardSubTab}
+            onSubTabChange={setTodaySubTab}
             sessionActive={!!activeSession}
           />
         )}
 
-        {activeTab === "friends" && (
+        {activeTab === "track" && (
+          <TrackScreen
+            resorts={rows}
+            currentUser={currentUser}
+            sessionActive={!!activeSession}
+            onStartSession={handleSessionStart}
+          />
+        )}
+
+        {activeTab === "crew" && (
           <div style={{ marginTop: 8 }}>
             {currentUser ? (
               <MessagingCenter />
@@ -1465,7 +1470,7 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === "profile" && (
+        {activeTab === "me" && (
           <div style={{ marginTop: 8 }}>
             {currentUser ? (
               <ProfilePage onLogOut={handleLogOut} onTabChange={setActiveTab} resorts={RESORTS} />

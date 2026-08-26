@@ -647,7 +647,7 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
               </button>
               <div style={{ width: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
               <button
-                onClick={() => onTabChange?.("friends")}
+                onClick={() => onTabChange?.("crew")}
                 style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "center", padding: "4px 0" }}
               >
                 <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1 }}>{friends.length}</div>
@@ -837,7 +837,7 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>Your Crew</div>
             <button
-              onClick={() => onTabChange?.("friends")}
+              onClick={() => onTabChange?.("crew")}
               style={{ background: "none", border: "none", color: "var(--color-accent-soft)", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: 0 }}
             >
               See All →

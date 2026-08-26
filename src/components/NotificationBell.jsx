@@ -156,13 +156,13 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
       onOpenPlan(targetId)
     } else if (targetType === "messages" && onTabChange) {
       // Where the host's note is. Used by "the trip is full" — see notifyRequestDecision.
-      onTabChange("friends")
+      onTabChange("crew")
     } else if (notif.type === "friend_request" && onTabChange) {
-      onTabChange("friends")
+      onTabChange("crew")
     } else if (onTabChange) {
       // Anything without a specific destination still lands somewhere sensible rather than
       // doing nothing, which reads as a broken tap.
-      onTabChange("friends")
+      onTabChange("crew")
     }
     setOpen(false)
   }
@@ -175,7 +175,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
       await acceptCrewInvite(crewId)
       await markNotificationRead(notif.id)
       setNotifications((prev) => prev.filter((n) => n.id !== notif.id))
-      if (onTabChange) onTabChange("friends")
+      if (onTabChange) onTabChange("crew")
       setOpen(false)
     } catch (err) {
       console.warn("Accept crew invite failed:", err)

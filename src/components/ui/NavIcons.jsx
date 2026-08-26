@@ -59,6 +59,22 @@ export function ProfileIcon({ size = 22 }) {
   )
 }
 
+// Track tab (Task 7): a stopwatch. The tab is the GPS session + arrival
+// check-in — "start my day and time it" — so a timer reads truer than a
+// location pin, which would collide with Plans' calendar/place language.
+export function TrackIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...common}>
+      <path d="M9.5 2.5h5" />
+      <path d="M12 2.5V6" />
+      <path d="m17.4 8.2 1.5-1.5" />
+      <circle cx="12" cy="13.5" r="7.5" />
+      <path d="M12 13.5V10" />
+      <path d="M12 13.5h2.7" />
+    </svg>
+  )
+}
+
 export function MountainIcon({ size = 22 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" {...common}>
