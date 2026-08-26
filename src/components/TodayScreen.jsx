@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import PowderMap from "./PowderMap"
-import MountainBoard from "./MountainBoard"
 import Badge, { TIER_COLORS } from "./ui/Badge"
 import ScoreRing from "./ui/ScoreRing"
 import Avatar from "./ui/Avatar"
@@ -435,7 +434,6 @@ export default function TodayScreen({
         {[
           { key: "conditions", label: "🏔️ Snow" },
           { key: "map",        label: "🗺️ Map" },
-          { key: "board",      label: "📋 Board" },
         ].map(({ key, label }) => (
           <button
             key={key}
@@ -467,10 +465,6 @@ export default function TodayScreen({
           skierDetails={skierDetails}
           friendIds={friendIds}
         />
-      )}
-
-      {conditionsSubTab === "board" && (
-        <MountainBoard defaultResortKey={topResort?.resortKey || "vail"} currentUserEmail={currentUser?.email} />
       )}
 
       {conditionsSubTab === "conditions" && topResort && (
