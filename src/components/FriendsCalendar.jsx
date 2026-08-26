@@ -69,6 +69,9 @@ export default function FriendsCalendar({
   const [editorSeedResort, setEditorSeedResort] = useState(null)
   const [editorError, setEditorError] = useState(null)
   const [editorBusy, setEditorBusy] = useState(false)
+  // True only when the editor was opened from "Add ski day" rather than by tapping a
+  // specific day — that is the one case where the user still needs to choose the date.
+  const [datePickable, setDatePickable] = useState(false)
 
   const todayKey = localDateKey()
   const currentUserId = currentUser?.id || null
@@ -279,6 +282,26 @@ export default function FriendsCalendar({
     }
   }
 
+  /**
+   * Add a ski day straight from the Plans calendar.
+   *
+   * This existed only on Profile > Ski Plans, so setting a day meant leaving the Plans tab,
+   * going to your profile, and coming back. Same editor, same save path — the only difference
+   * is that the date is not yet chosen, so the modal lets you pick it.
+   *
+   * Seeds with the day you have selected, else today when today is in view, else the first day
+   * of the range you are looking at — so the date starts somewhere near what is on screen
+   * rather than always snapping to today while you browse next month.
+   */
+  function handleAddSkiDay() {
+    if (!currentUserId) { onRequireLogin?.(); return }
+    const seed = selectedDay || (todayKey >= start && todayKey <= end ? todayKey : start)
+    setEditorError(null)
+    setEditorSeedResort(null)
+    setDatePickable(true)
+    setEditorDate(seed < todayKey ? todayKey : seed)
+  }
+
   async function handleEditorSave({ resortKey, eta, visibility }) {
     if (!editorDate) return
     setEditorBusy(true); setEditorError(null)
@@ -402,6 +425,23 @@ export default function FriendsCalendar({
         friendFilterCount={friendFilterCount}
       />
 
+      {/* Add a ski day without leaving the Plans tab. This used to live only on
+          Profile > Ski Plans, so planning a day meant going to your profile and coming back
+          to the calendar you were already looking at. */}
+      {currentUserId && (
+        <button
+          onClick={handleAddSkiDay}
+          style={{
+            justifySelf: "start", display: "inline-flex", alignItems: "center", gap: 6,
+            background: "var(--gradient-cta)", color: "white", border: "none",
+            borderRadius: 12, padding: "9px 16px", minHeight: 44,
+            fontSize: 13, fontWeight: 900, cursor: "pointer",
+          }}
+        >
+          + Add ski day
+        </button>
+      )}
+
       {failed.plans && <FailureNotice label="this week's plans" onRetry={loadPlans} />}
       {failed.crews && <FailureNotice label="your crews" onRetry={() => runStatic(["crews"])} />}
       {failed.friends && <FailureNotice label="your friends list" onRetry={() => runStatic(["friends"])} />}
@@ -436,15 +476,29 @@ export default function FriendsCalendar({
           <div style={{ color: "var(--color-text-3)", fontSize: 13 }}>
             Nobody's planned a day {viewMode === "week" ? "this week" : "this month"} yet.
           </div>
-          <button
-            onClick={() => onPlanADay?.()}
-            style={{
-              background: "var(--gradient-cta)", color: "white", border: "none", borderRadius: 12,
-              padding: "10px 20px", fontSize: 13, fontWeight: 900, cursor: "pointer", minHeight: 44,
-            }}
-          >
-            + Plan a day
-          </button>
+          {/* Two different things, so two buttons. This said "+ Plan a day" and created a
+              TRIP — the same plan/trip conflation the rest of this feature works to undo. */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+            <button
+              onClick={handleAddSkiDay}
+              style={{
+                background: "var(--gradient-cta)", color: "white", border: "none", borderRadius: 12,
+                padding: "10px 20px", fontSize: 13, fontWeight: 900, cursor: "pointer", minHeight: 44,
+              }}
+            >
+              + Add ski day
+            </button>
+            <button
+              onClick={() => onPlanADay?.()}
+              style={{
+                background: "transparent", color: "var(--color-text-2)",
+                border: "1px solid var(--color-border)", borderRadius: 12,
+                padding: "10px 20px", fontSize: 13, fontWeight: 800, cursor: "pointer", minHeight: 44,
+              }}
+            >
+              Create a trip
+            </button>
+          </div>
         </div>
       )}
 
@@ -556,14 +610,22 @@ export default function FriendsCalendar({
 
       {editorDate && (
         <PlanEditorModal
+          // Remount when the date changes so the form reseeds from THAT day's plan. The modal
+          // initialises resort/ETA/visibility with useState, which only runs on mount, so
+          // without this you would change the date and keep the previous day's values.
+          key={editorDate}
           dateKey={editorDate}
           plan={myPlanByDate.get(editorDate) || null}
           resorts={resorts}
           busy={editorBusy}
           error={editorError}
           defaultResortKey={editorSeedResort}
+          // Only the "Add ski day" button opens the editor without a day already chosen, so
+          // only it makes the date editable.
+          onDateChange={datePickable ? setEditorDate : undefined}
+          minDate={datePickable ? todayKey : undefined}
           onSave={handleEditorSave}
-          onClose={() => { setEditorDate(null); setEditorSeedResort(null) }}
+          onClose={() => { setEditorDate(null); setEditorSeedResort(null); setDatePickable(false) }}
         />
       )}
     </div>

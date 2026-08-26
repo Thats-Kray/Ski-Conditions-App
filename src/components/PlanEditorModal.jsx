@@ -43,7 +43,7 @@ function SectionLabel({ children }) {
  */
 export default function PlanEditorModal({
   dateKey, plan = null, resorts = [], busy = false, error = null,
-  defaultResortKey = null, onSave, onRemove, onClose,
+  defaultResortKey = null, onSave, onRemove, onClose, onDateChange, minDate,
 }) {
   const isMobile = useMobile()
   // enabled: !busy — Escape must no-op mid-save, matching the backdrop and the X
@@ -83,9 +83,28 @@ export default function PlanEditorModal({
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-        <div style={{ fontSize: 16, fontWeight: 900, color: "var(--color-text-1)" }}>
-          {formatDate(dateKey)}
-        </div>
+        {/* The date is editable only when a caller opts in by passing onDateChange — i.e. when
+            the editor was opened from an "add a ski day" button with no day chosen yet. Opened
+            by tapping a specific day, it stays a plain heading, so the profile's ski-plans tab
+            is unaffected. */}
+        {onDateChange ? (
+          <input
+            type="date"
+            value={dateKey}
+            min={minDate || undefined}
+            onChange={(e) => e.target.value && onDateChange(e.target.value)}
+            aria-label="Ski date"
+            style={{
+              background: "var(--color-surface)", border: "1px solid var(--color-border)",
+              borderRadius: 10, padding: "8px 10px", color: "var(--color-text-1)",
+              fontSize: 15, fontWeight: 800, minHeight: 44, colorScheme: "dark",
+            }}
+          />
+        ) : (
+          <div style={{ fontSize: 16, fontWeight: 900, color: "var(--color-text-1)" }}>
+            {formatDate(dateKey)}
+          </div>
+        )}
         <button
           onClick={busy ? undefined : onClose}
           aria-label="Close"
