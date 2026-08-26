@@ -1759,6 +1759,27 @@ export async function declineTripRequest(inviteId) {
   if (error) throw error
 }
 
+/**
+ * Turn migration 040's RLS refusal into something a user can act on.
+ *
+ * There are TWO writers to trip_rsvps that can be refused — rsvpToTrip and rsvpWithMessage —
+ * and the first version of this shipped inside rsvpToTrip only. TripDetailModal uses the
+ * other one, so joining through the modal failed silently: "Sending…" and then nothing.
+ *
+ * That is the fourth incident in this codebase caused by patching call sites one at a time
+ * instead of the shared path (see planUpsert.js's writer census). Hence one function, called
+ * by both. If a third RSVP writer ever appears, it calls this too.
+ */
+function asTripApprovalError(error) {
+  if (!error) return null
+  if (error.code === "42501" || /row-level security/i.test(error.message || "")) {
+    const e = new Error("You need the host's OK to join this trip. Mark yourself Interested and they can approve you.")
+    e.code = "NEEDS_TRIP_APPROVAL"
+    return e
+  }
+  return null
+}
+
 export async function rsvpToTrip(tripId, status) {
   const user = await getCurrentUser()
   if (!user) throw new Error("You must be logged in to RSVP.")
@@ -1773,15 +1794,8 @@ export async function rsvpToTrip(tripId, status) {
     .select()
     .single()
 
-  // Migration 040 restricts INSERT to the host, the invited, and people whose request was
-  // approved. PostgREST reports that as a bare "row-level security" 42501, which tells the
-  // user nothing about what to do next — so translate it into the actual next step.
-  if (error?.code === "42501" || /row-level security/i.test(error?.message || "")) {
-    const e = new Error("You need the host's OK to join this trip. Ask to join and they can approve you.")
-    e.code = "NEEDS_TRIP_APPROVAL"
-    throw e
-  }
-
+  const approvalError = asTripApprovalError(error)
+  if (approvalError) throw approvalError
   if (error) throw error
 
   // Dismiss any pending invite when user RSVPs
@@ -1883,6 +1897,10 @@ export async function rsvpWithMessage(tripId, status, { message, gifUrl, plusOne
     .select()
     .single()
 
+  // The writer that was missed the first time. TripDetailModal RSVPs through here, so an
+  // uninvited user saw "Sending…" and then silent failure.
+  const approvalError = asTripApprovalError(error)
+  if (approvalError) throw approvalError
   if (error) throw error
 
   // Dismiss any pending invite when user RSVPs with message
