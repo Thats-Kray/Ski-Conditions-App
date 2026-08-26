@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import {
   getAllVisibleTrips,
   getCurrentUser,
+  getAcceptedFriends,
+  rsvpToTrip,
 } from "../lib/socialApi"
 import TripCard from "./TripCard"
 import CreateTripModal from "./CreateTripModal"
@@ -11,6 +13,202 @@ import { resortName, resortEmoji } from "../lib/resorts"
 import { formatDate } from "../lib/format"
 import Avatar from "./ui/Avatar"
 import AvatarStatusRail from "./ui/AvatarStatusRail"
+import Card from "./ui/Card"
+import { SkiPingComposer } from "./SkiPingModal"
+
+/* ── Your Next Trip / pending invite ─────────────────────────────────
+ * Moved here from HomeDashboard.jsx (Task 5) unchanged — internals are a
+ * faithful copy. Only the call site differs: HomeDashboard wired onTabChange
+ * to App.jsx's tab switcher so "See all trips →" would jump here from Home.
+ * From inside this page that jump is self-referential, so the render call
+ * below passes a callback that switches to the Trips sub-tab instead — the
+ * only edit made to accommodate the new home. */
+function NextTripCard({ currentUser, onTabChange }) {
+  const [loading, setLoading] = useState(true)
+  const [invited, setInvited] = useState([])
+  const [nextTrip, setNextTrip] = useState(null)
+  const [dismissed, setDismissed] = useState(new Set())
+  const [rsvpBusyId, setRsvpBusyId] = useState(null)
+  const [showCreateTrip, setShowCreateTrip] = useState(false)
+
+  useEffect(() => {
+    if (!currentUser) { setLoading(false); return }
+    let cancelled = false
+    getAllVisibleTrips()
+      .then(({ mine = [], rsvpd = [], invited: invitedTrips = [] }) => {
+        if (cancelled) return
+        setInvited(invitedTrips)
+        const upcoming = [...mine, ...rsvpd].sort((a, b) => (a.ski_date || "").localeCompare(b.ski_date || ""))
+        setNextTrip(upcoming[0] || null)
+      })
+      .catch(() => { if (!cancelled) { setInvited([]); setNextTrip(null) } })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [currentUser])
+
+  const pendingInvite = invited.find((t) => !dismissed.has(t.id))
+
+  async function handleRsvp(tripId, status) {
+    setRsvpBusyId(tripId)
+    setDismissed((prev) => new Set([...prev, tripId])) // optimistic
+    try {
+      await rsvpToTrip(tripId, status)
+    } catch (e) {
+      console.warn("RSVP failed:", e)
+      setDismissed((prev) => { const next = new Set(prev); next.delete(tripId); return next }) // rollback
+    } finally {
+      setRsvpBusyId(null)
+    }
+  }
+
+  const cardHeader = (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ fontSize: 11, color: "var(--color-text-3)", textTransform: "uppercase", letterSpacing: 0.5 }}>
+        {pendingInvite ? "Trip Invite" : "Your Next Trip"}
+      </div>
+      <button
+        onClick={() => onTabChange("plans")}
+        style={{ background: "none", border: "none", color: "var(--color-accent)", fontWeight: 700, fontSize: 12, cursor: "pointer", padding: 0 }}
+      >
+        See all trips →
+      </button>
+    </div>
+  )
+
+  if (!currentUser || loading) {
+    return (
+      <Card style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {cardHeader}
+        <div style={{ fontSize: 13, color: "var(--color-text-2)" }}>
+          {!currentUser ? "Sign in to see your plans." : "Loading…"}
+        </div>
+      </Card>
+    )
+  }
+
+  // State A — pending invite
+  if (pendingInvite) {
+    const host = pendingInvite.host_profile
+    return (
+      <Card style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {cardHeader}
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 900 }}>
+            {resortEmoji(pendingInvite.resort_key)} {resortName(pendingInvite.resort_key) || pendingInvite.resort_key}
+          </div>
+          <div style={{ fontSize: 13, color: "var(--color-text-2)", marginTop: 4 }}>
+            {formatDate(pendingInvite.ski_date)}
+            {host && ` · Hosted by ${host.full_name || host.username || "a friend"}`}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={() => handleRsvp(pendingInvite.id, "going")}
+            disabled={rsvpBusyId === pendingInvite.id}
+            style={{
+              flex: 1, background: "var(--gradient-cta)", color: "white",
+              border: "none", borderRadius: 10, padding: "10px 14px", fontWeight: 800, fontSize: 13,
+              cursor: rsvpBusyId === pendingInvite.id ? "not-allowed" : "pointer",
+            }}
+          >
+            Accept
+          </button>
+          <button
+            onClick={() => handleRsvp(pendingInvite.id, "cantgo")}
+            disabled={rsvpBusyId === pendingInvite.id}
+            style={{
+              flex: 1, background: "rgba(255,255,255,0.06)", color: "var(--color-text-1)",
+              border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 14px",
+              fontWeight: 800, fontSize: 13, cursor: rsvpBusyId === pendingInvite.id ? "not-allowed" : "pointer",
+            }}
+          >
+            Decline
+          </button>
+        </div>
+      </Card>
+    )
+  }
+
+  // State B — next upcoming trip
+  if (nextTrip) {
+    const goingCount = (nextTrip.rsvps || []).filter((r) => r.status === "going").length
+    return (
+      <Card style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {cardHeader}
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 900 }}>
+            {resortEmoji(nextTrip.resort_key)} {resortName(nextTrip.resort_key) || nextTrip.resort_key}
+          </div>
+          <div style={{ fontSize: 13, color: "var(--color-text-2)", marginTop: 4 }}>
+            {formatDate(nextTrip.ski_date)} · {goingCount} going
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
+  // State C — no invite, no upcoming trips
+  return (
+    <>
+      <Card style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {cardHeader}
+        <button
+          onClick={() => setShowCreateTrip(true)}
+          style={{ background: "none", border: "none", color: "var(--color-accent)", fontWeight: 700, fontSize: 14, cursor: "pointer", padding: 0, textAlign: "left" }}
+        >
+          Plan a ski day with your crew →
+        </button>
+      </Card>
+      {showCreateTrip && (
+        <CreateTripModal
+          onClose={() => setShowCreateTrip(false)}
+          onCreated={() => setShowCreateTrip(false)}
+        />
+      )}
+    </>
+  )
+}
+
+/* ── Ski Ping CTA ─────────────────────────────────────────────────────
+ * Also moved here unchanged from HomeDashboard.jsx (Task 5). */
+function PingCta({ currentUser }) {
+  const [open, setOpen] = useState(false)
+  const [friends, setFriends] = useState(null)
+
+  if (!currentUser) return null
+
+  async function handleOpen() {
+    setOpen(true)
+    if (!friends) {
+      getAcceptedFriends().then(setFriends).catch(() => setFriends([]))
+    }
+  }
+
+  return (
+    <>
+      <div style={{ textAlign: "center", padding: "4px 0 2px" }}>
+        <button
+          onClick={handleOpen}
+          style={{
+            background: "none", border: "none", cursor: "pointer",
+            color: "var(--color-accent-soft)", fontSize: 13, fontWeight: 700,
+            textDecoration: "underline", textUnderlineOffset: 3,
+            padding: "6px 12px",
+          }}
+        >
+          👋 Ping a friend to ski →
+        </button>
+      </div>
+      {open && friends !== null && (
+        <SkiPingComposer
+          friends={friends}
+          onClose={() => setOpen(false)}
+          onSent={() => setOpen(false)}
+        />
+      )}
+    </>
+  )
+}
 
 /* ── Compact upcoming trip strip ───────────────────────────────────── */
 function UpcomingStrip({ trips, invitedTrips, currentUser, onOpen }) {
@@ -303,18 +501,22 @@ export default function SkiPlansPage({ onRequireLogin, resorts, focusDate = null
 
       {/* ── Calendar tab ── */}
       {subTab === "calendar" && (
-        <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 20, padding: "20px 18px" }}>
-          <FriendsCalendar
-            currentUser={currentUser}
-            onOpenTrip={setStripTrip}
-            trips={flatTrips}
-            loading={loading}
-            onRequireLogin={onRequireLogin}
-            onPlanADay={() => { setSubTab("trips"); handleCreateClick() }}
-            resorts={resorts}
-            focusDate={focusDate}
-            onFocusHandled={onFocusHandled}
-          />
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <NextTripCard currentUser={currentUser} onTabChange={() => setSubTab("trips")} />
+          <PingCta currentUser={currentUser} />
+          <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 20, padding: "20px 18px" }}>
+            <FriendsCalendar
+              currentUser={currentUser}
+              onOpenTrip={setStripTrip}
+              trips={flatTrips}
+              loading={loading}
+              onRequireLogin={onRequireLogin}
+              onPlanADay={() => { setSubTab("trips"); handleCreateClick() }}
+              resorts={resorts}
+              focusDate={focusDate}
+              onFocusHandled={onFocusHandled}
+            />
+          </div>
         </div>
       )}
 
