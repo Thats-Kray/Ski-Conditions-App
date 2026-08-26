@@ -1124,7 +1124,32 @@ export async function getSentCrewInvites() {
 // was its only caller and now passes departure_time straight to buildPlanEta via
 // buildPlanUpsert, which handles both formats. Deleted rather than kept "just in case".
 
-export async function respondToCrewInvite(inviteId, status) {
+/**
+ * Turn down someone who asked to ski with you, optionally with a word.
+ *
+ * "Full group", not "declined". Same reasoning as declineTripRequest: this is one of the two
+ * moments in the app that lands on somebody as a small rejection, and it should read as a fact
+ * about the day rather than a verdict on them. The note goes to their message inbox, where
+ * they can reply, rather than into a notification they cannot answer.
+ */
+async function sendPartyDeclineMessage(invite, note) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.id === invite.inviter_id) return
+
+    const where = resortName(invite.resort_key) || "that day"
+    const trimmed = (note || "").trim()
+    const body = trimmed
+      ? `${where} on ${formatDate(invite.ski_date)} — ${trimmed}`
+      : `${where} on ${formatDate(invite.ski_date)} — I've got a full group this time. Next one!`
+
+    await sendDM(invite.inviter_id, body)
+  } catch (e) {
+    console.warn("sendPartyDeclineMessage failed:", e)
+  }
+}
+
+export async function respondToCrewInvite(inviteId, status, note = null) {
   const user = await getCurrentUser()
 
   if (!user) {
@@ -1204,6 +1229,13 @@ export async function respondToCrewInvite(inviteId, status) {
       .update({ status, updated_at: new Date().toISOString() })
       .eq("id", inviteId)
     if (updateError) throw updateError
+
+    // Turning down someone who asked to ski with you gets the same treatment as turning down
+    // a trip request: a note, and it goes to their inbox. It is the same moment for the person
+    // on the other end, so it should not depend on which object they asked about.
+    if (isRequest && existing.inviter_id !== user.id) {
+      sendPartyDeclineMessage(existing, note).catch(() => {})
+    }
   }
 
   const { data: updatedInvite, error: readError } = await supabase

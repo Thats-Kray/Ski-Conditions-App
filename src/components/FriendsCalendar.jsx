@@ -77,6 +77,8 @@ export default function FriendsCalendar({
   const [leavingKey, setLeavingKey] = useState(null)
   const [partyRequests, setPartyRequests] = useState([])
   const [decidingRequestId, setDecidingRequestId] = useState(null)
+  const [decliningRequestId, setDecliningRequestId] = useState(null)
+  const [declineNote, setDeclineNote] = useState("")
 
   const todayKey = localDateKey()
   const currentUserId = currentUser?.id || null
@@ -359,11 +361,12 @@ export default function FriendsCalendar({
    * Accepting routes through respondToCrewInvite, which calls accept_plan_party and wires the
    * membership; the calendar then reloads so they appear in the group immediately.
    */
-  async function handlePartyRequest(inviteId, status) {
+  async function handlePartyRequest(inviteId, status, note = null) {
     if (decidingRequestId) return
     setDecidingRequestId(inviteId)
     try {
-      await respondToCrewInvite(inviteId, status)
+      await respondToCrewInvite(inviteId, status, note)
+      setDecliningRequestId(null)
       await Promise.all([runStatic(["partyRequests"]), loadPlans()])
     } catch (err) {
       console.error("[FriendsCalendar] party request decision failed:", err)
@@ -547,7 +550,7 @@ export default function FriendsCalendar({
                     {busy ? "…" : "Add to my group"}
                   </button>
                   <button
-                    onClick={() => handlePartyRequest(req.id, "declined")}
+                    onClick={() => { setDecliningRequestId(req.id); setDeclineNote("") }}
                     disabled={busy}
                     style={{
                       background: "transparent", color: "var(--color-text-3)",
@@ -556,9 +559,53 @@ export default function FriendsCalendar({
                       fontSize: 12, fontWeight: 700, cursor: busy ? "wait" : "pointer",
                     }}
                   >
-                    No thanks
+                    Full group
                   </button>
                 </div>
+
+                {/* Same two-step as turning down a trip request: the note has to be writable
+                    BEFORE the decision is sent, or it could never be written at all. Optional
+                    — Send works empty and falls back to standard wording. */}
+                {decliningRequestId === req.id && (
+                  <div style={{ display: "grid", gap: 6, width: "100%" }}>
+                    <textarea
+                      value={declineNote}
+                      onChange={(e) => setDeclineNote(e.target.value)}
+                      placeholder="Add a note (optional) — goes to their inbox"
+                      rows={2}
+                      style={{
+                        width: "100%", boxSizing: "border-box", resize: "none",
+                        background: "var(--color-surface)", color: "var(--color-text-1)",
+                        border: "1px solid var(--color-border)", borderRadius: 10,
+                        padding: "8px 10px", fontSize: 13, outline: "none", fontFamily: "inherit",
+                      }}
+                    />
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button
+                        onClick={() => handlePartyRequest(req.id, "declined", declineNote)}
+                        disabled={busy}
+                        style={{
+                          flex: 1, background: "var(--color-surface)", color: "var(--color-text-1)",
+                          border: "1px solid var(--color-border)", borderRadius: 10,
+                          padding: "8px 12px", minHeight: 38, fontSize: 12, fontWeight: 800,
+                          cursor: busy ? "wait" : "pointer",
+                        }}
+                      >
+                        {busy ? "Sending…" : "Send"}
+                      </button>
+                      <button
+                        onClick={() => setDecliningRequestId(null)}
+                        style={{
+                          background: "transparent", color: "var(--color-text-3)", border: "none",
+                          padding: "8px 12px", minHeight: 38, fontSize: 12, fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
