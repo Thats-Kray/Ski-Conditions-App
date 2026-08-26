@@ -83,7 +83,7 @@ function UpcomingStrip({ trips, invitedTrips, currentUser, onOpen }) {
 }
 
 /* ── Main page ─────────────────────────────────────────────────────── */
-export default function SkiPlansPage({ onRequireLogin, resorts }) {
+export default function SkiPlansPage({ onRequireLogin, resorts, focusDate = null, onFocusHandled }) {
   const [currentUser, setCurrentUser] = useState(null)
   const [myTrips, setMyTrips] = useState([])
   const [rsvpdTrips, setRsvpdTrips] = useState([])
@@ -94,6 +94,19 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
   const [showCreate, setShowCreate] = useState(false)
   const [stripTrip, setStripTrip] = useState(null)
   const [subTab, setSubTab] = useState("calendar")
+
+  // A notification pointing at a ski day has to land ON the calendar. Tapping it while the
+  // Trips sub-tab happened to be open would otherwise leave you on the wrong half of the page
+  // with nothing obviously different.
+  //
+  // Adjusted during render rather than in an effect — React's documented pattern for
+  // "adjust state when a prop changes". An effect here would set state synchronously on mount
+  // and cascade an extra render, which is what react-hooks/set-state-in-effect flags.
+  const [lastFocus, setLastFocus] = useState(null)
+  if (focusDate && focusDate !== lastFocus) {
+    setLastFocus(focusDate)
+    setSubTab("calendar")
+  }
 
   const loadTrips = useCallback(async () => {
     try {
@@ -299,6 +312,8 @@ export default function SkiPlansPage({ onRequireLogin, resorts }) {
             onRequireLogin={onRequireLogin}
             onPlanADay={() => { setSubTab("trips"); handleCreateClick() }}
             resorts={resorts}
+            focusDate={focusDate}
+            onFocusHandled={onFocusHandled}
           />
         </div>
       )}

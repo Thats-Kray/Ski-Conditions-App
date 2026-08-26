@@ -10,7 +10,7 @@ import ProfilePage from "./components/ProfilePage"
 import { ProfileNavContext } from "./lib/profileNav"
 import SkiPlansPage from "./components/SkiPlansPage"
 import TripDetailModal from "./components/TripDetailModal"
-import { useNotificationCount } from "./components/NotificationBell"
+import NotificationBell, { useNotificationCount } from "./components/NotificationBell"
 import LandingPage from "./components/LandingPage"
 import HomeDashboard from "./components/HomeDashboard"
 import ActiveSessionBar from "./components/ActiveSessionBar"
@@ -801,7 +801,17 @@ function BottomNav({ activeTab, onTabChange, currentProfile, notifCount }) {
             }}
           >
             {isProfile && currentProfile ? (
-              <ProfileAvatar profile={currentProfile} size={26} isActive={isActive} />
+              // The badge rides the avatar too, not just the Social icon. On a phone the
+              // profile is the thing people look at for "is anything waiting for me", and a
+              // count that only appears on one tab is easy to walk past.
+              <span style={{ position: "relative", lineHeight: 1, display: "flex" }}>
+                <ProfileAvatar profile={currentProfile} size={26} isActive={isActive} />
+                {notifCount > 0 && (
+                  <span style={{ position: "absolute", top: -3, right: -5, minWidth: 16, height: 16, borderRadius: 999, background: "var(--gradient-danger)", color: "white", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "1.5px solid rgba(4,8,15,1)", lineHeight: 1 }}>
+                    {notifCount > 9 ? "9+" : notifCount}
+                  </span>
+                )}
+              </span>
             ) : (
               <span style={{ position: "relative", lineHeight: 1, display: "flex", filter: isActive ? "drop-shadow(0 0 6px rgba(96,165,250,0.6))" : "none", transition: "filter 0.15s ease" }}>
                 <Icon size={22} />
@@ -827,7 +837,7 @@ function BottomNav({ activeTab, onTabChange, currentProfile, notifCount }) {
   )
 }
 
-function TopNav({ activeTab, onTabChange, currentProfile, notifCount }) {
+function TopNav({ activeTab, onTabChange, currentProfile, notifCount, currentUser, onOpenTrip, onOpenPlan }) {
   return (
     <nav className="top-nav">
       <div className="top-nav-inner">
@@ -881,6 +891,22 @@ function TopNav({ activeTab, onTabChange, currentProfile, notifCount }) {
               </button>
             )
           })}
+
+          {/* The bell, in the nav itself. It used to live only inside the Social tab, which
+              meant you had to already be where the notifications point you in order to find
+              out you had any. Sits next to the tabs so the unread count is visible from every
+              screen. */}
+          {currentUser && (
+            <div style={{ display: "flex", alignItems: "center", marginLeft: 4 }}>
+              <NotificationBell
+                currentUser={currentUser}
+                onOpenTrip={onOpenTrip}
+                onOpenPlan={onOpenPlan}
+                onTabChange={onTabChange}
+                variant="icon"
+              />
+            </div>
+          )}
         </div>
       </div>
     </nav>
@@ -935,6 +961,33 @@ export default function App() {
   const [authModalMode, setAuthModalMode] = useState(null)
   const [isRecoveryMode, setIsRecoveryMode] = useState(false)
   const [deepLinkTrip, setDeepLinkTrip] = useState(null)
+  // Set when a notification points at a specific ski day, so the Plans calendar opens
+  // there instead of on the current week.
+  const [planFocusDate, setPlanFocusDate] = useState(null)
+
+  /**
+   * Notification → the thing that caused it.
+   *
+   * Trips reuse the deep-link modal that already existed for ?trip= links, so a notification
+   * and a shared URL land in exactly the same place.
+   */
+  async function handleOpenTripById(tripId) {
+    if (!tripId) return
+    try {
+      setDeepLinkTrip(await getTripDetail(tripId))
+    } catch (e) {
+      // Most likely cause after migrations 040/042: you can no longer see that trip. Say so
+      // rather than opening an empty modal.
+      console.error("[App] couldn't open trip from notification:", e)
+      setActiveTab("plans")
+    }
+  }
+
+  /** A plan-party notification carries a date key, not a trip — open the Plans calendar. */
+  function handleOpenPlanDate(dateKey) {
+    setActiveTab("plans")
+    if (dateKey) setPlanFocusDate(dateKey)
+  }
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [pendingInviteId, setPendingInviteId] = useState(null)
   const [authReady, setAuthReady] = useState(false)
@@ -1645,6 +1698,9 @@ export default function App() {
         onTabChange={handleTabChange}
         currentProfile={currentProfile}
         notifCount={notifCount}
+        currentUser={currentUser}
+        onOpenTrip={handleOpenTripById}
+        onOpenPlan={handleOpenPlanDate}
       />
       <BottomNav
         activeTab={activeTab}
@@ -1994,7 +2050,12 @@ export default function App() {
 
         {activeTab === "plans" && (
           currentUser ? (
-            <SkiPlansPage onRequireLogin={requireLogin} resorts={RESORTS} />
+            <SkiPlansPage
+              onRequireLogin={requireLogin}
+              resorts={RESORTS}
+              focusDate={planFocusDate}
+              onFocusHandled={() => setPlanFocusDate(null)}
+            />
           ) : (
             <AuthGate onSignIn={() => openAuthModal("login")} onSignUp={() => openAuthModal("signup")}
               icon="🎿" title="Plan trips with your crew" desc="Sign in to create trips, invite friends, share rides, and track your whole season." />

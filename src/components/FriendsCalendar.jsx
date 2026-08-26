@@ -34,7 +34,7 @@ import {
  */
 export default function FriendsCalendar({
   currentUser, onOpenTrip, trips = [], loading = false, onRequireLogin, onPlanADay,
-  resorts = [],
+  resorts = [], focusDate = null, onFocusHandled,
 }) {
   const [viewMode, setViewMode] = useState("week")   // "week" | "month"
   const [anchor, setAnchor] = useState(() => new Date())
@@ -155,6 +155,17 @@ export default function FriendsCalendar({
     if (!currentUserId) return
     loadPlans()
   }, [currentUserId, loadPlans])
+
+  // Arrived from a notification about a specific day: jump the calendar to that week and
+  // select the day, then tell the parent it has been consumed. Without clearing it, every
+  // later re-render would drag the calendar back to that date and the user could not navigate
+  // away — a focus prop that never releases is a trap, not a feature.
+  useEffect(() => {
+    if (!focusDate) return
+    setAnchor(new Date(`${focusDate}T12:00:00`))
+    setSelectedDay(focusDate)
+    onFocusHandled?.()
+  }, [focusDate, onFocusHandled])
 
   // ── Filtering ────────────────────────────────────────────────────────────
   const friendIds = useMemo(() => new Set(friends.map((f) => f.id)), [friends])

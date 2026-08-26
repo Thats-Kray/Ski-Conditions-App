@@ -22,6 +22,14 @@ const TYPE_META = {
   friend_request:{ icon: "🤝", color: "#fb923c" },
   trip_update:   { icon: "🎿", color: "#67e8f9" },
   crew_invite:   { icon: "🤙", color: "#2563eb" },
+  // Migration 043. Distinct icons on purpose: at a glance you should be able to tell
+  // "someone wants in" from "you're in" without reading the sentence.
+  trip_request:          { icon: "🙋", color: "#38bdf8" },
+  trip_request_approved: { icon: "🎉", color: "#22c55e" },
+  trip_request_declined: { icon: "—",  color: "#94a3b8" },
+  trip_request_vote:     { icon: "👍", color: "#a3e635" },
+  party_request:         { icon: "🙋", color: "#f472b6" },
+  party_joined:          { icon: "🤝", color: "#22c55e" },
 }
 
 function getNotifCrewId(notif) {
@@ -52,7 +60,7 @@ export function useNotificationCount(currentUser) {
 const POPUP_WIDTH = 340
 const POPUP_MARGIN = 16
 
-export default function NotificationBell({ currentUser, onOpenTrip, onTabChange, dropUp = false, variant = "icon" }) {
+export default function NotificationBell({ currentUser, onOpenTrip, onTabChange, onOpenPlan, dropUp = false, variant = "icon" }) {
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const panelRef = useRef(null)
@@ -135,13 +143,24 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
       await markNotificationRead(notif.id)
       setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, read: true } : n))
     }
-    if (notif.type === "friend_request" && onTabChange) {
+    // Route on target_type (migration 043), falling back to the old trip_id/type rules so
+    // notifications created before this still go somewhere.
+    const targetType = notif.target_type || (notif.trip_id ? "trip" : null)
+    const targetId = notif.target_id || notif.trip_id || null
+
+    if (targetType === "trip" && targetId && onOpenTrip) {
+      onOpenTrip(targetId)
+    } else if (targetType === "plan" && onOpenPlan) {
+      // A ski-plan day, not a trip — opens the Plans calendar on that date.
+      onOpenPlan(targetId)
+    } else if (notif.type === "friend_request" && onTabChange) {
       onTabChange("friends")
-      setOpen(false)
-    } else if (notif.trip_id && onOpenTrip) {
-      onOpenTrip(notif.trip_id)
-      setOpen(false)
+    } else if (onTabChange) {
+      // Anything without a specific destination still lands somewhere sensible rather than
+      // doing nothing, which reads as a broken tap.
+      onTabChange("friends")
     }
+    setOpen(false)
   }
 
   async function handleCrewAccept(e, notif) {

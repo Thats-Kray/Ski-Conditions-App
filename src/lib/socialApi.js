@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { localDateKey } from "./calendarDates";
-import { OPEN_RESORT_KEY } from "./resorts";
+import { OPEN_RESORT_KEY, resortName } from "./resorts";
+import { formatDate } from "./format";
 import { buildPlanUpsert } from "./planUpsert";
 
 /* -----------------------------
@@ -1228,12 +1229,40 @@ export async function respondToCrewInvite(inviteId, status) {
  * the request to ski WITH them, which is theirs to approve.
  */
 export async function requestToJoinParty(ownerId, { skiDate, resortKey, message } = {}) {
-  return createCrewInvite(ownerId, {
+  const invite = await createCrewInvite(ownerId, {
     ski_date: skiDate,
     resort_key: resortKey,
     message,
     kind: "request",
   })
+
+  // target 'plan' + the date key, not a trip id — this opens the Plans calendar on that day.
+  // The whole reason migration 043 added target_type/target_id: before it, a notification
+  // could only ever point at a trip, and a plan party is not one.
+  notifyPartyRequest(ownerId, skiDate, resortKey).catch(() => {})
+  return invite
+}
+
+async function notifyPartyRequest(ownerId, skiDate, resortKey) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.id === ownerId) return
+    const { data: me } = await supabase
+      .from("profiles").select("full_name, username").eq("id", user.id).single()
+
+    const who = me?.full_name || me?.username || "Someone"
+    await insertNotification({
+      userId: ownerId,
+      type: "party_request",
+      title: `${who} wants to ski with you`,
+      body: `${resortName(resortKey) || "Your day"} · ${formatDate(skiDate)}`,
+      actorId: user.id,
+      targetType: "plan",
+      targetId: skiDate,
+    })
+  } catch (e) {
+    console.warn("notifyPartyRequest failed:", e)
+  }
 }
 
 /** Pending requests other people have sent ME, awaiting my approval. */
@@ -1706,7 +1735,36 @@ export async function requestToJoinTrip(tripId) {
     .single()
 
   if (error) throw error
+
+  // Fire-and-forget, and deliberately not awaited into the return: a notification that fails
+  // to send must not make the user think their request did not go through. It did — the row
+  // above is the request.
+  notifyTripRequest(tripId, user.id).catch(() => {})
+
   return data
+}
+
+/** Tell the host somebody wants in. */
+async function notifyTripRequest(tripId, actorId) {
+  try {
+    const [{ data: trip }, { data: me }] = await Promise.all([
+      supabase.from("ski_trips").select("host_id, title, resort_key").eq("id", tripId).single(),
+      supabase.from("profiles").select("full_name, username").eq("id", actorId).single(),
+    ])
+    if (!trip?.host_id || trip.host_id === actorId) return
+
+    const who = me?.full_name || me?.username || "Someone"
+    await insertNotification({
+      userId: trip.host_id,
+      type: "trip_request",
+      title: `${who} is interested in ${trip.title || resortName(trip.resort_key)}`,
+      body: "Tap to see them and decide.",
+      tripId,
+      actorId,
+    })
+  } catch (e) {
+    console.warn("notifyTripRequest failed:", e)
+  }
 }
 
 /** Pending join requests on trips I host. RLS already scopes this to my trips. */
@@ -1746,9 +1804,36 @@ export async function getIncomingTripRequests() {
  * the one who needs the RSVP row — the same asymmetry that made accept_plan_party() necessary.
  */
 export async function approveTripRequest(inviteId) {
+  // Read the request BEFORE approving: the RPC flips its status, and once it is no longer
+  // pending we would have to guess who to tell.
+  const { data: invite } = await supabase
+    .from("trip_invites").select("trip_id, invitee_id").eq("id", inviteId).single()
+
   const { data, error } = await supabase.rpc("approve_trip_request", { p_invite_id: inviteId })
   if (error) throw error
+
+  notifyRequestDecision(invite, "approved").catch(() => {})
   return data
+}
+
+/** Tell the person who asked what the host decided. Both answers are worth knowing. */
+async function notifyRequestDecision(invite, decision) {
+  if (!invite?.invitee_id || !invite?.trip_id) return
+  try {
+    const { data: trip } = await supabase
+      .from("ski_trips").select("title, resort_key").eq("id", invite.trip_id).single()
+    const where = trip?.title || resortName(trip?.resort_key) || "the trip"
+
+    await insertNotification({
+      userId: invite.invitee_id,
+      type: decision === "approved" ? "trip_request_approved" : "trip_request_declined",
+      title: decision === "approved" ? `You're in for ${where}` : `Not this time for ${where}`,
+      body: decision === "approved" ? "Tap to see the crew and the details." : null,
+      tripId: invite.trip_id,
+    })
+  } catch (e) {
+    console.warn("notifyRequestDecision failed:", e)
+  }
 }
 
 /**
@@ -1832,11 +1917,16 @@ export async function voteOnTripRequest(requestId, vote) {
 }
 
 export async function declineTripRequest(inviteId) {
+  const { data: invite } = await supabase
+    .from("trip_invites").select("trip_id, invitee_id").eq("id", inviteId).single()
+
   const { error } = await supabase
     .from("trip_invites")
     .update({ status: "declined" })
     .eq("id", inviteId)
   if (error) throw error
+
+  notifyRequestDecision(invite, "declined").catch(() => {})
 }
 
 /**
@@ -2525,7 +2615,10 @@ export async function getFriendsLeaderboard() {
 
 /* ── Notifications ──────────────────────────────────────────────────────────── */
 
-async function insertNotification({ userId, type, title, body = null, tripId = null, actorId = null, crewId = null }) {
+async function insertNotification({
+  userId, type, title, body = null, tripId = null, actorId = null, crewId = null,
+  targetType = null, targetId = null,
+}) {
   if (!userId) return
   // Build payload without crew_id to avoid schema-cache failures on older deployments.
   // crewId is already encoded in body JSON by callers that need it.
@@ -2538,6 +2631,13 @@ async function insertNotification({ userId, type, title, body = null, tripId = n
   }
   if (tripId)  payload.trip_id  = tripId
   if (crewId)  payload.crew_id  = crewId
+
+  // Where tapping this should take you (migration 043). A trip notification defaults to its
+  // own trip, so every existing caller becomes clickable without being touched.
+  const resolvedType = targetType ?? (tripId ? "trip" : null)
+  const resolvedId = targetId ?? (tripId || null)
+  if (resolvedType) payload.target_type = resolvedType
+  if (resolvedId)   payload.target_id   = String(resolvedId)
 
   const { error } = await supabase.from("notifications").insert(payload)
   if (error) {
