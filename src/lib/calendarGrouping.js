@@ -83,10 +83,24 @@ export function groupByDayAndMountain({
     return parties.get(`${userId}|${day}`) || { partyId: null, ownerId: null, name: null }
   }
 
+  // Everyone who has an explicit plan on a given day, as `userId|day`.
+  //
+  // daily_plans is UNIQUE (user_id, ski_date): one plan per person per day, so one PLACE per
+  // person per day. A trip RSVP is a weaker, older signal — switching your plan to another
+  // mountain does not revoke it — so without this, moving your plan from Crested Butte to
+  // Copper left you listed on both cards at once. Reported 2026-08-25.
+  //
+  // Deliberately NOT keyed on user alone: a plan on Saturday must not remove you from a trip
+  // on Sunday.
+  const plannedByDay = new Set()
+
   for (const plan of plans) {
     const day = dayKey(plan.ski_date)
     const g = bucket(day, plan.resort_key)
+    // Only claim the day once the plan actually placed them somewhere. A plan with an
+    // unusable date or resort puts them nowhere, so their trip attendance should still stand.
     if (!g) continue
+    plannedByDay.add(`${plan.user_id}|${day}`)
     // eta rides along so the card can show when this group is getting there.
     // getVisiblePlansInRange already selects it; it used to be dropped right here.
     g.byUser.set(plan.user_id, {
@@ -106,7 +120,10 @@ export function groupByDayAndMountain({
     g.trip = trip
     // Trip attendance carries no per-person ETA — ski_trips has a departure time
     // for the trip, not for each person. null keeps the attendee shape uniform.
-    if (trip.host_id && passes(trip.host_id) && !g.byUser.has(trip.host_id)) {
+    // No exception for hosts: your own plan is your statement of where you are, even on a
+    // trip you organised. The trip keeps its card and its badge either way.
+    if (trip.host_id && passes(trip.host_id) && !g.byUser.has(trip.host_id)
+        && !plannedByDay.has(`${trip.host_id}|${day}`)) {
       g.byUser.set(trip.host_id, {
         userId: trip.host_id, profile: trip.host_profile || null, eta: null,
         ...partyFor(trip.host_id, day),
@@ -118,6 +135,8 @@ export function groupByDayAndMountain({
       if (rsvp.status !== "going") continue
       if (!passes(rsvp.user_id)) continue
       if (g.byUser.has(rsvp.user_id)) continue
+      // Their own plan for this day wins over an RSVP they never got round to changing.
+      if (plannedByDay.has(`${rsvp.user_id}|${day}`)) continue
       g.byUser.set(rsvp.user_id, {
         userId: rsvp.user_id, profile: rsvp.profile || null, eta: null,
         ...partyFor(rsvp.user_id, day),

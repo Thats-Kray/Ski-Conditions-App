@@ -440,6 +440,106 @@ test("a party spanning two mountains appears at each, with only its own people",
   assert.deepEqual(vail.parties.map((g) => g.attendees.map((a) => a.userId)), [["u2"]])
 })
 
+// ── One person, one mountain, one day ────────────────────────────────────────
+//
+// Reported 2026-08-25: Kyle had RSVP'd "going" to a Crested Butte trip, then switched his own
+// plan to Copper. He appeared on BOTH cards. daily_plans is UNIQUE (user_id, ski_date), so he
+// only ever had one plan — the calendar was showing him in two places at once.
+//
+// The dedupe existed but was scoped per MOUNTAIN (`g.byUser.has(...)`), which catches being
+// listed twice at one resort and misses being listed once at each of two.
+
+test("switching your plan removes you from a trip at the mountain you left", () => {
+  const out = groupByDayAndMountain({
+    plans: [p("me", "2026-08-29", "coppermountain", "Kyle")],
+    trips: [{
+      id: "t1", ski_date: "2026-08-29", resort_key: "crestedbutte", host_id: "u2",
+      host_profile: { id: "u2", full_name: "Gaby" },
+      rsvps: [{ user_id: "me", status: "going", profile: { id: "me", full_name: "Kyle" } }],
+    }],
+    currentUserId: "me",
+  })
+  const day = out.get("2026-08-29")
+  const copper = day.find((g) => g.resortKey === "coppermountain")
+  const butte = day.find((g) => g.resortKey === "crestedbutte")
+
+  assert.deepEqual(copper.attendees.map((a) => a.userId), ["me"], "the plan is where you are")
+  assert.ok(!butte.attendees.some((a) => a.userId === "me"), "you cannot be at two mountains")
+})
+
+test("the trip card survives, with everyone else still on it", () => {
+  // Leaving a trip must not delete it from the calendar for the people still going.
+  const out = groupByDayAndMountain({
+    plans: [p("me", "2026-08-29", "coppermountain", "Kyle")],
+    trips: [{
+      id: "t1", ski_date: "2026-08-29", resort_key: "crestedbutte", host_id: "u2",
+      host_profile: { id: "u2", full_name: "Gaby" },
+      rsvps: [{ user_id: "me", status: "going", profile: { id: "me", full_name: "Kyle" } }],
+    }],
+    currentUserId: "me",
+  })
+  const butte = out.get("2026-08-29").find((g) => g.resortKey === "crestedbutte")
+  assert.ok(butte, "the trip still has a card")
+  assert.deepEqual(butte.attendees.map((a) => a.userId), ["u2"])
+  assert.equal(butte.trip.id, "t1", "and it keeps its TRIP badge")
+})
+
+test("a plan AT the trip's mountain still lists you exactly once", () => {
+  const out = groupByDayAndMountain({
+    plans: [p("me", "2026-08-29", "crestedbutte", "Kyle")],
+    trips: [{
+      id: "t1", ski_date: "2026-08-29", resort_key: "crestedbutte", host_id: "u2",
+      host_profile: { id: "u2", full_name: "Gaby" },
+      rsvps: [{ user_id: "me", status: "going", profile: { id: "me", full_name: "Kyle" } }],
+    }],
+    currentUserId: "me",
+  })
+  const butte = out.get("2026-08-29").find((g) => g.resortKey === "crestedbutte")
+  assert.equal(butte.attendees.filter((a) => a.userId === "me").length, 1)
+})
+
+test("with no plan of your own, your trip RSVP still places you", () => {
+  const out = groupByDayAndMountain({
+    trips: [{
+      id: "t1", ski_date: "2026-08-29", resort_key: "crestedbutte", host_id: "u2",
+      host_profile: { id: "u2", full_name: "Gaby" },
+      rsvps: [{ user_id: "me", status: "going", profile: { id: "me", full_name: "Kyle" } }],
+    }],
+    currentUserId: "me",
+  })
+  const butte = out.get("2026-08-29").find((g) => g.resortKey === "crestedbutte")
+  assert.ok(butte.attendees.some((a) => a.userId === "me"))
+})
+
+test("a host who moves their own plan drops off their own trip too", () => {
+  // Same rule, no exception for hosts: your plan is the statement of where you are.
+  const out = groupByDayAndMountain({
+    plans: [p("u2", "2026-08-29", "vail", "Gaby")],
+    trips: [{
+      id: "t1", ski_date: "2026-08-29", resort_key: "crestedbutte", host_id: "u2",
+      host_profile: { id: "u2", full_name: "Gaby" }, rsvps: [],
+    }],
+  })
+  const day = out.get("2026-08-29")
+  const butte = day.find((g) => g.resortKey === "crestedbutte")
+  assert.ok(!butte.attendees.some((a) => a.userId === "u2"))
+  assert.ok(day.find((g) => g.resortKey === "vail").attendees.some((a) => a.userId === "u2"))
+})
+
+test("a plan on one day does not remove you from a trip on another", () => {
+  const out = groupByDayAndMountain({
+    plans: [p("me", "2026-08-29", "coppermountain", "Kyle")],
+    trips: [{
+      id: "t1", ski_date: "2026-08-30", resort_key: "crestedbutte", host_id: "u2",
+      host_profile: { id: "u2", full_name: "Gaby" },
+      rsvps: [{ user_id: "me", status: "going", profile: { id: "me", full_name: "Kyle" } }],
+    }],
+    currentUserId: "me",
+  })
+  const sunday = out.get("2026-08-30").find((g) => g.resortKey === "crestedbutte")
+  assert.ok(sunday.attendees.some((a) => a.userId === "me"), "Sunday is a different day")
+})
+
 test("a party group exposes its owner so the card can name it", () => {
   const out = groupByDayAndMountain({
     plans: [p("u1", "2026-08-22", "coppermountain", "Nate")],
