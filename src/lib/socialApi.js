@@ -1678,6 +1678,87 @@ function autoLogSessionForTrip(userId, resortKey, skiDate, tripId) {
     .then(() => {}).catch(() => {})  // fire-and-forget
 }
 
+/* -----------------------------
+   Asking to join someone else's trip
+----------------------------- */
+
+/**
+ * Ask a trip's host to let you in.
+ *
+ * A request is a trip_invites row you create ABOUT YOURSELF: inviter and invitee are both you,
+ * kind='request'. It is stored that way rather than "invitee = the host" because
+ * trip_invites is UNIQUE (trip_id, invitee_id), and pointing every request at the host would
+ * mean only one person could ever ask to join a given trip. This way that constraint means the
+ * right thing — one pending membership record per person per trip.
+ */
+export async function requestToJoinTrip(tripId) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error("You must be logged in to ask to join a trip.")
+  if (!tripId) throw new Error("Missing trip.")
+
+  const { data, error } = await supabase
+    .from("trip_invites")
+    .upsert(
+      { trip_id: tripId, inviter_id: user.id, invitee_id: user.id, kind: "request", status: "pending" },
+      { onConflict: "trip_id,invitee_id" }
+    )
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+/** Pending join requests on trips I host. RLS already scopes this to my trips. */
+export async function getIncomingTripRequests() {
+  const user = await getCurrentUser()
+  if (!user) return []
+
+  const { data, error } = await supabase
+    .from("trip_invites")
+    .select("*, trip:ski_trips ( id, title, ski_date, resort_key, host_id )")
+    .eq("kind", "request")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+
+  if (error) throw error
+
+  // Belt and braces on top of RLS: only requests for trips I actually host.
+  const mine = (data || []).filter((r) => r.trip?.host_id === user.id)
+  if (mine.length === 0) return []
+
+  // The requester's profile is fetched separately rather than embedded.
+  // trip_invites.invitee_id references auth.users, not profiles, so PostgREST has no
+  // relationship to traverse — the same reason getReceivedCrewInvites does this by hand.
+  const { data: profiles, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .in("id", [...new Set(mine.map((r) => r.invitee_id).filter(Boolean))])
+
+  if (profileError) throw profileError
+
+  const byId = new Map((profiles || []).map((p) => [p.id, p]))
+  return mine.map((r) => ({ ...r, requester_profile: byId.get(r.invitee_id) || null }))
+}
+
+/**
+ * Approve a request. Goes through the RPC because the HOST is the caller but the REQUESTER is
+ * the one who needs the RSVP row — the same asymmetry that made accept_plan_party() necessary.
+ */
+export async function approveTripRequest(inviteId) {
+  const { data, error } = await supabase.rpc("approve_trip_request", { p_invite_id: inviteId })
+  if (error) throw error
+  return data
+}
+
+export async function declineTripRequest(inviteId) {
+  const { error } = await supabase
+    .from("trip_invites")
+    .update({ status: "declined" })
+    .eq("id", inviteId)
+  if (error) throw error
+}
+
 export async function rsvpToTrip(tripId, status) {
   const user = await getCurrentUser()
   if (!user) throw new Error("You must be logged in to RSVP.")
@@ -1691,6 +1772,15 @@ export async function rsvpToTrip(tripId, status) {
     )
     .select()
     .single()
+
+  // Migration 040 restricts INSERT to the host, the invited, and people whose request was
+  // approved. PostgREST reports that as a bare "row-level security" 42501, which tells the
+  // user nothing about what to do next — so translate it into the actual next step.
+  if (error?.code === "42501" || /row-level security/i.test(error?.message || "")) {
+    const e = new Error("You need the host's OK to join this trip. Ask to join and they can approve you.")
+    e.code = "NEEDS_TRIP_APPROVAL"
+    throw e
+  }
 
   if (error) throw error
 
