@@ -20,7 +20,7 @@ function dayNumber(dateKey) {
 export default function WeekView({
   anchorDate, groupsByDay, colorCtx, currentUserId, todayKey,
   joiningKey, onJoin, onOpenTrip, myPlanByDate, onEditPlan,
-  onAskToJoin, askingPartyId, askedPartyIds,
+  onAskToJoin, askingPartyId, askedPartyIds, onLeave, leavingKey,
 }) {
   const isMobile = useMobile()
   const [showPast, setShowPast] = useState(false)
@@ -51,6 +51,8 @@ export default function WeekView({
       onAskToJoin={onAskToJoin ? (party) => onAskToJoin(day.key, group.resortKey, party) : undefined}
       askingPartyId={askingPartyId}
       askedPartyIds={askedPartyIds}
+      onLeave={onLeave ? () => onLeave(day.key) : undefined}
+      leaving={leavingKey === day.key}
     />
   )
 

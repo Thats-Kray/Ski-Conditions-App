@@ -16,6 +16,7 @@ import { buildPlanUpsert } from "../lib/planUpsert"
 import {
   getVisiblePlansInRange, getAcceptedFriends, getMyPartyMembershipsInRange, requestToJoinParty,
   getMyCrews, getCrewMembers, joinPlanAtResort, upsertDailyPlan,
+  deleteDailyPlan, leaveParty,
 } from "../lib/socialApi"
 
 
@@ -72,6 +73,7 @@ export default function FriendsCalendar({
   // True only when the editor was opened from "Add ski day" rather than by tapping a
   // specific day — that is the one case where the user still needs to choose the date.
   const [datePickable, setDatePickable] = useState(false)
+  const [leavingKey, setLeavingKey] = useState(null)
 
   const todayKey = localDateKey()
   const currentUserId = currentUser?.id || null
@@ -293,6 +295,41 @@ export default function FriendsCalendar({
    * of the range you are looking at — so the date starts somewhere near what is on screen
    * rather than always snapping to today while you browse next month.
    */
+  /**
+   * Back out of a day from the calendar itself.
+   *
+   * Deletes the plan rather than marking it cancelled: daily_plans is UNIQUE (user_id,
+   * ski_date) and has no "not going" state, so no row IS not going. Same call the profile's
+   * ski-plans tab already uses.
+   *
+   * Also leaves that day's party. If you are not skiing, you are not skiing WITH anyone — and
+   * a membership row left behind would silently put you back in the group if you planned that
+   * mountain again later. The plan delete goes first because it is the thing the user asked
+   * for; a failed party-leave afterwards is untidy but invisible, since attendees are built
+   * from plans.
+   */
+  async function handleLeavePlan(dateKey) {
+    const plan = myPlanByDate.get(dateKey)
+    if (!plan?.id || leavingKey) return
+
+    setLeavingKey(dateKey)
+    setJoinError(null)
+    try {
+      await deleteDailyPlan(plan.id)
+      try {
+        await leaveParty(dateKey)
+      } catch (err) {
+        console.error("[FriendsCalendar] left the plan but not the party:", err)
+      }
+      await loadPlans()
+    } catch (err) {
+      console.error("[FriendsCalendar] leave plan failed:", err)
+      setJoinError(err?.message || "Couldn't remove your plan.")
+    } finally {
+      setLeavingKey(null)
+    }
+  }
+
   function handleAddSkiDay() {
     if (!currentUserId) { onRequireLogin?.(); return }
     const seed = selectedDay || (todayKey >= start && todayKey <= end ? todayKey : start)
@@ -520,6 +557,8 @@ export default function FriendsCalendar({
             onAskToJoin={handleAskToJoin}
             askingPartyId={askingPartyId}
             askedPartyIds={askedPartyIds}
+            onLeave={handleLeavePlan}
+            leavingKey={leavingKey}
           />
         )
       ) : (
@@ -590,6 +629,8 @@ export default function FriendsCalendar({
                   onAskToJoin={(party) => handleAskToJoin(dateKey, g.resortKey, party)}
                   askingPartyId={askingPartyId}
                   askedPartyIds={askedPartyIds}
+                  onLeave={() => handleLeavePlan(dateKey)}
+                  leaving={leavingKey === dateKey}
                 />
               ))}
             </div>
@@ -625,6 +666,11 @@ export default function FriendsCalendar({
           onDateChange={datePickable ? setEditorDate : undefined}
           minDate={datePickable ? todayKey : undefined}
           onSave={handleEditorSave}
+          // The editor has always supported Remove; this page just never passed it, so the
+          // only way to undo a plan was from the profile tab.
+          onRemove={myPlanByDate.get(editorDate)
+            ? () => { setEditorDate(null); handleLeavePlan(editorDate) }
+            : undefined}
           onClose={() => { setEditorDate(null); setEditorSeedResort(null); setDatePickable(false) }}
         />
       )}

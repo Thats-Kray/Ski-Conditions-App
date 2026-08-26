@@ -42,6 +42,7 @@ export default function DayPlanCard({
   group, colorCtx, currentUserId, canJoin = false, joining = false,
   onJoin, onOpenTrip, compact = false, myResortKey = null, onEditPlan,
   myPlanHasEta = false, onAskToJoin, askingPartyId = null, askedPartyIds,
+  onLeave, leaving = false,
 }) {
   const openProfile = useProfileNav()
   const { resortKey, attendees, trip } = group
@@ -291,6 +292,29 @@ export default function DayPlanCard({
               }}
             >
               {myPlanHasEta ? "Edit plan" : "Add ETA"}
+            </button>
+          )}
+          {/* Changing your mind has to be possible from the card you changed it on. Saying
+              you're in was one tap here; backing out used to mean leaving for your profile.
+              A separate labelled button rather than making "✓ You're in" itself a toggle —
+              an accidental tap should not silently cancel your weekend. */}
+          {/* Only when YOUR PLAN is what puts you on this card. You can also be here via a
+              trip RSVP with no plan of your own, and there "Not going" would delete nothing —
+              a button that silently does nothing is worse than no button. Leaving a trip is a
+              different action, on the trip card. */}
+          {onLeave && canJoin && myResortKey === resortKey && (
+            <button
+              onClick={() => onLeave(resortKey)}
+              disabled={leaving}
+              style={{
+                background: "transparent", border: "none",
+                padding: compact ? "6px 4px" : "8px 6px", minHeight: compact ? 32 : 44,
+                fontSize: compact ? 10 : 11, fontWeight: 700,
+                color: "var(--color-text-3)", textDecoration: "underline",
+                cursor: leaving ? "wait" : "pointer", opacity: leaving ? 0.6 : 1,
+              }}
+            >
+              {leaving ? "…" : "Not going"}
             </button>
           )}
         </div>
