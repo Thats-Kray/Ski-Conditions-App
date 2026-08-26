@@ -1432,7 +1432,6 @@ export default function App() {
             resorts={rows}
             currentUser={currentUser}
             onTabChange={setActiveTab}
-            onStartSession={handleSessionStart}
             sessionActive={!!activeSession}
           />
         )}
