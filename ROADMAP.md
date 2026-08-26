@@ -1123,6 +1123,46 @@ A turned-down request says **"full"**, not "declined", and the host's optional n
 requester's **message inbox** as a DM, not into the notification body — a note starts a
 conversation and a notification is a dead end.
 
+## Post-launch fixes from Kyle's live testing (2026-08-26)
+
+All found by using the app, none by the test suite. Worth reading before the next sprint,
+because the same shapes will recur.
+
+**Two RSVP writers, one fix.** Migration 040's RLS refusal was translated in `rsvpToTrip` only.
+`TripDetailModal` uses `rsvpWithMessage`, so joining through the modal showed "Sending…" and
+then silently reverted. Both now share `asTripApprovalError()`. Fourth incident of patching
+call sites instead of the shared path.
+
+**A notification pointed somewhere empty.** A plan-party request routed correctly to the Plans
+calendar — where no approve/reject UI existed; it was buried in the Social tab's collapsed
+"Ski Invites" accordion. `getIncomingPartyRequests` had been written and rendered NOWHERE.
+There is now a request strip on the calendar itself. Auditing the rest under the rule "every
+notification lands somewhere you can act" turned up two more: approving a party request
+notified nobody, and "the trip is full" opened the trip the user had just been excluded from
+(whose chat they can no longer see, post-042) instead of the message inbox holding the note.
+
+**One rejection had a note, the other didn't.** Turning down a TRIP request offered a note and
+DM'd it; turning down a PLAN request sent a bare "No thanks" with nothing. Being turned down is
+the same moment for the person on the other end regardless of which object they asked about.
+Both paths now: "Full"/"Full group" → note field opens BEFORE the decision is sent (otherwise
+it could never be written) → optional note goes to their message inbox as a DM.
+
+**One deliberate asymmetry, kept:** declining an INVITATION sends nothing. That is you saying
+no to someone else's offer, and you do not owe an explanation for it.
+
+## What this sprint proved about testing here
+
+- **Assert the success case, not just the denials.** Migration 041 refused EVERY member vote
+  and would have shipped; the suite checked that strangers were blocked, which passed.
+- **Enumerate, do not spot-fix.** The reported chat leak was seven tables, not one, and
+  `trip_media`/`trip_recaps` were already correct — the pattern existed and had not been
+  applied.
+- **The lint baseline earns its keep.** Holding 88 caught a real `handleVote` name collision
+  (the Interested buttons would have called the poll handler) and a setState-in-effect cascade.
+- **Verify the deploy by grepping the served bundle**, not by hash. Vercel hashes differ from a
+  local build, and a rapid second push can leave you verifying the intermediate bundle — which
+  happened once here and read as success until re-checked.
+
 ### TASK 19.1 — Per-crew ski plan visibility (OPEN) — **Size: M** — migration **044**
 
 **Re-scoped 2026-08-25. This is smaller than it used to be.** Migration 037 already
