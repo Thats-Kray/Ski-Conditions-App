@@ -15,6 +15,7 @@ import { formatDate } from "../lib/format"
 import { buildPlanUpsert } from "../lib/planUpsert"
 import {
   getVisiblePlansInRange, getAcceptedFriends, getMyPartyMembershipsInRange, requestToJoinParty,
+  getIncomingPartyRequests, respondToCrewInvite,
   getMyCrews, getCrewMembers, joinPlanAtResort, upsertDailyPlan,
   deleteDailyPlan, leaveParty,
 } from "../lib/socialApi"
@@ -74,6 +75,8 @@ export default function FriendsCalendar({
   // specific day — that is the one case where the user still needs to choose the date.
   const [datePickable, setDatePickable] = useState(false)
   const [leavingKey, setLeavingKey] = useState(null)
+  const [partyRequests, setPartyRequests] = useState([])
+  const [decidingRequestId, setDecidingRequestId] = useState(null)
 
   const todayKey = localDateKey()
   const currentUserId = currentUser?.id || null
@@ -81,6 +84,10 @@ export default function FriendsCalendar({
   // ── Static blocks: load once, cached across date navigation ──────────────
   const STATIC_LOADERS = useMemo(() => [
     { key: "friends", label: "your friends list", fn: getAcceptedFriends, apply: (v) => setFriends(v || []), fallback: [] },
+    // People asking to ski WITH me. In the registry rather than a bare fetch so a failure
+    // surfaces as a retryable notice instead of an empty strip that looks like "no requests".
+    { key: "partyRequests", label: "requests to ski with you", fn: getIncomingPartyRequests,
+      apply: (v) => setPartyRequests(v || []), fallback: [] },
     { key: "crews", label: "your crews", fallback: { rows: [], pairs: [] },
       fn: async () => {
         const rows = await getMyCrews()
@@ -341,6 +348,31 @@ export default function FriendsCalendar({
     }
   }
 
+  /**
+   * Approve or turn down someone asking to ski with me on a given day.
+   *
+   * Lives here, on the calendar, because that is where the notification sends you. It used to
+   * exist only in the Social tab's collapsed "Ski Invites" accordion, so tapping the
+   * notification landed you on a calendar with nothing to act on — which is exactly what Kyle
+   * reported.
+   *
+   * Accepting routes through respondToCrewInvite, which calls accept_plan_party and wires the
+   * membership; the calendar then reloads so they appear in the group immediately.
+   */
+  async function handlePartyRequest(inviteId, status) {
+    if (decidingRequestId) return
+    setDecidingRequestId(inviteId)
+    try {
+      await respondToCrewInvite(inviteId, status)
+      await Promise.all([runStatic(["partyRequests"]), loadPlans()])
+    } catch (err) {
+      console.error("[FriendsCalendar] party request decision failed:", err)
+      setJoinError(err?.message || "Couldn't respond to that request.")
+    } finally {
+      setDecidingRequestId(null)
+    }
+  }
+
   function handleAddSkiDay() {
     if (!currentUserId) { onRequireLogin?.(); return }
     const seed = selectedDay || (todayKey >= start && todayKey <= end ? todayKey : start)
@@ -473,6 +505,66 @@ export default function FriendsCalendar({
         friendFilterCount={friendFilterCount}
       />
 
+      {/* People asking to ski WITH you, answerable right here.
+          This is where the notification lands, so this is where the decision has to live —
+          sending someone to a calendar and making them hunt the Social tab for the Approve
+          button is the same as sending them nowhere. Sorted soonest-first: the day that is
+          almost here is the one you need to answer. */}
+      {partyRequests.length > 0 && (
+        <div style={{ display: "grid", gap: 6 }}>
+          {[...partyRequests]
+            .sort((a, b) => (a.ski_date || "").localeCompare(b.ski_date || ""))
+            .map((req) => {
+            const who = req.requester_profile?.full_name
+              || req.requester_profile?.username
+              || "Someone"
+            const busy = decidingRequestId === req.id
+            return (
+              <div key={req.id} style={{
+                display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+                padding: "10px 12px", borderRadius: 12,
+                background: "var(--color-accent-dim)",
+                border: "1px solid var(--color-accent)",
+              }}>
+                <div style={{ flex: 1, minWidth: 160 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-text-1)" }}>
+                    {who} wants to ski with you
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--color-text-2)", marginTop: 1 }}>
+                    {resortName(req.resort_key) || req.resort_key} · {formatDate(req.ski_date)}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  <button
+                    onClick={() => handlePartyRequest(req.id, "accepted")}
+                    disabled={busy}
+                    style={{
+                      background: "var(--gradient-cta)", color: "white", border: "none",
+                      borderRadius: 10, padding: "8px 14px", minHeight: 40,
+                      fontSize: 12, fontWeight: 900, cursor: busy ? "wait" : "pointer",
+                    }}
+                  >
+                    {busy ? "…" : "Add to my group"}
+                  </button>
+                  <button
+                    onClick={() => handlePartyRequest(req.id, "declined")}
+                    disabled={busy}
+                    style={{
+                      background: "transparent", color: "var(--color-text-3)",
+                      border: "1px solid var(--color-border)", borderRadius: 10,
+                      padding: "8px 12px", minHeight: 40,
+                      fontSize: 12, fontWeight: 700, cursor: busy ? "wait" : "pointer",
+                    }}
+                  >
+                    No thanks
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       {/* Add a ski day without leaving the Plans tab. This used to live only on
           Profile > Ski Plans, so planning a day meant going to your profile and coming back
           to the calendar you were already looking at. */}
@@ -493,6 +585,9 @@ export default function FriendsCalendar({
       {failed.plans && <FailureNotice label="this week's plans" onRetry={loadPlans} />}
       {failed.crews && <FailureNotice label="your crews" onRetry={() => runStatic(["crews"])} />}
       {failed.friends && <FailureNotice label="your friends list" onRetry={() => runStatic(["friends"])} />}
+      {failed.partyRequests && (
+        <FailureNotice label="requests to ski with you" onRetry={() => runStatic(["partyRequests"])} />
+      )}
       {joinError && (
         <FailureNotice
           message={`Couldn't save your plan (${joinError})`}

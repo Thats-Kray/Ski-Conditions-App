@@ -151,8 +151,12 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
     if (targetType === "trip" && targetId && onOpenTrip) {
       onOpenTrip(targetId)
     } else if (targetType === "plan" && onOpenPlan) {
-      // A ski-plan day, not a trip — opens the Plans calendar on that date.
+      // A ski-plan day, not a trip — opens the Plans calendar on that date, where the
+      // approve/decline strip for that day lives.
       onOpenPlan(targetId)
+    } else if (targetType === "messages" && onTabChange) {
+      // Where the host's note is. Used by "the trip is full" — see notifyRequestDecision.
+      onTabChange("friends")
     } else if (notif.type === "friend_request" && onTabChange) {
       onTabChange("friends")
     } else if (onTabChange) {

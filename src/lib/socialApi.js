@@ -1214,7 +1214,35 @@ export async function respondToCrewInvite(inviteId, status) {
 
   if (readError) throw readError
 
+  // Approving somebody's request has to tell THEM. Without this the requester never learns
+  // they were added — they would have to reopen the calendar and notice. Only for requests:
+  // an accepted invitation is the invitee acting on their own choice, and telling them what
+  // they just did is noise.
+  if (status === "accepted" && existing.kind === "request" && existing.inviter_id !== user.id) {
+    notifyPartyJoined(existing).catch(() => {})
+  }
+
   return updatedInvite
+}
+
+async function notifyPartyJoined(invite) {
+  try {
+    const { data: me } = await supabase
+      .from("profiles").select("full_name, username").eq("id", invite.invitee_id).single()
+    const who = me?.full_name || me?.username || "They"
+
+    await insertNotification({
+      userId: invite.inviter_id,
+      type: "party_joined",
+      title: `${who} added you to their group`,
+      body: `${resortName(invite.resort_key) || "Skiing"} · ${formatDate(invite.ski_date)}`,
+      actorId: invite.invitee_id,
+      targetType: "plan",
+      targetId: invite.ski_date,
+    })
+  } catch (e) {
+    console.warn("notifyPartyJoined failed:", e)
+  }
 }
 
 /* -----------------------------
@@ -1279,7 +1307,18 @@ export async function getIncomingPartyRequests() {
     .order("created_at", { ascending: false })
 
   if (error) throw error
-  return data || []
+  if (!data || data.length === 0) return []
+
+  // Profiles fetched separately, not embedded: crew_invites.inviter_id references auth.users,
+  // not profiles, so PostgREST has no relationship to traverse. Same trap as
+  // getIncomingTripRequests and getReceivedCrewInvites.
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .in("id", [...new Set(data.map((r) => r.inviter_id).filter(Boolean))])
+
+  const byId = new Map((profiles || []).map((p) => [p.id, p]))
+  return data.map((r) => ({ ...r, requester_profile: byId.get(r.inviter_id) || null }))
 }
 
 /**
@@ -1833,6 +1872,12 @@ async function notifyRequestDecision(invite, decision) {
         ? "Tap to see the crew and the details."
         : "The host sent you a message.",
       tripId: invite.trip_id,
+      // Approved: open the trip. Turned down: open messages, where the host's note actually
+      // is. Opening the trip would land them on something they were just told they are not
+      // part of — and since migration 042 they cannot see its chat anyway, so it would be a
+      // conspicuously empty page.
+      targetType: decision === "approved" ? "trip" : "messages",
+      targetId: decision === "approved" ? invite.trip_id : null,
     })
   } catch (e) {
     console.warn("notifyRequestDecision failed:", e)
