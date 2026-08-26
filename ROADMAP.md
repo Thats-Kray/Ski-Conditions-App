@@ -7,6 +7,16 @@ See `UX_CLEANUP.md` for the original UX polish tasks (Tasks 1–12).
 See `PRD.md` for full feature requirements and data architecture.
 See `sprints/` for execution-ready, task-by-task implementation plans (one file per task, self-contained agent briefs) — see **"Sprint Plan Coverage"** near the bottom of this file for the full map and recommended execution order.
 
+> **👉 Looking for what to work on next? Jump to "OPEN — the queue" and the sprint-sequence
+> table below it.** Sections 0-18 above are historical record; nearly all of it is shipped.
+> Groomed 2026-08-25 — every open item now carries a size estimate.
+>
+> **State as of that grooming:** migrations `001-041` applied; `npm test` = **126 passing**
+> (`node --test src/lib/*.test.js`); `npx eslint .` baseline = **88 problems (80 errors,
+> 8 warnings) — not zero, don't "fix" it incidentally**. Live at powdays.app; Vercel serves
+> the frontend from GitHub `main`, API and cron on Render (**`railway.json` is stale**).
+> Pushing to `main` ships to production with **no staging step**.
+
 ---
 
 ## SECTION 0 — Application Theme & Design System
@@ -643,26 +653,25 @@ rows and no code path (the app uses `crews`/`crew_members`). Also fixed:
 `daily_plans.status` defaulted to `'planning'`, a value its own CHECK constraint
 (`planned|driving|arrived`) rejects — every INSERT omitting `status` failed.
 
-### TASK 18.1 — Retire `daily_plans.group_id` and the `'groups'` visibility value
-- [ ] `group_id` FKs to `groups`, which has 0 rows and no code path.
-- [ ] `visibility='groups'` is now unreachable — such a plan is visible to nobody
-      but its owner. Migration 032 left both in place as the non-destructive
-      choice; removing them needs its own migration.
+### TASK 18.1 — ~~Retire `daily_plans.group_id` and the `'groups'` visibility value~~ — ✅ COMPLETE (migration 037)
+**DONE — Sprint 38.** `migrations/037_plan_parties.sql:271-275` drops the `group_id` column
+and rewrites the `daily_plans` visibility CHECK to `('friends','private')`. Both `group_id`
+and `'groups'` are gone. Closed 2026-08-25 during backlog grooming; the work shipped with
+plan parties and the checkbox was never ticked.
 
 ### TASK 18.2 — ~~`getCrewMembers()` returns pending members~~
 **DONE — Sprint 35.** `getCrewMembers` now takes `{ includePending = false }`; it filters to `status = 'active'` by default so the friends calendar cannot color or count a pending invitee into a crew, while `CrewGroupChat` passes `includePending: true` and renders pending rows with an "Invited" pill. The Sprint 34 note that RLS already hid these rows was **wrong** — migration 035's policy returns every row of a crew you are active in, pending included, which is why an unconditional filter regressed the invite flow.
 
-- [ ] The crew chips on the shared calendar include members whose `crew_members.status`
-      is `'pending'`, because `getCrewMembers` neither selects nor filters `status`.
-      Harmless today (RLS still won't return a non-friend pending member's plans,
-      and `shares_crew_with()` correctly requires `active` on both sides), but the
-      chip's member set and the RLS grant disagree. Filter at the query.
+_(Original open bullet removed 2026-08-25 during grooming — the filter described here is
+what Sprint 35 shipped. The checkbox was left live under a DONE heading for three sprints.)_
 
 ### TASK 18.6 — Project-wide `anon` grants (hardening, open)
-- [ ] `anon` holds table-level UPDATE on **47** tables in `public` — the stock Supabase
-      `GRANT ALL` default, not something Sprints 33/34 introduced. Migration 036 revoked
-      it only on `friend_requests` and `crew_members`, the two tables whose column
-      scoping 033/034 established, so that invariant now holds for both client roles.
+- [ ] **Re-measured against the live DB 2026-08-25 — this is bigger than first recorded.**
+      The original entry said "UPDATE on 47 tables." In fact `anon` holds **INSERT, DELETE,
+      TRUNCATE, REFERENCES and TRIGGER on 47 tables**, SELECT on 46, and UPDATE on 45. It is
+      the stock Supabase `GRANT ALL` default, not something Sprints 33/34 introduced.
+      Migration 036 revoked only on `friend_requests` and `crew_members`, the two tables
+      whose column scoping 033/034 established.
 - [ ] Not currently exploitable anywhere it was checked: every RLS policy on those
       tables is `TO authenticated`, so an `anon` request matches zero rows. The risk is
       latent — a future policy written `TO public` would silently re-open write access.
@@ -742,11 +751,8 @@ visible to any single task's reviewer:
 ### TASK 18.4 — ~~`getCrewMembers()` returns pending members~~ (duplicate of 18.2)
 **DONE — Sprint 35.** `getCrewMembers` now takes `{ includePending = false }`; it filters to `status = 'active'` by default so the friends calendar cannot color or count a pending invitee into a crew, while `CrewGroupChat` passes `includePending: true` and renders pending rows with an "Invited" pill. The Sprint 34 note that RLS already hid these rows was **wrong** — migration 035's policy returns every row of a crew you are active in, pending included, which is why an unconditional filter regressed the invite flow.
 
-- [ ] The crew chips on the shared calendar build their member sets from
-      `getCrewMembers`, which neither selects nor filters `crew_members.status`, so
-      a pending invitee is attributed to a crew they never joined. Cosmetic while
-      TASK 18.3 is open (RLS still won't return a non-friend pending member's
-      plans), but the chip's member set and `shares_crew_with()` disagree.
+_(Original open bullet removed 2026-08-25 during grooming. This task is a duplicate of
+18.2 and shipped with it in Sprint 35.)_
 
 **A second whole-branch review pass found 6 more, all fixed except 18.3/18.4:**
 1. **Security, fixed in migration 033:** `friend_requests_insert_own` constrained
@@ -789,7 +795,10 @@ block a real pending crew invitee (`without_guard: true`, `with_active_guard: fa
 
 ## Progress Summary
 
-*Last verified against actual code/migrations/git history 2026-08-06 (not just checkbox state — see [[project_2026_08_roadmap_completion]], [[project_2026_08_04_mountain_page_session]], and [[project_2026_08_06_premium_ui_uplift_session]] memory).*
+*Last verified against actual code/migrations/git history **2026-08-25** (not just checkbox
+state). That verification is what closed 18.1, 18.2, 18.4 and 19.7 — all four were done, and
+all four still carried live `- [ ]` boxes. **Checkbox state in this file has proven unreliable
+three sprints running; verify against the migration or the source file before trusting it.***
 
 All sprints 1–33 are merged to `main`, pushed, and live on powdays.app — including Mountain Board (Section 11), the Mountain Page/Krames Butte architecture (Section 12), the Premium UI Uplift redesign (Section 13), the Section 10 theme-switching MVP, Trust Tier & Verification Infrastructure (Section 14), the Ski Buddy Board (Section 15), Debt Clearing (Section 16), and the Strava token exposure fix (Section 17). Migrations 023–031 are all applied to the live Supabase project.
 
@@ -817,8 +826,13 @@ Sprints 32 and 33 were verified on the live app by Kyle on 2026-08-17. Both spri
 | 15 — Ski Buddy Board | 2 | 2 (Task 15.1 completed in Sprint 32 — see Section 16) |
 | 16 — Debt Clearing (Sprint 32) | 4 | 4 |
 | 17 — Profile Token Exposure (Sprint 33) | 4 | 4 (migration 030 was a no-op; migration 031 closed it — see task notes) |
-| 18 — Friend Profiles & Ski Plan Calendar (Sprint 34) | 6 | 2 (18.3 SECURITY fix as migration 034, 18.5 crew-invite visibility as migration 035; 18.1/18.2/18.4/18.6 remain deliberate follow-ups) |
-| **Total** | **50** | **44** |
+| 18 — Friend Profiles & Ski Plan Calendar (Sprint 34) | 6 | 5 (18.1 closed by migration 037; 18.2/18.4 shipped Sprint 35; 18.3 migration 034; 18.5 migration 035. **Only 18.6 `anon` grants remains open.**) |
+| 19 — Sprint 37 correctness & ETA | 7 | 6 (**19.1 per-crew visibility still open** — re-scoped, now migration 042) |
+| 20 — Sprints 38-40: parties, arrivals, trip authorization | 3 | 3 (migrations 037-041) |
+| **Total** | **60** | **53** |
+
+*Counts corrected 2026-08-25. The previous total (50/44) predated Sprints 35-40 and carried
+four items as open that had already shipped.*
 
 Task 0.2's hex-token cleanup is complete (2026-08-08) — Section 0 is fully done. `migrations/023_mountain_events.sql` (Section 13) and `migrations/024_theme_preference.sql` (Section 10) are both applied to the live Supabase project (2026-08-08). Section 10's theme-switching MVP is implemented and its migration is live, but `npm run lint` and a visual pass across all 5 themes haven't been run yet, and full app-wide theming beyond the MVP scope remains unscheduled follow-up work — see Section 10's task notes.
 
@@ -979,39 +993,236 @@ Each task is one commit, so any of them can be bisected or reverted independentl
 
 ---
 
-# Sprint 38 — queued
+# Sprints 38-40 — SHIPPED 2026-08-25 (migrations 037-041)
 
-### TASK 19.1 — Per-crew ski plan visibility (OPEN)
-- [ ] Kyle's ask: when setting visibility, choose **all friends** or **multi-select
-      specific crews** — "people might want to hide where they're going from some people
-      or groups."
-- [ ] Split out of Sprint 37 deliberately: it is the only item that rewrites a production
-      RLS policy and a CHECK constraint on live user data, and bundling that with 19
-      unrelated date-key edits would make a live failure hard to bisect.
-- [ ] **The trap, confirmed verbatim in migration 032's own comments (`032:30-36`):** the
-      SELECT policy at `032:101-109` keys off `visibility <> 'private'` — a **blacklist of
-      one value**. ANY new value is automatically readable by every friend and active
-      crewmate, which is the exact thing the feature exists to prevent.
-- [ ] **Recommended storage: a `visible_crew_ids uuid[]` column, NOT a join table.** A
-      `daily_plan_crews` table forces a two-table write, which breaks the invariant that
-      every plan write goes through one whole-row `buildPlanUpsert()`, and would need a
-      SECURITY DEFINER RPC to stay atomic (`create_crew` at `034:53-96` is the precedent).
-      An array column keeps the write single-row and `buildPlanUpsert` unchanged — one
-      more field in the merge, with a reset rule shaped like the existing `arrived_at`
-      invariant at `planUpsert.js:85`. Bounded set, no recursion risk, unit-testable.
-- [ ] Migration 037 must also: rewrite the policy as a **whitelist**; add `'crews'` and
-      drop `'groups'` from the CHECK (**the constraint has no name in the repo** —
-      `daily_plans` predates `migrations/001` — so use a `DO` block that looks it up in
-      `pg_constraint`); drop the dead `group_id` column (TASK 18.1, confirmed zero readers
-      in `src/`); add ONE `STABLE SECURITY DEFINER SET search_path = public` helper and
-      **never an inline `EXISTS` on another RLS-protected relation**, which is why
-      `20260515_crew_rls_fix.sql` and `022_fix_kramesbutte_rls_auth_users.sql` exist; and
-      revoke from `anon` as well as `authenticated`, per migration 036's lesson.
+_Recorded 2026-08-25 during backlog grooming. All of this shipped in one day and none of it
+was written down at the time — the rationale below was recovered from commit bodies before it
+drifted out of reach. The previous heading here read "Sprint 38 — queued / TASK 19.1", which
+was wrong: Sprint 38 shipped as plan parties, and **19.1 is still open** (re-scoped below)._
 
+## Sprint 38 — Plan parties (migrations 037, 038)
 
-Instructions: When asked "what can we work on next?" refer to this list for potential items to add to the next sprint development.
+**The model that now governs both plans and trips.** Kyle's correction:
 
-Last updated 8/13/2026 at 3:49PM
+- **Where you ski** — not ownable, and NEVER gated. The plan editor lets anyone pick any
+  resort, so a gate is bypassable *and* would mean asking permission to record your own
+  weekend. The button says **"I'm also going"**, not "I'm in" — the label was the lie.
+- **Who you ski WITH** — ownable. Invite, or a request the owner approves.
+
+One model, not two. It applies to plan parties AND to trips.
+
+**Visibility rule:** sharing a party reveals that party's **DATE only**. The rest of a
+non-friend's calendar stays hidden until they are friends. Hence `in_my_party(other, DATE)` —
+**a party helper taking one argument is a bug**, because it matches the PERSON and would leak
+the whole calendar after a single shared day.
+
+- `037` — `plan_parties` + `plan_party_members`. Membership is a **join table, NOT
+  `daily_plans.party_id`**: a column would sit in the blast radius of `upsertDailyPlan`, which
+  writes the whole row and has already caused three bugs by nulling omitted fields. The
+  `daily_plans` visibility CHECK became `('friends','private')`; `group_id` and `'groups'`
+  retired (closes TASK 18.1). The SELECT policy is now a **WHITELIST**, so a new visibility
+  value is invisible until explicitly added rather than silently over-shared.
+- `038` — `accept_plan_party()`. One function for both directions, because in both the actor
+  is `crew_invites.invitee_id`.
+
+## Sprint 39 — Arrivals count as ski days (migration 039)
+
+- A **trigger**, not app code: `daily_plans.status='arrived'` writes a `ski_sessions` row.
+  Several paths set `arrived`, and a hand-maintained writer census is exactly what caused
+  TASK 19.6.
+- Normalised `ski_sessions.resort_name` to keys. It was stored as both `'vail'` and `'Vail'`,
+  and the table is UNIQUE on it — so the same day logged two ways counted as two ski days.
+
+## Sprint 40 — Trips: authorization and the join flow (migrations 040, 041)
+
+**RLS on trips had been enforcing nothing.** `trip_rsvps ALL USING (user_id = auth.uid())`,
+`ski_trips SELECT USING (true)`, `trip_invites SELECT USING (true)` — any stranger could RSVP
+to any trip and read every trip and every invite in the app. Now invite-or-approval, with
+`approve_trip_request()`. Four pre-existing uninvited RSVPs are grandfathered: INSERT is
+restricted, but UPDATE/DELETE stay open so nobody is trapped in a trip.
+
+- `041` — `trip_request_votes`. **Members advise, the host decides.** There is deliberately
+  **no threshold at which yes-votes admit anyone**; admission runs only through
+  `approve_trip_request()`. The requester never sees the votes — RLS keeps them out of the
+  list until approved, so they cannot see who voted against them. No new "interested" record
+  was needed: a `trip_invites` row with `kind='request'` already means exactly that.
+
+## Two bugs Kyle found by live testing
+
+- **Two plan cards for himself on one day.** He never had two plans — the calendar drew him
+  from his plan AND from a stale trip RSVP. The dedupe was scoped **per mountain**, so it
+  could not see one listing at each of two. Now keyed on `userId|day`.
+- **Could join a trip uninvited** — which turned out to be the 040 hole above.
+
+## ⚠️ THE RECURRING LESSON — now five incidents
+
+Every one of these failures came from an **incomplete census of writers/paths**, never from
+the code being changed:
+
+1. `buildPlanUpsert`'s own comment said "four writers" and was wrong by one.
+2. TASK 19.6 — `respondToCrewInvite` wrote an illegal visibility.
+3. A missed `daily_plans` writer un-privated users' plans in production.
+4. `3a100ed` — **two** writers to `trip_rsvps` (`rsvpToTrip` and `rsvpWithMessage`), and the
+   RLS-refusal translation was added to one. The modal used the other and failed silently:
+   "Sending…" then a quiet revert, with `console.warn(e)` and nothing else. This was the same
+   census mistake **that had just been documented one commit earlier.**
+5. Migration **041's first version broke the inline-`EXISTS` rule** and refused EVERY member
+   vote — the policy read `trip_invites` inline, and that table is invisible to non-host
+   members.
+
+**The fix is never to patch each call site.** Move the invariant somewhere it cannot be
+bypassed — a trigger, an RPC, a policy, or one shared function (`asTripApprovalError()` is
+the current example). Assume any writer census in a comment is already stale.
+
+## ⚠️ A POLICY TEST THAT ONLY CHECKS DENIALS IS NOT A TEST
+
+Incident #5 above was caught **only** because the test asserted that a member vote
+**SUCCEEDS**. Every denial assertion still passed while the feature was completely broken —
+a policy that refuses everyone denies exactly as well as a correct one.
+
+**Always assert the success case.** This applies directly to TASK 19.1 below: a `'crews'`
+visibility branch that silently refuses everybody will pass any test suite built only from
+"stranger cannot read" assertions.
+
+**Also worth keeping:** the 88-problem lint baseline earned its keep in `0af28a9`. A new
+`handleVote` collided with an existing `handleVote` in the same component — two declarations
+in one scope means the later wins, so the new buttons would have silently called the poll
+handler. Lint caught it as "already defined." One new error was a real bug, not noise.
+
+---
+
+# OPEN — the queue
+
+### TASK 19.1 — Per-crew ski plan visibility (OPEN) — **Size: M** — migration **042**
+
+**Re-scoped 2026-08-25. This is smaller than it used to be.** Migration 037 already
+restructured the SELECT policy from a blacklist into a whitelist, which was the dangerous
+part. `037:42-43` says so verbatim: *"this does NOT add the 'crews' visibility value or
+visible_crew_ids (TASK 19.1). The policy is restructured as a whitelist so 19.1 is one extra
+OR branch later."* The old blacklist-trap and `group_id` bullets here are resolved; the old
+text said "Migration 037 must also…", but **037 through 041 are all taken — this is 042.**
+
+- [ ] **Kyle's ask:** when setting visibility, choose **all friends** or **multi-select
+      specific crews** — "people might want to hide where they're going from some people or
+      groups."
+- [ ] **Storage: a `visible_crew_ids uuid[]` column, NOT a join table.** A `daily_plan_crews`
+      table forces a two-table write, breaking the invariant that every plan write goes
+      through one whole-row `buildPlanUpsert()`, and would need a SECURITY DEFINER RPC to stay
+      atomic. An array keeps the write single-row. Bounded set, no recursion risk, unit-testable.
+- [ ] Add `'crews'` to the visibility CHECK. **The constraint is unnamed** (`daily_plans`
+      predates `migrations/001`) — look it up with a `DO` block over `pg_constraint`.
+- [ ] One extra OR branch on the whitelist policy, backed by **one** `STABLE SECURITY DEFINER
+      SET search_path = public` helper. **Never an inline `EXISTS` against another
+      RLS-protected relation** — that is why `20260515_crew_rls_fix.sql` and
+      `022_fix_kramesbutte_rls_auth_users.sql` had to exist, and **migration 041 broke this
+      exact rule again on its first attempt** (incident #5 above). This trap has now fired
+      three times; treat it as the single most likely way 042 goes wrong.
+- [ ] **Test the SUCCESS case, not just denials.** See the policy-test warning above — 041's
+      breakage was invisible to every denial assertion.
+- [ ] Revoke from `anon` as well as `authenticated` (migration 036's lesson).
+- [ ] `src/lib/planUpsert.js`: one merge field + a reset rule shaped like the existing
+      `arrived_at` invariant at `:85`. Extend `planUpsert.test.js`.
+- [ ] Multi-select UI in `PlanEditorModal.jsx`.
+
+**Risk: rewrites a production RLS policy and a CHECK constraint on live user data. Ship it
+alone, not bundled.** Dry-run in a rolled-back transaction against live data first.
+
+### TASK 1.1-T — Component test harness — **Size: M** — ⚠️ highest-leverage item open
+
+`npm test` is `node --test src/lib/*.test.js`: **126 tests, 7 files, all in `src/lib`, no
+DOM.** Zero components are under test — including the ~3,600-line Social tab and the
+1,761-line `TripDetailModal.jsx`. Every UI change in Sprints 38-40 is unverified, and **both**
+bugs above were found by Kyle clicking around, not by CI.
+
+That is a tax on every future sprint, which is why it sorts first.
+
+- [ ] Add Vitest + `@testing-library/react`. Vitest reuses the existing Vite config instead of
+      standing up a parallel toolchain — `vite` and `@vitejs/plugin-react` are already dev deps.
+- [ ] **This knowingly breaks the "no new deps" convention.** That convention earned its keep
+      when the alternative was a second build system. Here the cost of *not* having component
+      tests is now demonstrated, twice, in one day.
+- [ ] Keep `node --test` for `src/lib` (126 green — don't churn them). Add `npm run test:ui`.
+- [ ] First targets, chosen by risk: `calendar/DayPlanCard.jsx` (the `userId|day` dedupe that
+      broke), `PlanEditorModal.jsx` (the write path into `buildPlanUpsert`), `TripDetailModal`'s
+      RSVP handlers (the silent-failure path from incident #4).
+- [ ] **Lint baseline is 88 problems (80 errors, 8 warnings).** Not zero. Don't let a new
+      config raise it, and don't "fix" the baseline incidentally.
+
+### TASK 19.5b — `UserProfileModal` Escape + focus trap — **Size: XS**
+
+TASK 19.5 built `src/lib/useDismissableLayer.js` but **left `UserProfileModal` out of scope**,
+and it's still out: verified 2026-08-25, the file has zero `keydown`/`Escape` handling. Only
+`PlanEditorModal` and `CalendarFilterSheet` adopted the hook.
+
+- [ ] **Reuse `useDismissableLayer` — do not write new dismissal logic.**
+- [ ] 5 call sites (`TodaysCrew`, `CrewGroupChat`, `PowderMap`, `FriendsPage`,
+      `ui/AvatarStatusRail`), all with an identical `userId`/`onClose` prop shape, so one hook
+      swap covers all five. Natural first customer for the harness above.
+
+### TASK 20.1 — Migration lineage decision — **Size: S**
+
+Two competing lineages and nothing declares which is authoritative: `migrations/` (001-041,
+sequential, no gaps) and `supabase/migrations/` (15 date-named `20260515_*` files). Decide,
+note it in one line at the top of both directories. Cheap now; a real trap for whoever writes
+042 without knowing.
+
+### TASK 20.2 — Dead-table cleanup — **Size: XS**
+
+`group_members` and `resort_bookmarks` have RLS enabled, **zero policies, and zero code
+references** (verified against the live DB 2026-08-25). RLS-on-with-no-policy is deny-all, so
+they are inert. Drop them, or record why they stay. Note `moderation_flags` also has zero
+policies but is **correct** — `server/index.js:833` writes it with the service-role key,
+which bypasses RLS.
+
+### TASK 20.3 — `VITE_API_URL` fallback duplicated in 5 places — **Size: S**
+
+`App.jsx:291`, `StravaConnect.jsx:7`, `StravaSyncReview.jsx:5`, `TripDetailModal.jsx:61`,
+`socialApi.js:231` each carry their own `http://localhost:8787` fallback. Five sources of
+truth for one config value. A config bug waiting to happen.
+
+### TASK 20.4 — Resort coordinates hardcoded in 3 places — **Size: S**
+
+`App.jsx`'s `RESORTS` constant, `server/index.js`, and the `resort_coordinates` table.
+Recorded 2026-08-12, still true.
+
+### TASK 20.5 — Mountain Board Tier 1 gating — **Size: S**, product decision first
+
+A Tier 0 account can still post to Mountain Board inside a geofence. Open question from the
+Ski Buddy memo that was never migrated into this document. Decide whether that's intended.
+
+---
+
+## Deliberately NOT doing: rename `crew_invites` / `trip_invites`
+
+Logged as a task in the Sprint 38 plan doc and never tracked. Both are genuinely misnamed —
+neither has a `crew_id`, and both are really per-day/per-trip membership records.
+
+**Recommendation: don't.** ~74 occurrences across 12 files, but the table rename is the
+*small* part: the JS API surface is 130+ identifiers concentrated in `socialApi.js`, already
+the hottest file in the repo at 3,695 lines. `038:39` declares `v_inv crew_invites;` as a
+**row type**, which breaks silently under a view shim. Zero user-visible benefit. Revisit only
+if `socialApi.js` is being split anyway.
+
+---
+
+## Sprint sequence (set 2026-08-25 — Kyle's lens: throughput → features → security/debt)
+
+| Sprint | Contents | Size |
+|---|---|---|
+| **42** | TASK 1.1-T component test harness + first 3 suites | M |
+| **43** | TASK 19.1 per-crew visibility (migration 042, **alone**) | M |
+| **44** | Social tab IA — **design session first**, then implementation | L |
+| **45** | TASK 18.6 `anon` grants audit + revoke | M |
+| **46** | Debt bundle: 20.2, 20.3, 20.4 + deferred minors | S |
+
+Quick wins droppable into any sprint: TASK 19.5b (XS), TASK 20.1 (S), TASK 20.2 (XS).
+
+**Blocked on Kyle, not on code:** TASK 14.1 OAuth credentials (~45 min of console setup;
+until then `linkOAuthIdentity()` fails with "Unsupported provider" and Tier 1 verification is
+unreachable) and `OPENAI_API_KEY` (~5 min, one env var on **Render** — not Railway,
+`railway.json` is stale; `server/moderation.js:8` no-ops safely without it).
+
+---
 
 # Improvements
 -Community section (Social tab) — revisit how the pages are layered. Kyle, 2026-08-13 after
@@ -1032,20 +1243,27 @@ to join. Week view is the decision tool (7 columns on desktop, stacked day rows 
 month view is the planning tool. Trips fold into the matching mountain card as a badge.
 Spec: `docs/superpowers/specs/2026-08-18-friends-calendar-design.md`.
 
--**Social tab UI cleanup.** The Social tab layout is messy — it now stacks a 4-way
+-**Social tab UI cleanup — Size: L (design pass FIRST).** The real root is
+`MessagingCenter.jsx` (939 lines), composing `FriendsPage` (973), `CrewGroupChat` (842),
+`ActivityFeed`, `TripChatView`, `DirectMessageView`, `SkiPingModal`, `DateMatchmaker` —
+**~3,600 lines.** "Three levels deep before a post" is an information-architecture problem,
+and no amount of refactoring fixes a layout decision that hasn't been made. Split it: a
+design session producing a target IA, *then* an implementation sprint against it. **Do not
+start this as a code task, and sequence it after the test harness** — restructuring 3,600
+untested lines is how you ship regressions you can't see. The original note follows.
+
+The Social tab layout is messy — it now stacks a 4-way
 sub-tab bar (Leaderboard / Crews / Friends / Community) inside MessagingCenter's own
 Chats/People/Activity shell, so there are two competing levels of navigation before any
 content. Sprint 34 added a fifth surface (full friend profiles) reachable from it. Needs
 a real information-architecture pass, not just spacing tweaks.
-  - **Include the load-resilience fix here.** `FriendsPage.loadPageData()` awaits ten
-    calls in a single `Promise.all`, so one rejection blanks the entire tab — this is
-    exactly what happened on 2026-08-18, when a stale-bundle `profiles` 403 made the
-    whole friends list vanish behind a raw Postgres error toast. Deliberately deferred
-    out of Sprint 34: the naive fix (`.catch(() => [])` on everything) trades a loud
-    failure for a silent one, and the loud failure is what made that bug findable in
-    minutes. The right version degrades **per section** and still shows the user that
-    something failed — which is a layout decision, so it belongs with the IA pass
-    rather than ahead of it.
+  - ~~**Include the load-resilience fix here.**~~ **DONE — TASK 19.7, Sprint 37
+    (`ef35fa8`).** Verified 2026-08-25: `FriendsPage.jsx:34-35` imports `FailureNotice` and
+    `runLoaders`/`mergeFailed`/`selectLoaders` from `src/lib/loaderRegistry.js`, with
+    per-block retry at `:465`. The ten-call `Promise.all` is gone, and it degrades **per
+    section** while still showing the user that something failed — rather than the naive
+    `.catch(() => [])` that would have traded a loud failure for a silent one. **The IA pass
+    below is no longer blocked by this.**
 
 -**"Where are my friends skiing" calendar — the flagship view.** Sprint 34 shipped the
 mechanics (per-person plan calendars, crew-filterable scope chips on the Plans tab), but
@@ -1064,6 +1282,45 @@ rather than incrementally. Open questions to settle in brainstorming:
     a reason to come back.
 
 # New Items
-Ski Tracking User Interface. Page for viewing live tracking data.
--include a home-screen widget that shows live stats on the users as an iphone lock screen widget
--challenge friends to most vert, most runs, most distance, most lifts
+
+_Sized 2026-08-25. These are features, not debt — none is scheduled._
+
+- **Challenge friends to most vert / most runs / most distance / most lifts — Size: M.**
+  ⭐ **Best ROI in this list.** The data already exists in `ski_sessions` + `ski_runs`, and
+  `leaderboardApi.js` (430 lines) is the pattern to extend. It is also the only idea here that
+  is *genuinely social* — a reason to invite someone else onto the app rather than a nicer
+  experience for the person already using it.
+- **Ski Tracking UI — a page for viewing live tracking data — Size: M.**
+  `useGpsTracker.js` (332) and `useLiveFriendLocations.js` (73) already exist; this is mostly
+  a view over hooks that are already written.
+- **iPhone lock-screen widget showing live stats — Size: XL. ⚠️ Not possible on this stack.**
+  Lock-screen widgets require WidgetKit and a native iOS app shipped through the App Store.
+  PowderDays is a PWA; there is no web API that can do this. Either scope it as a native
+  companion app — a separate project, not a task — or cut it. Recording it here so it stops
+  being re-proposed as if it were a sprint-sized item.
+
+## Sizes for the older ideas above
+
+| Item | Size | Note |
+|---|---|---|
+| Powder Score algorithm | **S-M** | Tuning, not building. Needs a definition of "better" before it can be estimated honestly. |
+| Map View + friends locations per mountain | **S** | `PowderMap.jsx` (337) exists; largely a test-and-fix pass. |
+| Weather / conditions API quality | **M** | Too vague as written. Needs one specific complaint to become actionable. |
+
+---
+
+# The honest critique (2026-08-25 grooming)
+
+Two things worth saying out loud, because a groomed backlog can hide them.
+
+**This backlog is roughly 70% debt, and debt does not move you toward side income.** The app
+is live with roughly one real user. Working fifteen hardening items is motion that *feels*
+like progress. The throughput-first ordering is right **because it makes the feature work
+faster** — not because the debt is valuable in itself. If the test harness doesn't visibly
+speed up the sprint after it, that's the signal to stop investing there.
+
+**Nothing in this backlog answers "why would a second person use this?"** The closest is
+friend challenges, which is why it's starred above. Per-crew visibility and the Social tab IA
+both improve an experience nobody outside Kyle has yet. It may be worth spending a sprint on
+getting five real skiers onto powdays.app instead. This document can't decide that — but it
+shouldn't go unasked.
