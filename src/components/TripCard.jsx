@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { rsvpToTrip, cancelTripRsvp, deleteTrip } from "../lib/socialApi"
+import { rsvpToTrip, cancelTripRsvp, deleteTrip, requestToJoinTrip } from "../lib/socialApi"
 import TripDetailModal from "./TripDetailModal"
 import { RESORT_NAMES, RESORT_PHOTOS, RESORT_ACCENTS } from "../lib/resorts"
 import { formatDateFull } from "../lib/format"
@@ -117,6 +117,9 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
   const [prevServerRsvp] = useState(trip.my_rsvp_status || null)
   const [rsvpLoading, setRsvpLoading] = useState(false)
   const [rsvpPop, setRsvpPop] = useState(null)
+  // null | "needed" | "sending" | "sent" | "failed" — only ever leaves null when the host's
+  // approval is actually required, so nobody who can already join sees any of this.
+  const [askState, setAskState] = useState(null)
   const [comments] = useState(trip.comments || [])
   const [deleting, setDeleting] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
@@ -175,10 +178,27 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
         await rsvpToTrip(trip.id, next)
       }
       onUpdate?.()
-    } catch {
+      setAskState(null)
+    } catch (err) {
       setMyRsvp(prev)
+      // Migration 040: joining a trip you were not invited to now needs the host's OK.
+      // This catch used to swallow everything, so the button just flickered back and the
+      // user learned nothing about why — offer the actual next step instead.
+      if (err?.code === "NEEDS_TRIP_APPROVAL") setAskState("needed")
     } finally {
       setRsvpLoading(false)
+    }
+  }
+
+  async function handleAskToJoin(e) {
+    e?.stopPropagation?.()
+    setAskState("sending")
+    try {
+      await requestToJoinTrip(trip.id)
+      setAskState("sent")
+    } catch (err) {
+      console.error("[TripCard] ask to join failed:", err)
+      setAskState("failed")
     }
   }
 
@@ -494,6 +514,43 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
                 </button>
               )
             })}
+          </div>
+        )}
+
+        {/* Host approval needed — shown only after a join is actually refused, so the RSVP
+            buttons stay exactly as they were for anyone who is invited or already going. */}
+        {askState && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between",
+              gap: 10, padding: "9px 12px", borderRadius: 12,
+              background: "var(--color-surface)", border: "1px solid var(--color-border)",
+              fontSize: 12, color: "var(--color-text-2)",
+            }}
+          >
+            {askState === "sent" ? (
+              <span>✓ Asked to join — {hostFirstName} will get back to you.</span>
+            ) : askState === "failed" ? (
+              <span style={{ color: "var(--color-danger)" }}>Couldn&apos;t send that request.</span>
+            ) : (
+              <>
+                <span>You need {hostFirstName}&apos;s OK to join.</span>
+                <button
+                  onClick={handleAskToJoin}
+                  disabled={askState === "sending"}
+                  style={{
+                    flexShrink: 0, background: "transparent",
+                    border: "1px solid var(--color-accent)", borderRadius: 999,
+                    padding: "6px 12px", fontSize: 11, fontWeight: 800,
+                    color: "var(--color-accent)", minHeight: 32,
+                    cursor: askState === "sending" ? "wait" : "pointer",
+                  }}
+                >
+                  {askState === "sending" ? "Asking…" : "Ask to join"}
+                </button>
+              </>
+            )}
           </div>
         )}
 

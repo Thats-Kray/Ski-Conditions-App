@@ -14,6 +14,9 @@ import {
   getFriendsLeaderboard,
   createCrewInvite,
   getReceivedCrewInvites,
+  getIncomingTripRequests,
+  approveTripRequest,
+  declineTripRequest,
   getSentCrewInvites,
   respondToCrewInvite,
   getMySkiPlans,
@@ -193,6 +196,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
   const [acceptedFriends, setAcceptedFriends] = useState([])
   const [leaderboard, setLeaderboard]         = useState([])
   const [receivedInvites, setReceivedInvites] = useState([])
+  const [tripRequests, setTripRequests]       = useState([])
   const [sentInvites, setSentInvites]         = useState([])
   const [skiPlans, setSkiPlans]               = useState([])
   const [friendsWeekend, setFriendsWeekend]   = useState([])
@@ -237,6 +241,26 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
    * The setters are stable across renders, so rebuilding this array per call costs
    * nothing and avoids a memo whose deps could drift.
    */
+  /**
+   * Approve or decline someone asking to join a trip I host.
+   *
+   * Approving goes through the RPC: the host is the caller but the REQUESTER is the one who
+   * needs the RSVP row, so it cannot be a plain client write under the new policy.
+   */
+  async function handleTripRequest(inviteId, decision) {
+    setWorkingId(inviteId)
+    try {
+      if (decision === "approve") await approveTripRequest(inviteId)
+      else await declineTripRequest(inviteId)
+      await loadPageData(["tripRequests"])
+      showToast("success", decision === "approve" ? "They're on the trip." : "Request declined.")
+    } catch (e) {
+      showToast("error", e.message || "Couldn't respond to that request.")
+    } finally {
+      setWorkingId(null)
+    }
+  }
+
   function pageLoaders() {
     return [
       { key: "incoming",     label: "your friend requests",        fn: getIncomingFriendRequests, fallback: [], apply: setIncomingRequests },
@@ -244,6 +268,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
       { key: "friends",      label: "your friends list",           fn: getAcceptedFriends,        fallback: [], apply: setAcceptedFriends },
       { key: "leaderboard",  label: "the leaderboard",             fn: getFriendsLeaderboard,     fallback: [], apply: setLeaderboard },
       { key: "crewInvites",  label: "your crew invites",           fn: getReceivedCrewInvites,    fallback: [], apply: setReceivedInvites },
+      { key: "tripRequests", label: "requests to join your trips", fn: getIncomingTripRequests,   fallback: [], apply: setTripRequests },
       { key: "sentInvites",  label: "the invites you sent",        fn: getSentCrewInvites,        fallback: [], apply: setSentInvites },
       { key: "skiPlans",     label: "your ski plans",              fn: getMySkiPlans,             fallback: [], apply: setSkiPlans },
       { key: "friendsTrips", label: "your friends' upcoming trips", fn: getFriendsUpcomingTrips,  fallback: [], apply: setFriendsWeekend },
@@ -443,6 +468,56 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
             onRetry={() => loadPageData([l.key])}
           />
         ))}
+
+      {/* ── People asking to join a trip I host ──
+          Surfaced at the top level rather than inside the trip card: the host is not
+          necessarily looking at that trip when someone asks. */}
+      {tripRequests.length > 0 && (
+        <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
+          {tripRequests.map((r) => (
+            <div key={r.id} style={{
+              display: "flex", alignItems: "center", gap: 10,
+              borderRadius: 14, padding: "10px 14px",
+              background: "linear-gradient(135deg, rgba(96,165,250,0.10), rgba(139,92,246,0.10))",
+              border: "1px solid rgba(96,165,250,0.28)",
+            }}>
+              <Avatar profile={r.requester_profile} size={32} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>
+                  {getDisplayName(r.requester_profile)} asked to join
+                </div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 1 }}>
+                  {r.trip?.title || formatResortName(r.trip?.resort_key)} · {formatDate(r.trip?.ski_date)}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                <button
+                  onClick={() => handleTripRequest(r.id, "approve")}
+                  disabled={workingId === r.id}
+                  style={{
+                    padding: "7px 14px", borderRadius: 8, border: "none",
+                    background: "var(--color-accent-deep)", color: "white",
+                    fontWeight: 700, fontSize: 13, cursor: "pointer",
+                  }}
+                >
+                  Approve
+                </button>
+                <button
+                  onClick={() => handleTripRequest(r.id, "decline")}
+                  disabled={workingId === r.id}
+                  style={{
+                    padding: "7px 12px", borderRadius: 8, border: "none",
+                    background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)",
+                    fontWeight: 700, fontSize: 13, cursor: "pointer",
+                  }}
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Toast ── */}
       {toast && (
