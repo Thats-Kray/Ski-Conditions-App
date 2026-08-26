@@ -11,7 +11,6 @@ import SkiPlansPage from "./components/SkiPlansPage"
 import TripDetailModal from "./components/TripDetailModal"
 import NotificationBell, { useNotificationCount } from "./components/NotificationBell"
 import LandingPage from "./components/LandingPage"
-import HomeDashboard from "./components/HomeDashboard"
 import ActiveSessionBar from "./components/ActiveSessionBar"
 import SessionRecapModal from "./components/SessionRecapModal"
 import MountainPage from "./components/MountainPage"
@@ -1426,16 +1425,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ── Home Dashboard ── */}
-        {activeTab === "home" && (
-          <HomeDashboard
-            resorts={rows}
-            currentUser={currentUser}
-            onTabChange={setActiveTab}
-            sessionActive={!!activeSession}
-          />
-        )}
-
         {activeTab === "dashboard" && (
           <TodayScreen
             rows={rows}
@@ -1461,6 +1450,7 @@ export default function App() {
             topIkon={topIkon}
             setMountainPageResortKey={setMountainPageResortKey}
             onSubTabChange={setDashboardSubTab}
+            sessionActive={!!activeSession}
           />
         )}
 

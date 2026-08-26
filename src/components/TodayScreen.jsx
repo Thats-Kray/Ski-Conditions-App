@@ -3,6 +3,7 @@ import PowderMap from "./PowderMap"
 import Badge, { TIER_COLORS } from "./ui/Badge"
 import ScoreRing from "./ui/ScoreRing"
 import Avatar from "./ui/Avatar"
+import { useIsStandalone } from "../lib/useMobile"
 
 const OWNER_EMAIL = "raykyle1104@gmail.com"
 const KRAMES_BUTTE_KEY = "kramesbutte"
@@ -382,6 +383,170 @@ function LeaderCard({ title, icon, resort }) {
   )
 }
 
+// ── Add to Home Screen nudge ──────────────────────────────────────────────────
+//
+// Sprint plan says this should key off `sessionActive` (GPS session started),
+// a prop introduced by Sprint 4. This sprint runs independently and in
+// isolation from Sprint 4's changes, so `sessionActive` may not actually be
+// wired up by any parent yet — it's accepted here as an optional prop
+// (defaults to false) so it "just works" once Sprint 4 lands. In the
+// meantime we fall back to the visit-count trigger the plan also describes
+// ("the GPS session has started OR a certain number of visits have passed"),
+// so the nudge is functional on its own rather than permanently dormant.
+//
+// Moved here verbatim from HomeDashboard.jsx (Task 6 of the IA restructure) —
+// HomeDashboard was retired and this banner belongs on the landing tab.
+const A2HS_DISMISS_KEY = "pd_a2hs_dismissed"
+const A2HS_VISIT_KEY = "pd_a2hs_visit_count"
+const A2HS_VISIT_THRESHOLD = 3
+
+function AddToHomeScreenNudge({ currentUser, sessionActive }) {
+  const isStandalone = useIsStandalone()
+  const [showNudge, setShowNudge] = useState(false)
+
+  useEffect(() => {
+    let visitCount = 0
+    try {
+      visitCount = (parseInt(localStorage.getItem(A2HS_VISIT_KEY), 10) || 0) + 1
+      localStorage.setItem(A2HS_VISIT_KEY, String(visitCount))
+    } catch {
+      // localStorage unavailable — treat as first visit, non-fatal
+    }
+
+    let dismissed = false
+    try {
+      dismissed = localStorage.getItem(A2HS_DISMISS_KEY) === "true"
+    } catch {
+      // ignore
+    }
+
+    if (
+      currentUser &&
+      !isStandalone &&
+      !dismissed &&
+      (sessionActive || visitCount >= A2HS_VISIT_THRESHOLD)
+    ) {
+      setShowNudge(true)
+    }
+  }, [currentUser, isStandalone, sessionActive])
+
+  function dismissNudge() {
+    try { localStorage.setItem(A2HS_DISMISS_KEY, "true") } catch {}
+    setShowNudge(false)
+  }
+
+  if (!showNudge) return null
+
+  return (
+    <div style={{
+      background: "rgba(56,189,248,0.08)",
+      border: "1px solid rgba(56,189,248,0.2)",
+      borderRadius: 14,
+      padding: "10px 14px",
+      marginBottom: 12,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+      fontSize: 13,
+    }}>
+      <span style={{ color: "rgba(255,255,255,0.8)" }}>
+        📲 Add to Home Screen for better GPS tracking
+      </span>
+      <button
+        onClick={dismissNudge}
+        style={{
+          background: "none", border: "none", color: "rgba(255,255,255,0.4)",
+          fontSize: 12, cursor: "pointer", fontWeight: 700, flexShrink: 0,
+        }}
+      >
+        Dismiss
+      </button>
+    </div>
+  )
+}
+
+// ── Offseason launch banner ───────────────────────────────────────────────────
+//
+// Moved here verbatim from HomeDashboard.jsx (Task 6 of the IA restructure).
+
+function OffseasonBanner() {
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem("pd_offseason_banner_26") === "1" } catch { return false }
+  })
+
+  if (dismissed) return null
+
+  return (
+    <div style={{
+      position: "relative",
+      background: "var(--gradient-banner-offseason)",
+      border: "1px solid rgba(96,165,250,0.3)",
+      borderRadius: 20,
+      padding: "20px 48px 20px 24px",
+      display: "flex",
+      alignItems: "flex-start",
+      gap: 16,
+    }}>
+      {/* Snowflake accent */}
+      <div style={{ fontSize: 36, flexShrink: 0, lineHeight: 1 }}>❄️</div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 11, fontWeight: 800, letterSpacing: 1.2,
+          color: "var(--color-accent-soft)", textTransform: "uppercase", marginBottom: 6,
+        }}>
+          Colorado Season Wrap — Winter 2025/26
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-banner-heading)", marginBottom: 6, lineHeight: 1.4 }}>
+          The mountains are closing for the summer. See you on the slopes this fall! ⛷️
+        </div>
+        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}>
+          PowderDays is officially launching for the <span style={{ color: "var(--color-banner-highlight)", fontWeight: 700 }}>2026/27 season</span>.
+          Invite your crew now — resort conditions, trip planning, and leaderboards
+          will be live when the lifts spin up in <span style={{ color: "var(--color-banner-highlight)", fontWeight: 700 }}>November 2026</span>.
+        </div>
+
+        <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            background: "rgba(96,165,250,0.12)", border: "1px solid rgba(96,165,250,0.25)",
+            borderRadius: 20, padding: "5px 14px",
+            fontSize: 12, fontWeight: 700, color: "var(--color-banner-highlight)",
+          }}>
+            🎿 Rope Drops Winter 2026
+          </div>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.2)",
+            borderRadius: 20, padding: "5px 14px",
+            fontSize: 12, fontWeight: 700, color: "var(--color-banner-badge-mint)",
+          }}>
+            11 Colorado Resorts Tracked
+          </div>
+        </div>
+      </div>
+
+      {/* Dismiss button */}
+      <button
+        onClick={() => {
+          try { localStorage.setItem("pd_offseason_banner_26", "1") } catch {}
+          setDismissed(true)
+        }}
+        style={{
+          position: "absolute", top: 12, right: 12,
+          background: "none", border: "none", cursor: "pointer",
+          color: "rgba(255,255,255,0.35)", fontSize: 18, lineHeight: 1,
+          padding: 4, borderRadius: 6,
+        }}
+        aria-label="Dismiss"
+      >
+        ×
+      </button>
+    </div>
+  )
+}
+
 // The Snow/dashboard tab, lifted verbatim out of App.jsx (Task 2 of the IA
 // restructure). `conditionsSubTab` is pure UI state that belonged here, not
 // on App.jsx — everything else is threaded through as props with the exact
@@ -417,6 +582,7 @@ export default function TodayScreen({
   topIkon,
   setMountainPageResortKey,
   onSubTabChange,
+  sessionActive = false,
 }) {
   const [conditionsSubTab, setConditionsSubTab] = useState("conditions")
 
@@ -429,6 +595,10 @@ export default function TodayScreen({
 
   return (
     <>
+      {/* Tab-agnostic banners, moved in from HomeDashboard.jsx (Task 6) */}
+      <AddToHomeScreenNudge currentUser={currentUser} sessionActive={sessionActive} />
+      <OffseasonBanner />
+
       {/* Sub-tab switcher */}
       <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
         {[
