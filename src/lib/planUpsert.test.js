@@ -115,10 +115,19 @@ test("visibility omitted falls back to existing.visibility, then friends", () =>
 })
 
 test("every value the visibility CHECK allows passes through", () => {
-  for (const v of ["friends", "groups", "private"]) {
+  for (const v of ["friends", "private"]) {
     const out = buildPlanUpsert(null, { skiDate: "2026-01-15", resortKey: "vail", visibility: v })
     assert.equal(out.visibility, v)
   }
+})
+
+test("'groups' stopped being legal when migration 037 dropped it", () => {
+  // Retired in 037 (TASK 18.1) along with daily_plans.group_id. Verified against the live
+  // database first: 0 rows used either. Kept as a test so the constant cannot drift back.
+  assert.throws(
+    () => buildPlanUpsert(null, { skiDate: "2026-01-15", resortKey: "vail", visibility: "groups" }),
+    /visibility/i
+  )
 })
 
 test("an illegal visibility throws instead of reaching the database", () => {

@@ -66,7 +66,15 @@ const VALID_STATUSES = ["planned", "driving", "arrived"]
 // value here THROWS rather than falling back: falling back to existing/"friends" on a
 // plan the user marked Private would silently un-private their day, and a silent
 // privacy change is a worse failure than a loud error.
-const VALID_VISIBILITIES = ["friends", "groups", "private"]
+// Mirrors daily_plans_visibility_check. Migration 037 dropped 'groups' — 0 rows used it and
+// the old policy treated it identically to 'friends' anyway — so the database now allows
+// exactly these two.
+//
+// If you add a value, add it to the CHECK *and* to the RLS policy in the same migration. As of
+// 037 that policy is a WHITELIST (`visibility = 'friends'`), not the old blacklist
+// (`visibility <> 'private'`), so a new value is invisible to everyone until it is listed
+// there. That is deliberate: the blacklist meant any new value leaked to all friends.
+const VALID_VISIBILITIES = ["friends", "private"]
 
 export function buildPlanUpsert(existing, { skiDate, resortKey, eta, visibility, note, status, arrivedAt } = {}) {
   const ski_date = skiDate !== undefined ? skiDate : existing?.ski_date
