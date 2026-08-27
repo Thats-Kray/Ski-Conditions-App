@@ -503,7 +503,9 @@ git commit -m "refactor: extract FriendsGoingBadge to its own file with a solid 
 
 **Files:**
 - Create: `src/components/BestBetCard.jsx`
-- Modify: `src/components/TodayScreen.jsx` (imports; replace the hero-render block)
+- Modify: `src/lib/resorts.js` (add exported `mapsUrl`)
+- Modify: `src/components/TodayScreen.jsx` (imports; replace the hero-render block; remove its
+  own private `mapsUrl` in favor of the shared one)
 - Modify: `src/App.jsx` (remove now-dead `rankedEpic`/`rankedIkon`/`topEpic`/`topIkon`, remove
   `topEpic`/`topIkon` props passed to `TodayScreen`, remove the `.leader-crown` animation rule)
 - Modify: `src/index.css` (remove the now-dead `.leader-grid` rule)
@@ -511,26 +513,70 @@ git commit -m "refactor: extract FriendsGoingBadge to its own file with a solid 
 **Interfaces:**
 - Consumes: `topResort` (same shape already used by the crown card — `name`, `powderScore`,
   `powderTier`, `pass`, `snowPrev24in`, `wind`, `driveRisk`, `directionsQuery`,
-  `resortKey`), `friendTripsByResort` (already a `TodayScreen` prop).
+  `resortKey`), `friendTripsByResort` (already a `TodayScreen` prop), `RISK_COLORS` (`./ui/Badge`,
+  already exported, identical mapping to `TodayScreen.jsx`'s private `riskColor()` — reuse it
+  rather than redefining a third copy), `mapsUrl` (new export from `../lib/resorts`, see Step 1).
 - Produces: `export default function BestBetCard({ topResort, friendsGoing })`, consumed by
-  `TodayScreen.jsx`.
+  `TodayScreen.jsx`. Also `export function mapsUrl(destination)` in `src/lib/resorts.js`,
+  consumed by both `BestBetCard.jsx` and (after Step 3) `TodayScreen.jsx`'s existing `ResortCard`.
 
-- [ ] **Step 1: Create `BestBetCard.jsx`**
+- [ ] **Step 1: Move `mapsUrl` into `src/lib/resorts.js`, with a test**
 
-```jsx
-import Badge, { TIER_COLORS } from "./ui/Badge"
-import FriendsGoingBadge from "./FriendsGoingBadge"
+`TodayScreen.jsx` already has a private `mapsUrl()` helper (used by `ResortCard`'s Directions
+button); `BestBetCard` needs the identical function for its own Directions button. Rather than
+add a third copy, promote it to the shared resorts lib both files already import from. It's a
+mechanical relocation of already-working code, not new behavior, so this is one step rather
+than a full red-green cycle — but it's landing in a file with existing test coverage
+(`src/lib/resorts.test.js`), so it gets a test alongside it.
 
-function riskColor(risk) {
-  if (risk === "Low") return "var(--rating-mint)"
-  if (risk === "Moderate") return "var(--rating-gold)"
-  if (risk === "High") return "var(--rating-peach)"
-  return "var(--rating-coral)"
-}
-
-function mapsUrl(destination) {
+Add to `src/lib/resorts.js` (anywhere among its other exported functions, e.g. directly after
+`normalizeResortKey`):
+```js
+export function mapsUrl(destination) {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`
 }
+```
+
+Add to `src/lib/resorts.test.js` (check its top for the existing import line from
+`"./resorts.js"` and add `mapsUrl` to it):
+```js
+test("mapsUrl builds a Google Maps directions link, URL-encoding the destination", () => {
+  const url = mapsUrl("Vail Parking Structure, Vail CO")
+  assert.strictEqual(
+    url,
+    "https://www.google.com/maps/dir/?api=1&destination=Vail%20Parking%20Structure%2C%20Vail%20CO"
+  )
+})
+```
+
+Run `node --test src/lib/resorts.test.js` — expect PASS (this is confirming a relocation, not
+discovering new behavior, so there's no red step here).
+
+- [ ] **Step 2: Remove `TodayScreen.jsx`'s private copy and import the shared one**
+
+In `src/components/TodayScreen.jsx`, delete the local definition (near the top of the file,
+directly below the `mapsUrl` used by `formatPercent`):
+```js
+function mapsUrl(destination) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+    destination
+  )}`
+}
+```
+Add an import for it instead — `src/components/TodayScreen.jsx` doesn't currently import
+anything from `../lib/resorts`, so add a new import line near its other imports:
+```js
+import { mapsUrl } from "../lib/resorts"
+```
+`ResortCard`'s existing `href={mapsUrl(r.directionsQuery)}` call is unchanged — same function,
+same signature, just imported now instead of locally defined.
+
+- [ ] **Step 3: Create `BestBetCard.jsx`**
+
+```jsx
+import Badge, { TIER_COLORS, RISK_COLORS } from "./ui/Badge"
+import FriendsGoingBadge from "./FriendsGoingBadge"
+import { mapsUrl } from "../lib/resorts"
 
 /**
  * The Today List View's single hero card — "Best Bet Today". Replaces the old
@@ -581,7 +627,7 @@ export default function BestBetCard({ topResort, friendsGoing }) {
         {" · "}
         {topResort.wind || "—"}
         {" · "}
-        Drive risk <span style={{ color: riskColor(topResort.driveRisk), fontWeight: 800 }}>{topResort.driveRisk || "Unknown"}</span>
+        Drive risk <span style={{ color: RISK_COLORS[topResort.driveRisk] ?? RISK_COLORS.Severe, fontWeight: 800 }}>{topResort.driveRisk || "Unknown"}</span>
       </div>
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -605,7 +651,7 @@ export default function BestBetCard({ topResort, friendsGoing }) {
 }
 ```
 
-- [ ] **Step 2: Wire it into `TodayScreen.jsx`, remove the crown card + `LeaderCard` usages**
+- [ ] **Step 4: Wire it into `TodayScreen.jsx`, remove the crown card + `LeaderCard` usages**
 
 Add the import (near the other component imports at the top of `src/components/TodayScreen.jsx`):
 ```js
@@ -695,14 +741,14 @@ Replace it with:
       )}
 ```
 
-- [ ] **Step 3: Delete the now-dead `LeaderCard` function**
+- [ ] **Step 5: Delete the now-dead `LeaderCard` function**
 
 Delete `src/components/TodayScreen.jsx:334-384` (the entire `function LeaderCard({ title, icon,
-resort }) { ... }` block) — its only two call sites were just removed in Step 2.
+resort }) { ... }` block) — its only two call sites were just removed in Step 4.
 
-- [ ] **Step 4: Remove `secondResort`/`thirdResort`/`topEpic`/`topIkon` from `TodayScreen`'s props**
+- [ ] **Step 6: Remove `secondResort`/`thirdResort`/`topEpic`/`topIkon` from `TodayScreen`'s props**
 
-They're no longer read anywhere in the file after Steps 2-3. In the `export default function
+They're no longer read anywhere in the file after Steps 4-5. In the `export default function
 TodayScreen({ ... })` destructuring (`src/components/TodayScreen.jsx:561-586`), remove the
 lines:
 ```js
@@ -713,7 +759,7 @@ lines:
 ```
 (`topResort` stays — it's still used by `BestBetCard`.)
 
-- [ ] **Step 5: Remove the same dead data from `App.jsx`**
+- [ ] **Step 7: Remove the same dead data from `App.jsx`**
 
 Delete `src/App.jsx:1078-1086` (`rankedEpic`/`rankedIkon`) and the two lines at
 `src/App.jsx:1091-1092` (`topEpic`/`topIkon`), leaving:
@@ -748,14 +794,14 @@ In the `<TodayScreen ... />` call (`src/App.jsx:1459-1463`), remove the now-inva
 their constants in the previous paragraph — keep the JSX prop consistent with whether the
 constant still exists.)
 
-- [ ] **Step 6: Remove the dead `.leader-crown` animation rule**
+- [ ] **Step 8: Remove the dead `.leader-crown` animation rule**
 
 In `src/App.jsx`, find and delete this line (near line 1147, inside an inline `<style>` block):
 ```css
         .leader-crown { animation: floaty 2.8s ease-in-out infinite; }
 ```
 
-- [ ] **Step 7: Remove the dead `.leader-grid` CSS rule**
+- [ ] **Step 9: Remove the dead `.leader-grid` CSS rule**
 
 In `src/index.css`, delete the block at lines 405-416:
 ```css
@@ -773,7 +819,7 @@ In `src/index.css`, delete the block at lines 405-416:
 }
 ```
 
-- [ ] **Step 8: Manual verification**
+- [ ] **Step 10: Manual verification**
 
 `npm run dev`, Today tab, List sub-tab: the hero now renders as the compact `BestBetCard` (Best
 Bet Today label, resort name, pass + tier pills, big score number, one stat line, `Who's going`
@@ -781,20 +827,21 @@ Bet Today label, resort name, pass + tier pills, big score number, one stat line
 Epic/Best Ikon boxes below it. `Who's going` opens the same name popover as before. `Directions`
 opens Google Maps to the resort. Confirm no console errors about missing props.
 
-- [ ] **Step 9: Run the test suite and lint**
+- [ ] **Step 11: Run the test suite and lint**
 
 ```bash
 npm test
 npx eslint .
 ```
-Expected: `npm test` unchanged (130 passing, no `src/lib` files touched); `npx eslint .` at or
-below the 87-problem baseline — specifically check there's no new `no-unused-vars` for
-`topEpic`/`topIkon`/`secondResort`/`thirdResort`/`LeaderCard`.
+Expected: `npm test` now shows 131 passing (130 + the new `mapsUrl` test from Step 1). `npx
+eslint .` at or below the 87-problem baseline — specifically check there's no new
+`no-unused-vars` for `topEpic`/`topIkon`/`secondResort`/`thirdResort`/`LeaderCard`, and no
+leftover reference to the deleted local `mapsUrl`/`riskColor` in `TodayScreen.jsx`.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 12: Commit**
 
 ```bash
-git add src/components/BestBetCard.jsx src/components/TodayScreen.jsx src/App.jsx src/index.css
+git add src/components/BestBetCard.jsx src/lib/resorts.js src/lib/resorts.test.js src/components/TodayScreen.jsx src/App.jsx src/index.css
 git commit -m "feat: replace Today hero with compact BestBetCard, drop Best-Epic/Best-Ikon cards"
 ```
 
@@ -1107,7 +1154,7 @@ state, or structure change — this step is sizing only.
 ```bash
 npm test
 ```
-Expected: unchanged, 130 passing.
+Expected: unchanged, 131 passing (130 baseline + the `mapsUrl` test added in Task 4).
 
 - [ ] **Step 7: Commit**
 
@@ -1300,7 +1347,7 @@ confirming the fetch doesn't throw.)
 npm test
 npx eslint .
 ```
-Expected: `npm test` now shows 133 passing (130 + the 3 new `planButtonState` cases). `npx
+Expected: `npm test` now shows 134 passing (131 + the 3 new `planButtonState` cases). `npx
 eslint .` at or below the 87-problem baseline.
 
 - [ ] **Step 11: Commit**
@@ -1478,7 +1525,7 @@ the Ski Plans calendar if a user wants it.)
 npm test
 npx eslint .
 ```
-Expected: `npm test` still 133 passing. `npx eslint .` at or below the 87-problem baseline.
+Expected: `npm test` still 134 passing. `npx eslint .` at or below the 87-problem baseline.
 
 - [ ] **Step 8: Commit**
 
