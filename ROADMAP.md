@@ -1262,6 +1262,104 @@ Recorded 2026-08-12, still true.
 A Tier 0 account can still post to Mountain Board inside a geofence. Open question from the
 Ski Buddy memo that was never migrated into this document. Decide whether that's intended.
 
+### TASK 21.1 — IA restructure Phase 1 — ✅ SHIPPED 2026-08-26
+
+5-tab nav (**Today / Plans / Track / Crew / Me**) replacing the old Home/Snow/Plans/Social/
+Profile split, live on `main` at commit `0114742`. Executed as a standalone SDD plan
+(`~/.claude/plans/use-the-claude-design-mcp-abstract-dragonfly.md`, not previously tracked
+here — folding it in now). Faithful re-slot only: existing UI moved verbatim into new tabs,
+**no visual changes**. `HomeDashboard.jsx` deleted; its 9 widgets redistributed (Track got
+Start-my-day/check-in/`TodaysCrew`; Plans got `NextTripCard`/`PingCta`; Today got the
+offseason banner/install nudge; 3 confirmed-duplicate widgets retired). Trip chat now lives
+only inside a trip's own detail view, not the DM inbox. Kyle click-tested it live and
+confirmed it looks right; a final whole-branch review caught one cross-task bug
+(`NextTripCard` and `SkiPlansPage`'s pre-existing `UpcomingStrip` showed the same invite and
+didn't refresh each other) and it was fixed pre-merge.
+
+**Deferred to Phase 2+ — not started, not sized:** the design-token/theme-contract system,
+the 12-pattern component library from the design doc, the "plan party"→"group" rename, the
+two-weight button grammar (filled "I'm also going" vs outlined+lock "Ask to join"), a
+mandatory offseason-state redesign for Today, a 5-theme contrast audit, and 56px
+glove-friendly tap targets on Track.
+
+**Cleanup punch list — all confirmed Minor by the final review, bundle into one future
+commit, none urgent:**
+- [ ] Dead `loading`/`refresh` props still threaded into `TodayScreen.jsx` (their only
+      consumer moved back to `App.jsx`)
+- [ ] One-commit header-flash returning Today←Map — `App.jsx`'s `handleTabChange` doesn't
+      reset `todaySubTab`
+- [ ] `TripChatView.jsx` is fully orphaned (97 lines, zero importers) — queue the delete
+- [ ] Two dead `NavIcons.jsx` exports (`HomeIcon`, and now `MountainIcon` too)
+- [ ] Unused `getMyTripConversations` export in `socialApi.js`
+- [ ] The retired `WhosSkiingTodayCard`'s "📍 N friends on the mountain" indicator has no
+      replacement (friend pins still show on Today→Map via `useLiveFriendLocations` — a
+      **prominence loss, not a feature loss**; get a yes/no from Kyle rather than an
+      unprompted revert)
+- [ ] `HeroBannerStrip`'s suppression comment in `App.jsx` overstates itself in 3 of 4 states
+      (comment-only fix)
+- [ ] `TrackScreen` has no auth gate (narrow — only reachable via explicit browse mode)
+- [ ] `NextTripCard`'s own LOCAL invite/nextTrip state still doesn't refresh after creating a
+      trip via its own inline modal (the page-level `UpcomingStrip` duplicate DOES now
+      refresh — that was the pre-merge blocking fix; this is a narrower residual flavor)
+
+**This session also surfaced two naming things, split into the task below and one standing
+bug:** the app doc `Mockup POWDERDAYS-DESIGN-SYSTEM.md` (root, untracked) had the app name
+wrong as "PowderDays" in 3 spots — fixed in the doc. **Separately, and not part of any
+decision:** `index.html`'s Open Graph/Twitter meta tags point at `https://powderdays.app/` —
+the **wrong domain**. Real one is `powdays.app`. Fix this regardless of the rename task's
+scope; it's a bug, not a naming call.
+
+### TASK 21.2 — PowDays rename + logo assets — queued 2026-08-26, not started — **Size: S-M**
+
+Scope decided with Kyle on 2026-08-26 — don't re-litigate, ask again only if requirements
+change:
+
+- [ ] **Rename: config + assets only.** Fix the browser tab title, PWA manifest
+      `name`/`short_name` (`public/manifest.json` — **not** the dead `public/site.webmanifest`;
+      `index.html` links `/manifest.json`, so the older file's "Pow Days" name has never
+      actually been live), `index.html` meta tags (`<title>`, `og:*`, `twitter:*`,
+      `apple-mobile-web-app-title`), and fix the `powderdays.app` → `powdays.app` domain bug
+      from TASK 21.1 in the same pass.
+- [ ] **Leave the ~18 in-app UI text mentions of "PowderDays" as-is for a later pass** — the
+      nav header occurrence is superseded by the banner-logo swap below anyway. Remaining
+      spots: `App.jsx` (2 more), `OnboardingFlow.jsx`, `SessionRecapModal.jsx`,
+      `ShareStatCard.jsx` (canvas-drawn share-card text), `LeaderboardPage.jsx`,
+      `TodayScreen.jsx`, `LandingPage.jsx` (4 spots), `gpxExport.js` (GPX creator tag), and a
+      log-message prefix at `socialApi.js:2762`.
+- [ ] **Banner logo: replace the in-app header, not just social-preview images.** The app has
+      **no image-based logo anywhere today** — every occurrence is styled text
+      (`❄️ PowderDays`). Swap `mockups/PowDays_BannerLogo.jpeg` in for the text wordmark at
+      minimum in `TopNav` — the persistent header shown on every screen while logged in
+      (`App.jsx` ~line 468, gradient-text `<div>❄️ PowderDays</div>`). Two smaller one-off
+      text occurrences also exist (`App.jsx` ~1281, logged-out landing footer line;
+      `App.jsx` ~1385, Today-tab-inactive small header) — decide with Kyle whether those also
+      become the image or stay text; a small inline logo image may not size well at those
+      smaller contexts.
+- [ ] Update the icon set actually wired in: `public/favicon.ico`, `favicon-16/32/64.png`,
+      `apple-touch-icon.png` (all public root), plus `public/icons/icon-192.png` /
+      `icon-512.png` (the subfolder — this is what `manifest.json`'s `icons` array actually
+      points at). `public/icon-192.png` / `icon-512.png` at the ROOT (no `icons/` prefix) are
+      unused duplicates from an earlier 2026-08-07 branding pass — don't waste time on those
+      unless repurposing them.
+
+**Technical notes for whoever picks this up:**
+- The new mockup JPEGs (`mockups/PowDays_AppIcon.jpeg`, `PowDays_BannerLogo.jpeg`) are
+  marketing/preview-style graphics — backdrop, falling snowflakes, drop shadow baked in —
+  not raw icon source files. Converting the app icon into a clean favicon set (16/32/64px,
+  `apple-touch-icon.png` at 180×180, manifest `icon-192`/`icon-512`) will likely need a crop
+  to just the rounded-square badge; a small favicon built from this much JPEG detail may
+  read as muddy at 16px — flag that to Kyle rather than shipping something illegible.
+- There's ALSO an already-existing, unused `pow-days-*` asset set in `public/` from
+  2026-08-07 (`pow-days-app-icon-1024.png`, `pow-days-logo-wordmark-wide-1600x500.png`, etc.
+  — see `public/README-pow-days-assets.txt`). Neither that set nor the new mockups are wired
+  in yet. Worth a quick look before starting in case one is more usable than the other.
+- `sips` (built into macOS) can resize/convert JPEG→PNG for the icon set without adding a
+  dependency — no ImageMagick or new npm package needed.
+
+Mostly config/meta-tag edits plus one component's header swap; the technical notes above are
+the only real judgment calls. Small enough to be a good candidate to slot in ahead of or
+alongside Sprint 42 — but that ordering call is Kyle's, not decided here.
+
 ---
 
 ## Deliberately NOT doing: rename `crew_invites` / `trip_invites`
@@ -1288,6 +1386,9 @@ if `socialApi.js` is being split anyway.
 | **46** | Debt bundle: 20.2, 20.3, 20.4 + deferred minors | S |
 
 Quick wins droppable into any sprint: TASK 19.5b (XS), TASK 20.1 (S), TASK 20.2 (XS).
+
+**Queued 2026-08-26, not yet slotted into this table:** TASK 21.2 (PowDays rename + logo
+assets, S-M) — small enough to go ahead of or alongside Sprint 42, but that's Kyle's call.
 
 **Blocked on Kyle, not on code:** TASK 14.1 OAuth credentials (~45 min of console setup;
 until then `linkOAuthIdentity()` fails with "Unsupported provider" and Tier 1 verification is
