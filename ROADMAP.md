@@ -1310,24 +1310,50 @@ decision:** `index.html`'s Open Graph/Twitter meta tags point at `https://powder
 the **wrong domain**. Real one is `powdays.app`. Fix this regardless of the rename task's
 scope; it's a bug, not a naming call.
 
-### TASK 21.2 — PowDays rename + logo assets — queued 2026-08-26, not started — **Size: S-M**
+### TASK 21.2 — ~~PowDays rename + logo assets~~ — ✅ COMPLETE 2026-08-27
 
-Scope decided with Kyle on 2026-08-26 — don't re-litigate, ask again only if requirements
-change:
+**DONE.** Shipped across 15 commits from `worktree-powdays-rename-task-21.2`, starting
+`11b699c` "rebrand: rename app to PowDays (config, icons, header logo)".
 
-- [ ] **Rename: config + assets only.** Fix the browser tab title, PWA manifest
+**Verified against source on 2026-08-27, not against the commit messages** — every bullet below
+was re-checked in the file it names:
+
+| Scope bullet | Evidence |
+|---|---|
+| Tab title + meta tags | `index.html:17` `<title>PowDays — …</title>`; `:15` `apple-mobile-web-app-title`; `:23` `og:title`; `:29` `twitter:title` |
+| PWA manifest | `public/manifest.json` → `name` and `short_name` both `"PowDays"` |
+| **`powderdays.app` → `powdays.app` domain bug** | **Zero occurrences** of `powderdays.app` remain in `index.html`, `public/`, or `src/`. `og:url` is `https://powdays.app/`. Also fixed a stale watermark domain in the share card (`6eb5907`). |
+| Banner logo replaces the text wordmark | `App.jsx:468` renders `/powdays-logo-banner.png` in `TopNav`; `LandingPage` header swapped too (`da02c34`) |
+| Icon set (the wired-in ones) | `11b699c` touched `favicon.ico`, `favicon-16/32/64.png`, `apple-touch-icon.png`, `icons/icon-192.png`, `icons/icon-512.png` — all six, plus the new `powdays-logo-banner.png` |
+| In-app text mentions **deliberately deferred** | **13 remain** in `src/` — `OnboardingFlow` (2), `LandingPage` (4), `ShareStatCard` (2), `SessionRecapModal`, `LeaderboardPage`, `TodayScreen`, `socialApi.js:2762`, `gpxExport.js:27`. This was the decision, not an oversight. **Still open as a later pass.** |
+
+**Shipped beyond the original scope** (all from the same worktree, none of it previously
+tracked here):
+- **Persistent mobile logo bar** — `App.jsx:546` renders `/powdays-logo-mobile.png`; the mobile
+  top bar is logo-only, not a full nav bar (`a642304`, then bigger/transparent/centered in
+  `a5b3bae`).
+- **5-theme contrast audit** (`3f8b0e4`) — gradient buttons + the Aurora Peak popover.
+- **Message composer's Send button was cut off on mobile** (`2f6d9a4`).
+- **Canvas share-card theming** (`3c26357`, `6eb5907`) — new `src/lib/shareCardTokens.js`, a JS
+  mirror of the CSS theme tokens, because a canvas-drawn card cannot read CSS variables. Ships
+  with `shareCardTokens.test.js`; **this is what moved the suite from 126 to 130 tests.** Plan:
+  `docs/superpowers/plans/2026-08-27-sharecard-theme-tokens.md`.
+
+_Original scope, kept for the record:_
+
+- [x] **Rename: config + assets only.** Fix the browser tab title, PWA manifest
       `name`/`short_name` (`public/manifest.json` — **not** the dead `public/site.webmanifest`;
       `index.html` links `/manifest.json`, so the older file's "Pow Days" name has never
       actually been live), `index.html` meta tags (`<title>`, `og:*`, `twitter:*`,
       `apple-mobile-web-app-title`), and fix the `powderdays.app` → `powdays.app` domain bug
       from TASK 21.1 in the same pass.
-- [ ] **Leave the ~18 in-app UI text mentions of "PowderDays" as-is for a later pass** — the
+- [x] **Leave the ~18 in-app UI text mentions of "PowderDays" as-is for a later pass** — the
       nav header occurrence is superseded by the banner-logo swap below anyway. Remaining
       spots: `App.jsx` (2 more), `OnboardingFlow.jsx`, `SessionRecapModal.jsx`,
       `ShareStatCard.jsx` (canvas-drawn share-card text), `LeaderboardPage.jsx`,
       `TodayScreen.jsx`, `LandingPage.jsx` (4 spots), `gpxExport.js` (GPX creator tag), and a
       log-message prefix at `socialApi.js:2762`.
-- [ ] **Banner logo: replace the in-app header, not just social-preview images.** The app has
+- [x] **Banner logo: replace the in-app header, not just social-preview images.** The app has
       **no image-based logo anywhere today** — every occurrence is styled text
       (`❄️ PowderDays`). Swap `mockups/PowDays_BannerLogo.jpeg` in for the text wordmark at
       minimum in `TopNav` — the persistent header shown on every screen while logged in
@@ -1336,7 +1362,7 @@ change:
       `App.jsx` ~1385, Today-tab-inactive small header) — decide with Kyle whether those also
       become the image or stay text; a small inline logo image may not size well at those
       smaller contexts.
-- [ ] Update the icon set actually wired in: `public/favicon.ico`, `favicon-16/32/64.png`,
+- [x] Update the icon set actually wired in: `public/favicon.ico`, `favicon-16/32/64.png`,
       `apple-touch-icon.png` (all public root), plus `public/icons/icon-192.png` /
       `icon-512.png` (the subfolder — this is what `manifest.json`'s `icons` array actually
       points at). `public/icon-192.png` / `icon-512.png` at the ROOT (no `icons/` prefix) are
@@ -1440,8 +1466,14 @@ work, and it needs none of the routing).
 than state-driven tabs, and `src/lib/routes.js` gives the navigation layer real coverage under
 the runner that already exists. Doing it first makes Sprint 43 cheaper.
 
-**Queued 2026-08-26, not yet slotted into this table:** TASK 21.2 (PowDays rename + logo
-assets, S-M) — small enough to go ahead of or alongside Sprint 42, but that's Kyle's call.
+**TASK 21.2 (PowDays rename + logo assets) shipped 2026-08-27** — see its section above. It
+also carried a 5-theme contrast audit, a persistent mobile logo bar, a mobile composer fix, and
+canvas share-card theming (`src/lib/shareCardTokens.js`, +4 tests → suite is now **130**).
+
+**Still open from 21.2:** the **13 remaining in-app "PowderDays" text mentions**, deliberately
+deferred. Size **XS** — a find-and-replace across 9 files, but check each in context: two are
+inside canvas-drawn share-card text (`ShareStatCard.jsx:214`, `:461`), one is a GPX `creator`
+tag (`gpxExport.js:27`) and one a log prefix (`socialApi.js:2762`).
 
 **Blocked on Kyle, not on code:** TASK 14.1 OAuth credentials (~45 min of console setup;
 until then `linkOAuthIdentity()` fails with "Unsupported provider" and Tier 1 verification is
