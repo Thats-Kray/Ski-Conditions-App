@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { buildPlanUpsert } from "./planUpsert.js"
+import { buildPlanUpsert, planButtonState } from "./planUpsert.js"
 
 const isoEta = (h, m) => new Date(2026, 0, 15, h, m, 0).toISOString()
 
@@ -246,4 +246,19 @@ test("carrying status forward (caller omits status) on an arrived plan keeps the
   const out = buildPlanUpsert(existing, { resortKey: "vail" })
   assert.equal(out.status, "arrived")
   assert.equal(out.arrived_at, "2026-08-21T15:00:00.000Z")
+})
+
+test("planButtonState: no plan today → create", () => {
+  const result = planButtonState(null, "vail")
+  assert.deepStrictEqual(result, { label: "Ski here today", mode: "create" })
+})
+
+test("planButtonState: plan exists at a different resort → switch", () => {
+  const result = planButtonState({ resort_key: "vail" }, "copper")
+  assert.deepStrictEqual(result, { label: "Switch to here", mode: "switch" })
+})
+
+test("planButtonState: plan already at this resort → edit", () => {
+  const result = planButtonState({ resort_key: "vail" }, "vail")
+  assert.deepStrictEqual(result, { label: "✓ You're skiing here", mode: "edit" })
 })

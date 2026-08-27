@@ -119,3 +119,18 @@ export function buildPlanUpsert(existing, { skiDate, resortKey, eta, visibility,
     arrived_at: arrivedFinal,
   }
 }
+
+/**
+ * The three states the "Ski here today"/"Switch to here"/"✓ You're skiing here" button on
+ * a resort card can be in, derived from the user's own plan for today (or null, if they
+ * don't have one) and the resort the card belongs to.
+ *
+ * @param {object|null} myTodayPlan - result of getMyDailyPlan(localDateKey()), or null
+ * @param {string} resortKey - the resort this card is for
+ * @returns {{ label: string, mode: "create" | "switch" | "edit" }}
+ */
+export function planButtonState(myTodayPlan, resortKey) {
+  if (!myTodayPlan) return { label: "Ski here today", mode: "create" }
+  if (myTodayPlan.resort_key === resortKey) return { label: "✓ You're skiing here", mode: "edit" }
+  return { label: "Switch to here", mode: "switch" }
+}
