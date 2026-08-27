@@ -402,6 +402,13 @@ input, textarea, select {
   }
 }
 
+/* ── Compact resort list (Today List View) ──────────────────────── */
+.resort-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* ── Metrics row (3 stat boxes inside resort card) ──────────────── */
 .metric-grid {
   display: grid;

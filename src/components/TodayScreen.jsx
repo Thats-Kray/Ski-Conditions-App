@@ -4,6 +4,7 @@ import Badge, { TIER_COLORS } from "./ui/Badge"
 import ScoreRing from "./ui/ScoreRing"
 import FriendsGoingBadge from "./FriendsGoingBadge"
 import BestBetCard from "./BestBetCard"
+import ResortListRow from "./ResortListRow"
 import { useIsStandalone } from "../lib/useMobile"
 import { mapsUrl } from "../lib/resorts"
 
@@ -485,6 +486,16 @@ export default function TodayScreen({
   sessionActive = false,
 }) {
   const [conditionsSubTab, setConditionsSubTab] = useState("conditions")
+  const [expandedKeys, setExpandedKeys] = useState(new Set())
+
+  function toggleExpanded(resortKey) {
+    setExpandedKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(resortKey)) next.delete(resortKey)
+      else next.add(resortKey)
+      return next
+    })
+  }
 
   // Report the current sub-tab to App.jsx on mount and on every change, so its
   // header (Refresh button + description) can stay in sync without owning
@@ -570,7 +581,7 @@ export default function TodayScreen({
             className="filter-bar"
             style={{
               marginTop: 4,
-              marginBottom: 20,
+              marginBottom: 14,
             }}
           >
             <div style={{ display: "flex", gap: 8 }}>
@@ -585,9 +596,10 @@ export default function TodayScreen({
                         : "rgba(255,255,255,0.06)",
                     color: passFilter === p ? "var(--color-pass-pill-text)" : "white",
                     border: "1px solid rgba(255,255,255,0.1)",
-                    padding: "10px 14px",
+                    padding: "7px 12px",
                     borderRadius: 999,
                     fontWeight: 800,
+                    fontSize: 13,
                     cursor: "pointer",
                   }}
                 >
@@ -606,8 +618,9 @@ export default function TodayScreen({
                 background: "rgba(255,255,255,0.06)",
                 border: "1px solid rgba(255,255,255,0.1)",
                 color: "white",
-                padding: "12px 14px",
+                padding: "9px 12px",
                 borderRadius: 14,
+                fontSize: 13,
                 outline: "none",
               }}
             />
@@ -619,8 +632,9 @@ export default function TodayScreen({
                 background: "rgba(255,255,255,0.06)",
                 border: "1px solid rgba(255,255,255,0.1)",
                 color: "white",
-                padding: "12px 14px",
+                padding: "9px 12px",
                 borderRadius: 14,
+                fontSize: 13,
                 outline: "none",
               }}
             >
@@ -632,11 +646,44 @@ export default function TodayScreen({
             </select>
           </section>
 
-          <main className="resort-grid">
-            {rows.map((r) => (
-              <ResortCard key={r.name} r={r} skierCounts={skierCounts} skierDetails={skierDetails} activityCount={resortActivityCounts[r.resortKey] || 0} friendsGoing={friendTripsByResort[r.resortKey] || []} vibeData={vibeData} onOpenMountainPage={setMountainPageResortKey} />
-            ))}
-          </main>
+          {(() => {
+            const moreResorts = rows.filter((r) => r.resortKey !== topResort?.resortKey)
+            return (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.8, color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>
+                    {moreResorts.length} More Resort{moreResorts.length === 1 ? "" : "s"}
+                  </div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+                    sorted by {sortBy}
+                  </div>
+                </div>
+                <main className="resort-list">
+                  {moreResorts.map((r, i) => (
+                    <div key={r.resortKey}>
+                      <ResortListRow
+                        rank={i + 2}
+                        r={r}
+                        expanded={expandedKeys.has(r.resortKey)}
+                        onToggle={() => toggleExpanded(r.resortKey)}
+                      />
+                      {expandedKeys.has(r.resortKey) && (
+                        <ResortCard
+                          r={r}
+                          skierCounts={skierCounts}
+                          skierDetails={skierDetails}
+                          activityCount={resortActivityCounts[r.resortKey] || 0}
+                          friendsGoing={friendTripsByResort[r.resortKey] || []}
+                          vibeData={vibeData}
+                          onOpenMountainPage={setMountainPageResortKey}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </main>
+              </>
+            )
+          })()}
         </>
       )}
     </>
