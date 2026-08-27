@@ -23,7 +23,7 @@ import { SkiPingComposer } from "./SkiPingModal"
  * From inside this page that jump is self-referential, so the render call
  * below passes a callback that switches to the Trips sub-tab instead — the
  * only edit made to accommodate the new home. */
-function NextTripCard({ currentUser, onTabChange }) {
+function NextTripCard({ currentUser, onSeeAllTrips, onChanged }) {
   const [loading, setLoading] = useState(true)
   const [invited, setInvited] = useState([])
   const [nextTrip, setNextTrip] = useState(null)
@@ -53,6 +53,7 @@ function NextTripCard({ currentUser, onTabChange }) {
     setDismissed((prev) => new Set([...prev, tripId])) // optimistic
     try {
       await rsvpToTrip(tripId, status)
+      onChanged?.()
     } catch (e) {
       console.warn("RSVP failed:", e)
       setDismissed((prev) => { const next = new Set(prev); next.delete(tripId); return next }) // rollback
@@ -67,7 +68,7 @@ function NextTripCard({ currentUser, onTabChange }) {
         {pendingInvite ? "Trip Invite" : "Your Next Trip"}
       </div>
       <button
-        onClick={() => onTabChange("plans")}
+        onClick={onSeeAllTrips}
         style={{ background: "none", border: "none", color: "var(--color-accent)", fontWeight: 700, fontSize: 12, cursor: "pointer", padding: 0 }}
       >
         See all trips →
@@ -162,7 +163,7 @@ function NextTripCard({ currentUser, onTabChange }) {
       {showCreateTrip && (
         <CreateTripModal
           onClose={() => setShowCreateTrip(false)}
-          onCreated={() => setShowCreateTrip(false)}
+          onCreated={() => { setShowCreateTrip(false); onChanged?.() }}
         />
       )}
     </>
@@ -502,7 +503,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts, focusDate = null
       {/* ── Calendar tab ── */}
       {subTab === "calendar" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <NextTripCard currentUser={currentUser} onTabChange={() => setSubTab("trips")} />
+          <NextTripCard currentUser={currentUser} onSeeAllTrips={() => setSubTab("trips")} onChanged={loadTrips} />
           <PingCta currentUser={currentUser} />
           <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 20, padding: "20px 18px" }}>
             <FriendsCalendar
