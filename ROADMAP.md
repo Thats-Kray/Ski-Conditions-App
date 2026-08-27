@@ -9,7 +9,9 @@ See `sprints/` for execution-ready, task-by-task implementation plans (one file 
 
 > **👉 Looking for what to work on next? Jump to "OPEN — the queue" and the sprint-sequence
 > table below it.** Sections 0-18 above are historical record; nearly all of it is shipped.
-> Groomed 2026-08-25 — every open item now carries a size estimate.
+> Groomed 2026-08-25 — every open item now carries a size estimate. **Re-prioritized
+> 2026-08-27: TASK 22.0 (mockup fidelity pass) is now the active top item — see it first in
+> the OPEN queue.**
 >
 > **State as of that grooming:** migrations `001-041` applied; `npm test` = **126 passing**
 > _(130 as of 2026-08-27 — this number moves; always re-check rather than cite it)_
@@ -1433,6 +1435,96 @@ single **1,184 KB** chunk with nothing lazy-loaded.
 
 ---
 
+### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS**
+
+**Kyle, 2026-08-27: this now sits ahead of everything else in the queue below**, including
+TASK 22.1-22.4. New high-fidelity mockups exist at
+`mockups/PowDays.app mockup design/Screen Shots/` (5 screens: Today Mountains, Today Map View,
+Plans, Crew, Profile) plus a source canvas `PowDays Reorg Mockup.dc.html`. The live app does not
+match them — it still looks like the pre-mockup build even though the mockups were "worked on
+yesterday." Going page by page, starting with **Today**, comparing screenshot to shipped code
+and producing a gap list before any implementation starts. Sizing lands once the full page-by-page
+audit is done and Kyle has called out priorities per page.
+
+**Today page gap audit (2026-08-27), Today Mountains + Today Map View screenshots vs.
+`TodayScreen.jsx`/`App.jsx`/`PowderMap.jsx`:**
+- Header is structurally different. Mockup: persistent `❄️ PowderDays` wordmark + notification
+  bell in one row, then a second row of `Today` / `Jan 18 · ☁️ Powder day` with a `List | Map`
+  segmented pill at right. Live app: on the Today tab, the brand wordmark is replaced entirely
+  by a `❄️ Morning Decision Engine` eyebrow pill + `Colorado Snow Conditions` h1 + a long
+  description paragraph + a `Refresh` button — no date, no "Powder day" condition line, no
+  segmented List/Map control (today it's two separate buttons, `🏔️ Snow` / `🗺️ Map`, not a
+  pill). The bell (`NotificationBell`) exists but only in desktop `TopNav` — mobile's persistent
+  top bar is logo-only per TASK 21.2, so mobile Today has no bell at all today.
+- Hero "best bet" card is a different pattern entirely. Mockup: compact card — `BEST BET TODAY`
+  label, resort name, pass + tier pills inline, one big score number top-right, one stat line
+  (overnight snow · summit wind · drive risk), two CTA pills (`Who's going` with a headcount
+  bubble, `Directions`). Live app's `leader-crown` card is a large gradient block with a 👑
+  emoji, "Best Powder Right Now: X — score" as one long heading, silver/bronze runner-ups as
+  inline text, and two separate `LeaderCard` boxes below for Best Epic / Best Ikon — none of
+  which appear in the mockup at all.
+- Resort list rows are a full redesign, not a tweak. Mockup: one compact row per resort — rank
+  number, colored score-tier pill, name, `tier · pass` subtitle, right-aligned `24H SNOW`/`BASE`
+  stacked numbers. Live app's `ResortCard` is a tall expandable card per resort: hero background
+  photo, Open/Closed + pass + drive-risk badges, a 3-metric grid (24h snow/base/skiers),
+  community-activity line, friends-going badge, forecast text box, travel-alerts box, a
+  "Show Details"/"This Week" expand toggle pair, and two full-width CTA buttons (Mountain Page,
+  Directions) — all on every row. Filter bar (All/Epic/Ikon + search + sort dropdown) also has
+  no equivalent shown in the mockup's list screen (mockup just says "sorted by Powder Score").
+- Map view needs the biggest net-new work. Mockup: full-bleed dark map with glowing gradient
+  score bubbles per resort (score number inside, resort name below) and small orange
+  friend-initial badges pinned to the edge of a bubble when someone's going there, plus a
+  draggable bottom sheet ("TOP OF THE LIST") showing the top 3 resorts as compact rows. Live
+  `PowderMap.jsx` uses plain Leaflet `CircleMarker`s (flat colored circles, no glow/gradient) and
+  `Popup`s for detail (tap-to-open, not always-visible name/score) — no bottom sheet exists at
+  all today.
+
+**Not yet reviewed:** Plans, Crew, Profile pages have mockup screenshots too but haven't been
+compared to shipped code yet — next up after Today is signed off.
+
+---
+
+### TASK 22.1 — Friends-calendar as the flagship view — **Size: M**
+
+**Scheduled Sprint 43** (prioritized by Kyle, 2026-08-27 — after TASK 22.0's redesign work).
+Mechanics already shipped (Sprint 34/35: per-person plan calendars, crew-filterable scope chips
+on the Plans tab); what's unresolved is placement and presentation. Kyle's read: this is the
+single biggest driver of return visits — the reason someone opens the app midweek is to see
+where everyone's going this weekend. Open questions to settle before implementation (design
+session, not straight to code):
+- Where does it live — its own top-level tab, the Today tab's primary card, or stay inside
+  Plans (today it's a buried sub-tab)?
+- Weekend-first framing ("this weekend / next weekend") vs. the current month grid — the grid is
+  the planning tool, a weekend view would be the *decision* tool.
+- Group by mountain ("6 people at Copper Saturday") instead of by person, which is what today's
+  calendar shows.
+- Should it surface a nudge to join a friend's day or start one at that mountain?
+- Empty state matters a lot here — with nobody planned yet, the page still needs to give a
+  reason to come back.
+
+### TASK 22.2 — Powder Score algorithm tuning — **Size: S-M**
+
+**Scheduled Sprint 44.** Tuning the existing formula, not building a new one. Needs a working
+definition of "better" from Kyle before it can be scoped precisely — bring 1-2 concrete cases
+where the current score felt wrong to the kickoff.
+
+### TASK 22.3 — Weather/conditions API quality pass — **Size: M**
+
+**Scheduled Sprint 45.** Too vague as currently written to size tightly. Needs one specific
+complaint (a resort/day where the data was wrong, stale, or missing) to become actionable —
+surface that before the sprint starts rather than during it.
+
+### TASK 22.4 — Map View + friends' locations per mountain — **Size: S**
+
+**Scheduled Sprint 46.** `PowderMap.jsx` (337 lines) already exists — this is mostly a
+test-and-fix pass on live friend-location pins (`useLiveFriendLocations.js`), not new build.
+**Note:** TASK 22.0's Today-page audit above already found the map's *visual* styling (glowing
+score bubbles, bottom sheet) needs real redesign work to match the new mockup — that work now
+also lives under TASK 22.0, so this task should re-scope to functional correctness once 22.0's
+map redesign lands, to avoid duplicating the same file twice in two sprints.
+
+---
+
 ## Deliberately NOT doing: rename `crew_invites` / `trip_invites`
 
 Logged as a task in the Sprint 38 plan doc and never tracked. Both are genuinely misnamed —
@@ -1446,17 +1538,27 @@ if `socialApi.js` is being split anyway.
 
 ---
 
-## Sprint sequence (set 2026-08-25 — Kyle's lens: throughput → features → security/debt)
+## Sprint sequence (re-set 2026-08-27 — Kyle: redesign fidelity first, then the four
+prioritized open ideas, then the throughput → features → security/debt queue set 2026-08-25)
 
 | Sprint | Contents | Size |
 |---|---|---|
-| **42** | **TASK 20.6 routing + code splitting** (Tasks 1-5; 6 cuttable) | M |
-| **42.5** | TASK 20.6 Tasks 7-8 — code splitting + lazy Leaflet | S |
-| **43** | TASK 1.1-T component test harness + first 3 suites | M |
-| **44** | TASK 19.1 per-crew visibility (migration 044, **alone**) | M |
-| **45** | Social tab IA — **design session first**, then implementation | L |
-| **46** | TASK 18.6 `anon` grants audit + revoke | M |
-| **47** | Debt bundle: 20.2, 20.3, 20.4 + deferred minors | S |
+| **42** | **TASK 22.0 — Mockup fidelity pass**, page-by-page (Today in progress) | TBD |
+| **43** | TASK 22.1 — Friends-calendar flagship placement (**design session first**) | M |
+| **44** | TASK 22.2 — Powder Score algorithm tuning | S-M |
+| **45** | TASK 22.3 — Weather/conditions API quality pass | M |
+| **46** | TASK 22.4 — Map View + friends'-location test-and-fix | S |
+| **47** | **TASK 20.6 routing + code splitting** (Tasks 1-5; 6 cuttable) | M |
+| **47.5** | TASK 20.6 Tasks 7-8 — code splitting + lazy Leaflet | S |
+| **48** | TASK 1.1-T component test harness + first 3 suites | M |
+| **49** | TASK 19.1 per-crew visibility (migration 044, **alone**) | M |
+| **50** | Social tab IA — **design session first**, then implementation | L |
+| **51** | TASK 18.6 `anon` grants audit + revoke | M |
+| **52** | Debt bundle: 20.2, 20.3, 20.4 + deferred minors | S |
+
+**Sprint numbers moved 2026-08-27 — the old 42-47 (routing → debt bundle) are now 47-52.** The
+old queue's own content and order are unchanged, only shifted down five slots. Check this table
+before citing a sprint number from an earlier session.
 
 Quick wins droppable into any sprint: TASK 19.5b (XS), TASK 20.1 (S), TASK 20.2 (XS), and
 **TASK 20.6's Task 8 alone** (lazy Leaflet — biggest measured win in the backlog for the least
@@ -1464,7 +1566,7 @@ work, and it needs none of the routing).
 
 **Why 20.6 moved ahead of the test harness (Kyle, 2026-08-27):** routing is far easier to test
 than state-driven tabs, and `src/lib/routes.js` gives the navigation layer real coverage under
-the runner that already exists. Doing it first makes Sprint 43 cheaper.
+the runner that already exists. Doing it first makes Sprint 48 cheaper.
 
 **TASK 21.2 (PowDays rename + logo assets) shipped 2026-08-27** — see its section above. It
 also carried a 5-theme contrast audit, a persistent mobile logo bar, a mobile composer fix, and
@@ -1523,7 +1625,8 @@ a real information-architecture pass, not just spacing tweaks.
     `.catch(() => [])` that would have traded a loud failure for a silent one. **The IA pass
     below is no longer blocked by this.**
 
--**"Where are my friends skiing" calendar — the flagship view.** Sprint 34 shipped the
+-**"Where are my friends skiing" calendar — the flagship view.** **Scheduled: Sprint 43,
+TASK 22.1** (2026-08-27) — open questions below carry forward unchanged into that task. Sprint 34 shipped the
 mechanics (per-person plan calendars, crew-filterable scope chips on the Plans tab), but
 the presentation is a first cut and the placement is unresolved. Kyle's read: this is the
 single biggest driver of return visits — the reason someone opens the app midweek is to
@@ -1558,6 +1661,9 @@ _Sized 2026-08-25. These are features, not debt — none is scheduled._
   being re-proposed as if it were a sprint-sized item.
 
 ## Sizes for the older ideas above
+
+**All three below scheduled 2026-08-27 as TASK 22.2-22.4, Sprints 44-46** — see those task
+entries in the OPEN queue for the current, authoritative detail. Kept here as the size record.
 
 | Item | Size | Note |
 |---|---|---|
