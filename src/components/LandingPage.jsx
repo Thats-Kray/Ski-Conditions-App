@@ -448,10 +448,7 @@ export default function LandingPage({ onSignIn, onSignUp, onBrowse }) {
         justifyContent: "space-between", alignItems: "center",
         backdropFilter: "blur(12px)",
       }} className="mobile-bar">
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ width: 24, height: 24, borderRadius: 6, background: "var(--gradient-primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>❄️</div>
-          <span style={{ fontSize: 15, fontWeight: 900, color: "white" }}>PowderDays</span>
-        </div>
+        <img src="/powdays-logo-banner.png" alt="PowDays" style={{ height: 24, width: "auto", display: "block" }} />
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={onSignIn} style={{ padding: "7px 14px", borderRadius: 9, border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "var(--color-text-1)", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Sign In</button>
           <button onClick={onSignUp} style={{ padding: "7px 14px", borderRadius: 9, border: "none", background: "var(--gradient-primary)", color: "white", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>Start →</button>
@@ -479,10 +476,7 @@ export default function LandingPage({ onSignIn, onSignUp, onBrowse }) {
         display: "none",
       }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: "var(--gradient-primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>❄️</div>
-            <span style={{ fontSize: 17, fontWeight: 900, color: "white", letterSpacing: -0.3 }}>PowderDays</span>
-          </div>
+          <img src="/powdays-logo-banner.png" alt="PowDays" style={{ height: 30, width: "auto", flexShrink: 0, display: "block" }} />
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <button onClick={() => scrollTo("features")} style={navLink}>Features</button>
             <button onClick={() => scrollTo("how-it-works")} style={navLink}>How It Works</button>
