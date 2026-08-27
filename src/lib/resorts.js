@@ -83,6 +83,10 @@ export function normalizeResortKey(key) {
   return String(key).trim().toLowerCase().replace(/\s+/g, "")
 }
 
+export function mapsUrl(destination) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`
+}
+
 /**
  * Resorts the manual "log a day" picker offers that are NOT Colorado day-trip mountains.
  *

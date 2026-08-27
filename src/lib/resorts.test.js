@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import {
   OPEN_RESORT_KEY, OPEN_RESORT_LABEL,
   RESORT_NAMES, RESORT_EMOJI,
-  resortName, resortEmoji, normalizeResortKey, PICKER_RESORT_LABELS,
+  resortName, resortEmoji, normalizeResortKey, PICKER_RESORT_LABELS, mapsUrl,
 } from "./resorts.js"
 
 test("the open sentinel resolves to a friendly label", () => {
@@ -72,4 +72,12 @@ test("out-of-region names do not leak into the pickers built from RESORT_NAMES",
   assert.ok(!Object.keys(RESORT_NAMES).includes("whistlerblackcomb"))
   assert.ok(!Object.keys(RESORT_NAMES).includes("alta"))
   assert.equal(Object.keys(RESORT_NAMES).length, 12)
+})
+
+test("mapsUrl builds a Google Maps directions link, URL-encoding the destination", () => {
+  const url = mapsUrl("Vail Parking Structure, Vail CO")
+  assert.strictEqual(
+    url,
+    "https://www.google.com/maps/dir/?api=1&destination=Vail%20Parking%20Structure%2C%20Vail%20CO"
+  )
 })

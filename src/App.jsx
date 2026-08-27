@@ -1086,21 +1086,7 @@ export default function App() {
     [rows]
   )
 
-  const rankedEpic = useMemo(
-    () => rankedResorts.filter((r) => r.pass === "Epic"),
-    [rankedResorts]
-  )
-
-  const rankedIkon = useMemo(
-    () => rankedResorts.filter((r) => r.pass === "Ikon"),
-    [rankedResorts]
-  )
-
   const topResort = rankedResorts[0]
-  const secondResort = rankedResorts[1]
-  const thirdResort = rankedResorts[2]
-  const topEpic = rankedEpic[0]
-  const topIkon = rankedIkon[0]
 
   // Show landing page for unauthenticated users (unless they chose to browse)
   const showLandingPage = authReady && !currentUser && !browseModeOverride && !isRecoveryMode
@@ -1155,7 +1141,6 @@ export default function App() {
       <SnowfallBackground />
       <style>{`
         body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif; }
-        .leader-crown { animation: floaty 2.8s ease-in-out infinite; }
         @keyframes floaty {
           0%, 100% { transform: translateY(0px) scale(1); }
           50% { transform: translateY(-4px) scale(1.03); }
@@ -1475,10 +1460,6 @@ export default function App() {
             refresh={refresh}
             currentUser={currentUser}
             topResort={topResort}
-            secondResort={secondResort}
-            thirdResort={thirdResort}
-            topEpic={topEpic}
-            topIkon={topIkon}
             setMountainPageResortKey={setMountainPageResortKey}
             onSubTabChange={setTodaySubTab}
             sessionActive={!!activeSession}

@@ -3,7 +3,9 @@ import PowderMap from "./PowderMap"
 import Badge, { TIER_COLORS } from "./ui/Badge"
 import ScoreRing from "./ui/ScoreRing"
 import FriendsGoingBadge from "./FriendsGoingBadge"
+import BestBetCard from "./BestBetCard"
 import { useIsStandalone } from "../lib/useMobile"
+import { mapsUrl } from "../lib/resorts"
 
 const OWNER_EMAIL = "raykyle1104@gmail.com"
 const KRAMES_BUTTE_KEY = "kramesbutte"
@@ -11,12 +13,6 @@ const KRAMES_BUTTE_KEY = "kramesbutte"
 function formatPercent(open, total) {
   if (open == null || total == null || total === 0) return "—"
   return `${Math.round((open / total) * 100)}%`
-}
-
-function mapsUrl(destination) {
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-    destination
-  )}`
 }
 
 function Row({ label, value }) {
@@ -67,15 +63,6 @@ function SevenDayForecastPanel({ dailySnow }) {
       )}
     </div>
   )
-}
-
-function tierColor(tier) {
-  if (tier === "Elite")     return "var(--rating-mint)"
-  if (tier === "Very Good") return "var(--rating-sky)"
-  if (tier === "Good")      return "var(--rating-gold)"
-  if (tier === "Okay")      return "var(--rating-peach)"
-  if (tier === "Closed")    return "var(--rating-slate)"
-  return "var(--rating-coral)" // Poor
 }
 
 function riskColor(risk) {
@@ -300,58 +287,6 @@ function ResortLogo({ resort }) {
   )
 }
 
-function LeaderCard({ title, icon, resort }) {
-  if (!resort) return null
-
-  return (
-    <div
-      style={{
-        background: "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,255,255,0.1)",
-        borderRadius: 22,
-        padding: 18,
-        display: "grid",
-        gap: 8,
-        boxShadow: "0 18px 50px rgba(0,0,0,0.28)",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 12,
-          letterSpacing: 0.5,
-          textTransform: "uppercase",
-          color: "rgba(255,255,255,0.58)",
-        }}
-      >
-        {title}
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ fontSize: 26 }}>{icon}</div>
-        <div>
-          <div style={{ fontSize: 19, fontWeight: 900 }}>{resort.name}</div>
-          <div
-            style={{
-              marginTop: 2,
-              color: tierColor(resort.powderTier),
-              fontWeight: 800,
-              fontSize: 13,
-            }}
-          >
-            Score {resort.powderScore} · {resort.powderTier}
-          </div>
-        </div>
-      </div>
-      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.72)" }}>
-        {resort.snowPrev24in != null ? `${resort.snowPrev24in}" last 24h` : "—"} ·{" "}
-        {resort.snow24in != null ? `${resort.snow24in}" next 24h` : "—"} ·{" "}
-        <span style={{ color: riskColor(resort.driveRisk), fontWeight: 800 }}>
-          Drive {resort.driveRisk}
-        </span>
-      </div>
-    </div>
-  )
-}
-
 // ── Add to Home Screen nudge ──────────────────────────────────────────────────
 //
 // Sprint plan says this should key off `sessionActive` (GPS session started),
@@ -545,10 +480,6 @@ export default function TodayScreen({
   refresh,
   currentUser,
   topResort,
-  secondResort,
-  thirdResort,
-  topEpic,
-  topIkon,
   setMountainPageResortKey,
   onSubTabChange,
   sessionActive = false,
@@ -615,73 +546,8 @@ export default function TodayScreen({
       )}
 
       {conditionsSubTab === "conditions" && topResort && (
-        <div style={{ display: "grid", gap: 14, marginBottom: 20 }}>
-          <div
-            className="leader-crown"
-            style={{
-              background: scoreGradient(topResort.powderScore),
-              border: "1px solid rgba(255,255,255,0.14)",
-              borderRadius: 24,
-              padding: 22,
-              display: "grid",
-              gap: 10,
-              boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <div style={{ fontSize: 28 }}>👑</div>
-              <div style={{ fontSize: 24, fontWeight: 900 }}>
-                Best Powder Right Now: {topResort.name} — {topResort.powderScore}
-              </div>
-              <div
-                style={{
-                  borderRadius: 999,
-                  padding: "6px 10px",
-                  background: "rgba(255,255,255,0.14)",
-                  border: "1px solid rgba(255,255,255,0.16)",
-                  color: tierColor(topResort.powderTier),
-                  fontSize: 12,
-                  fontWeight: 900,
-                  textTransform: "uppercase",
-                }}
-              >
-                {topResort.powderTier}
-              </div>
-            </div>
-
-            <div style={{ color: "rgba(255,255,255,0.88)", fontSize: 14 }}>
-              {topResort.snowPrev24in != null
-                ? `${topResort.snowPrev24in}" in the last 24h`
-                : "—"}{" "}
-              ·{" "}
-              {topResort.snow24in != null
-                ? `${topResort.snow24in}" forecast next 24h`
-                : "—"}{" "}
-              · {topResort.tempF != null ? `${topResort.tempF}°F` : "—"} ·{" "}
-              {topResort.wind || "—"} ·{" "}
-              <span style={{ color: riskColor(topResort.driveRisk), fontWeight: 900 }}>
-                Drive {topResort.driveRisk}
-              </span>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                flexWrap: "wrap",
-                fontSize: 13,
-                color: "rgba(255,255,255,0.8)",
-              }}
-            >
-              {secondResort && <div>🥈 {secondResort.name} ({secondResort.powderScore})</div>}
-              {thirdResort && <div>🥉 {thirdResort.name} ({thirdResort.powderScore})</div>}
-            </div>
-          </div>
-
-          <div className="leader-grid">
-            <LeaderCard title="Best Epic Resort" icon="🎿" resort={topEpic} />
-            <LeaderCard title="Best Ikon Resort" icon="🏔️" resort={topIkon} />
-          </div>
+        <div style={{ marginBottom: 20 }}>
+          <BestBetCard topResort={topResort} friendsGoing={friendTripsByResort[topResort.resortKey] || []} />
         </div>
       )}
 

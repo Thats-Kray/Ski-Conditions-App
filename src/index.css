@@ -402,19 +402,6 @@ input, textarea, select {
   }
 }
 
-/* ── Leader cards grid ──────────────────────────────────────────── */
-.leader-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px;
-}
-@media (max-width: 639px) {
-  .leader-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-}
-
 /* ── Metrics row (3 stat boxes inside resort card) ──────────────── */
 .metric-grid {
   display: grid;
