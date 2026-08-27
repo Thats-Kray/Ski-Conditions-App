@@ -599,28 +599,36 @@ export default function TodayScreen({
       <AddToHomeScreenNudge currentUser={currentUser} sessionActive={sessionActive} />
       <OffseasonBanner />
 
-      {/* Sub-tab switcher */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
+      {/* Segmented List | Map control — one outer pill, two halves */}
+      <div
+        style={{
+          display: "inline-flex",
+          gap: 2,
+          padding: 3,
+          marginBottom: 20,
+          background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.1)",
+          borderRadius: 999,
+        }}
+      >
         {[
-          { key: "conditions", label: "🏔️ Snow" },
-          { key: "map",        label: "🗺️ Map" },
+          { key: "conditions", label: "List" },
+          { key: "map",        label: "Map" },
         ].map(({ key, label }) => (
           <button
             key={key}
             onClick={() => setConditionsSubTab(key)}
             style={{
-              background: conditionsSubTab === key
-                ? "var(--gradient-primary)"
-                : "rgba(255,255,255,0.06)",
-              color: "white",
-              border: "1px solid rgba(255,255,255,0.12)",
-              padding: "9px 16px",
-              borderRadius: 12,
+              background: conditionsSubTab === key ? "var(--gradient-primary)" : "transparent",
+              color: conditionsSubTab === key ? "white" : "rgba(255,255,255,0.6)",
+              border: "none",
+              padding: "8px 20px",
+              borderRadius: 999,
               fontWeight: 800,
               fontSize: 13,
               cursor: "pointer",
               transition: "all 0.15s",
-              boxShadow: conditionsSubTab === key ? "0 4px 14px rgba(56,189,248,0.2)" : "none",
+              boxShadow: conditionsSubTab === key ? "0 4px 14px rgba(56,189,248,0.25)" : "none",
             }}
           >
             {label}
