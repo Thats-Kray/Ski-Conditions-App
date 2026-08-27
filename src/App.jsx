@@ -537,6 +537,20 @@ function TopNav({ activeTab, onTabChange, currentProfile, notifCount, currentUse
   )
 }
 
+// Mobile-only equivalent of TopNav's branding — BottomNav already owns tab
+// switching on mobile, so this is just the logo, not a full nav bar.
+function MobileTopBar() {
+  return (
+    <div className="mobile-top-bar">
+      <img
+        src="/powdays-logo-banner.png"
+        alt="PowDays"
+        style={{ height: 24, width: "auto", display: "block" }}
+      />
+    </div>
+  )
+}
+
 function TabButton({ active, onClick, children }) {
   return (
     <button
@@ -1332,6 +1346,7 @@ export default function App() {
         onOpenTrip={handleOpenTripById}
         onOpenPlan={handleOpenPlanDate}
       />
+      <MobileTopBar />
       <BottomNav
         activeTab={activeTab}
         onTabChange={handleTabChange}
@@ -1342,7 +1357,7 @@ export default function App() {
       <div className="mobile-scroll-pad" style={{
         maxWidth: 1320,
         margin: "0 auto",
-        paddingTop: isMobile ? 16 : 30,
+        paddingTop: isMobile ? "calc(44px + var(--safe-top) + 16px)" : 30,
         paddingLeft: isMobile ? 14 : 20,
         paddingRight: isMobile ? 14 : 20,
         paddingBottom: isMobile ? undefined : 48,
