@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import SnowfallBackground from "./components/SnowfallBackground"
 import { useMobile } from "./lib/useMobile"
 import { localDateKey } from "./lib/calendarDates"
+import { formatDate } from "./lib/format"
 import AuthForm from "./components/AuthForm"
 import OnboardingFlow from "./components/OnboardingFlow"
 import MessagingCenter from "./components/MessagingCenter"
@@ -457,6 +458,16 @@ function BottomNav({ activeTab, onTabChange, currentProfile, notifCount }) {
       })}
     </nav>
   )
+}
+
+// A short, honest condition label for the Today header. Only claims "Powder day" when
+// there's real fresh snow behind it — an empty/undefined topResort or a dry day just
+// shows the date with no dash-clause, rather than guessing.
+function todayConditionLabel(topResort) {
+  if (!topResort) return ""
+  if ((topResort.snowPrev24in ?? 0) >= 6) return "❄️ Powder day"
+  if ((topResort.snowPrev24in ?? 0) > 0) return "🌨️ Fresh snow"
+  return ""
 }
 
 function TopNav({ activeTab, onTabChange, currentProfile, notifCount, currentUser, onOpenTrip, onOpenPlan }) {
@@ -1391,12 +1402,13 @@ export default function App() {
           <div>
             {activeTab === "today" ? (
               <div>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", padding: "5px 10px", borderRadius: 999, fontSize: 11, color: "rgba(255,255,255,0.65)", marginBottom: 8 }}>
-                  ❄️ Morning Decision Engine
-                </div>
                 <h1 style={{ margin: 0, fontSize: isMobile ? 24 : 30, fontWeight: 900, letterSpacing: -0.5 }}>
-                  {isMobile ? "Snow Conditions" : "Colorado Snow Conditions"}
+                  Today
                 </h1>
+                <div style={{ marginTop: 4, fontSize: 14, color: "rgba(255,255,255,0.55)" }}>
+                  {formatDate(localDateKey())}
+                  {todayConditionLabel(topResort) ? ` · ${todayConditionLabel(topResort)}` : ""}
+                </div>
               </div>
             ) : (
               <div style={{ fontSize: 18, fontWeight: 900, color: "white", letterSpacing: -0.3 }}>❄️ PowDays</div>
@@ -1405,6 +1417,19 @@ export default function App() {
 
           {/* Right: actions */}
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {/* Mobile has no bell today — TopNav (which has one) is desktop-only, and the
+                always-on MobileTopBar is deliberately logo-only (TASK 21.2). Scope the bell
+                to the Today tab specifically so mobile doesn't end up with two bells once
+                TopNav is visible again on desktop. */}
+            {activeTab === "today" && isMobile && currentUser && (
+              <NotificationBell
+                currentUser={currentUser}
+                onOpenTrip={handleOpenTripById}
+                onOpenPlan={handleOpenPlanDate}
+                onTabChange={handleTabChange}
+                variant="icon"
+              />
+            )}
             {/* conditionsSubTab itself lives inside TodayScreen now (Task 2) — App.jsx
                 only gets a read-only mirror of it (todaySubTab, via onSubTabChange)
                 so this button can stay inline with the title, exactly where it was. */}
@@ -1424,13 +1449,6 @@ export default function App() {
             )}
           </div>
         </header>
-
-        {/* Today-tab description — only shown on the conditions sub-tab */}
-        {activeTab === "today" && todaySubTab === "conditions" && (
-          <p style={{ margin: "0 0 20px", color: "rgba(255,255,255,0.55)", fontSize: 14, maxWidth: 680, lineHeight: 1.6 }}>
-            Resort snow, NWS forecasts, terrain metrics, and live COtrip travel conditions — blended into one morning ski decision engine.
-          </p>
-        )}
 
         {error && (
           <div style={{ background: "rgba(255,0,0,0.12)", border: "1px solid rgba(255,0,0,0.25)", padding: 12, borderRadius: 14, color: "var(--color-danger)", marginBottom: 16 }}>
