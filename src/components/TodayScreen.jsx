@@ -721,7 +721,7 @@ export default function TodayScreen({
       {skiHereModalResortKey && (
         <PlanEditorModal
           dateKey={localDateKey()}
-          plan={myTodayPlan}
+          plan={myTodayPlan?.resort_key === skiHereModalResortKey ? myTodayPlan : null}
           resorts={rows}
           defaultResortKey={skiHereModalResortKey}
           busy={savingTodayPlan}
