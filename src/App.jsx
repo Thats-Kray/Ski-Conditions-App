@@ -21,6 +21,7 @@ import {
   getAcceptedFriends,
   getCurrentUser,
   getFriendUpcomingTripsByResort,
+  getMyDailyPlan,
   getMyProfile,
   getResortActivityCounts,
   getResortSkierCounts,
@@ -30,8 +31,10 @@ import {
   logActivityOnce,
   logOut,
   syncVerificationFromAuth,
+  upsertDailyPlan,
 } from "./lib/socialApi"
 import { flushSessionToSupabase, logSkiDay } from "./lib/leaderboardApi"
+import { buildPlanUpsert } from "./lib/planUpsert"
 import { useGpsTracker } from "./lib/useGpsTracker"
 import HeroBannerStrip from "./components/ui/HeroBannerStrip"
 import { SnowIcon, PlansIcon, TrackIcon, SocialIcon, ProfileIcon } from "./components/ui/NavIcons"
@@ -607,6 +610,9 @@ export default function App() {
   const [skierDetails, setSkierDetails] = useState({})
   const [resortActivityCounts, setResortActivityCounts] = useState({}) // { [resortKey]: count }
   const [friendTripsByResort, setFriendTripsByResort] = useState({})
+  const [myTodayPlan, setMyTodayPlan] = useState(null)
+  const [savingTodayPlan, setSavingTodayPlan] = useState(false)
+  const [todayPlanError, setTodayPlanError] = useState(null)
   const [friendIds, setFriendIds] = useState([]) // accepted friends' user IDs — live map pins (S28)
   const [vibeData, setVibeData] = useState({ checkinCounts: {}, rsvpCounts: {} })
   const [currentUser, setCurrentUser] = useState(null)
@@ -983,6 +989,15 @@ export default function App() {
     return () => { cancelled = true }
   }, [currentUser])
 
+  useEffect(() => {
+    if (!currentUser) { setMyTodayPlan(null); return }
+    let cancelled = false
+    getMyDailyPlan(localDateKey())
+      .then((plan) => { if (!cancelled) setMyTodayPlan(plan) })
+      .catch(() => { if (!cancelled) setMyTodayPlan(null) })
+    return () => { cancelled = true }
+  }, [currentUser])
+
   // Accepted friends' IDs — feeds useLiveFriendLocations for the map's live
   // pins (S28-T3) and Home's "N friends on mountain now" count (S28-T4).
   useEffect(() => {
@@ -1076,6 +1091,25 @@ export default function App() {
     // leave a stale profile mounted over the tab the user just picked.
     setViewingProfileId(null)
     setActiveTab(tab)
+  }
+
+  async function handleSaveTodayPlan({ resortKey, eta, visibility }) {
+    setSavingTodayPlan(true); setTodayPlanError(null)
+    try {
+      const saved = await upsertDailyPlan(buildPlanUpsert(myTodayPlan, {
+        skiDate: localDateKey(),
+        resortKey,
+        visibility,
+        eta, // already snapped by PlanEditorModal
+      }))
+      setMyTodayPlan(saved)
+      return true
+    } catch (err) {
+      setTodayPlanError(err?.message || "Couldn't save that plan. Try again.")
+      return false
+    } finally {
+      setSavingTodayPlan(false)
+    }
   }
 
   const rankedResorts = useMemo(
@@ -1455,6 +1489,10 @@ export default function App() {
             friendIds={friendIds}
             resortActivityCounts={resortActivityCounts}
             friendTripsByResort={friendTripsByResort}
+            myTodayPlan={myTodayPlan}
+            savingTodayPlan={savingTodayPlan}
+            todayPlanError={todayPlanError}
+            onSaveTodayPlan={handleSaveTodayPlan}
             vibeData={vibeData}
             loading={loading}
             refresh={refresh}
