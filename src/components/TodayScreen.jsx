@@ -5,6 +5,9 @@ import ScoreRing from "./ui/ScoreRing"
 import FriendsGoingBadge from "./FriendsGoingBadge"
 import BestBetCard from "./BestBetCard"
 import ResortListRow from "./ResortListRow"
+import PlanEditorModal from "./PlanEditorModal"
+import { planButtonState } from "../lib/planUpsert"
+import { localDateKey } from "../lib/calendarDates"
 import { useIsStandalone } from "../lib/useMobile"
 import { mapsUrl } from "../lib/resorts"
 
@@ -93,7 +96,7 @@ function scoreGradient(score) {
   return "linear-gradient(135deg, #7f1d1d, #451a03)"                    // Poor
 }
 
-function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGoing, vibeData, onOpenMountainPage }) {
+function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGoing, vibeData, onOpenMountainPage, myTodayPlan, onSkiHereToday }) {
   const [expanded, setExpanded] = useState(false)
   const [weekExpanded, setWeekExpanded] = useState(false)
 
@@ -236,6 +239,27 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
             <SevenDayForecastPanel dailySnow={r.dailySnow} />
           </div>
         )}
+
+        {/* Ski here today */}
+        {(() => {
+          const { label, mode } = planButtonState(myTodayPlan, r.resortKey)
+          const isConfirmed = mode === "edit"
+          return (
+            <button
+              onClick={() => onSkiHereToday(r.resortKey)}
+              style={{
+                display: "grid", placeItems: "center",
+                border: isConfirmed ? "1px solid rgba(34,197,94,0.4)" : "none",
+                color: isConfirmed ? "var(--color-success)" : "var(--color-pass-pill-text)",
+                fontWeight: 800, padding: "11px 14px", borderRadius: 14,
+                background: isConfirmed ? "rgba(10,30,10,0.5)" : "var(--gradient-primary)",
+                fontSize: 13, cursor: "pointer",
+              }}
+            >
+              {label}
+            </button>
+          )
+        })()}
 
         {/* Mountain Page */}
         <button
@@ -484,9 +508,14 @@ export default function TodayScreen({
   setMountainPageResortKey,
   onSubTabChange,
   sessionActive = false,
+  myTodayPlan,
+  savingTodayPlan,
+  todayPlanError,
+  onSaveTodayPlan,
 }) {
   const [conditionsSubTab, setConditionsSubTab] = useState("conditions")
   const [expandedKeys, setExpandedKeys] = useState(new Set())
+  const [skiHereModalResortKey, setSkiHereModalResortKey] = useState(null)
 
   function toggleExpanded(resortKey) {
     setExpandedKeys((prev) => {
@@ -676,6 +705,8 @@ export default function TodayScreen({
                           friendsGoing={friendTripsByResort[r.resortKey] || []}
                           vibeData={vibeData}
                           onOpenMountainPage={setMountainPageResortKey}
+                          myTodayPlan={myTodayPlan}
+                          onSkiHereToday={setSkiHereModalResortKey}
                         />
                       )}
                     </div>
@@ -685,6 +716,22 @@ export default function TodayScreen({
             )
           })()}
         </>
+      )}
+
+      {skiHereModalResortKey && (
+        <PlanEditorModal
+          dateKey={localDateKey()}
+          plan={myTodayPlan}
+          resorts={rows}
+          defaultResortKey={skiHereModalResortKey}
+          busy={savingTodayPlan}
+          error={todayPlanError}
+          onSave={async (fields) => {
+            const ok = await onSaveTodayPlan(fields)
+            if (ok) setSkiHereModalResortKey(null)
+          }}
+          onClose={() => setSkiHereModalResortKey(null)}
+        />
       )}
     </>
   )
