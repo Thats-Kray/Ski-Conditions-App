@@ -1,6 +1,6 @@
 {
-  "name": "PowderDays",
-  "short_name": "PowderDays",
+  "name": "PowDays",
+  "short_name": "PowDays",
   "description": "Colorado ski conditions, crew planning, and GPS session tracking",
   "start_url": "/",
   "display": "standalone",

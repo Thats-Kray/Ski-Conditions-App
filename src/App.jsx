@@ -464,9 +464,11 @@ function TopNav({ activeTab, onTabChange, currentProfile, notifCount, currentUse
     <nav className="top-nav">
       <div className="top-nav-inner">
         {/* Branding */}
-        <div style={{ fontSize: 17, fontWeight: 800, background: "linear-gradient(135deg, var(--color-text-1), var(--color-accent))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", letterSpacing: -0.3, flexShrink: 0 }}>
-          ❄️ PowderDays
-        </div>
+        <img
+          src="/powdays-logo-banner.png"
+          alt="PowDays"
+          style={{ height: 28, width: "auto", flexShrink: 0, display: "block" }}
+        />
 
         {/* Tabs */}
         <div style={{ display: "flex", gap: 4 }}>
@@ -1278,7 +1280,7 @@ export default function App() {
             </div>
 
             <div style={{ marginTop: 40, fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 600, letterSpacing: 0.4 }}>
-              ❄️ PowderDays — Plan your ski season with your crew
+              ❄️ PowDays — Plan your ski season with your crew
             </div>
           </div>
         </div>
@@ -1382,7 +1384,7 @@ export default function App() {
                 </h1>
               </div>
             ) : (
-              <div style={{ fontSize: 18, fontWeight: 900, color: "white", letterSpacing: -0.3 }}>❄️ PowderDays</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "white", letterSpacing: -0.3 }}>❄️ PowDays</div>
             )}
           </div>
 
