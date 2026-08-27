@@ -1,6 +1,7 @@
 import Badge, { TIER_COLORS, RISK_COLORS } from "./ui/Badge"
 import FriendsGoingBadge from "./FriendsGoingBadge"
 import { mapsUrl } from "../lib/resorts"
+import { planButtonState } from "../lib/planUpsert"
 
 /**
  * The Today List View's single hero card — "Best Bet Today". Replaces the old
@@ -8,7 +9,7 @@ import { mapsUrl } from "../lib/resorts"
  * Decision 5): that per-pass callout is dropped, the pass badge on this card and on
  * every list row below it is what's left of it.
  */
-export default function BestBetCard({ topResort, friendsGoing }) {
+export default function BestBetCard({ topResort, friendsGoing, myTodayPlan, onSkiHereToday }) {
   if (!topResort) return null
 
   return (
@@ -69,6 +70,25 @@ export default function BestBetCard({ topResort, friendsGoing }) {
         >
           Directions
         </a>
+        {(() => {
+          const { label, mode } = planButtonState(myTodayPlan, topResort.resortKey)
+          const isConfirmed = mode === "edit"
+          return (
+            <button
+              onClick={() => onSkiHereToday(topResort.resortKey)}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                border: isConfirmed ? "1px solid rgba(34,197,94,0.4)" : "none",
+                color: isConfirmed ? "var(--color-success)" : "var(--color-pass-pill-text)",
+                fontWeight: 800, fontSize: 14, padding: "12px 20px", borderRadius: 999,
+                background: isConfirmed ? "rgba(10,30,10,0.5)" : "var(--gradient-primary)",
+                cursor: "pointer",
+              }}
+            >
+              {label}
+            </button>
+          )
+        })()}
       </div>
     </div>
   )

@@ -512,6 +512,7 @@ export default function TodayScreen({
   savingTodayPlan,
   todayPlanError,
   onSaveTodayPlan,
+  onClearTodayPlanError,
 }) {
   const [conditionsSubTab, setConditionsSubTab] = useState("conditions")
   const [expandedKeys, setExpandedKeys] = useState(new Set())
@@ -587,7 +588,12 @@ export default function TodayScreen({
 
       {conditionsSubTab === "conditions" && topResort && (
         <div style={{ marginBottom: 20 }}>
-          <BestBetCard topResort={topResort} friendsGoing={friendTripsByResort[topResort.resortKey] || []} />
+          <BestBetCard
+            topResort={topResort}
+            friendsGoing={friendTripsByResort[topResort.resortKey] || []}
+            myTodayPlan={myTodayPlan}
+            onSkiHereToday={setSkiHereModalResortKey}
+          />
         </div>
       )}
 
@@ -676,12 +682,13 @@ export default function TodayScreen({
           </section>
 
           {(() => {
-            const moreResorts = rows.filter((r) => r.resortKey !== topResort?.resortKey)
+            const excludeHero = Boolean(topResort) && sortBy === "Powder Score"
+            const moreResorts = excludeHero ? rows.filter((r) => r.resortKey !== topResort.resortKey) : rows
             return (
               <>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.8, color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>
-                    {moreResorts.length} More Resort{moreResorts.length === 1 ? "" : "s"}
+                    {moreResorts.length} {excludeHero ? "More " : ""}Resort{moreResorts.length === 1 ? "" : "s"}
                   </div>
                   <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
                     sorted by {sortBy}
@@ -691,7 +698,7 @@ export default function TodayScreen({
                   {moreResorts.map((r, i) => (
                     <div key={r.resortKey}>
                       <ResortListRow
-                        rank={i + 2}
+                        rank={excludeHero ? i + 2 : i + 1}
                         r={r}
                         expanded={expandedKeys.has(r.resortKey)}
                         onToggle={() => toggleExpanded(r.resortKey)}
@@ -721,7 +728,7 @@ export default function TodayScreen({
       {skiHereModalResortKey && (
         <PlanEditorModal
           dateKey={localDateKey()}
-          plan={myTodayPlan?.resort_key === skiHereModalResortKey ? myTodayPlan : null}
+          plan={myTodayPlan ? { ...myTodayPlan, resort_key: skiHereModalResortKey } : null}
           resorts={rows}
           defaultResortKey={skiHereModalResortKey}
           busy={savingTodayPlan}
@@ -730,7 +737,7 @@ export default function TodayScreen({
             const ok = await onSaveTodayPlan(fields)
             if (ok) setSkiHereModalResortKey(null)
           }}
-          onClose={() => setSkiHereModalResortKey(null)}
+          onClose={() => { setSkiHereModalResortKey(null); onClearTodayPlanError() }}
         />
       )}
     </>

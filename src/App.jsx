@@ -1096,7 +1096,8 @@ export default function App() {
   async function handleSaveTodayPlan({ resortKey, eta, visibility }) {
     setSavingTodayPlan(true); setTodayPlanError(null)
     try {
-      const saved = await upsertDailyPlan(buildPlanUpsert(myTodayPlan, {
+      const existing = await getMyDailyPlan(localDateKey())
+      const saved = await upsertDailyPlan(buildPlanUpsert(existing, {
         skiDate: localDateKey(),
         resortKey,
         visibility,
@@ -1493,6 +1494,7 @@ export default function App() {
             savingTodayPlan={savingTodayPlan}
             todayPlanError={todayPlanError}
             onSaveTodayPlan={handleSaveTodayPlan}
+            onClearTodayPlanError={() => setTodayPlanError(null)}
             vibeData={vibeData}
             loading={loading}
             refresh={refresh}
