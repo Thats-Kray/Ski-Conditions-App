@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { fmt, formatDateFull } from "../lib/format"
 import { RESORT_PHOTOS, resortName, normalizeResortKey } from "../lib/resorts"
+import { getShareCardTheme, rgba } from "../lib/shareCardTokens"
 
 const SKILL_COLORS = {
   green:        "#22c55e",
@@ -76,7 +77,7 @@ function drawSnowflakes(ctx, W, H, seed) {
   }
 }
 
-function drawAvatar(ctx, name, x, y, size, skillLevel) {
+function drawAvatar(ctx, name, x, y, size, skillLevel, theme) {
   const initials = (name || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
   const r = size / 2
   const cx = x + r
@@ -84,8 +85,8 @@ function drawAvatar(ctx, name, x, y, size, skillLevel) {
 
   // Outer glow
   const glow = ctx.createRadialGradient(cx, cy, r * 0.5, cx, cy, r * 1.4)
-  glow.addColorStop(0, "rgba(37,99,235,0.35)")
-  glow.addColorStop(1, "rgba(37,99,235,0)")
+  glow.addColorStop(0, rgba(theme.accentDeep, 0.35))
+  glow.addColorStop(1, rgba(theme.accentDeep, 0))
   ctx.fillStyle = glow
   ctx.beginPath()
   ctx.arc(cx, cy, r * 1.4, 0, Math.PI * 2)
@@ -93,14 +94,15 @@ function drawAvatar(ctx, name, x, y, size, skillLevel) {
 
   // Circle bg
   const grad = ctx.createLinearGradient(x, y, x + size, y + size)
-  grad.addColorStop(0, "#1d4ed8")
-  grad.addColorStop(1, "#0891b2")
+  grad.addColorStop(0, theme.accentDeep)
+  grad.addColorStop(1, theme.accentTeal)
   ctx.fillStyle = grad
   ctx.beginPath()
   ctx.arc(cx, cy, r, 0, Math.PI * 2)
   ctx.fill()
 
-  // Border
+  // Border — skill-level color is theme-invariant by design (same convention
+  // as the app-wide trail-difficulty tokens in src/index.css), not themed here.
   const skillColor = SKILL_COLORS[skillLevel] || "#60a5fa"
   ctx.strokeStyle = skillColor
   ctx.lineWidth = 4
@@ -150,6 +152,7 @@ function drawImageCover(ctx, img, x, y, w, h) {
 
 async function renderCard(canvas, { profile, stats, season, session }) {
   const mode = session ? "session" : "season"
+  const theme = getShareCardTheme(profile?.theme)
   const W = 1080
   const H = 1080
   canvas.width = W
@@ -183,16 +186,16 @@ async function renderCard(canvas, { profile, stats, season, session }) {
   } else {
     // Plain gradient background (existing season-mode look, also the session-mode fallback).
     const bg = ctx.createLinearGradient(0, 0, W * 0.6, H)
-    bg.addColorStop(0, "#050e20")
-    bg.addColorStop(0.5, "#061628")
-    bg.addColorStop(1, "#040b18")
+    bg.addColorStop(0, theme.bgDeep)
+    bg.addColorStop(0.5, theme.bgElevated)
+    bg.addColorStop(1, theme.bg)
     ctx.fillStyle = bg
     ctx.fillRect(0, 0, W, H)
 
     // Ambient glow top-right
     const glow1 = ctx.createRadialGradient(W * 0.85, H * 0.15, 0, W * 0.85, H * 0.15, W * 0.55)
-    glow1.addColorStop(0, "rgba(37,99,235,0.18)")
-    glow1.addColorStop(1, "rgba(37,99,235,0)")
+    glow1.addColorStop(0, rgba(theme.accent, 0.18))
+    glow1.addColorStop(1, rgba(theme.accent, 0))
     ctx.fillStyle = glow1
     ctx.fillRect(0, 0, W, H)
   }
@@ -205,7 +208,7 @@ async function renderCard(canvas, { profile, stats, season, session }) {
 
   // Top bar: branding
   ctx.font = `800 44px -apple-system, BlinkMacSystemFont, system-ui, sans-serif`
-  ctx.fillStyle = "#60a5fa"
+  ctx.fillStyle = theme.accent
   ctx.textAlign = "left"
   ctx.textBaseline = "alphabetic"
   ctx.fillText("❄️  PowderDays", 76, 108)
@@ -219,7 +222,7 @@ async function renderCard(canvas, { profile, stats, season, session }) {
   }
 
   // Divider
-  ctx.strokeStyle = "rgba(96,165,250,0.2)"
+  ctx.strokeStyle = rgba(theme.accent, 0.2)
   ctx.lineWidth = 1
   ctx.beginPath()
   ctx.moveTo(76, 134)
@@ -230,7 +233,7 @@ async function renderCard(canvas, { profile, stats, season, session }) {
   const avatarSize = 152
   const avatarX = 76
   const avatarY = 168
-  drawAvatar(ctx, profile?.full_name || profile?.username, avatarX, avatarY, avatarSize, profile?.skill_level)
+  drawAvatar(ctx, profile?.full_name || profile?.username, avatarX, avatarY, avatarSize, profile?.skill_level, theme)
 
   // Name + handle
   const name = profile?.full_name || profile?.username || "Skier"
@@ -395,12 +398,12 @@ async function renderCard(canvas, { profile, stats, season, session }) {
       const pbY = rowTop + rowH3 + 16
       drawRoundedRect(ctx, 76, pbY, W - 152, 88, 18)
       const pbBg = ctx.createLinearGradient(76, pbY, W - 76, pbY + 88)
-      pbBg.addColorStop(0, "rgba(96,165,250,0.18)")
-      pbBg.addColorStop(1, "rgba(8,145,178,0.10)")
+      pbBg.addColorStop(0, rgba(theme.accentDeep, 0.18))
+      pbBg.addColorStop(1, rgba(theme.accentTeal, 0.10))
       ctx.fillStyle = pbBg
       ctx.fill()
       drawRoundedRect(ctx, 76, pbY, W - 152, 88, 18)
-      ctx.strokeStyle = "rgba(96,165,250,0.3)"
+      ctx.strokeStyle = rgba(theme.accentDeep, 0.3)
       ctx.lineWidth = 1.5
       ctx.stroke()
 
@@ -420,7 +423,7 @@ async function renderCard(canvas, { profile, stats, season, session }) {
   ctx.fillStyle = "rgba(255,255,255,0.2)"
   ctx.textAlign = "center"
   ctx.textBaseline = "alphabetic"
-  ctx.fillText("powderdays.app", W / 2, H - 44)
+  ctx.fillText("powdays.app", W / 2, H - 44)
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
