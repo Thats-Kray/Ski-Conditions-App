@@ -543,9 +543,9 @@ function MobileTopBar() {
   return (
     <div className="mobile-top-bar">
       <img
-        src="/powdays-logo-banner.png"
+        src="/powdays-logo-mobile.png"
         alt="PowDays"
-        style={{ height: 24, width: "auto", display: "block" }}
+        style={{ height: 36, width: "auto", display: "block" }}
       />
     </div>
   )
