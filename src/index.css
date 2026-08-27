@@ -43,8 +43,8 @@
   --color-nav-bg:        rgba(4, 8, 15, 0.95);
   --color-badge-border:  rgba(4, 8, 15, 1);
 
-  --gradient-primary:    linear-gradient(135deg, #0284c7, #38bdf8);
-  --gradient-elite:      linear-gradient(135deg, #0e7490, #38bdf8);
+  --gradient-primary:    linear-gradient(135deg, #0284c7, #0897d7);
+  --gradient-elite:      linear-gradient(135deg, #0e7490, #0897d7);
   --gradient-bg:         radial-gradient(ellipse 80% 35% at 50% 0%, rgba(56,189,248,0.08) 0%, transparent 100%),
                          linear-gradient(180deg, #04080f 0%, #060d1a 100%);
 
@@ -170,8 +170,8 @@
   --color-accent: #F59E0B; --color-accent-dim: rgba(245,158,11,0.15); --color-accent-glow: rgba(245,158,11,0.28); --color-accent-2: #3B82F6;
   --color-text-1: #F8FAFC; --color-text-2: #FCD34D; --color-text-3: rgba(252,211,77,0.45); --color-text-muted: #64748B;
   --color-nav-bg: rgba(2,5,16,0.95); --color-badge-border: rgba(2,5,16,1);
-  --gradient-primary: linear-gradient(135deg, #f59e0b, #d97706);
-  --gradient-elite: linear-gradient(135deg, #d97706, #f59e0b);
+  --gradient-primary: linear-gradient(135deg, #c57f08, #d97706);
+  --gradient-elite: linear-gradient(135deg, #d97706, #c57f08);
   --gradient-bg: radial-gradient(ellipse 80% 35% at 50% 0%, rgba(245,158,11,0.08) 0%, transparent 100%), linear-gradient(180deg, #020510 0%, #0A1628 100%);
   --shadow-card: 0 4px 24px rgba(0,0,0,0.5); --shadow-accent: 0 0 20px rgba(245,158,11,0.25); --shadow-button: 0 6px 20px rgba(245,158,11,0.22);
   --color-accent-soft: #FBBF24; --color-accent-strong: #D97706; --color-accent-deep: #B45309; --color-accent-teal: #2563EB;
@@ -188,8 +188,8 @@
   --color-accent: #14B8A6; --color-accent-dim: rgba(20,184,166,0.15); --color-accent-glow: rgba(20,184,166,0.28); --color-accent-2: #2563EB;
   --color-text-1: #E2E8F0; --color-text-2: #5EEAD4; --color-text-3: rgba(94,234,212,0.45); --color-text-muted: #475569;
   --color-nav-bg: rgba(8,14,24,0.95); --color-badge-border: rgba(8,14,24,1);
-  --gradient-primary: linear-gradient(135deg, #14b8a6, #0d9488);
-  --gradient-elite: linear-gradient(135deg, #0d9488, #14b8a6);
+  --gradient-primary: linear-gradient(135deg, #12a191, #0d9488);
+  --gradient-elite: linear-gradient(135deg, #0d9488, #12a191);
   --gradient-bg: radial-gradient(ellipse 80% 35% at 50% 0%, rgba(20,184,166,0.08) 0%, transparent 100%), linear-gradient(180deg, #080E18 0%, #0F1C30 100%);
   --shadow-card: 0 4px 24px rgba(0,0,0,0.5); --shadow-accent: 0 0 20px rgba(20,184,166,0.25); --shadow-button: 0 6px 20px rgba(20,184,166,0.22);
   --color-accent-soft: #2DD4BF; --color-accent-strong: #0D9488; --color-accent-deep: #0F766E; --color-accent-teal: #1D4ED8;
@@ -206,12 +206,12 @@
   --color-accent: #A855F7; --color-accent-dim: rgba(168,85,247,0.15); --color-accent-glow: rgba(168,85,247,0.28); --color-accent-2: #06D6A0;
   --color-text-1: #FAF5FF; --color-text-2: #C084FC; --color-text-3: rgba(192,132,252,0.45); --color-text-muted: #4A3F6B;
   --color-nav-bg: rgba(5,3,16,0.95); --color-badge-border: rgba(5,3,16,1);
-  --gradient-primary: linear-gradient(135deg, #A855F7, #06D6A0);
+  --gradient-primary: linear-gradient(135deg, #A855F7, #049f77);
   --gradient-elite: linear-gradient(135deg, #059669, #A855F7);
   --gradient-bg: radial-gradient(ellipse 80% 35% at 50% 0%, rgba(168,85,247,0.08) 0%, transparent 100%), linear-gradient(180deg, #050310 0%, #0D0A23 100%);
   --shadow-card: 0 4px 24px rgba(0,0,0,0.5); --shadow-accent: 0 0 20px rgba(168,85,247,0.25); --shadow-button: 0 6px 20px rgba(168,85,247,0.22);
   --color-accent-soft: #C084FC; --color-accent-strong: #9333EA; --color-accent-deep: #7E22CE; --color-accent-teal: #059669;
-  --color-modal-bg: #170F2C; --color-bg-deep: #0A0618; --color-surface-popover: #241A3D;
+  --color-modal-bg: #170F2C; --color-bg-deep: #0A0618; --color-surface-popover: #171128;
   --color-banner-heading: #FAF5FF; --color-banner-highlight: #C084FC;
   --gradient-cta: linear-gradient(135deg, var(--color-accent-deep), var(--color-accent-teal));
 }
@@ -226,8 +226,8 @@
   --color-accent: #F97316; --color-accent-dim: rgba(249,115,22,0.15); --color-accent-glow: rgba(249,115,22,0.28); --color-accent-2: #F59E0B;
   --color-text-1: #FFF7ED; --color-text-2: #FB923C; --color-text-3: rgba(251,146,60,0.45); --color-text-muted: #44260A;
   --color-nav-bg: rgba(12,7,4,0.95); --color-badge-border: rgba(12,7,4,1);
-  --gradient-primary: linear-gradient(135deg, #ea580c, #f97316);
-  --gradient-elite: linear-gradient(135deg, #d97706, #f97316);
+  --gradient-primary: linear-gradient(135deg, #ea580c, #ea6406);
+  --gradient-elite: linear-gradient(135deg, #d97706, #ea6406);
   --gradient-bg: radial-gradient(ellipse 80% 35% at 50% 0%, rgba(249,115,22,0.08) 0%, transparent 100%), linear-gradient(180deg, #0C0704 0%, #1C1208 100%);
   --shadow-card: 0 4px 24px rgba(0,0,0,0.5); --shadow-accent: 0 0 20px rgba(249,115,22,0.25); --shadow-button: 0 6px 20px rgba(249,115,22,0.22);
   --color-accent-soft: #FB923C; --color-accent-strong: #EA580C; --color-accent-deep: #C2410C; --color-accent-teal: #D97706;
