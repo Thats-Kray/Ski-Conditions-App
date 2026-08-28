@@ -11,7 +11,8 @@ See `sprints/` for execution-ready, task-by-task implementation plans (one file 
 > table below it.** Sections 0-18 above are historical record; nearly all of it is shipped.
 > Groomed 2026-08-25 — every open item now carries a size estimate. **Re-prioritized
 > 2026-08-27: TASK 22.0 (mockup fidelity pass) is now the active top item — see it first in
-> the OPEN queue.**
+> the OPEN queue. Its Today-List-View slice shipped 2026-08-27 (live, commit `5062d98`);
+> Map sub-view + Plans/Crew/Profile pages are next.**
 >
 > **State as of that grooming:** migrations `001-041` applied; `npm test` = **126 passing**
 > _(130 as of 2026-08-27 — this number moves; always re-check rather than cite it)_
@@ -1436,6 +1437,35 @@ single **1,184 KB** chunk with nothing lazy-loaded.
 ---
 
 ### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS**
+
+**Today List View slice: ✅ SHIPPED 2026-08-27, live on `main`** (commit `5062d98`, deploy
+verified by grepping the live bundle for `"Best Bet Today"`/`"Ski here today"` —
+`assets/index-alm6S4z4.js`). Built via subagent-driven-development (8 tasks + a final-review
+fix wave, 12 commits total) from spec
+`docs/superpowers/specs/2026-08-27-today-list-view-redesign-design.md` and plan
+`docs/superpowers/plans/2026-08-27-today-list-view-redesign.md`. Shipped: the restyled
+header (brand row context + `Today`/date+condition + segmented `List | Map` pill + a new
+mobile-only notification bell), the compact `BestBetCard` hero (replacing the old crown card
+and separate Best-Epic/Best-Ikon boxes — that per-pass callout is a deliberate, accepted
+drop), the compact `ResortListRow` list with accordion expand-in-place into the existing
+`ResortCard`, and a `Ski here today` action (on both the hero and every list row) wired into
+the existing `daily_plans` write path via the existing `PlanEditorModal` — no new write path,
+no schema change. Whole-branch review caught and fixed one real data-loss bug before merge
+(`handleSaveTodayPlan` was merging against a stale client-side plan snapshot instead of a
+fresh read — `daily_plans` has 5 other writers elsewhere in the app that don't share state
+with this one) plus two live-now-in-the-actual-offseason bugs (the resort list assumed a
+hero/top resort always exists, and always excluded it regardless of active sort). Kyle
+explicitly expanded scope mid-build to add the `Ski here today` button to `BestBetCard` too
+(originally only the list rows below it had one).
+**Not yet done, still needs to happen: a real authenticated click-through in the running
+app.** Every task in this build was verified via `npm test`/`npx eslint`/`npm run build` +
+diff review only — no task had working browser/Supabase-auth tooling in its environment (same
+recurring limitation as prior sessions, see memory). Specifically worth checking: the
+offseason list state (the app's actual current state), a non-Powder-Score sort, the new
+`BestBetCard` button, and switching an existing Private plan to a different resort.
+**Map sub-view's own visual redesign (glowing gradient score bubbles, friend-avatar pins, the
+"Top of the List" bottom sheet) is still open** — deliberately out of scope for this slice,
+see the gap audit below. Plans/Crew/Profile page mockup fidelity also not started.
 
 **Kyle, 2026-08-27: this now sits ahead of everything else in the queue below**, including
 TASK 22.1-22.4. New high-fidelity mockups exist at
