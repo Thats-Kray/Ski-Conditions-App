@@ -1462,12 +1462,11 @@ with this one) plus two live-now-in-the-actual-offseason bugs (the resort list a
 hero/top resort always exists, and always excluded it regardless of active sort). Kyle
 explicitly expanded scope mid-build to add the `Ski here today` button to `BestBetCard` too
 (originally only the list rows below it had one).
-**Not yet done, still needs to happen: a real authenticated click-through in the running
-app.** Every task in this build was verified via `npm test`/`npx eslint`/`npm run build` +
-diff review only — no task had working browser/Supabase-auth tooling in its environment (same
-recurring limitation as prior sessions, see memory). Specifically worth checking: the
-offseason list state (the app's actual current state), a non-Powder-Score sort, the new
-`BestBetCard` button, and switching an existing Private plan to a different resort.
+**Authenticated click-through: ✅ DONE, Kyle confirmed 2026-08-27 it looks good** (no specific
+issues reported). Every task in this build was itself verified only via
+`npm test`/`npx eslint`/`npm run build` + diff review — no subagent had working
+browser/Supabase-auth tooling in its environment (same recurring limitation as prior sessions,
+see memory) — so this real click-through was the first actual confirmation of the shipped UI.
 **Today Map View slice: ✅ SHIPPED 2026-08-27, live on `main`** (merge commit `f2758bd`, deploy
 verified by grepping the live bundle for `"TOP OF THE LIST"` — `assets/index-DlT2Ycwv.js` — and
 Kyle click-tested it himself in the running app, calling the first pass "great"). Spec at
