@@ -1,23 +1,11 @@
 import { useState } from "react"
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet"
+import { MapContainer, TileLayer, CircleMarker, Marker, Popup } from "react-leaflet"
+import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 import UserProfileModal from "./UserProfileModal"
 import { useLiveFriendLocations } from "../lib/useLiveFriendLocations"
 import { formatEtaShort } from "../lib/format"
 import { scoreTier } from "../lib/powderMapTiers"
-
-function scoreColor(score) {
-  return `var(--rating-${scoreTier(score)})`
-}
-
-function markerRadius(count) {
-  if (!count || count <= 0) return 8
-  if (count >= 10) return 20
-  if (count >= 7) return 17
-  if (count >= 4) return 14
-  if (count >= 2) return 11
-  return 9
-}
 
 function displayName(person) {
   return person.full_name || person.username || "Skier"
@@ -38,6 +26,59 @@ function avatarFallback(name) {
     .join("")
     .slice(0, 2)
     .toUpperCase()
+}
+
+// L.divIcon's `html` is raw innerHTML, not JSX — nothing here is auto-escaped the way React
+// escapes {}. resort.name is static config, but people[0]'s name flows from user profile data
+// before avatarFallback() reduces it to 2 initials, so escape both defensively.
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[c]))
+}
+
+const BUBBLE_SIZE = 56
+const ICON_WIDTH = 110
+const ICON_HEIGHT = 92
+
+// Mockup's friend-initials badge has no existing design token to match (not a tier/risk/status
+// color) — literal hex chosen to match the mockup exactly, same convention as this file's other
+// one-off literal colors (see the Popup-chrome comment below).
+function resortBubbleIcon(resort, people) {
+  const tier = scoreTier(resort.powderScore)
+  const fill = `var(--rating-${tier})`
+  const glow = `var(--rating-${tier}-border)`
+  const scoreText = escapeHtml(resort.powderScore ?? "—")
+  const name = escapeHtml(resort.name)
+
+  const badge = people.length > 0
+    ? `<div style="position:absolute;top:-4px;right:-4px;width:20px;height:20px;border-radius:999px;background:#f97316;color:#fff;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;border:2px solid #0A1628;">${escapeHtml(avatarFallback(displayName(people[0])))}</div>`
+    : ""
+
+  const html = `
+    <div style="width:${ICON_WIDTH}px;height:${ICON_HEIGHT}px;display:flex;flex-direction:column;align-items:center;">
+      <div style="position:relative;width:${BUBBLE_SIZE}px;height:${BUBBLE_SIZE}px;">
+        <div style="width:100%;height:100%;border-radius:999px;background:radial-gradient(circle at 35% 30%, ${fill}, ${fill} 55%, ${glow} 100%);box-shadow:0 0 20px 4px ${glow};display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#0f172a;">
+          ${scoreText}
+        </div>
+        ${badge}
+      </div>
+      <div style="margin-top:6px;font-weight:800;font-size:12px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.8);white-space:nowrap;">
+        ${name}
+      </div>
+    </div>
+  `
+
+  return L.divIcon({
+    html,
+    className: "resort-bubble-marker",
+    iconSize: [ICON_WIDTH, ICON_HEIGHT],
+    iconAnchor: [ICON_WIDTH / 2, BUBBLE_SIZE / 2],
+  })
 }
 
 // Renders only inside a Leaflet <Popup>, which uses leaflet.css's fixed white
@@ -99,40 +140,6 @@ function SkierRow({ person, onViewProfile }) {
   )
 }
 
-function LegendItem({ color, label }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div
-        style={{
-          width: 16,
-          height: 16,
-          borderRadius: 999,
-          background: color,
-          border: "1px solid rgba(255,255,255,0.25)",
-        }}
-      />
-      <div>{label}</div>
-    </div>
-  )
-}
-
-function MarkerSizeItem({ size, label }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div
-        style={{
-          width: size,
-          height: size,
-          borderRadius: 999,
-          background: "var(--color-accent-deep)",
-          border: "1px solid rgba(255,255,255,0.25)",
-        }}
-      />
-      <div>{label}</div>
-    </div>
-  )
-}
-
 export default function PowderMap({
   resorts,
   skierCounts = {},
@@ -148,56 +155,7 @@ export default function PowderMap({
     <div style={{ display: "grid", gap: 12 }}>
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 12,
-        }}
-      >
-        <div
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 16,
-            padding: 14,
-            display: "grid",
-            gap: 8,
-          }}
-        >
-          <div style={{ fontWeight: 900, fontSize: 14 }}>
-            Powder Score Color
-          </div>
-
-          <LegendItem color="var(--rating-coral)" label="Low powder score" />
-          <LegendItem color="var(--rating-peach)" label="Okay / decent" />
-          <LegendItem color="var(--rating-gold)" label="Good" />
-          <LegendItem color="var(--rating-sky)" label="Very good" />
-          <LegendItem color="var(--rating-mint)" label="Elite / best snow" />
-        </div>
-
-        <div
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 16,
-            padding: 14,
-            display: "grid",
-            gap: 8,
-          }}
-        >
-          <div style={{ fontWeight: 900, fontSize: 14 }}>
-            Marker Size = Skier Density
-          </div>
-
-          <MarkerSizeItem size={8} label="0–1 skiers" />
-          <MarkerSizeItem size={11} label="2–3 skiers" />
-          <MarkerSizeItem size={14} label="4–6 skiers" />
-          <MarkerSizeItem size={17} label="7–9 skiers" />
-          <MarkerSizeItem size={20} label="10+ skiers" />
-        </div>
-      </div>
-
-      <div
-        style={{
+          position: "relative",
           height: "min(520px, calc(100dvh - 340px))",
           minHeight: 280,
           borderRadius: 20,
@@ -220,16 +178,10 @@ export default function PowderMap({
             const people = skierDetails?.[r.resortKey] || []
 
             return (
-              <CircleMarker
+              <Marker
                 key={r.name}
-                center={[r.lat, r.lon]}
-                radius={markerRadius(count)}
-                pathOptions={{
-                  color: scoreColor(r.powderScore),
-                  fillColor: scoreColor(r.powderScore),
-                  fillOpacity: 0.88,
-                  weight: 2,
-                }}
+                position={[r.lat, r.lon]}
+                icon={resortBubbleIcon(r, people)}
               >
                 <Popup maxWidth={320}>
                   <div style={{ minWidth: 240 }}>
@@ -274,7 +226,7 @@ export default function PowderMap({
                     </div>
                   </div>
                 </Popup>
-              </CircleMarker>
+              </Marker>
             )
           })}
 
