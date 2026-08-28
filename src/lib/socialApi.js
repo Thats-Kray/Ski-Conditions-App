@@ -3476,7 +3476,7 @@ export async function getMyCrews() {
     .select(`
       role,
       joined_at,
-      crew:crew_id ( id, name, emoji, description, invite_only, created_by, created_at )
+      crew:crew_id ( id, name, emoji, description, invite_only, created_by, created_at, photo_url )
     `)
     .eq("user_id", user.id)
     .eq("status", "active")
