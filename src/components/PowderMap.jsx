@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css"
 import UserProfileModal from "./UserProfileModal"
 import { useLiveFriendLocations } from "../lib/useLiveFriendLocations"
 import { formatEtaShort } from "../lib/format"
-import { scoreTier } from "../lib/powderMapTiers"
+import { TIER_COLORS, TIER_BORDER_COLORS } from "./ui/Badge"
 
 function displayName(person) {
   return person.full_name || person.username || "Skier"
@@ -49,9 +49,8 @@ const ICON_HEIGHT = 92
 // color) — literal hex chosen to match the mockup exactly, same convention as this file's other
 // one-off literal colors (see the Popup-chrome comment below).
 function resortBubbleIcon(resort, people) {
-  const tier = scoreTier(resort.powderScore)
-  const fill = `var(--rating-${tier})`
-  const glow = `var(--rating-${tier}-border)`
+  const tierLabel = resort.powderTier || "Closed"
+  const fill = TIER_COLORS[tierLabel] || TIER_COLORS.Closed
   const scoreText = escapeHtml(resort.powderScore ?? "—")
   const name = escapeHtml(resort.name)
 
@@ -60,9 +59,9 @@ function resortBubbleIcon(resort, people) {
     : ""
 
   const html = `
-    <div style="width:${ICON_WIDTH}px;height:${ICON_HEIGHT}px;display:flex;flex-direction:column;align-items:center;">
-      <div style="position:relative;width:${BUBBLE_SIZE}px;height:${BUBBLE_SIZE}px;">
-        <div style="width:100%;height:100%;border-radius:999px;background:radial-gradient(circle at 35% 30%, ${fill}, ${fill} 55%, ${glow} 100%);box-shadow:0 0 20px 4px ${glow};display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#0f172a;">
+    <div style="width:${ICON_WIDTH}px;height:${ICON_HEIGHT}px;display:flex;flex-direction:column;align-items:center;pointer-events:none;">
+      <div style="position:relative;width:${BUBBLE_SIZE}px;height:${BUBBLE_SIZE}px;pointer-events:auto;">
+        <div style="width:100%;height:100%;border-radius:999px;background:radial-gradient(circle at 35% 30%, rgba(255,255,255,0.35), ${fill} 60%);box-shadow:0 0 24px 6px ${fill};display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#0f172a;">
           ${scoreText}
         </div>
         ${badge}
@@ -78,11 +77,12 @@ function resortBubbleIcon(resort, people) {
     className: "resort-bubble-marker",
     iconSize: [ICON_WIDTH, ICON_HEIGHT],
     iconAnchor: [ICON_WIDTH / 2, BUBBLE_SIZE / 2],
+    popupAnchor: [0, -BUBBLE_SIZE / 2],
   })
 }
 
 function SheetRow({ resort }) {
-  const tier = scoreTier(resort.powderScore)
+  const tierLabel = resort.powderTier || "Closed"
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
       <div
@@ -90,8 +90,8 @@ function SheetRow({ resort }) {
           minWidth: 36,
           height: 28,
           borderRadius: 8,
-          background: `var(--rating-${tier}-border)`,
-          color: `var(--rating-${tier})`,
+          background: TIER_BORDER_COLORS[tierLabel] || TIER_BORDER_COLORS.Closed,
+          color: TIER_COLORS[tierLabel] || TIER_COLORS.Closed,
           fontWeight: 900,
           fontSize: 14,
           display: "flex",
@@ -123,7 +123,7 @@ function TopOfTheListSheet({ resorts, expanded, onToggle }) {
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 10,
+        zIndex: 1100,
         background: "var(--color-modal-bg)",
         borderTop: "1px solid var(--color-border)",
         borderRadius: "20px 20px 0 0",

@@ -7,6 +7,15 @@ export const TIER_COLORS = {
   "Closed": "var(--rating-slate)",
 }
 
+export const TIER_BORDER_COLORS = {
+  "Elite": "var(--rating-mint-border)",
+  "Very Good": "var(--rating-sky-border)",
+  "Good": "var(--rating-gold-border)",
+  "Okay": "var(--rating-peach-border)",
+  "Poor": "var(--rating-coral-border)",
+  "Closed": "var(--rating-slate-border)",
+}
+
 export const RISK_COLORS = {
   "Low": "var(--rating-mint)",
   "Moderate": "var(--rating-gold)",
