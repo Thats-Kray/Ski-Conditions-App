@@ -81,6 +81,89 @@ function resortBubbleIcon(resort, people) {
   })
 }
 
+function SheetRow({ resort }) {
+  const tier = scoreTier(resort.powderScore)
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
+      <div
+        style={{
+          minWidth: 36,
+          height: 28,
+          borderRadius: 8,
+          background: `var(--rating-${tier}-border)`,
+          color: `var(--rating-${tier})`,
+          fontWeight: 900,
+          fontSize: 14,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        {resort.powderScore ?? "—"}
+      </div>
+      <div style={{ flex: 1, fontWeight: 700, fontSize: 14, color: "var(--color-text-1)" }}>
+        {resort.name}
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-accent)" }}>
+        {resort.snowPrev24in != null ? `${resort.snowPrev24in}" new` : "—"}
+      </div>
+    </div>
+  )
+}
+
+function TopOfTheListSheet({ resorts, expanded, onToggle }) {
+  const top3 = resorts.slice(0, 3)
+  if (top3.length === 0) return null
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 10,
+        background: "var(--color-modal-bg)",
+        borderTop: "1px solid var(--color-border)",
+        borderRadius: "20px 20px 0 0",
+        padding: "8px 16px 14px",
+        boxShadow: "0 -8px 30px rgba(0,0,0,0.4)",
+      }}
+    >
+      <button
+        onClick={onToggle}
+        aria-expanded={expanded}
+        aria-label={expanded ? "Collapse top of the list" : "Expand top of the list"}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 6,
+          width: "100%",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "2px 0",
+        }}
+      >
+        <div style={{ width: 36, height: 4, borderRadius: 999, background: "var(--color-border)" }} />
+        <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1, color: "var(--color-text-2)" }}>
+          TOP OF THE LIST
+        </div>
+      </button>
+
+      {expanded && (
+        <div>
+          {top3.map((r) => (
+            <SheetRow key={r.name} resort={r} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Renders only inside a Leaflet <Popup>, which uses leaflet.css's fixed white
 // popup chrome (no app dark-theme override exists for it) — colors below are
 // intentionally literal hex chosen for contrast on that white surface, not
@@ -147,6 +230,7 @@ export default function PowderMap({
   friendIds = [],
 }) {
   const [viewingUserId, setViewingUserId] = useState(null)
+  const [sheetExpanded, setSheetExpanded] = useState(true)
   // Live "N friends on mountain now" pins (S28-T3) — ephemeral Realtime
   // Broadcast, only ever shown for accepted friends.
   const liveLocations = useLiveFriendLocations(friendIds)
@@ -277,6 +361,12 @@ export default function PowderMap({
             </CircleMarker>
           ))}
         </MapContainer>
+
+        <TopOfTheListSheet
+          resorts={resorts}
+          expanded={sheetExpanded}
+          onToggle={() => setSheetExpanded((e) => !e)}
+        />
       </div>
       {viewingUserId && (
         <UserProfileModal userId={viewingUserId} onClose={() => setViewingUserId(null)} />
