@@ -11,13 +11,18 @@ See `sprints/` for execution-ready, task-by-task implementation plans (one file 
 > table below it.** Sections 0-18 above are historical record; nearly all of it is shipped.
 > Groomed 2026-08-25 — every open item now carries a size estimate. **Re-prioritized
 > 2026-08-27: TASK 22.0 (mockup fidelity pass) is now the active top item — see it first in
-> the OPEN queue. Its Today-List-View slice shipped 2026-08-27 (live, commit `5062d98`);
-> Map sub-view + Plans/Crew/Profile pages are next.**
+> the OPEN queue. Its Today-List-View slice shipped 2026-08-27 (live, commit `5062d98`); its
+> Today-Map-View slice also shipped 2026-08-27 (live, commit `f2758bd`, Kyle click-tested it
+> himself). Plans/Crew/Profile pages are next.**
 >
 > **State as of that grooming:** migrations `001-041` applied; `npm test` = **126 passing**
-> _(130 as of 2026-08-27 — this number moves; always re-check rather than cite it)_
-> (`node --test src/lib/*.test.js`); `npx eslint .` baseline = **88 problems (80 errors,
-> 8 warnings) — not zero, don't "fix" it incidentally**. Live at powdays.app; Vercel serves
+> _(134 as of 2026-08-27 after the Map-view slice — this number moves; always re-check rather
+> than cite it)_ (`node --test src/lib/*.test.js`); `npx eslint .` baseline = **88 problems (80
+> errors, 8 warnings) in a fresh checkout — not zero, don't "fix" it incidentally. The main
+> working-copy checkout has separately shown a higher, unrelated count (95) confined to
+> `server/*.js`, a pre-existing node_modules-drift quirk in that one checkout, not a code
+> regression — re-verify in a clean checkout/worktree if the number looks off.** Live at
+> powdays.app; Vercel serves
 > the frontend from GitHub `main`, API and cron on Render (**`railway.json` is stale**).
 > Pushing to `main` ships to production with **no staging step**.
 
@@ -1436,7 +1441,7 @@ single **1,184 KB** chunk with nothing lazy-loaded.
 
 ---
 
-### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS**
+### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done, Plans/Crew/Profile next)**
 
 **Today List View slice: ✅ SHIPPED 2026-08-27, live on `main`** (commit `5062d98`, deploy
 verified by grepping the live bundle for `"Best Bet Today"`/`"Ski here today"` —
@@ -1463,9 +1468,41 @@ diff review only — no task had working browser/Supabase-auth tooling in its en
 recurring limitation as prior sessions, see memory). Specifically worth checking: the
 offseason list state (the app's actual current state), a non-Powder-Score sort, the new
 `BestBetCard` button, and switching an existing Private plan to a different resort.
-**Map sub-view's own visual redesign (glowing gradient score bubbles, friend-avatar pins, the
-"Top of the List" bottom sheet) is still open** — deliberately out of scope for this slice,
-see the gap audit below. Plans/Crew/Profile page mockup fidelity also not started.
+**Today Map View slice: ✅ SHIPPED 2026-08-27, live on `main`** (merge commit `f2758bd`, deploy
+verified by grepping the live bundle for `"TOP OF THE LIST"` — `assets/index-DlT2Ycwv.js` — and
+Kyle click-tested it himself in the running app, calling the first pass "great"). Spec at
+`docs/superpowers/specs/2026-08-27-today-map-view-redesign-design.md`, plan at
+`docs/superpowers/plans/2026-08-27-today-map-view-redesign.md`, built in worktree
+`today-map-view-redesign` (merged + deleted after shipping) via subagent-driven-development: 3
+tasks + a 2-round final-review fix wave, 8 commits. Shipped: resort markers on `PowderMap.jsx`
+switched from Leaflet `CircleMarker`s to custom `divIcon` bubbles — tier-colored radial-gradient
+glow, score number inside, name label below, an orange friend-initials badge pinned to a bubble
+when someone from the resort's `skierDetails` list is going there — plus a tap-toggle "Top of the
+List" bottom sheet showing the top 3 resorts in the same order/sort the List sub-view already
+uses. Both legend cards above the map were dropped (bubbles are now self-labeled). Live-GPS
+friend pins and the resort detail `Popup` were left untouched by design.
+**The whole-branch final review (opus) earned its cost again, catching two real bugs no per-task
+diff could see:** (1) the bottom sheet shipped at `zIndex: 10`, which loses to Leaflet's own pane
+z-indices (400-1000) and rendered the entire sheet invisible behind the map tiles; (2) Task 1's
+extracted `scoreTier()` copied the *old* `scoreColor()`'s score bands (88/76/63/50), which turned
+out to silently disagree with the tier system the rest of the app already uses —
+`powderTier`/`TIER_COLORS` (bands 80/65/50/35, defined in `App.jsx`/`Badge.jsx`, consumed by
+`ResortListRow`/`BestBetCard`/`MountainPage`) — so a resort could show a different tier color on
+the map bubble than in the List view for the same score, and the new bottom sheet was about to put
+that mismatch directly next to the list it mirrors. **Kyle's call: consolidate onto the existing
+`powderTier`/`TIER_COLORS` system** rather than just patching the extracted function's numbers —
+`src/lib/powderMapTiers.js` (Task 1's whole file) was deleted, `TIER_BORDER_COLORS` added to
+`Badge.jsx` alongside the existing `TIER_COLORS`. A second fix round was needed for a third
+finding (marker hitbox covering the full 110×92px icon box, not just the visible bubble, blocking
+map pan/tap in dense clusters) — the first attempt used inline `pointer-events` styles on the
+divIcon's *injected content*, which can't reach the actual interactive DOM node Leaflet itself
+creates and sizes (`.leaflet-marker-icon.leaflet-interactive`); the working fix is a real CSS rule
+in `index.css` with higher selector specificity, targeting that node via the `className` already
+passed to `L.divIcon`.
+**Verification note, same recurring gap as the List slice, now closed for this one:** no
+subagent in this build had browser tooling, so every fix (including the two-round CSS/z-index
+loop) was verified by diff-reading, CSS specificity math, and static checks only — but Kyle did
+the real click-through himself after merge/push and confirmed it looks good.
 
 **Kyle, 2026-08-27: this now sits ahead of everything else in the queue below**, including
 TASK 22.1-22.4. New high-fidelity mockups exist at
@@ -1509,8 +1546,9 @@ audit is done and Kyle has called out priorities per page.
   `Popup`s for detail (tap-to-open, not always-visible name/score) — no bottom sheet exists at
   all today.
 
-**Not yet reviewed:** Plans, Crew, Profile pages have mockup screenshots too but haven't been
-compared to shipped code yet — next up after Today is signed off.
+**Today is signed off — both slices (List, Map) shipped and live, Kyle click-tested each one.
+Not yet reviewed:** Plans, Crew, Profile pages have mockup screenshots too but haven't been
+compared to shipped code yet — next up.
 
 ---
 
@@ -1573,7 +1611,7 @@ prioritized open ideas, then the throughput → features → security/debt queue
 
 | Sprint | Contents | Size |
 |---|---|---|
-| **42** | **TASK 22.0 — Mockup fidelity pass**, page-by-page (Today in progress) | TBD |
+| **42** | **TASK 22.0 — Mockup fidelity pass**, page-by-page (Today done, Plans/Crew/Profile next) | TBD |
 | **43** | TASK 22.1 — Friends-calendar flagship placement (**design session first**) | M |
 | **44** | TASK 22.2 — Powder Score algorithm tuning | S-M |
 | **45** | TASK 22.3 — Weather/conditions API quality pass | M |
