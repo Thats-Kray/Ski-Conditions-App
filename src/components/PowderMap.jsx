@@ -4,14 +4,10 @@ import "leaflet/dist/leaflet.css"
 import UserProfileModal from "./UserProfileModal"
 import { useLiveFriendLocations } from "../lib/useLiveFriendLocations"
 import { formatEtaShort } from "../lib/format"
+import { scoreTier } from "../lib/powderMapTiers"
 
 function scoreColor(score) {
-  if (score == null) return "var(--rating-slate)"  // no data
-  if (score >= 88) return "var(--rating-mint)"      // elite / best snow
-  if (score >= 76) return "var(--rating-sky)"       // very good
-  if (score >= 63) return "var(--rating-gold)"      // good
-  if (score >= 50) return "var(--rating-peach)"     // okay / decent
-  return "var(--rating-coral)"                      // low powder score
+  return `var(--rating-${scoreTier(score)})`
 }
 
 function markerRadius(count) {
