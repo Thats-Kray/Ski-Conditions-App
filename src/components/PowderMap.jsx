@@ -1,27 +1,11 @@
 import { useState } from "react"
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet"
+import { MapContainer, TileLayer, CircleMarker, Marker, Popup } from "react-leaflet"
+import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 import UserProfileModal from "./UserProfileModal"
 import { useLiveFriendLocations } from "../lib/useLiveFriendLocations"
 import { formatEtaShort } from "../lib/format"
-
-function scoreColor(score) {
-  if (score == null) return "var(--rating-slate)"  // no data
-  if (score >= 88) return "var(--rating-mint)"      // elite / best snow
-  if (score >= 76) return "var(--rating-sky)"       // very good
-  if (score >= 63) return "var(--rating-gold)"      // good
-  if (score >= 50) return "var(--rating-peach)"     // okay / decent
-  return "var(--rating-coral)"                      // low powder score
-}
-
-function markerRadius(count) {
-  if (!count || count <= 0) return 8
-  if (count >= 10) return 20
-  if (count >= 7) return 17
-  if (count >= 4) return 14
-  if (count >= 2) return 11
-  return 9
-}
+import { TIER_COLORS, TIER_BORDER_COLORS } from "./ui/Badge"
 
 function displayName(person) {
   return person.full_name || person.username || "Skier"
@@ -42,6 +26,142 @@ function avatarFallback(name) {
     .join("")
     .slice(0, 2)
     .toUpperCase()
+}
+
+// L.divIcon's `html` is raw innerHTML, not JSX — nothing here is auto-escaped the way React
+// escapes {}. resort.name is static config, but people[0]'s name flows from user profile data
+// before avatarFallback() reduces it to 2 initials, so escape both defensively.
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[c]))
+}
+
+const BUBBLE_SIZE = 56
+const ICON_WIDTH = 110
+const ICON_HEIGHT = 92
+
+// Mockup's friend-initials badge has no existing design token to match (not a tier/risk/status
+// color) — literal hex chosen to match the mockup exactly, same convention as this file's other
+// one-off literal colors (see the Popup-chrome comment below).
+function resortBubbleIcon(resort, people) {
+  const tierLabel = resort.powderTier || "Closed"
+  const fill = TIER_COLORS[tierLabel] || TIER_COLORS.Closed
+  const scoreText = escapeHtml(resort.powderScore ?? "—")
+  const name = escapeHtml(resort.name)
+
+  const badge = people.length > 0
+    ? `<div style="position:absolute;top:-4px;right:-4px;width:20px;height:20px;border-radius:999px;background:#f97316;color:#fff;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;border:2px solid #0A1628;">${escapeHtml(avatarFallback(displayName(people[0])))}</div>`
+    : ""
+
+  const html = `
+    <div style="width:${ICON_WIDTH}px;height:${ICON_HEIGHT}px;display:flex;flex-direction:column;align-items:center;">
+      <div class="resort-bubble-hit" style="position:relative;width:${BUBBLE_SIZE}px;height:${BUBBLE_SIZE}px;">
+        <div style="width:100%;height:100%;border-radius:999px;background:radial-gradient(circle at 35% 30%, rgba(255,255,255,0.35), ${fill} 60%);box-shadow:0 0 24px 6px ${fill};display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#0f172a;">
+          ${scoreText}
+        </div>
+        ${badge}
+      </div>
+      <div style="margin-top:6px;font-weight:800;font-size:12px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.8);white-space:nowrap;">
+        ${name}
+      </div>
+    </div>
+  `
+
+  return L.divIcon({
+    html,
+    className: "resort-bubble-marker",
+    iconSize: [ICON_WIDTH, ICON_HEIGHT],
+    iconAnchor: [ICON_WIDTH / 2, BUBBLE_SIZE / 2],
+    popupAnchor: [0, -BUBBLE_SIZE / 2],
+  })
+}
+
+function SheetRow({ resort }) {
+  const tierLabel = resort.powderTier || "Closed"
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
+      <div
+        style={{
+          minWidth: 36,
+          height: 28,
+          borderRadius: 8,
+          background: TIER_BORDER_COLORS[tierLabel] || TIER_BORDER_COLORS.Closed,
+          color: TIER_COLORS[tierLabel] || TIER_COLORS.Closed,
+          fontWeight: 900,
+          fontSize: 14,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        {resort.powderScore ?? "—"}
+      </div>
+      <div style={{ flex: 1, fontWeight: 700, fontSize: 14, color: "var(--color-text-1)" }}>
+        {resort.name}
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-accent)" }}>
+        {resort.snowPrev24in != null ? `${resort.snowPrev24in}" new` : "—"}
+      </div>
+    </div>
+  )
+}
+
+function TopOfTheListSheet({ resorts, expanded, onToggle }) {
+  const top3 = resorts.slice(0, 3)
+  if (top3.length === 0) return null
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 1100,
+        background: "var(--color-modal-bg)",
+        borderTop: "1px solid var(--color-border)",
+        borderRadius: "20px 20px 0 0",
+        padding: "8px 16px 14px",
+        boxShadow: "0 -8px 30px rgba(0,0,0,0.4)",
+      }}
+    >
+      <button
+        onClick={onToggle}
+        aria-expanded={expanded}
+        aria-label={expanded ? "Collapse top of the list" : "Expand top of the list"}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 6,
+          width: "100%",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "2px 0",
+        }}
+      >
+        <div style={{ width: 36, height: 4, borderRadius: 999, background: "var(--color-border)" }} />
+        <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1, color: "var(--color-text-2)" }}>
+          TOP OF THE LIST
+        </div>
+      </button>
+
+      {expanded && (
+        <div>
+          {top3.map((r) => (
+            <SheetRow key={r.name} resort={r} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // Renders only inside a Leaflet <Popup>, which uses leaflet.css's fixed white
@@ -103,40 +223,6 @@ function SkierRow({ person, onViewProfile }) {
   )
 }
 
-function LegendItem({ color, label }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div
-        style={{
-          width: 16,
-          height: 16,
-          borderRadius: 999,
-          background: color,
-          border: "1px solid rgba(255,255,255,0.25)",
-        }}
-      />
-      <div>{label}</div>
-    </div>
-  )
-}
-
-function MarkerSizeItem({ size, label }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div
-        style={{
-          width: size,
-          height: size,
-          borderRadius: 999,
-          background: "var(--color-accent-deep)",
-          border: "1px solid rgba(255,255,255,0.25)",
-        }}
-      />
-      <div>{label}</div>
-    </div>
-  )
-}
-
 export default function PowderMap({
   resorts,
   skierCounts = {},
@@ -144,6 +230,7 @@ export default function PowderMap({
   friendIds = [],
 }) {
   const [viewingUserId, setViewingUserId] = useState(null)
+  const [sheetExpanded, setSheetExpanded] = useState(true)
   // Live "N friends on mountain now" pins (S28-T3) — ephemeral Realtime
   // Broadcast, only ever shown for accepted friends.
   const liveLocations = useLiveFriendLocations(friendIds)
@@ -152,56 +239,7 @@ export default function PowderMap({
     <div style={{ display: "grid", gap: 12 }}>
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 12,
-        }}
-      >
-        <div
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 16,
-            padding: 14,
-            display: "grid",
-            gap: 8,
-          }}
-        >
-          <div style={{ fontWeight: 900, fontSize: 14 }}>
-            Powder Score Color
-          </div>
-
-          <LegendItem color="var(--rating-coral)" label="Low powder score" />
-          <LegendItem color="var(--rating-peach)" label="Okay / decent" />
-          <LegendItem color="var(--rating-gold)" label="Good" />
-          <LegendItem color="var(--rating-sky)" label="Very good" />
-          <LegendItem color="var(--rating-mint)" label="Elite / best snow" />
-        </div>
-
-        <div
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 16,
-            padding: 14,
-            display: "grid",
-            gap: 8,
-          }}
-        >
-          <div style={{ fontWeight: 900, fontSize: 14 }}>
-            Marker Size = Skier Density
-          </div>
-
-          <MarkerSizeItem size={8} label="0–1 skiers" />
-          <MarkerSizeItem size={11} label="2–3 skiers" />
-          <MarkerSizeItem size={14} label="4–6 skiers" />
-          <MarkerSizeItem size={17} label="7–9 skiers" />
-          <MarkerSizeItem size={20} label="10+ skiers" />
-        </div>
-      </div>
-
-      <div
-        style={{
+          position: "relative",
           height: "min(520px, calc(100dvh - 340px))",
           minHeight: 280,
           borderRadius: 20,
@@ -224,16 +262,10 @@ export default function PowderMap({
             const people = skierDetails?.[r.resortKey] || []
 
             return (
-              <CircleMarker
+              <Marker
                 key={r.name}
-                center={[r.lat, r.lon]}
-                radius={markerRadius(count)}
-                pathOptions={{
-                  color: scoreColor(r.powderScore),
-                  fillColor: scoreColor(r.powderScore),
-                  fillOpacity: 0.88,
-                  weight: 2,
-                }}
+                position={[r.lat, r.lon]}
+                icon={resortBubbleIcon(r, people)}
               >
                 <Popup maxWidth={320}>
                   <div style={{ minWidth: 240 }}>
@@ -278,7 +310,7 @@ export default function PowderMap({
                     </div>
                   </div>
                 </Popup>
-              </CircleMarker>
+              </Marker>
             )
           })}
 
@@ -329,6 +361,12 @@ export default function PowderMap({
             </CircleMarker>
           ))}
         </MapContainer>
+
+        <TopOfTheListSheet
+          resorts={resorts}
+          expanded={sheetExpanded}
+          onToggle={() => setSheetExpanded((e) => !e)}
+        />
       </div>
       {viewingUserId && (
         <UserProfileModal userId={viewingUserId} onClose={() => setViewingUserId(null)} />
