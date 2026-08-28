@@ -607,3 +607,18 @@ input, textarea, select {
   background-repeat: no-repeat;
   background-position: bottom;
 }
+
+/* Resort map bubble markers (PowderMap.jsx): Leaflet sizes its own
+   .leaflet-marker-icon node to the full divIcon iconSize (110x92, including
+   the label gutter below the visible bubble) and forces pointer-events:auto
+   on it via leaflet.css's .leaflet-marker-icon.leaflet-interactive rule.
+   Three-class selector below is required to out-specificity that rule
+   regardless of stylesheet load order, so only the 56px bubble itself
+   (.resort-bubble-hit) is actually clickable/tappable — not the transparent
+   corners or the name label underneath it. */
+.leaflet-marker-icon.leaflet-interactive.resort-bubble-marker {
+  pointer-events: none;
+}
+.leaflet-marker-icon.leaflet-interactive.resort-bubble-marker .resort-bubble-hit {
+  pointer-events: auto;
+}

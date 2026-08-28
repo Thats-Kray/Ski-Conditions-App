@@ -59,8 +59,8 @@ function resortBubbleIcon(resort, people) {
     : ""
 
   const html = `
-    <div style="width:${ICON_WIDTH}px;height:${ICON_HEIGHT}px;display:flex;flex-direction:column;align-items:center;pointer-events:none;">
-      <div style="position:relative;width:${BUBBLE_SIZE}px;height:${BUBBLE_SIZE}px;pointer-events:auto;">
+    <div style="width:${ICON_WIDTH}px;height:${ICON_HEIGHT}px;display:flex;flex-direction:column;align-items:center;">
+      <div class="resort-bubble-hit" style="position:relative;width:${BUBBLE_SIZE}px;height:${BUBBLE_SIZE}px;">
         <div style="width:100%;height:100%;border-radius:999px;background:radial-gradient(circle at 35% 30%, rgba(255,255,255,0.35), ${fill} 60%);box-shadow:0 0 24px 6px ${fill};display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#0f172a;">
           ${scoreText}
         </div>
