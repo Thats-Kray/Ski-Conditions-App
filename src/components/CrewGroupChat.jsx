@@ -3,6 +3,11 @@ import { supabase } from "../lib/supabase"
 import UserProfileModal from "./UserProfileModal"
 import Avatar from "./ui/Avatar"
 import MediaMessageInput, { MessageMedia } from "./ui/MediaMessageInput"
+import { useMobile } from "../lib/useMobile"
+import { crewColor } from "../lib/crewColors"
+import { computeNextOut } from "../lib/crewNextOut"
+import { localDateKey } from "../lib/calendarDates"
+import { resortName } from "../lib/resorts"
 import {
   createCrew,
   getMyCrews,
@@ -18,6 +23,8 @@ import {
   acceptCrewInvite,
   declineCrewInvite,
   getCurrentUser,
+  getVisiblePlansInRange,
+  uploadCrewPhoto,
 } from "../lib/socialApi"
 
 const EMOJI_OPTIONS = ["⛷️", "🏂", "🤙", "🏔️", "❄️", "🔥", "💎", "🎿", "🌨️", "🦅", "🐻", "🐺"]
@@ -232,15 +239,33 @@ function EditCrewModal({ crew, onSaved, onClose }) {
   const [emoji, setEmoji]       = useState(crew.emoji)
   const [description, setDesc]  = useState(crew.description || "")
   const [inviteOnly, setInviteOnly] = useState(crew.invite_only)
+  const [photoUrl, setPhotoUrl] = useState(crew.photo_url || null)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState("")
+
+  async function handlePhotoChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingPhoto(true)
+    setError("")
+    try {
+      const url = await uploadCrewPhoto(crew.id, file)
+      setPhotoUrl(url)
+    } catch (err) {
+      setError(err.message || "Photo upload failed.")
+    } finally {
+      setUploadingPhoto(false)
+      e.target.value = ""
+    }
+  }
 
   async function handleSave() {
     if (!name.trim()) { setError("Crew name can't be empty."); return }
     setSaving(true); setError("")
     try {
-      await updateCrewGroup(crew.id, { name: name.trim(), emoji, description: description.trim(), invite_only: inviteOnly })
-      onSaved({ ...crew, name: name.trim(), emoji, description: description.trim(), invite_only: inviteOnly })
+      await updateCrewGroup(crew.id, { name: name.trim(), emoji, description: description.trim(), invite_only: inviteOnly, photo_url: photoUrl })
+      onSaved({ ...crew, name: name.trim(), emoji, description: description.trim(), invite_only: inviteOnly, photo_url: photoUrl })
     } catch (e) {
       setError(e.message || "Failed to save.")
     } finally {
@@ -263,6 +288,25 @@ function EditCrewModal({ crew, onSaved, onClose }) {
         </div>
 
         {error && <div style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 10, background: "rgba(239,68,68,0.14)", border: "1px solid rgba(239,68,68,0.3)", color: "var(--color-danger)" /* rule 7: nearest danger-family token */, fontSize: 13 }}>{error}</div>}
+
+        {/* Photo */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Crew Photo (optional)</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, overflow: "hidden", background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {photoUrl ? <img src={photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 22 }}>{emoji}</span>}
+            </div>
+            <label style={{ padding: "8px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: 700, cursor: uploadingPhoto ? "default" : "pointer" }}>
+              {uploadingPhoto ? "Uploading…" : photoUrl ? "Change photo" : "Upload photo"}
+              <input type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploadingPhoto} style={{ display: "none" }} />
+            </label>
+            {photoUrl && (
+              <button onClick={() => setPhotoUrl(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Emoji */}
         <div style={{ marginBottom: 14 }}>
@@ -621,13 +665,27 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
 
 // ── Crew List ─────────────────────────────────────────────────────────────────
 
-export default function CrewGroupChat({ friends = [] }) {
+const LS_PREFIX = "pd_cr_"
+function getLastRead(crewId) {
+  try { return localStorage.getItem(LS_PREFIX + crewId) || null } catch { return null }
+}
+function markRead(crewId) {
+  try { localStorage.setItem(LS_PREFIX + crewId, new Date().toISOString()) } catch { /* best-effort */ }
+}
+
+export default function CrewGroupChat({ friends = [], onUnreadChange }) {
+  const isMobile = useMobile()
   const [crews, setCrews] = useState([])
   const [pendingInvites, setPendingInvites] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedCrew, setSelectedCrew] = useState(null)
   const [showCreate, setShowCreate] = useState(false)
   const [currentUserId, setCurrentUserId] = useState(null)
+  const channelRef = useRef(null)
+
+  function notifyUnread(list) {
+    onUnreadChange?.(list.some((c) => c.unread))
+  }
 
   async function loadCrews() {
     try {
@@ -637,8 +695,44 @@ export default function CrewGroupChat({ friends = [] }) {
         getPendingCrewInvites(),
       ])
       setCurrentUserId(user?.id || null)
-      setCrews(crewData)
       setPendingInvites(pending)
+
+      if (crewData.length === 0) {
+        setCrews([])
+        notifyUnread([])
+        return
+      }
+
+      const crewIds = crewData.map((c) => c.id)
+      const today = localDateKey()
+      const horizon = localDateKey(new Date(Date.now() + 30 * 86400000))
+
+      const [membersByCrewArr, visiblePlans, recentMsgsRes] = await Promise.all([
+        Promise.all(crewData.map((c) => getCrewMembers(c.id))),
+        getVisiblePlansInRange(today, horizon).catch(() => []),
+        supabase
+          .from("crew_messages")
+          .select("crew_id, created_at")
+          .in("crew_id", crewIds)
+          .order("created_at", { ascending: false })
+          .limit(Math.min(crewIds.length * 6, 120)),
+      ])
+
+      const lastMsgByCrewId = {}
+      for (const msg of (recentMsgsRes.data || [])) {
+        if (!lastMsgByCrewId[msg.crew_id]) lastMsgByCrewId[msg.crew_id] = msg
+      }
+
+      const enriched = crewData.map((crew, i) => {
+        const members = membersByCrewArr[i]
+        const memberIds = members.map((m) => m.profile?.id).filter(Boolean)
+        const lastMessage = lastMsgByCrewId[crew.id] || null
+        const lastRead = getLastRead(crew.id)
+        const unread = !!(lastMessage && (!lastRead || new Date(lastMessage.created_at) > new Date(lastRead)))
+        return { ...crew, members, nextOut: computeNextOut(memberIds, visiblePlans), unread }
+      })
+      setCrews(enriched)
+      notifyUnread(enriched)
     } catch (e) {
       console.warn("Crews load error:", e)
     } finally {
@@ -648,6 +742,41 @@ export default function CrewGroupChat({ friends = [] }) {
 
   useEffect(() => { loadCrews() }, [])
 
+  useEffect(() => {
+    if (channelRef.current) supabase.removeChannel(channelRef.current)
+    channelRef.current = supabase
+      .channel("crew-list-unread")
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "crew_messages",
+      }, (payload) => {
+        const crewId = payload.new?.crew_id
+        if (!crewId) return
+        setCrews((prev) => {
+          const inList = prev.some((c) => c.id === crewId)
+          if (!inList) return prev
+          const next = prev.map((c) =>
+            c.id === crewId
+              ? { ...c, lastMessage: payload.new, unread: c.id !== selectedCrew?.id }
+              : c
+          )
+          notifyUnread(next)
+          return next
+        })
+      })
+      .subscribe()
+    return () => { if (channelRef.current) supabase.removeChannel(channelRef.current) }
+  }, [selectedCrew?.id])
+
+  function openCrew(crew) {
+    markRead(crew.id)
+    setCrews((prev) => {
+      const next = prev.map((c) => c.id === crew.id ? { ...c, unread: false } : c)
+      notifyUnread(next)
+      return next
+    })
+    setSelectedCrew(crew)
+  }
+
   async function handleAcceptInvite(crewId) {
     try {
       await acceptCrewInvite(crewId)
@@ -655,7 +784,7 @@ export default function CrewGroupChat({ friends = [] }) {
       // Open the crew chat immediately after accepting
       const accepted = await getMyCrews()
       const crew = accepted.find((c) => c.id === crewId)
-      if (crew) setSelectedCrew(crew)
+      if (crew) openCrew(crew)
     } catch (e) {
       console.error("Accept invite error:", e)
     }
@@ -682,14 +811,23 @@ export default function CrewGroupChat({ friends = [] }) {
   }
 
   if (selectedCrew) {
+    const containerHeight = isMobile ? "calc(100dvh - 88px)" : "calc(100dvh - 132px)"
     return (
-      <CrewChatView
-        crew={selectedCrew}
-        currentUserId={currentUserId}
-        friends={friends}
-        onBack={() => setSelectedCrew(null)}
-        onLeft={handleLeft}
-      />
+      <div style={{
+        height: containerHeight,
+        background: "rgba(4,8,20,0.85)",
+        borderRadius: isMobile ? 0 : 18,
+        overflow: "hidden",
+        border: isMobile ? "none" : "1px solid rgba(255,255,255,0.07)",
+      }}>
+        <CrewChatView
+          crew={selectedCrew}
+          currentUserId={currentUserId}
+          friends={friends}
+          onBack={() => setSelectedCrew(null)}
+          onLeft={handleLeft}
+        />
+      </div>
     )
   }
 
@@ -782,52 +920,68 @@ export default function CrewGroupChat({ friends = [] }) {
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {crews.map((crew) => (
-          <button
-            key={crew.id}
-            onClick={() => setSelectedCrew(crew)}
-            style={{
-              display: "flex", alignItems: "center", gap: 14,
-              padding: "14px 16px", borderRadius: 16, cursor: "pointer",
-              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-              textAlign: "left", width: "100%",
-              transition: "background 0.15s",
-            }}
-          >
-            {/* Crew emoji badge */}
-            <div style={{
-              width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-              background: "linear-gradient(135deg,rgba(37,99,235,0.25),rgba(8,145,178,0.2))",
-              border: "1px solid rgba(96,165,250,0.2)",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
-            }}>
-              {crew.emoji}
-            </div>
+        {crews.map((crew, i) => {
+          const color = crewColor(i)
+          const visibleMembers = crew.members.slice(0, 4)
+          const overflowCount = crew.members.length - visibleMembers.length
+          return (
+            <button
+              key={crew.id}
+              onClick={() => openCrew(crew)}
+              style={{
+                position: "relative", display: "flex", alignItems: "center", gap: 14,
+                padding: "14px 16px", borderRadius: 16, cursor: "pointer",
+                background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+                textAlign: "left", width: "100%",
+              }}
+            >
+              {crew.unread && (
+                <span style={{ position: "absolute", top: 10, right: 10, width: 9, height: 9, borderRadius: "50%", background: "var(--color-accent-strong)" }} />
+              )}
 
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {crew.name}
+              {/* Icon: photo if set, else flat color dot */}
+              {crew.photo_url ? (
+                <img src={crew.photo_url} alt="" style={{ width: 48, height: 48, borderRadius: 14, objectFit: "cover", flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 12, height: 12, borderRadius: 4, background: color, flexShrink: 0 }} />
+              )}
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {crew.name}
+                  </div>
+                  {crew.myRole === "admin" && (
+                    <span style={{ fontSize: 9, fontWeight: 800, color: "var(--color-warning)", background: "rgba(251,191,36,0.15)", borderRadius: 4, padding: "1px 5px", flexShrink: 0 }}>
+                      ADMIN
+                    </span>
+                  )}
                 </div>
-                {crew.myRole === "admin" && (
-                  <span style={{ fontSize: 9, fontWeight: 800, color: "var(--color-warning)", background: "rgba(251,191,36,0.15)", borderRadius: 4, padding: "1px 5px", flexShrink: 0 }}>
-                    ADMIN
-                  </span>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
+                  {crew.members.length} member{crew.members.length !== 1 ? "s" : ""}
+                </div>
+                {crew.nextOut && (
+                  <div style={{ fontSize: 12, color: "var(--color-accent-soft)", marginTop: 3 }}>
+                    Next out: {resortName(crew.nextOut.resortKey) || crew.nextOut.resortKey} · {new Date(crew.nextOut.skiDate + "T12:00:00").toLocaleDateString([], { weekday: "short" })}
+                  </div>
                 )}
               </div>
-              {crew.description ? (
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {crew.description}
-                </div>
-              ) : null}
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 3 }}>
-                {crew.invite_only ? "🔒 Invite only" : "🌐 Open"} · Tap to open chat
-              </div>
-            </div>
 
-            <div style={{ color: "rgba(255,255,255,0.25)", fontSize: 18 }}>›</div>
-          </button>
-        ))}
+              <div style={{ display: "flex", flexShrink: 0 }}>
+                {visibleMembers.map((m, idx) => (
+                  <div key={m.id} style={{ marginLeft: idx === 0 ? 0 : -8, border: "2px solid rgba(10,14,26,1)", borderRadius: "50%" }}>
+                    <Avatar profile={m.profile} size={26} />
+                  </div>
+                ))}
+                {overflowCount > 0 && (
+                  <div style={{ marginLeft: -8, width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "2px solid rgba(10,14,26,1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,0.6)" }}>
+                    +{overflowCount}
+                  </div>
+                )}
+              </div>
+            </button>
+          )
+        })}
       </div>
 
       {showCreate && (
