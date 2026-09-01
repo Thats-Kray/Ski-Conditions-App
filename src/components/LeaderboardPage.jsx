@@ -7,23 +7,21 @@ import Avatar from "./ui/Avatar"
 import SessionStatsForm from "./SessionStatsForm"
 import ResortPicker from "./ui/ResortPicker"
 
+// Order and set match the mockup's 7-chip Leaderboard row exactly (TASK 22.0
+// Leaderboard-slice redesign). Top Speed/Most Lifts/Time on Mountain are
+// deliberately not sortable categories here anymore — their data still flows
+// through leaderboardApi.js and SessionStatsForm.jsx, they're just not tabs
+// on this page. "Longest Day" is the mockup's label for the same longestRun
+// stat (longest single run, in feet) — not a new day-level metric.
 const CATEGORIES = [
-  { key: "days",           label: "🎿 Days",          stat: (e) => e.days,           unit: "days"  },
-  { key: "powderDays",     label: "❄️ Powder Days",   stat: (e) => e.powderDays,     unit: "days"  },
-  { key: "vertical",       label: "↕️ Vertical",      stat: (e) => e.verticalFt,     unit: "ft"    },
-  { key: "miles",          label: "🛣️ Miles",         stat: (e) => e.milesSki,       unit: "mi"    },
-  { key: "topSpeed",       label: "⚡ Top Speed",     stat: (e) => e.topSpeed,       unit: "mph"   },
-  { key: "longestRun",     label: "📏 Longest Run",   stat: (e) => e.longestRun,     unit: "ft"    },
-  { key: "totalLifts",     label: "🚡 Most Lifts",    stat: (e) => e.totalLifts,     unit: "lifts" },
-  { key: "timeOnMountain", label: "⏱️ Time",          stat: (e) => e.timeOnMountain, unit: ""      },
+  { key: "vertical",   label: "↕️ Vertical",    stat: (e) => e.verticalFt, unit: "ft"      },
+  { key: "days",       label: "🎿 Days",        stat: (e) => e.days,       unit: "days"    },
+  { key: "powderDays", label: "❄️ Powder Days", stat: (e) => e.powderDays, unit: "days"    },
+  { key: "resorts",    label: "⛰️ Resorts",     stat: (e) => e.resorts,    unit: "resorts" },
+  { key: "miles",      label: "🛣️ Miles",       stat: (e) => e.milesSki,   unit: "mi"      },
+  { key: "runs",       label: "🎿 Runs",        stat: (e) => e.totalRuns,  unit: "runs"    },
+  { key: "longestRun", label: "📏 Longest Day", stat: (e) => e.longestRun, unit: "ft"      },
 ]
-
-// Formats a minute count as "Xh Ym". Returns null (not a display string) for
-// null/undefined input so callers can distinguish "no data" from "0 minutes".
-function formatMinutes(mins) {
-  if (mins == null) return null
-  return `${Math.floor(mins / 60)}h ${mins % 60}m`
-}
 
 const RANK_MEDALS = ["🥇", "🥈", "🥉"]
 const REACTION_EMOJIS = ["🎿", "❄️", "🔥", "👑"]
@@ -164,12 +162,6 @@ function LeaderboardRow({ entry, rank, category, reactions, onReact, currentUser
   const medal  = rank <= 3 ? RANK_MEDALS[rank - 1] : null
   const isTop  = rank <= 3
 
-  const displayValue = value == null
-    ? "—"
-    : cat.key === "timeOnMountain"
-      ? formatMinutes(value)
-      : value
-
   return (
     <div style={{
       padding: "12px 14px",
@@ -207,12 +199,9 @@ function LeaderboardRow({ entry, rank, category, reactions, onReact, currentUser
 
         {/* Stat */}
         <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <div style={{ fontSize: 22, fontWeight: 900, color: isTop ? "var(--color-accent-soft)" : "white", lineHeight: 1 }}>
-            {displayValue}
+          <div style={{ fontSize: 16, fontWeight: 900, color: isTop ? "var(--color-accent-soft)" : "white", whiteSpace: "nowrap" }}>
+            {value == null ? "—" : `${typeof value === "number" ? value.toLocaleString("en-US") : value} ${cat.unit}`}
           </div>
-          {value != null && cat.unit && (
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{cat.unit}</div>
-          )}
         </div>
       </div>
 
@@ -248,7 +237,7 @@ function LeaderboardRow({ entry, rank, category, reactions, onReact, currentUser
 export default function LeaderboardPage() {
   const season = getCurrentSeason()
   const [boardMode, setBoardMode] = useState("friends")
-  const [category, setCategory]   = useState("days")
+  const [category, setCategory]   = useState("vertical")
   const [board, setBoard]         = useState([]) // unsorted, as fetched
   const [mySessions, setMySessions] = useState([])
   const [loading, setLoading]     = useState(true)
@@ -274,7 +263,7 @@ export default function LeaderboardPage() {
     // NOTE: `category` is deliberately absent. It only decides the sort order of
     // rows we already have, so including it here made every tab click refire the
     // leaderboard RPC *and* getMySessions (3 queries + a background upsert),
-    // flashing "Loading…" on all 8 tabs. The sort now lives in a useMemo below.
+    // flashing "Loading…" on all 7 tabs. The sort now lives in a useMemo below.
   }, [season.startYear, boardMode])
 
   useEffect(() => { load() }, [load])
@@ -296,12 +285,12 @@ export default function LeaderboardPage() {
   const myRank = entries.indexOf(me) + 1
 
   // Reactions are scoped per active category tab + season — refetch whenever
-  // either changes so a 🔥 on Top Speed doesn't bleed into the Vertical tab.
+  // either changes so a 🔥 on Runs doesn't bleed into the Vertical tab.
   useEffect(() => {
     if (!entries.length) return
     let cancelled = false
     // Drop the previous tab's badges up front. They're keyed by user, not by
-    // stat, so leaving them up would render Top Speed's 🔥 against Vertical's
+    // stat, so leaving them up would render Runs' 🔥 against Vertical's
     // rows for the length of the fetch.
     setReactionsByUser({})
     getLeaderboardReactions(entries.map((e) => e.id), category, String(season.startYear))
