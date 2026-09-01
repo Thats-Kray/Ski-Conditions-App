@@ -740,22 +740,26 @@ export default function TodayScreen({
         >
           Friends
         </div>
-        <TodaysCrew />
+        <TodaysCrew key={`${myTodayPlan?.id ?? "none"}:${myTodayPlan?.resort_key ?? ""}`} />
 
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 800,
-            letterSpacing: 0.8,
-            color: "rgba(255,255,255,0.5)",
-            textTransform: "uppercase",
-            marginTop: 20,
-            marginBottom: 10,
-          }}
-        >
-          Recent Activity
-        </div>
-        <ActivityFeed />
+        {currentUser && (
+          <>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: 0.8,
+                color: "rgba(255,255,255,0.5)",
+                textTransform: "uppercase",
+                marginTop: 20,
+                marginBottom: 10,
+              }}
+            >
+              Recent Activity
+            </div>
+            <ActivityFeed />
+          </>
+        )}
       </div>
 
       {skiHereModalResortKey && (
