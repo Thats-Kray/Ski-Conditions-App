@@ -6,9 +6,11 @@ import { timeAgo, formatSessionStat } from "../lib/format"
 import { resortName } from "../lib/resorts"
 
 const TYPE_COPY = {
-  ski_session: (name, m) => `${name} skied ${m?.resort_name ? resortName(m.resort_name) : "a resort"}${m?.is_powder_day ? " on a powder day ❄️" : ""}`,
-  trip_rsvp: (name) => `${name} is going on a trip`,
-  trip_created: (name, m) => `${name} planned a trip${m?.resort_key ? ` to ${resortName(m.resort_key)}` : ""}`,
+  // Name is deliberately omitted from these sentences — the card header above already
+  // shows the actor's name, so these read as a continuation fragment, not a full sentence.
+  ski_session: (name, m) => `Skied ${m?.resort_name ? resortName(m.resort_name) : "a resort"}${m?.is_powder_day ? " on a powder day ❄️" : ""}`,
+  trip_rsvp: () => "Is going on a trip",
+  trip_created: (name, m) => `Planned a trip${m?.resort_key ? ` to ${resortName(m.resort_key)}` : ""}`,
 }
 const EMOJIS = ["🎿", "❄️", "🔥", "👑"]
 
@@ -91,7 +93,7 @@ export default function ActivityFeed() {
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Avatar profile={item.profiles} size={36} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-text-1)" }}>{actorName}</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{actorName}</div>
                 <div style={{ fontSize: 11, color: "var(--color-text-3)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {subtitle}
                 </div>
