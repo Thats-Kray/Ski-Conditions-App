@@ -77,9 +77,13 @@ current piece of information:
 New pure function, `formatSessionStat(session)` in `src/lib/format.js` (alongside the file's
 existing formatters):
 
-- Input: a `ski_sessions` row shape (`{ total_runs, vertical_ft, is_powder_day }`, all
-  nullable/optional — a session with no manual stats logged has `total_runs`/`vertical_ft` as
-  `null`).
+- Input: a `ski_sessions` row shape (`{ runs_logged, vertical_feet, is_powder_day }`, all
+  nullable/optional — a session with no manual stats logged has `runs_logged`/`vertical_feet` as
+  `null` or `0`). **Correction, added at plan time:** an earlier draft of this section named
+  these columns `total_runs`/`vertical_ft` — those names don't exist on `ski_sessions` (`total_runs`
+  is the `get_leaderboard` RPC's aggregate alias; `vertical_ft` is `ski_runs`' per-segment column).
+  The real columns, confirmed against `supabase/migrations/20260515_ski_sessions.sql` and
+  `migrations/010_ski_runs.sql`, are `runs_logged`/`vertical_feet`, as corrected above.
 - Output: a string joining whichever pieces are present with `" · "` — e.g.
   `"18 runs · 24,300 ft · 🌨 powder day"`, or just `"🌨 powder day"` if no runs/vertical were
   logged, or just the resort name (already shown in the header per §3.1) if nothing else is
@@ -110,10 +114,14 @@ export async function getActivityFeed(limit = 30) {
     .map((i) => i.subject_id)
   if (!sessionIds.length) return items
 
-  const { data: sessions } = await supabase
+  // Real ski_sessions columns (see the correction in §3.2) — not total_runs/vertical_ft,
+  // which don't exist on this table. Also: don't silently discard this query's `error`
+  // the way this snippet once did — see the implementation plan's handling.
+  const { data: sessions, error: sessionErr } = await supabase
     .from("ski_sessions")
-    .select("id, total_runs, vertical_ft, is_powder_day")
+    .select("id, runs_logged, vertical_feet, is_powder_day")
     .in("id", sessionIds)
+  if (sessionErr) { console.warn("getActivityFeed session stats lookup failed", sessionErr); return items }
 
   const sm = new Map((sessions || []).map((s) => [s.id, s]))
   return items.map((i) => (i.type === "ski_session" ? { ...i, sessionStats: sm.get(i.subject_id) || null } : i))
