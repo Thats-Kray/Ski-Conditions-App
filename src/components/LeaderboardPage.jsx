@@ -201,12 +201,9 @@ function LeaderboardRow({ entry, rank, category, reactions, onReact, currentUser
 
         {/* Stat */}
         <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <div style={{ fontSize: 22, fontWeight: 900, color: isTop ? "var(--color-accent-soft)" : "white", lineHeight: 1 }}>
-            {displayValue}
+          <div style={{ fontSize: 16, fontWeight: 900, color: isTop ? "var(--color-accent-soft)" : "white", whiteSpace: "nowrap" }}>
+            {value == null ? "—" : cat.unit ? `${displayValue} ${cat.unit}` : displayValue}
           </div>
-          {value != null && cat.unit && (
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{cat.unit}</div>
-          )}
         </div>
       </div>
 
