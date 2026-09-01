@@ -1674,6 +1674,58 @@ and Profile pages.
 
 ---
 
+### TASK 22.5 — Today tab Friends section (live crew status + activity feed) — ✅ SHIPPED 2026-08-31
+
+Not part of TASK 22.0's mockup-fidelity gap-audit sequence — a separate, Kyle-requested feature:
+the Today tab (the app's default landing screen) now shows a "Friends" section once the user
+scrolls past the List/Map resort content, combining live plan status (who's planning/driving/
+arrived today) with the recent activity feed, so this information no longer requires switching to
+the Track or Crew tabs to see.
+
+**Design, not a rebuild:** both pieces already existed and shipped elsewhere — `TodaysCrew.jsx`
+(live status, on the Track tab) and `ActivityFeed.jsx` (Crew tab's Feed sub-tab). This task
+composed both, completely unmodified, into a new section at the bottom of `TodayScreen.jsx`, with
+matching section-header styling borrowed from the existing "X More Resorts" header. Neither
+original mount site (Track tab, Crew tab's Feed sub-tab) was touched or removed — this is
+additive only.
+
+Spec at `docs/superpowers/specs/2026-08-31-today-friends-feed-design.md`, plan at
+`docs/superpowers/plans/2026-08-31-today-friends-feed.md`. Built via subagent-driven-development
+in worktree `today-friends-feed` (merged + deleted after shipping): one implementation task
+(review clean, no findings) plus a final whole-branch review that caught two real integration bugs
+invisible from the task's own diff — the class of thing this project's process notes keep
+recording final review for:
+1. **(Important)** `TodaysCrew` fetches on mount only, no refresh prop. Once mounted next to the
+   Today tab's own "Ski here today" plan-save flow (same screen, no remount between them), saving
+   a plan left the crew card showing stale data until its own internal Refresh button was
+   clicked. Fixed with a `key` on `<TodaysCrew key={...myTodayPlan?.id...:...resort_key...} />`
+   derived from the plan's id + resort_key, forcing a remount (and fresh fetch) whenever the
+   user's own plan changes — no prop threading into `TodaysCrew.jsx` itself.
+2. **(Minor)** The design spec's own reasoning was wrong: it claimed the Crew tab (where
+   `ActivityFeed` normally lives) has no auth gate, when it actually does
+   (`App.jsx` renders it only for `currentUser`). This session's change is genuinely the first
+   place `ActivityFeed` becomes reachable by a signed-out/browse-mode visitor. Benign on data (RLS
+   scopes `activity_feed`/`activity_feed_reactions` to `authenticated`, so anon gets zero rows —
+   verified against `migrations/013_activity_feed.sql`) but produced an inconsistent UX:
+   `TodaysCrew` shows its own "Sign in to see who's skiing today" prompt for signed-out users,
+   while `ActivityFeed` had no such awareness and just showed an empty-feed message underneath it.
+   Fixed by gating the "Recent Activity" heading + `<ActivityFeed />` on `currentUser`;
+   `TodaysCrew` itself stays unconditional since it already handles its own signed-out state.
+
+Both fixes verified in a scoped re-review (clean, no new breakage). Final state: 145 tests
+passing (unchanged — no `src/lib` touched), lint 89 problems in a fresh worktree (unchanged from
+baseline). Deploy verified live on `powdays.app` by grepping the served bundle
+(`assets/index-DtNmaM41.js`) for `"Recent Activity"`.
+
+**Not yet click-tested by Kyle** — same recurring verification gap as every other slice this
+session series: no subagent in this environment has interactive browser/Supabase-auth tooling, so
+this shipped on lint/test/build/diff-review verification only. Check next time in the app: Today
+tab scrolled down under both List and Map sub-tabs, the Driving/Arrived buttons actually writing
+from this new location, and signed-out/browse mode showing only `TodaysCrew`'s sign-in prompt
+(no visible "Recent Activity" section).
+
+---
+
 ### TASK 22.1 — Friends-calendar as the flagship view — **Size: M**
 
 **Scheduled Sprint 43** (prioritized by Kyle, 2026-08-27 — after TASK 22.0's redesign work).
