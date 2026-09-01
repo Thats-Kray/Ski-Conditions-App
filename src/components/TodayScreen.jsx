@@ -3,7 +3,6 @@ import PowderMap from "./PowderMap"
 import Badge, { TIER_COLORS } from "./ui/Badge"
 import ScoreRing from "./ui/ScoreRing"
 import FriendsGoingBadge from "./FriendsGoingBadge"
-import BestBetCard from "./BestBetCard"
 import ResortListRow from "./ResortListRow"
 import PlanEditorModal from "./PlanEditorModal"
 import TodaysCrew from "./TodaysCrew"
@@ -518,6 +517,7 @@ export default function TodayScreen({
 }) {
   const [conditionsSubTab, setConditionsSubTab] = useState("conditions")
   const [expandedKeys, setExpandedKeys] = useState(new Set())
+  const [heroExpanded, setHeroExpanded] = useState(true)
   const [skiHereModalResortKey, setSkiHereModalResortKey] = useState(null)
 
   function toggleExpanded(resortKey) {
@@ -590,12 +590,25 @@ export default function TodayScreen({
 
       {conditionsSubTab === "conditions" && topResort && (
         <div style={{ marginBottom: 20 }}>
-          <BestBetCard
-            topResort={topResort}
-            friendsGoing={friendTripsByResort[topResort.resortKey] || []}
-            myTodayPlan={myTodayPlan}
-            onSkiHereToday={setSkiHereModalResortKey}
+          <ResortListRow
+            r={topResort}
+            label="BEST BET TODAY"
+            expanded={heroExpanded}
+            onToggle={() => setHeroExpanded((e) => !e)}
           />
+          {heroExpanded && (
+            <ResortCard
+              r={topResort}
+              skierCounts={skierCounts}
+              skierDetails={skierDetails}
+              activityCount={resortActivityCounts[topResort.resortKey] || 0}
+              friendsGoing={friendTripsByResort[topResort.resortKey] || []}
+              vibeData={vibeData}
+              onOpenMountainPage={setMountainPageResortKey}
+              myTodayPlan={myTodayPlan}
+              onSkiHereToday={setSkiHereModalResortKey}
+            />
+          )}
         </div>
       )}
 
