@@ -1441,7 +1441,7 @@ single **1,184 KB** chunk with nothing lazy-loaded.
 
 ---
 
-### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab in progress — Crews, Board, and Leaderboard slices shipped, Feed/Friends slices next; Plans/Profile not yet started)**
+### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab in progress — Crews, Board, and Leaderboard slices shipped, Feed slice A shipped (B/C queued), Friends slice next; Plans/Profile not yet started)**
 
 **Today List View slice: ✅ SHIPPED 2026-08-27, live on `main`** (commit `5062d98`, deploy
 verified by grepping the live bundle for `"Best Bet Today"`/`"Ski here today"` —
@@ -1719,8 +1719,67 @@ the merged result.
 Final state: 145 tests passing (unchanged), lint 89 problems in a fresh worktree (unchanged from
 baseline).
 
-**Not yet reviewed:** Feed/Friends sub-tabs of Crew (next up, in that order), Plans and Profile
-pages.
+**Feed sub-tab slice A of 3: ✅ SHIPPED 2026-09-01, merged locally to `main`** (fast-forward merge,
+commit `261a69e`, not yet pushed — same pending-push situation as Crews/Board/Leaderboard). Spec
+at `docs/superpowers/specs/2026-09-01-crew-tab-feed-slice-a-design.md`, plan at
+`docs/superpowers/plans/2026-09-01-crew-tab-feed-slice-a.md`, built in worktree
+`crew-tab-feed-slice-a` (merged + deleted after shipping) via subagent-driven-development: 2
+tasks + a final-review fix wave, 4 commits.
+**Feed's mockup implied real new subsystems (comments, photo attachments, group-level activity
+cards) stacked on a restyle — too big for one slice.** Kyle's call: decompose into ordered
+sub-slices, same lens as the original 5-way Crew-tab split — **Feed-A (restyle + richer stats +
+reactions restyle, this slice) → Feed-B (comments) → Feed-C (photo attachments)**, with
+group-level cards explicitly **backlogged for a future sprint**, not sequenced yet. Also decided
+during brainstorming: the Feed does NOT gain a "plans" activity type (stays activity-only —
+TASK 22.5's `TodaysCrew.jsx` already owns "who's out today" on the Today tab, so adding plans to
+Feed too would duplicate it); reactions keep their exact current single-reaction-per-person
+4-emoji behavior, restyled visually only (the mockup's single-kudos-count model was considered
+and declined as a real behavior change, not a restyle).
+**Shipped:** a card restyle (avatar + name + "resort · time-ago" header, replacing the old
+sentence+separate-time-ago layout); a new `formatSessionStat()` helper (`src/lib/format.js`,
+12 new unit tests) producing a richer stat line ("18 runs · 24,300 ft · 🌨 powder day") for
+logged-session entries via a render-time join to `ski_sessions` in `getActivityFeed()` — no
+schema change, since the columns already existed; `trip_rsvp`/`trip_created` entries keep their
+sentence-style copy (trimmed of the now-redundant leading name, see final-review fix below).
+**A real bug was caught and fixed BEFORE any code was written**, by the plan-writing agent
+(dispatched on Opus per Kyle's "OpusPlan" request) reading the actual schema instead of trusting
+the design spec: the spec's sample query used `total_runs`/`vertical_ft` as `ski_sessions`
+column names — **neither exists on that table**. `total_runs` is actually the `get_leaderboard`
+RPC's aggregate output alias; `vertical_ft` is a column on the *different* `ski_runs` table. The
+real `ski_sessions` columns are `runs_logged`/`vertical_feet`. Had this shipped as originally
+drafted, every stat-line lookup would have failed with a PostgREST error — silently, since the
+spec's own sample code discarded the query's `error` — and every card would have fallen back to
+sentence copy forever with nothing in the console. The plan was rewritten with the corrected
+columns and an explicit `console.warn` on failure before implementation started; the spec doc
+was also corrected post-hoc (commit `a8d0847`) so it doesn't mislead Feed-B/Feed-C later.
+**The whole-branch final review (opus) re-verified the column-name fix independently against
+the schema (not trusting the plan's own account) and found it correct, then caught one genuine
+Important finding of its own:** the restyle's new header duplicated the actor's name against
+`TYPE_COPY`'s existing fallback sentences (e.g. header "Maya Rivera" + body "Maya Rivera is
+going on a trip") — a real gap where the plan/spec introduced a name header without reconciling
+it against the frozen sentence copy. **Kyle's call: trim the name off the 3 `TYPE_COPY`
+sentences** ("Is going on a trip", "Planned a trip to Vail", "Skied Winter Park on a powder day
+❄️"), since the header already supplies it. Fixed in the same wave as a trivial header-truncation
+gap (the new name line lacked the ellipsis/overflow styling its sibling subtitle line already
+had). Both fixed and re-reviewed clean.
+**Deferred, logged, not fixed:** the restyled card is ~60% taller than before and the feed list
+is still uncapped at 30 items — worth a "show more" cap when Feed-B (comments) touches this same
+card area, not now; reaction-button tap height (~24px) is under the 44px guideline but matches
+the app's existing pill convention and actually improved from ~20px pre-slice, not a regression.
+**Verification note, same recurring gap as every prior slice:** no subagent in this environment
+has browser or Supabase-auth tooling — every task, the final review, and the fix wave were
+verified via `npm test`/`npx eslint .`/`npm run build`/diff review/independent schema
+re-derivation only. **Not yet click-tested by Kyle** — do that first, especially whether a
+session with real logged stats actually shows a populated stat line (the one thing no amount of
+source review can fully confirm without a live Supabase round-trip) and whether the taller card
+looks right in both mount sites (Crew tab's Feed sub-tab, and the Today tab's Friends section
+from TASK 22.5) on mobile.
+Final state: 157 tests passing (was 145, +12 new), lint 89 problems in a fresh worktree
+(unchanged from baseline).
+
+**Not yet reviewed:** Feed-B (comments), Feed-C (photo attachments), Friends sub-tab of Crew
+(next up after Feed-B/C, per the original 5-slice order), Plans and Profile pages. Group-level
+Feed activity cards are backlogged, not yet scheduled.
 
 ---
 
