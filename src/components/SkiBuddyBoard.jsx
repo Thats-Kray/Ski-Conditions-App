@@ -295,8 +295,8 @@ export default function SkiBuddyBoard() {
                   <Avatar profile={post.profiles} size={38} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{author}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
-                      {RESORT_EMOJI[post.resort_key]} {RESORT_NAMES[post.resort_key] || post.resort_key} · {formatDate(post.ski_date)} · {timeAgo(post.created_at)}
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {RESORT_EMOJI[post.resort_key]} {RESORT_NAMES[post.resort_key] || post.resort_key} · {formatDate(post.ski_date)} · posted {timeAgo(post.created_at)}
                     </div>
                   </div>
                   <span style={passBadgeStyle(post.pass_type)}>{passLabel(post.pass_type)}</span>
