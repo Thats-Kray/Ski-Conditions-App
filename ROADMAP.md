@@ -1441,7 +1441,7 @@ single **1,184 KB** chunk with nothing lazy-loaded.
 
 ---
 
-### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done, Plans/Crew/Profile next)**
+### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab in progress — Crews slice shipped, Board/Leaderboard/Feed/Friends slices next; Plans/Profile not yet started)**
 
 **Today List View slice: ✅ SHIPPED 2026-08-27, live on `main`** (commit `5062d98`, deploy
 verified by grepping the live bundle for `"Best Bet Today"`/`"Ski here today"` —
@@ -1545,9 +1545,78 @@ audit is done and Kyle has called out priorities per page.
   `Popup`s for detail (tap-to-open, not always-visible name/score) — no bottom sheet exists at
   all today.
 
-**Today is signed off — both slices (List, Map) shipped and live, Kyle click-tested each one.
-Not yet reviewed:** Plans, Crew, Profile pages have mockup screenshots too but haven't been
-compared to shipped code yet — next up.
+**Today is signed off — both slices (List, Map) shipped and live, Kyle click-tested each one.**
+
+**Crew tab gap audit (2026-08-27-28), against `mockups/PowDays.app mockup design/PowDays Reorg
+Mockup.dc.html`** (an interactive prototype covering all 5 Crew sub-tabs, richer than the single
+static `Screen Shots/PowDays Reorg Mockup-Crew Page.png` screenshot, which only shows Friends):
+the mockup's 5-way `Friends/Crews/Feed/Board/Leaderboard` chip bar existed nowhere in the app —
+`MessagingCenter.jsx` had its own unrelated 3-way `Chats/Friends/Activity` toggle, and nested one
+level inside its "Friends" panel, `FriendsPage.jsx` had a *second*, different 4-way toggle
+(`Leaderboard/Crews/Friends/Community`). Decomposed into 5 slices, real-smallest-lift-first:
+**Crews → Board → Leaderboard → Feed → Friends** (Kyle's confirmed order, revised once the full
+mockup source revealed Crews/Board were smaller lifts than Leaderboard/Feed, which needed real
+new data-model/taxonomy work). Also found: `FriendsPage.jsx`'s own `FriendAvatar` component is a
+second, disagreeing per-person avatar-color implementation vs. the correct `Avatar.jsx` (hash-based
+multi-color vs. always-solid-blue) — flagged for the Friends slice, where `FriendAvatar` is
+actually used.
+
+**Crews sub-tab slice: ✅ SHIPPED 2026-08-28, merged locally to `main`** (merge commit `17aa68f`,
+not yet pushed — Kyle to confirm push separately). Spec at
+`docs/superpowers/specs/2026-08-27-crew-tab-crews-slice-design.md`, plan at
+`docs/superpowers/plans/2026-08-27-crew-tab-crews-slice.md`, built in worktree
+`crew-tab-crews-slice` (merged + deleted after shipping) via subagent-driven-development: 6 tasks
++ a final-review fix wave, 12 commits. Shipped: the shared 5-way tab-bar shell (all 5 tabs wired
+immediately — Friends/Feed/Board/Leaderboard route to their existing, unpolished components as-is
+until their own slices land; Crews defaults active this slice, flips to Friends once that slice
+ships, matching the mockup's own default); the Crews sub-tab itself fully redesigned — crew cards
+show a flat color-dot icon via the *existing* `crewColor()` from `crewColors.js` (same function
+already coloring crews on the Plans calendar) with an optional uploaded photo overriding it (Kyle's
+explicit ask, new `crews.photo_url` column + `crew-photos` storage bucket, migration `044`), real
+stacked member avatars via `Avatar.jsx`, member count, a new "Next out: {resort} · {day}" line (new
+query against the existing `getVisiblePlansInRange`, no schema change), and per-card + aggregate
+tab-chip unread-message dots. `MessagingCenter.jsx` shrank from 846 lines to ~150 as a
+consequence — the old merged DM+crew-chat inbox is gone entirely (Kyle's call, matches the mockup
+exactly: crew chat opens from a Crews-tab card, DMs open from a Friend row's message icon, no
+browsable list), which made a duplicate local `CreateCrewModal` and duplicate Ping/Date-Matchmaker
+trigger state dead code, deleted.
+**Real gap found, deliberately NOT fixed this slice:** the notification bell does not actually
+notify on new messages today (confirmed by grep — no DB trigger inserts into `notifications` on a
+new `crew_messages`/`direct_messages` row); the unread-dot mitigation built this slice is the
+scoped answer to "the old inbox was the only place this was visible," not a fix for that
+underlying gap. Worth its own future task.
+**The whole-branch final review (opus) earned its cost again — 4 real cross-task bugs no single
+task's diff could see:** (1) the crew-chat panel's viewport-height budget assumed no chrome above
+it (matching the DM view's pattern), but `MessagingCenter`'s title+tab-bar chrome still rendered
+above it, overflowing the panel under the bottom nav; (2) editing a crew (including uploading a
+photo) never refreshed the card list on return, so a new photo silently didn't appear until a
+remount; (3) a `setCrews` updater called a parent setter internally (impure updater, React
+warning); (4) the unread dot only worked while the Crews tab was actually mounted, since its
+realtime subscription lived inside the tab-gated `CrewGroupChat` — defeating the point of a dot
+that's supposed to work while you're *not* looking at that tab. Kyle chose the properly-correct
+fix for (4): moved the aggregate-unread computation to the always-mounted `MessagingCenter`
+(shared `src/lib/crewUnread.js`), not a display:none workaround. **The fix-wave implementer then
+caught a second bug in the fix instructions themselves before shipping it**: the literal
+early-return `MessagingCenter` fix for (1) would have changed its root React element type on the
+exact render where a crew's `openCrew` had just set that crew's `selectedCrew` state internally —
+a root-type change unmounts the whole subtree, discarding that pending state, so clicking a crew
+would have silently flashed back to a fresh empty list instead of opening its chat. Reworked to
+keep `CrewGroupChat` at a stable tree position and toggle chrome visibility instead — same visual
+outcome, no remount. One reviewer finding on the migration (add `IF NOT EXISTS` to `CREATE POLICY`)
+was dismissed and parked: not valid PostgreSQL syntax, and the plan correctly said to mirror the
+existing `chat-media` bucket migration, which has the same lack of guard.
+**Verification note, same recurring gap as every prior slice:** no subagent in this environment has
+browser or Supabase-auth tooling — every task, the final review, and the fix wave were verified via
+`npm test`/`npx eslint`/`npm run build`/diff review only. **Not yet click-tested by Kyle** — do
+that first, especially the crew-chat panel sizing and the photo-upload-then-return-to-list flow
+(both were bugs the final review caught from source reading alone, worth confirming in the
+browser).
+Final state: 139 tests passing (was 134), lint 89 problems (was 88 baseline in a fresh worktree —
+net +1, from 2 new benign `react-hooks/set-state-in-effect` lint errors matching a pattern the
+file already had unaddressed, offset by other reductions).
+
+**Not yet reviewed:** Board/Leaderboard/Feed/Friends sub-tabs of Crew (next up, in that order),
+Plans and Profile pages.
 
 ---
 
@@ -1610,7 +1679,7 @@ prioritized open ideas, then the throughput → features → security/debt queue
 
 | Sprint | Contents | Size |
 |---|---|---|
-| **42** | **TASK 22.0 — Mockup fidelity pass**, page-by-page (Today done, Plans/Crew/Profile next) | TBD |
+| **42** | **TASK 22.0 — Mockup fidelity pass**, page-by-page (Today done; Crew tab in progress — Crews slice shipped) | TBD |
 | **43** | TASK 22.1 — Friends-calendar flagship placement (**design session first**) | M |
 | **44** | TASK 22.2 — Powder Score algorithm tuning | S-M |
 | **45** | TASK 22.3 — Weather/conditions API quality pass | M |
