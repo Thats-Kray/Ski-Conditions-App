@@ -173,7 +173,7 @@ the photo.
 | `src/components/ui/Avatar.jsx` | *unmodified* — reused as-is for the member-avatar stack (Decision 6) |
 | `src/lib/socialApi.js` | *modify* — extend `getMyCrews()` (or add `getCrewMembers`) for member list/count (§3.4); add `getCrewsNextOut` (or fold into the same call) (§3.4); add `uploadCrewPhoto`/`updateCrewPhoto` (§3.3) |
 | `migrations/0XX_crew_photos.sql` | *new* — `crews.photo_url` column + `crew-photos` bucket/RLS (§3.5) |
-| `src/components/FriendsPage.jsx` | *unmodified* — its "friends" section content is reused as-is this slice; its own 4-way tab bar stops being reachable through `MessagingCenter` but the file itself isn't touched |
+| `src/components/FriendsPage.jsx` | *modify (minimal, additive)* — add two optional props, `hideTabBar` and `initialSection`, both defaulting to current behavior when omitted (no other caller exists today, confirmed by grep, so this is risk-free). `MessagingCenter` renders it with `hideTabBar initialSection="friends"` so only the friends-section content shows, without a redundant nested tab bar duplicating the new top-level one. No change to any section's own content/logic. |
 | `src/components/ActivityFeed.jsx`, `SkiBuddyBoard.jsx`, `LeaderboardPage.jsx` | *unmodified* — routed to as-is (§3.1) |
 
 ## 5. Constraints inherited from the repo
