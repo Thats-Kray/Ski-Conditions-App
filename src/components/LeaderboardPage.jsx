@@ -7,23 +7,21 @@ import Avatar from "./ui/Avatar"
 import SessionStatsForm from "./SessionStatsForm"
 import ResortPicker from "./ui/ResortPicker"
 
+// Order and set match the mockup's 7-chip Leaderboard row exactly (TASK 22.0
+// Leaderboard-slice redesign). Top Speed/Most Lifts/Time on Mountain are
+// deliberately not sortable categories here anymore — their data still flows
+// through leaderboardApi.js and SessionStatsForm.jsx, they're just not tabs
+// on this page. "Longest Day" is the mockup's label for the same longestRun
+// stat (longest single run, in feet) — not a new day-level metric.
 const CATEGORIES = [
-  { key: "days",           label: "🎿 Days",          stat: (e) => e.days,           unit: "days"  },
-  { key: "powderDays",     label: "❄️ Powder Days",   stat: (e) => e.powderDays,     unit: "days"  },
-  { key: "vertical",       label: "↕️ Vertical",      stat: (e) => e.verticalFt,     unit: "ft"    },
-  { key: "miles",          label: "🛣️ Miles",         stat: (e) => e.milesSki,       unit: "mi"    },
-  { key: "topSpeed",       label: "⚡ Top Speed",     stat: (e) => e.topSpeed,       unit: "mph"   },
-  { key: "longestRun",     label: "📏 Longest Run",   stat: (e) => e.longestRun,     unit: "ft"    },
-  { key: "totalLifts",     label: "🚡 Most Lifts",    stat: (e) => e.totalLifts,     unit: "lifts" },
-  { key: "timeOnMountain", label: "⏱️ Time",          stat: (e) => e.timeOnMountain, unit: ""      },
+  { key: "vertical",   label: "↕️ Vertical",    stat: (e) => e.verticalFt, unit: "ft"      },
+  { key: "days",       label: "🎿 Days",        stat: (e) => e.days,       unit: "days"    },
+  { key: "powderDays", label: "❄️ Powder Days", stat: (e) => e.powderDays, unit: "days"    },
+  { key: "resorts",    label: "⛰️ Resorts",     stat: (e) => e.resorts,    unit: "resorts" },
+  { key: "miles",      label: "🛣️ Miles",       stat: (e) => e.milesSki,   unit: "mi"      },
+  { key: "runs",       label: "🎿 Runs",        stat: (e) => e.totalRuns,  unit: "runs"    },
+  { key: "longestRun", label: "📏 Longest Day", stat: (e) => e.longestRun, unit: "ft"      },
 ]
-
-// Formats a minute count as "Xh Ym". Returns null (not a display string) for
-// null/undefined input so callers can distinguish "no data" from "0 minutes".
-function formatMinutes(mins) {
-  if (mins == null) return null
-  return `${Math.floor(mins / 60)}h ${mins % 60}m`
-}
 
 const RANK_MEDALS = ["🥇", "🥈", "🥉"]
 const REACTION_EMOJIS = ["🎿", "❄️", "🔥", "👑"]
@@ -164,11 +162,7 @@ function LeaderboardRow({ entry, rank, category, reactions, onReact, currentUser
   const medal  = rank <= 3 ? RANK_MEDALS[rank - 1] : null
   const isTop  = rank <= 3
 
-  const displayValue = value == null
-    ? "—"
-    : cat.key === "timeOnMountain"
-      ? formatMinutes(value)
-      : value
+  const displayValue = value == null ? "—" : value
 
   return (
     <div style={{
