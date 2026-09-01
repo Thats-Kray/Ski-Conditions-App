@@ -490,8 +490,8 @@ function OffseasonBanner() {
 // source of truth for the sub-tab itself.
 export default function TodayScreen({
   rows,
-  passFilter,
-  setPassFilter,
+  passFilters,
+  setPassFilters,
   query,
   setQuery,
   sortBy,
@@ -635,16 +635,33 @@ export default function TodayScreen({
             }}
           >
             <div style={{ display: "flex", gap: 8 }}>
-              {["All", "Epic", "Ikon"].map((p) => (
+              <button
+                onClick={() => setPassFilters(new Set())}
+                style={{
+                  background: passFilters.size === 0 ? "var(--gradient-pass-pill)" : "rgba(255,255,255,0.06)",
+                  color: passFilters.size === 0 ? "var(--color-pass-pill-text)" : "white",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  padding: "7px 12px",
+                  borderRadius: 999,
+                  fontWeight: 800,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                All
+              </button>
+              {["Epic", "Ikon"].map((p) => (
                 <button
                   key={p}
-                  onClick={() => setPassFilter(p)}
+                  onClick={() => setPassFilters((prev) => {
+                    const next = new Set(prev)
+                    if (next.has(p)) next.delete(p)
+                    else next.add(p)
+                    return next
+                  })}
                   style={{
-                    background:
-                      passFilter === p
-                        ? "var(--gradient-pass-pill)"
-                        : "rgba(255,255,255,0.06)",
-                    color: passFilter === p ? "var(--color-pass-pill-text)" : "white",
+                    background: passFilters.has(p) ? "var(--gradient-pass-pill)" : "rgba(255,255,255,0.06)",
+                    color: passFilters.has(p) ? "var(--color-pass-pill-text)" : "white",
                     border: "1px solid rgba(255,255,255,0.1)",
                     padding: "7px 12px",
                     borderRadius: 999,
