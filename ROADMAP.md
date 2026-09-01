@@ -1441,7 +1441,7 @@ single **1,184 KB** chunk with nothing lazy-loaded.
 
 ---
 
-### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab in progress — Crews slice shipped, Board/Leaderboard/Feed/Friends slices next; Plans/Profile not yet started)**
+### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab in progress — Crews and Board slices shipped, Leaderboard/Feed/Friends slices next; Plans/Profile not yet started)**
 
 **Today List View slice: ✅ SHIPPED 2026-08-27, live on `main`** (commit `5062d98`, deploy
 verified by grepping the live bundle for `"Best Bet Today"`/`"Ski here today"` —
@@ -1615,8 +1615,62 @@ Final state: 139 tests passing (was 134), lint 89 problems (was 88 baseline in a
 net +1, from 2 new benign `react-hooks/set-state-in-effect` lint errors matching a pattern the
 file already had unaddressed, offset by other reductions).
 
-**Not yet reviewed:** Board/Leaderboard/Feed/Friends sub-tabs of Crew (next up, in that order),
-Plans and Profile pages.
+**Board sub-tab slice: ✅ SHIPPED 2026-08-31, merged locally to `main`** (fast-forward merge,
+commit `e0dc990`, not yet pushed — same pending-push situation as the Crews slice). Spec at
+`docs/superpowers/specs/2026-08-31-crew-tab-board-slice-design.md`, plan at
+`docs/superpowers/plans/2026-08-31-crew-tab-board-slice.md`, built in worktree
+`crew-tab-board-slice` (merged + deleted after shipping) via subagent-driven-development: 3
+tasks + a final-review fix wave, 5 commits. Shipped: a new `passColor()`/`passBadgeStyle()`
+helper in `skiBuddyOptions.js` (Ikon/Epic colors are the mockup's literal values; independent/
+other are new choices clearing the same hue-separation/contrast bar, tested in
+`skiBuddyOptions.test.js`); `SkiBuddyBoard.jsx`'s 4 separate filter dimensions
+(passTypeFilter/resortFilter/carpoolFilter/ridingStyleFilter, 3 chip rows + a resort dropdown)
+consolidated into the mockup's single 6-chip row (`All/Ikon/Epic/Indy/Local/Carpool`) — resort
+and riding-style filtering dropped from the UI entirely (Kyle's call, matches the mockup exactly
+— both remain visible per-post, just not filterable), "Indy"/"Local" are UI-only labels for
+`PASS_TYPES`' `independent`/`other` keys (no data-model change), and "Carpool" is an independent
+boolean toggle (`hasCarpool`, any `carpool_status !== "none"`) rather than folded into the
+pass-type mutual-exclusion group; and a compact per-post card restyle (avatar + name + subtitle
+line + color-coded pass badge header, matching the mockup's rhythm) that preserves every existing
+piece of card content and every action (Respond, Report, response threads, verification-tier
+gating, Filled status, carpool seat count) — a pure restyle, not a feature cut.
+**The whole-branch final review (opus) earned its cost again — 2 real Important findings, both
+in the exact 3 lines Task 3 added, both fixed in one round:** (1) the new subtitle line (resort +
+date + time-ago) had no width constraint and, at real mobile widths, is wider than its ~210px
+available column — it would have wrapped to a second line, undoing the entire point of the
+compact single-line-header restyle; fixed with `overflow`/`textOverflow`/`whiteSpace` truncation
+(the parent column already had the `flex:1, minWidth:0` ellipsis needs). (2) `timeAgo()` returns
+an ABSOLUTE date (e.g. "Jan 12") once a post is 7+ days old, so a post created well before its ski
+date could render two unlabeled dates back to back ("Sat, Jan 18 · Jan 12") with nothing
+distinguishing "when you're skiing" from "when this was posted" — fixed by prefixing that segment
+with "posted" so every `timeAgo()` return shape reads unambiguously. Both were genuinely new
+regressions introduced by this slice's own restyle, not pre-existing — the first per-task review
+had (incorrectly) logged the wrap issue as "pre-existing, not a regression"; the final review
+caught and corrected that adjudication with the actual pre-restyle layout as evidence.
+**Real gaps found, deliberately NOT fixed this slice (all logged as deferred minors, none
+load-bearing):** the mockup's tag-pill row visual (bordered, `rgba(56,189,248,...)` accent-tinted
+pills) was never actually applied — the pills kept their pre-existing neutral white-alpha styling,
+just relocated; a null/missing `post.profiles` shows two different fallbacks side by side
+("Someone" for the name, "?" for the avatar); the new `passColor()` export is tested but unused
+in production (`passBadgeStyle()` duplicates its lookup instead of calling it); `SkiBuddyBoard`'s
+new chip row's only CSS rule (`.pd-x`'s scrollbar-hiding) lives in a sibling `MessagingCenter.jsx`
+`<style>` tag rather than `index.css` — harmless today since they're always co-mounted, but
+`SkiBuddyBoard` has a second, currently-unreachable mount site at `FriendsPage.jsx:548` that the
+**Friends slice will make reachable** — move that rule into `index.css` when that slice touches
+`FriendsPage.jsx`; the 6 filter/toggle chips (here and in `MessagingCenter.jsx`'s own tab bar)
+have no `aria-pressed`.
+**Verification note, same recurring gap as every prior slice:** no subagent in this environment
+has browser or Supabase-auth tooling — every task, the final review, and the fix wave were
+verified via `npm test`/`npx eslint .`/`npm run build`/diff review only. **Not yet click-tested by
+Kyle** — do that first, especially whether the subtitle-line fix actually reads cleanly at real
+mobile widths and whether the independent Carpool toggle's interaction with the 5 pass chips
+feels right (both were things source-level review flagged it could not fully settle without a
+browser).
+Final state: 145 tests passing (was 139), lint 89 problems in a fresh worktree (unchanged from
+baseline — this slice added exactly as many lint-clean lines as it removed).
+
+**Not yet reviewed:** Leaderboard/Feed/Friends sub-tabs of Crew (next up, in that order), Plans
+and Profile pages.
 
 ---
 
