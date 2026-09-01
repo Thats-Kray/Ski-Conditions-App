@@ -26,6 +26,7 @@ import {
   getVisiblePlansInRange,
   uploadCrewPhoto,
 } from "../lib/socialApi"
+import { markRead, isCrewUnread } from "../lib/crewUnread"
 
 const EMOJI_OPTIONS = ["⛷️", "🏂", "🤙", "🏔️", "❄️", "🔥", "💎", "🎿", "🌨️", "🦅", "🐻", "🐺"]
 
@@ -665,15 +666,7 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
 
 // ── Crew List ─────────────────────────────────────────────────────────────────
 
-const LS_PREFIX = "pd_cr_"
-function getLastRead(crewId) {
-  try { return localStorage.getItem(LS_PREFIX + crewId) || null } catch { return null }
-}
-function markRead(crewId) {
-  try { localStorage.setItem(LS_PREFIX + crewId, new Date().toISOString()) } catch { /* best-effort */ }
-}
-
-export default function CrewGroupChat({ friends = [], onUnreadChange }) {
+export default function CrewGroupChat({ friends = [], onCrewChatOpenChange }) {
   const isMobile = useMobile()
   const [crews, setCrews] = useState([])
   const [pendingInvites, setPendingInvites] = useState([])
@@ -682,10 +675,6 @@ export default function CrewGroupChat({ friends = [], onUnreadChange }) {
   const [showCreate, setShowCreate] = useState(false)
   const [currentUserId, setCurrentUserId] = useState(null)
   const channelRef = useRef(null)
-
-  function notifyUnread(list) {
-    onUnreadChange?.(list.some((c) => c.unread))
-  }
 
   async function loadCrews() {
     try {
@@ -699,7 +688,6 @@ export default function CrewGroupChat({ friends = [], onUnreadChange }) {
 
       if (crewData.length === 0) {
         setCrews([])
-        notifyUnread([])
         return
       }
 
@@ -727,12 +715,10 @@ export default function CrewGroupChat({ friends = [], onUnreadChange }) {
         const members = membersByCrewArr[i]
         const memberIds = members.map((m) => m.profile?.id).filter(Boolean)
         const lastMessage = lastMsgByCrewId[crew.id] || null
-        const lastRead = getLastRead(crew.id)
-        const unread = !!(lastMessage && (!lastRead || new Date(lastMessage.created_at) > new Date(lastRead)))
+        const unread = isCrewUnread(lastMessage, crew.id)
         return { ...crew, members, nextOut: computeNextOut(memberIds, visiblePlans), unread }
       })
       setCrews(enriched)
-      notifyUnread(enriched)
     } catch (e) {
       console.warn("Crews load error:", e)
     } finally {
@@ -754,13 +740,11 @@ export default function CrewGroupChat({ friends = [], onUnreadChange }) {
         setCrews((prev) => {
           const inList = prev.some((c) => c.id === crewId)
           if (!inList) return prev
-          const next = prev.map((c) =>
+          return prev.map((c) =>
             c.id === crewId
               ? { ...c, lastMessage: payload.new, unread: c.id !== selectedCrew?.id }
               : c
           )
-          notifyUnread(next)
-          return next
         })
       })
       .subscribe()
@@ -769,11 +753,8 @@ export default function CrewGroupChat({ friends = [], onUnreadChange }) {
 
   function openCrew(crew) {
     markRead(crew.id)
-    setCrews((prev) => {
-      const next = prev.map((c) => c.id === crew.id ? { ...c, unread: false } : c)
-      notifyUnread(next)
-      return next
-    })
+    setCrews((prev) => prev.map((c) => c.id === crew.id ? { ...c, unread: false } : c))
+    onCrewChatOpenChange?.(true)
     setSelectedCrew(crew)
   }
 
@@ -802,10 +783,12 @@ export default function CrewGroupChat({ friends = [], onUnreadChange }) {
   function handleCreated(crew) {
     setShowCreate(false)
     loadCrews()
+    onCrewChatOpenChange?.(true)
     setSelectedCrew({ ...crew, myRole: "admin" })
   }
 
   function handleLeft() {
+    onCrewChatOpenChange?.(false)
     setSelectedCrew(null)
     loadCrews()
   }
@@ -824,7 +807,7 @@ export default function CrewGroupChat({ friends = [], onUnreadChange }) {
           crew={selectedCrew}
           currentUserId={currentUserId}
           friends={friends}
-          onBack={() => setSelectedCrew(null)}
+          onBack={() => { onCrewChatOpenChange?.(false); setSelectedCrew(null); loadCrews() }}
           onLeft={handleLeft}
         />
       </div>
