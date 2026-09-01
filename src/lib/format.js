@@ -90,3 +90,38 @@ export function snapToQuarterHour(hhmm) {
   }
   return `${String(hour).padStart(2, "0")}:${String(snapped).padStart(2, "0")}`
 }
+
+/**
+ * A ski_sessions row's stats as one display line: "18 runs · 24,300 ft · 🌨 powder day".
+ *
+ * Uses ski_sessions' real column names — `runs_logged` and `vertical_feet`, exactly what
+ * SessionStatsForm and SessionEditForm write. (`total_runs` is the get_leaderboard RPC's
+ * aggregate alias and `vertical_ft` is ski_runs' per-segment column; neither is a column
+ * on ski_sessions, and selecting either would error.)
+ *
+ * `runs_logged` is `INT DEFAULT 0` (migration 010), so a session whose owner never opened
+ * the stats form reads 0, not null — 0 is treated as "not logged" and omitted, otherwise
+ * every untouched session would advertise "0 runs".
+ *
+ * Returns "" rather than null when there is nothing to show, so callers can fall back with
+ * a plain `||` and omit the line entirely instead of rendering an empty element.
+ */
+export function formatSessionStat(session) {
+  if (!session) return ""
+
+  const parts = []
+
+  const runs = Number(session.runs_logged)
+  if (Number.isFinite(runs) && runs > 0) {
+    parts.push(`${Math.round(runs).toLocaleString("en-US")} ${Math.round(runs) === 1 ? "run" : "runs"}`)
+  }
+
+  const vertical = Number(session.vertical_feet)
+  if (Number.isFinite(vertical) && vertical > 0) {
+    parts.push(`${Math.round(vertical).toLocaleString("en-US")} ft`)
+  }
+
+  if (session.is_powder_day) parts.push("🌨 powder day")
+
+  return parts.join(" · ")
+}

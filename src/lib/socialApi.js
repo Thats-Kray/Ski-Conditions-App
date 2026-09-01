@@ -3904,7 +3904,41 @@ export async function getActivityFeed(limit = 30) {
     .order("created_at", { ascending: false })
     .limit(limit)
   if (error) throw error
-  return data || []
+  const items = data || []
+  if (!items.length) return items
+
+  // Session stats are resolved as a second batched query rather than embedded,
+  // the same resolve-as-a-second-query pattern getSkiBuddyPosts/getBoardPosts
+  // already use for profiles. Read-time, not a snapshot in activity_feed.metadata:
+  // updateSessionStats lets a user edit a day's numbers afterwards, and a snapshot
+  // would go stale the moment they did.
+  const sessionIds = items
+    .filter((i) => i.type === "ski_session" && i.subject_id)
+    .map((i) => i.subject_id)
+  if (!sessionIds.length) return items
+
+  // These are ski_sessions' real column names. `runs_logged` comes from migration
+  // 010; `vertical_feet`/`is_powder_day` from the base table. `total_runs`/`vertical_ft`
+  // exist only as the get_leaderboard RPC's aggregate alias and as ski_runs' per-segment
+  // column — selecting either name here would fail the request.
+  const { data: sessions, error: sessionErr } = await supabase
+    .from("ski_sessions")
+    .select("id, runs_logged, vertical_feet, is_powder_day")
+    .in("id", sessionIds)
+
+  // Non-fatal by design: a failed stat lookup degrades ski_session cards to their
+  // existing sentence copy instead of blanking the whole feed. Warned rather than
+  // discarded, because a silently-empty result is indistinguishable from "nobody has
+  // logged stats yet" — which is exactly how a wrong column name would hide.
+  if (sessionErr) {
+    console.warn("getActivityFeed session stats lookup failed", sessionErr)
+    return items
+  }
+
+  const byId = new Map((sessions || []).map((s) => [s.id, s]))
+  return items.map((i) =>
+    i.type === "ski_session" ? { ...i, sessionStats: byId.get(i.subject_id) || null } : i
+  )
 }
 
 export async function getActivityReactions(activityIds) {
