@@ -9,10 +9,11 @@ import {
   syncVerificationFromAuth,
   getCurrentUser,
 } from "../lib/socialApi"
-import { RIDING_STYLES, PASS_TYPES, CARPOOL_STATUSES } from "../lib/skiBuddyOptions"
+import { RIDING_STYLES, PASS_TYPES, CARPOOL_STATUSES, passBadgeStyle } from "../lib/skiBuddyOptions"
 import { RESORT_NAMES, RESORT_EMOJI } from "../lib/resorts"
 import { timeAgo } from "../lib/format"
 import AccentCard from "./ui/AccentCard"
+import Avatar from "./ui/Avatar"
 import VerificationUpgradeModal from "./VerificationUpgradeModal"
 import PostSkiBuddyForm from "./PostSkiBuddyForm"
 
@@ -290,23 +291,29 @@ export default function SkiBuddyBoard() {
             const styles = RIDING_STYLES.filter((s) => post.riding_style?.includes(s.key))
             return (
               <AccentCard key={post.id} accentColor="var(--color-accent)">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                  <div>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{RESORT_EMOJI[post.resort_key]} {RESORT_NAMES[post.resort_key] || post.resort_key}</span>
-                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginLeft: 8 }}>{formatDate(post.ski_date)}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <Avatar profile={post.profiles} size={38} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{author}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+                      {RESORT_EMOJI[post.resort_key]} {RESORT_NAMES[post.resort_key] || post.resort_key} · {formatDate(post.ski_date)} · {timeAgo(post.created_at)}
+                    </div>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: "var(--color-accent)" }}>{passLabel(post.pass_type)}</span>
+                  <span style={passBadgeStyle(post.pass_type)}>{passLabel(post.pass_type)}</span>
                 </div>
 
                 {post.is_held_for_review && isOwner && (
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--color-danger)", marginBottom: 6 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--color-danger)", marginTop: 10 }}>
                     ⏳ Under review — only you can see this post right now.
                   </div>
                 )}
 
-                {post.description && <div style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", marginBottom: 6 }}>{post.description}</div>}
+                {post.description && <div style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", marginTop: 10 }}>{post.description}</div>}
 
-                <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 10 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>
+                    {passLabel(post.pass_type)}
+                  </span>
                   {styles.map((s) => (
                     <span key={s.key} style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>
                       {s.emoji} {s.label}
@@ -323,33 +330,30 @@ export default function SkiBuddyBoard() {
                   )}
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{author} · {timeAgo(post.created_at)}</span>
-                  <div style={{ display: "flex", gap: 10 }}>
-                    {isOwner ? (
-                      <button onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)} style={{ background: "none", border: "none", color: "var(--color-accent)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                        {expandedPostId === post.id ? "Hide responses" : "View responses"}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleRespondClick(post.id)}
-                        disabled={post.status !== "open" || respondedPostIds.has(post.id)}
-                        style={{
-                          background: "none", border: "none",
-                          color: post.status === "open" && !respondedPostIds.has(post.id) ? "var(--color-accent)" : "rgba(255,255,255,0.3)",
-                          fontSize: 11, fontWeight: 700,
-                          cursor: post.status === "open" && !respondedPostIds.has(post.id) ? "pointer" : "default",
-                        }}
-                      >
-                        {respondedPostIds.has(post.id) ? "✓ Response Sent" : "Respond"}
-                      </button>
-                    )}
-                    {!isOwner && (
-                      <button onClick={() => setReportingId(reportingId === post.id ? null : post.id)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", fontSize: 11, cursor: "pointer" }}>
-                        🚩 Report
-                      </button>
-                    )}
-                  </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  {isOwner ? (
+                    <button onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)} style={{ background: "none", border: "none", color: "var(--color-accent)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                      {expandedPostId === post.id ? "Hide responses" : "View responses"}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleRespondClick(post.id)}
+                      disabled={post.status !== "open" || respondedPostIds.has(post.id)}
+                      style={{
+                        background: "none", border: "none",
+                        color: post.status === "open" && !respondedPostIds.has(post.id) ? "var(--color-accent)" : "rgba(255,255,255,0.3)",
+                        fontSize: 11, fontWeight: 700,
+                        cursor: post.status === "open" && !respondedPostIds.has(post.id) ? "pointer" : "default",
+                      }}
+                    >
+                      {respondedPostIds.has(post.id) ? "✓ Response Sent" : "Respond"}
+                    </button>
+                  )}
+                  {!isOwner && (
+                    <button onClick={() => setReportingId(reportingId === post.id ? null : post.id)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", fontSize: 11, cursor: "pointer" }}>
+                      🚩 Report
+                    </button>
+                  )}
                 </div>
 
                 {respondingPostId === post.id && (
