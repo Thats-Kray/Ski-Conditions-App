@@ -6,6 +6,8 @@ import FriendsGoingBadge from "./FriendsGoingBadge"
 import BestBetCard from "./BestBetCard"
 import ResortListRow from "./ResortListRow"
 import PlanEditorModal from "./PlanEditorModal"
+import TodaysCrew from "./TodaysCrew"
+import ActivityFeed from "./ActivityFeed"
 import { planButtonState } from "../lib/planUpsert"
 import { localDateKey } from "../lib/calendarDates"
 import { useIsStandalone } from "../lib/useMobile"
@@ -724,6 +726,37 @@ export default function TodayScreen({
           })()}
         </>
       )}
+
+      <div style={{ marginTop: 28 }}>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: 0.8,
+            color: "rgba(255,255,255,0.5)",
+            textTransform: "uppercase",
+            marginBottom: 10,
+          }}
+        >
+          Friends
+        </div>
+        <TodaysCrew />
+
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: 0.8,
+            color: "rgba(255,255,255,0.5)",
+            textTransform: "uppercase",
+            marginTop: 20,
+            marginBottom: 10,
+          }}
+        >
+          Recent Activity
+        </div>
+        <ActivityFeed />
+      </div>
 
       {skiHereModalResortKey && (
         <PlanEditorModal
