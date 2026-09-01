@@ -1441,7 +1441,7 @@ single **1,184 KB** chunk with nothing lazy-loaded.
 
 ---
 
-### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab in progress — Crews and Board slices shipped, Leaderboard/Feed/Friends slices next; Plans/Profile not yet started)**
+### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab in progress — Crews, Board, and Leaderboard slices shipped, Feed/Friends slices next; Plans/Profile not yet started)**
 
 **Today List View slice: ✅ SHIPPED 2026-08-27, live on `main`** (commit `5062d98`, deploy
 verified by grepping the live bundle for `"Best Bet Today"`/`"Ski here today"` —
@@ -1669,8 +1669,58 @@ browser).
 Final state: 145 tests passing (was 139), lint 89 problems in a fresh worktree (unchanged from
 baseline — this slice added exactly as many lint-clean lines as it removed).
 
-**Not yet reviewed:** Leaderboard/Feed/Friends sub-tabs of Crew (next up, in that order), Plans
-and Profile pages.
+**Leaderboard sub-tab slice: ✅ SHIPPED 2026-08-31, merged locally to `main`** (merge commit
+`5e3cab7`, not yet pushed — same pending-push situation as Crews/Board). Spec at
+`docs/superpowers/specs/2026-08-31-crew-tab-leaderboard-slice-design.md`, plan at
+`docs/superpowers/plans/2026-08-31-crew-tab-leaderboard-slice.md`, built in worktree
+`crew-tab-leaderboard-slice` (merged + deleted after shipping) via subagent-driven-development: 2
+tasks + a final-review fix wave, 4 commits. The smallest slice yet — the whole change lives in
+one file, `LeaderboardPage.jsx`, no schema/query change. Shipped: `CATEGORIES` (the sortable
+metric-tab array) changed from 8 categories to the mockup's exact 7, in the mockup's order
+(`Vertical/Days/Powder Days/Resorts/Miles/Runs/Longest Day`) — `Resorts`/`Runs` added as new
+sortable tabs (both were already fetched per entry, no new query), `Top Speed`/`Most
+Lifts`/`Time on Mountain` dropped as tabs (their data still flows through `leaderboardApi.js` and
+`SessionStatsForm.jsx`, just not surfaced as a leaderboard tab anymore), `Longest Run` relabeled
+to `Longest Day` per the mockup's wording with its stat unchanged; and each row's stat display
+restyled from a two-line "big number / small unit label" block to the mockup's single inline
+string ("18 days", "96 mi"). Every other feature on the page — the Friends/Global toggle, the
+2-step Log-a-Ski-Day modal, the season-snapshot stat strip, the my-logged-days list with delete,
+medals, the "YOU" badge, `topResort`, and per-user emoji reactions — kept working unmodified,
+same "restyle, don't cut" precedent as Board.
+**Both per-task reviews came back completely clean, zero findings in either** — the smallest,
+most mechanical slice yet. **The whole-branch final review (opus) still earned its cost**,
+finding 2 real Important gaps neither task-scoped review could see because both were about
+mockup fidelity as a *whole*, not either task's specific diff: (1) the mockup formats every stat
+number with `.toLocaleString("en-US")` (e.g. "142,000 ft") but the implementation showed raw
+numbers ("142000 ft") — a real gap in the spec itself (the spec never mentioned number
+formatting), not an implementer error, fixed by formatting numeric values before display; (2) the
+default selected tab was still `"days"` even though `CATEGORIES` now leads with `vertical` per
+the mockup's own order, so the highlighted chip on load wasn't the leftmost one shown — **Kyle's
+call: switch the default to `vertical`**, matching the mockup exactly. Also fixed in the same
+wave (2 Minors): two stale code comments elsewhere in the file referencing "8 tabs" and "Top
+Speed" (both now wrong after the category change, missed by both per-task reviews since neither
+touched those lines), and now-dead defensive code in the stat-display expression left over from
+mid-refactor. **Deferred, not fixed:** pre-existing `leaderboard_reactions` rows on the 3 removed
+categories become permanently unreachable (no error, no data loss, not worth a migration for a
+low-traffic app); an asymmetric `cat`-undefined guard between two functions (verified safe today,
+not worth changing).
+**Verification note, same recurring gap as every prior slice:** no subagent in this environment
+has browser or Supabase-auth tooling — every task, the final review, and the fix wave were
+verified via `npm test`/`npx eslint .`/`npm run build`/diff review only. **Not yet click-tested by
+Kyle** — do that first, especially whether the new inline stat strings read cleanly at mobile
+widths (the final review did the arithmetic and found overflow structurally impossible given the
+existing flex layout, but arithmetic isn't a screenshot) and whether reacting on the new
+`Resorts`/`Runs` tabs round-trips correctly.
+**Note on merge history:** this branch forked from `main` before a concurrent session's TASK 22.5
+(Today tab Friends section, out-of-band from this sequence) landed — the merge back was a real
+3-way merge, not a fast-forward like Crews/Board, but touched no overlapping files (only
+`ROADMAP.md` was edited by both, auto-merged cleanly) and tests/lint/build all verified clean on
+the merged result.
+Final state: 145 tests passing (unchanged), lint 89 problems in a fresh worktree (unchanged from
+baseline).
+
+**Not yet reviewed:** Feed/Friends sub-tabs of Crew (next up, in that order), Plans and Profile
+pages.
 
 ---
 
