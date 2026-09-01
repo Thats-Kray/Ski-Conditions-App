@@ -24,6 +24,20 @@ function formatDate(dateStr) {
   return new Date(dateStr + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
 }
 
+// Chip labels match the mockup's copy exactly. "Local" is a friendlier UI
+// label for PASS_TYPES' "other" key — no data-model change, this file just
+// displays a nicer word for that one chip. "carpool" isn't a pass-type key at
+// all; it's handled as an independent boolean toggle, not part of the
+// pass-type selection (see the click handler above).
+const BOARD_FILTER_CHIPS = [
+  { key: "all", label: "All" },
+  { key: "ikon", label: "Ikon" },
+  { key: "epic", label: "Epic" },
+  { key: "independent", label: "Indy" },
+  { key: "other", label: "Local" },
+  { key: "carpool", label: "Carpool" },
+]
+
 // Local, unexported — tightly coupled to how each post renders in the list
 // (expand-in-place), not reused elsewhere. See Task 4's design note.
 function ResponseThread({ post, currentUserId, onStatusChange }) {
@@ -89,9 +103,7 @@ export default function SkiBuddyBoard() {
   const [currentUserId, setCurrentUserId] = useState(null)
 
   const [passTypeFilter, setPassTypeFilter] = useState("all")
-  const [resortFilter, setResortFilter] = useState("all")
-  const [carpoolFilter, setCarpoolFilter] = useState("all")
-  const [ridingStyleFilter, setRidingStyleFilter] = useState("all")
+  const [hasCarpool, setHasCarpool] = useState(false)
 
   const [showForm, setShowForm] = useState(false)
   const [showVerifyModal, setShowVerifyModal] = useState(false)
@@ -124,11 +136,9 @@ export default function SkiBuddyBoard() {
   const fetchPosts = useCallback(() => {
     return getSkiBuddyPosts({
       passType: passTypeFilter === "all" ? null : passTypeFilter,
-      resortKey: resortFilter === "all" ? null : resortFilter,
-      carpoolStatus: carpoolFilter === "all" ? null : carpoolFilter,
-      ridingStyle: ridingStyleFilter === "all" ? null : ridingStyleFilter,
+      hasCarpool,
     })
-  }, [passTypeFilter, resortFilter, carpoolFilter, ridingStyleFilter])
+  }, [passTypeFilter, hasCarpool])
 
   // Callable version for the manual reconciliation call in handleStatusChange
   // — fire-and-forget, not tied to the filter-change race below, so it
@@ -244,56 +254,26 @@ export default function SkiBuddyBoard() {
       )}
 
       {/* Filters */}
-      <div style={{ display: "grid", gap: 8 }}>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {["all", ...PASS_TYPES.map((p) => p.key)].map((key) => (
-            <button key={key} onClick={() => setPassTypeFilter(key)} style={{
-              padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer",
-              border: "1px solid rgba(255,255,255,0.1)",
-              background: passTypeFilter === key ? "rgba(56,189,248,0.25)" : "rgba(255,255,255,0.04)", color: "white",
-            }}>
-              {key === "all" ? "All Passes" : passLabel(key)}
+      <div className="pd-x" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
+        {BOARD_FILTER_CHIPS.map(({ key, label }) => {
+          const active = key === "carpool" ? hasCarpool : passTypeFilter === key
+          return (
+            <button
+              key={key}
+              onClick={() => (key === "carpool" ? setHasCarpool((v) => !v) : setPassTypeFilter(key))}
+              style={{
+                flexShrink: 0,
+                padding: "8px 16px", borderRadius: 999, fontSize: 13, fontWeight: 800, cursor: "pointer",
+                background: active ? "var(--color-accent)" : "rgba(255,255,255,0.05)",
+                color: active ? "var(--color-bg)" : "rgba(255,255,255,0.6)",
+                border: active ? "1px solid var(--color-accent)" : "1px solid rgba(255,255,255,0.1)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {label}
             </button>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {["all", ...CARPOOL_STATUSES.map((c) => c.key)].map((key) => {
-            const c = CARPOOL_STATUSES.find((c) => c.key === key)
-            return (
-              <button key={key} onClick={() => setCarpoolFilter(key)} style={{
-                padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer",
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: carpoolFilter === key ? "rgba(56,189,248,0.25)" : "rgba(255,255,255,0.04)", color: "white",
-              }}>
-                {key === "all" ? "Any Carpool" : c.label}
-              </button>
-            )
-          })}
-        </div>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {["all", ...RIDING_STYLES.map((s) => s.key)].map((key) => {
-            const s = RIDING_STYLES.find((s) => s.key === key)
-            return (
-              <button key={key} onClick={() => setRidingStyleFilter(key)} style={{
-                padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer",
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: ridingStyleFilter === key ? "rgba(56,189,248,0.25)" : "rgba(255,255,255,0.04)", color: "white",
-              }}>
-                {key === "all" ? "Any Style" : `${s.emoji} ${s.label}`}
-              </button>
-            )
-          })}
-        </div>
-        <select
-          value={resortFilter}
-          onChange={(e) => setResortFilter(e.target.value)}
-          style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.05)", color: "white", fontSize: 13, colorScheme: "dark" }}
-        >
-          <option value="all">All Resorts</option>
-          {Object.keys(RESORT_NAMES).map((key) => (
-            <option key={key} value={key}>{RESORT_EMOJI[key]} {RESORT_NAMES[key]}</option>
-          ))}
-        </select>
+          )
+        })}
       </div>
 
       {loading ? (

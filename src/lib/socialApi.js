@@ -292,6 +292,7 @@ export async function getSkiBuddyPosts(filters = {}) {
   if (filters.resortKey) query = query.eq("resort_key", filters.resortKey)
   if (filters.carpoolStatus) query = query.eq("carpool_status", filters.carpoolStatus)
   if (filters.ridingStyle) query = query.contains("riding_style", [filters.ridingStyle])
+  if (filters.hasCarpool) query = query.neq("carpool_status", "none")
   if (filters.dateFrom) query = query.gte("ski_date", filters.dateFrom)
   if (filters.dateTo) query = query.lte("ski_date", filters.dateTo)
 
