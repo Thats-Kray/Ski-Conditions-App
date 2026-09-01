@@ -162,8 +162,6 @@ function LeaderboardRow({ entry, rank, category, reactions, onReact, currentUser
   const medal  = rank <= 3 ? RANK_MEDALS[rank - 1] : null
   const isTop  = rank <= 3
 
-  const displayValue = value == null ? "—" : value
-
   return (
     <div style={{
       padding: "12px 14px",
@@ -202,7 +200,7 @@ function LeaderboardRow({ entry, rank, category, reactions, onReact, currentUser
         {/* Stat */}
         <div style={{ textAlign: "right", flexShrink: 0 }}>
           <div style={{ fontSize: 16, fontWeight: 900, color: isTop ? "var(--color-accent-soft)" : "white", whiteSpace: "nowrap" }}>
-            {value == null ? "—" : cat.unit ? `${displayValue} ${cat.unit}` : displayValue}
+            {value == null ? "—" : `${typeof value === "number" ? value.toLocaleString("en-US") : value} ${cat.unit}`}
           </div>
         </div>
       </div>
@@ -239,7 +237,7 @@ function LeaderboardRow({ entry, rank, category, reactions, onReact, currentUser
 export default function LeaderboardPage() {
   const season = getCurrentSeason()
   const [boardMode, setBoardMode] = useState("friends")
-  const [category, setCategory]   = useState("days")
+  const [category, setCategory]   = useState("vertical")
   const [board, setBoard]         = useState([]) // unsorted, as fetched
   const [mySessions, setMySessions] = useState([])
   const [loading, setLoading]     = useState(true)
@@ -265,7 +263,7 @@ export default function LeaderboardPage() {
     // NOTE: `category` is deliberately absent. It only decides the sort order of
     // rows we already have, so including it here made every tab click refire the
     // leaderboard RPC *and* getMySessions (3 queries + a background upsert),
-    // flashing "Loading…" on all 8 tabs. The sort now lives in a useMemo below.
+    // flashing "Loading…" on all 7 tabs. The sort now lives in a useMemo below.
   }, [season.startYear, boardMode])
 
   useEffect(() => { load() }, [load])
@@ -287,12 +285,12 @@ export default function LeaderboardPage() {
   const myRank = entries.indexOf(me) + 1
 
   // Reactions are scoped per active category tab + season — refetch whenever
-  // either changes so a 🔥 on Top Speed doesn't bleed into the Vertical tab.
+  // either changes so a 🔥 on Runs doesn't bleed into the Vertical tab.
   useEffect(() => {
     if (!entries.length) return
     let cancelled = false
     // Drop the previous tab's badges up front. They're keyed by user, not by
-    // stat, so leaving them up would render Top Speed's 🔥 against Vertical's
+    // stat, so leaving them up would render Runs' 🔥 against Vertical's
     // rows for the length of the fetch.
     setReactionsByUser({})
     getLeaderboardReactions(entries.map((e) => e.id), category, String(season.startYear))
