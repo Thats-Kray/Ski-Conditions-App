@@ -188,7 +188,7 @@ function CrewInviteCard({ invite, onAccept, onDecline, working }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function FriendsPage({ hideCrew = false, onMessageFriend = null }) {
+export default function FriendsPage({ hideCrew = false, onMessageFriend = null, hideTabBar = false, initialSection = "leaderboard" }) {
   const [searchText, setSearchText]           = useState("")
   const [searchResults, setSearchResults]     = useState([])
   const [incomingRequests, setIncomingRequests] = useState([])
@@ -205,7 +205,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
   const [searching, setSearching]             = useState(false)
   const [workingId, setWorkingId]             = useState(null)
   const [toast, setToast]                     = useState(null) // { type: "success"|"error", text }
-  const [activeSection, setActiveSection]     = useState("leaderboard")
+  const [activeSection, setActiveSection]     = useState(initialSection)
   const [friendsFilter, setFriendsFilter]     = useState("all") // "all" | "pending"
   const [showInviteId, setShowInviteId]       = useState(null)
   const [inviteForm, setInviteForm]           = useState({ resort_key: "", ski_date: "", departure_time: "06:00 AM", seats_available: 3, message: "" })
@@ -428,31 +428,33 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null }
     <div style={{ padding: "0 0 80px", color: "var(--color-text-1)" }}>
 
       {/* ── Top tab bar ── */}
-      <div style={{ display: "flex", gap: 2, marginBottom: 16, background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 4 }}>
-        {[
-          { key: "leaderboard", label: "🏆 Friend Leaderboard" },
-          ...(hideCrew ? [] : [{ key: "crews", label: "🤙 Crews" }]),
-          { key: "friends",     label: "👥 Friends" },
-          { key: "community",   label: "🎿 Community" },
-        ].map(({ key, label }) => (
-          <button key={key} onClick={() => setActiveSection(key)} style={{
-            flex: 1, padding: "11px 8px", borderRadius: 9, border: "none", cursor: "pointer",
-            fontWeight: 800, fontSize: 14, minHeight: 44,
-            background: activeSection === key ? "rgba(255,255,255,0.14)" : "transparent",
-            color: activeSection === key ? "white" : "rgba(255,255,255,0.4)",
-            position: "relative",
-          }}>
-            {label}
-            {key === "friends" && incomingRequests.length > 0 && (
-              <span style={{
-                position: "absolute", top: 6, right: 8,
-                width: 7, height: 7, borderRadius: 999,
-                background: "var(--color-danger)",
-              }} />
-            )}
-          </button>
-        ))}
-      </div>
+      {!hideTabBar && (
+        <div style={{ display: "flex", gap: 2, marginBottom: 16, background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 4 }}>
+          {[
+            { key: "leaderboard", label: "🏆 Friend Leaderboard" },
+            ...(hideCrew ? [] : [{ key: "crews", label: "🤙 Crews" }]),
+            { key: "friends",     label: "👥 Friends" },
+            { key: "community",   label: "🎿 Community" },
+          ].map(({ key, label }) => (
+            <button key={key} onClick={() => setActiveSection(key)} style={{
+              flex: 1, padding: "11px 8px", borderRadius: 9, border: "none", cursor: "pointer",
+              fontWeight: 800, fontSize: 14, minHeight: 44,
+              background: activeSection === key ? "rgba(255,255,255,0.14)" : "transparent",
+              color: activeSection === key ? "white" : "rgba(255,255,255,0.4)",
+              position: "relative",
+            }}>
+              {label}
+              {key === "friends" && incomingRequests.length > 0 && (
+                <span style={{
+                  position: "absolute", top: 6, right: 8,
+                  width: 7, height: 7, borderRadius: 999,
+                  background: "var(--color-danger)",
+                }} />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Per-block load failures ──
           One row per block that failed, each with its own Retry. Persistent by

@@ -495,6 +495,28 @@ export async function uploadProfilePhoto(file) {
   return data.publicUrl;
 }
 
+export async function uploadCrewPhoto(crewId, file) {
+  if (!file) {
+    throw new Error("No file provided.");
+  }
+
+  const fileExt = file.name.split(".").pop();
+  const filePath = `${crewId}/photo-${Date.now()}.${fileExt}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("crew-photos")
+    .upload(filePath, file, {
+      cacheControl: "3600",
+      upsert: true,
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage.from("crew-photos").getPublicUrl(filePath);
+
+  return data.publicUrl;
+}
+
 /* -----------------------------
    Daily Plans
 ----------------------------- */
@@ -3454,7 +3476,7 @@ export async function getMyCrews() {
     .select(`
       role,
       joined_at,
-      crew:crew_id ( id, name, emoji, description, invite_only, created_by, created_at )
+      crew:crew_id ( id, name, emoji, description, invite_only, created_by, created_at, photo_url )
     `)
     .eq("user_id", user.id)
     .eq("status", "active")
