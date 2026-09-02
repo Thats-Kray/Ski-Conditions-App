@@ -3976,6 +3976,68 @@ export async function addActivityReaction(activityId, emoji) {
   return data
 }
 
+// ─── Activity feed comments (Feed slice B, migration 045) ───────────────────
+
+/**
+ * Every comment on a batch of activities, in one query — the same batched shape as
+ * getActivityReactions above, not a per-card lazy fetch. A feed page is 30 flat,
+ * lightweight threads; one query beats 30 round trips if every card gets expanded.
+ *
+ * No visibility filtering belongs here: activity_feed_comments_select routes through
+ * can_see_activity(), so Postgres has already restricted this to activities the caller
+ * can see (migration 045).
+ *
+ * The profiles embed is the same shape getActivityFeed uses 40 lines up:
+ * activity_feed_comments.user_id references auth.users(id) exactly as
+ * activity_feed.actor_id does, and profiles.id is a one-to-one FK onto the same target,
+ * which is what lets PostgREST resolve the relationship.
+ */
+export async function getActivityComments(activityIds) {
+  if (!activityIds?.length) return []
+  const { data, error } = await supabase
+    .from("activity_feed_comments")
+    .select("id, activity_id, user_id, content, created_at, profiles:user_id(id, full_name, username, avatar_url)")
+    .in("activity_id", activityIds)
+    .order("created_at", { ascending: true })
+  if (error) throw error
+  return data || []
+}
+
+/**
+ * Post one comment and return the stored row with its author profile resolved, so the
+ * caller can splice it straight into the open thread without a refetch (Decision 5: no
+ * realtime, no auto-refresh timer).
+ *
+ * There is deliberately no client-side visibility check. activity_feed_comments_insert
+ * requires BOTH user_id = auth.uid() AND can_see_activity(activity_id), so commenting on
+ * an activity the caller cannot see is refused by Postgres — the real boundary — not by
+ * a JS guard that an attacker never runs.
+ */
+export async function addActivityComment(activityId, content) {
+  const trimmed = (content || "").trim()
+  if (!trimmed) throw new Error("Comment can't be empty.")
+
+  const user = await getCurrentUser()
+  const { data, error } = await supabase
+    .from("activity_feed_comments")
+    .insert({ activity_id: activityId, user_id: user.id, content: trimmed })
+    .select("id, activity_id, user_id, content, created_at, profiles:user_id(id, full_name, username, avatar_url)")
+    .single()
+  if (error) throw error
+  return data
+}
+
+/**
+ * Delete one comment. Ownership is enforced by activity_feed_comments_delete
+ * (user_id = auth.uid()), which makes someone else's comment match zero rows rather than
+ * error — so there is deliberately no second ownership check here, matching how
+ * trip_comments' own DELETE policy is relied on.
+ */
+export async function deleteActivityComment(commentId) {
+  const { error } = await supabase.from("activity_feed_comments").delete().eq("id", commentId)
+  if (error) throw error
+}
+
 // ─── Mountain Board (sprint-29) ─────────────────────────────────────────────
 
 export async function getResortCoordinates() {
