@@ -3898,24 +3898,35 @@ export async function logActivityOnce(type, { subjectId = null, subjectType = nu
 }
 
 export async function getActivityFeed(limit = 30) {
+  // No FK exists from activity_feed.actor_id to profiles (only to auth.users), so a
+  // PostgREST embedded select here always 400s — the exact situation getBoardPosts
+  // documents and fixes below. Resolve profiles with a separate query instead.
   const { data, error } = await supabase
     .from("activity_feed")
-    .select("*, profiles:actor_id(id, full_name, username, avatar_url)")
+    .select("*")
     .order("created_at", { ascending: false })
     .limit(limit)
   if (error) throw error
   const items = data || []
   if (!items.length) return items
 
+  const actorIds = [...new Set(items.map((i) => i.actor_id))]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .in("id", actorIds)
+  const pm = new Map((profiles || []).map((p) => [p.id, p]))
+  const withProfiles = items.map((i) => ({ ...i, profiles: pm.get(i.actor_id) || null }))
+
   // Session stats are resolved as a second batched query rather than embedded,
   // the same resolve-as-a-second-query pattern getSkiBuddyPosts/getBoardPosts
-  // already use for profiles. Read-time, not a snapshot in activity_feed.metadata:
+  // already use for profiles above. Read-time, not a snapshot in activity_feed.metadata:
   // updateSessionStats lets a user edit a day's numbers afterwards, and a snapshot
   // would go stale the moment they did.
-  const sessionIds = items
+  const sessionIds = withProfiles
     .filter((i) => i.type === "ski_session" && i.subject_id)
     .map((i) => i.subject_id)
-  if (!sessionIds.length) return items
+  if (!sessionIds.length) return withProfiles
 
   // These are ski_sessions' real column names. `runs_logged` comes from migration
   // 010; `vertical_feet`/`is_powder_day` from the base table. `total_runs`/`vertical_ft`
@@ -3932,12 +3943,12 @@ export async function getActivityFeed(limit = 30) {
   // logged stats yet" — which is exactly how a wrong column name would hide.
   if (sessionErr) {
     console.warn("getActivityFeed session stats lookup failed", sessionErr)
-    return items
+    return withProfiles
   }
 
-  const byId = new Map((sessions || []).map((s) => [s.id, s]))
-  return items.map((i) =>
-    i.type === "ski_session" ? { ...i, sessionStats: byId.get(i.subject_id) || null } : i
+  const statsById = new Map((sessions || []).map((s) => [s.id, s]))
+  return withProfiles.map((i) =>
+    i.type === "ski_session" ? { ...i, sessionStats: statsById.get(i.subject_id) || null } : i
   )
 }
 
@@ -3974,6 +3985,88 @@ export async function addActivityReaction(activityId, emoji) {
     .single()
   if (error) throw error
   return data
+}
+
+// ─── Activity feed comments (Feed slice B, migration 045) ───────────────────
+
+/**
+ * Every comment on a batch of activities, in one query — the same batched shape as
+ * getActivityReactions above, not a per-card lazy fetch. A feed page is 30 flat,
+ * lightweight threads; one query beats 30 round trips if every card gets expanded.
+ *
+ * No visibility filtering belongs here: activity_feed_comments_select routes through
+ * can_see_activity(), so Postgres has already restricted this to activities the caller
+ * can see (migration 045).
+ *
+ * No FK exists from activity_feed_comments.user_id to profiles (only to auth.users),
+ * so — same situation as getActivityFeed/getBoardPosts — profiles are resolved with a
+ * separate query rather than a PostgREST embed, which always 400s here.
+ */
+export async function getActivityComments(activityIds) {
+  if (!activityIds?.length) return []
+  const { data, error } = await supabase
+    .from("activity_feed_comments")
+    .select("id, activity_id, user_id, content, created_at")
+    .in("activity_id", activityIds)
+    .order("created_at", { ascending: true })
+  if (error) throw error
+  const comments = data || []
+  if (!comments.length) return comments
+
+  const userIds = [...new Set(comments.map((c) => c.user_id))]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .in("id", userIds)
+  const pm = new Map((profiles || []).map((p) => [p.id, p]))
+  return comments.map((c) => ({ ...c, profiles: pm.get(c.user_id) || null }))
+}
+
+/**
+ * Post one comment and return the stored row with its author profile resolved, so the
+ * caller can splice it straight into the open thread without a refetch (Decision 5: no
+ * realtime, no auto-refresh timer).
+ *
+ * There is deliberately no client-side visibility check. activity_feed_comments_insert
+ * requires BOTH user_id = auth.uid() AND can_see_activity(activity_id), so commenting on
+ * an activity the caller cannot see is refused by Postgres — the real boundary — not by
+ * a JS guard that an attacker never runs.
+ *
+ * No FK exists from activity_feed_comments.user_id to profiles (only to auth.users), so
+ * the author's profile is resolved with a separate query after the insert, same as
+ * getActivityComments/getActivityFeed/getBoardPosts — an embedded select on the INSERT's
+ * .select() would always 400.
+ */
+export async function addActivityComment(activityId, content) {
+  const trimmed = (content || "").trim()
+  if (!trimmed) throw new Error("Comment can't be empty.")
+
+  const user = await getCurrentUser()
+  const { data, error } = await supabase
+    .from("activity_feed_comments")
+    .insert({ activity_id: activityId, user_id: user.id, content: trimmed })
+    .select("id, activity_id, user_id, content, created_at")
+    .single()
+  if (error) throw error
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  return { ...data, profiles: profile || null }
+}
+
+/**
+ * Delete one comment. Ownership is enforced by activity_feed_comments_delete
+ * (user_id = auth.uid()), which makes someone else's comment match zero rows rather than
+ * error — so there is deliberately no second ownership check here, matching how
+ * trip_comments' own DELETE policy is relied on.
+ */
+export async function deleteActivityComment(commentId) {
+  const { error } = await supabase.from("activity_feed_comments").delete().eq("id", commentId)
+  if (error) throw error
 }
 
 // ─── Mountain Board (sprint-29) ─────────────────────────────────────────────
