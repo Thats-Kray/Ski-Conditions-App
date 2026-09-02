@@ -1,9 +1,19 @@
 import { useState, useEffect } from "react"
-import { getActivityFeed, getActivityReactions, addActivityReaction, getCurrentUser } from "../lib/socialApi"
+import {
+  getActivityFeed,
+  getActivityReactions,
+  addActivityReaction,
+  getActivityComments,
+  addActivityComment,
+  deleteActivityComment,
+  reportContent,
+  getCurrentUser,
+} from "../lib/socialApi"
 import Avatar from "./ui/Avatar"
 import AccentCard from "./ui/AccentCard"
 import { timeAgo, formatSessionStat } from "../lib/format"
 import { resortName } from "../lib/resorts"
+import { groupCommentsByActivity } from "../lib/activityComments"
 
 const TYPE_COPY = {
   // Name is deliberately omitted from these sentences — the card header above already
@@ -19,6 +29,15 @@ export default function ActivityFeed() {
   const [reactions, setReactions] = useState({}) // { [activity_id]: [{user_id, emoji}] }
   const [currentUserId, setCurrentUserId] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [comments, setComments] = useState({}) // { [activity_id]: [row, ...] }, oldest-first
+  // One thread open at a time, mirroring SkiBuddyBoard's expandedPostId. That is what
+  // lets the composer and the report form be single shared pieces of state instead of
+  // per-card maps: only one of each can be on screen.
+  const [expandedId, setExpandedId] = useState(null)
+  const [draft, setDraft] = useState("")
+  const [posting, setPosting] = useState(false)
+  const [reportingId, setReportingId] = useState(null) // a comment id, not an activity id
+  const [reportReason, setReportReason] = useState("")
 
   useEffect(() => {
     let cancelled = false
@@ -27,7 +46,18 @@ export default function ActivityFeed() {
         if (cancelled) return
         setItems(rows)
         setCurrentUserId(user?.id ?? null)
-        const reactionRows = await getActivityReactions(rows.map((r) => r.id)).catch(() => [])
+        const ids = rows.map((r) => r.id)
+        const [reactionRows, commentRows] = await Promise.all([
+          getActivityReactions(ids).catch(() => []),
+          // Warned, not silently swallowed. A PostgREST relationship error or an RLS
+          // refusal here is otherwise indistinguishable from "nobody has commented yet" —
+          // the exact silent-failure class Feed-A's session-stats join had to guard
+          // against. An empty list still renders the feed; it just says so in the console.
+          getActivityComments(ids).catch((e) => {
+            console.warn("getActivityComments failed", e)
+            return []
+          }),
+        ])
         if (cancelled) return
         const grouped = {}
         for (const r of reactionRows) {
@@ -35,6 +65,7 @@ export default function ActivityFeed() {
           grouped[r.activity_id].push(r)
         }
         setReactions(grouped)
+        setComments(groupCommentsByActivity(commentRows))
       })
       .catch(() => { if (!cancelled) setItems([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
@@ -57,6 +88,64 @@ export default function ActivityFeed() {
     }
   }
 
+  function toggleThread(activityId) {
+    // Opening a different card resets the composer and any open report form, so a draft
+    // can never be posted onto the wrong activity or a reason submitted for the wrong
+    // comment.
+    setExpandedId((prev) => (prev === activityId ? null : activityId))
+    setDraft("")
+    setReportingId(null)
+    setReportReason("")
+  }
+
+  async function handlePostComment(activityId) {
+    const text = draft.trim()
+    if (!text || posting) return
+    setPosting(true)
+    try {
+      const row = await addActivityComment(activityId, text)
+      // Appended rather than refetched: the new row is by definition the newest in the
+      // thread, and it comes back with its profile already resolved.
+      setComments((prev) => ({ ...prev, [activityId]: [...(prev[activityId] || []), row] }))
+      setDraft("")
+    } catch (e) {
+      console.warn("addActivityComment failed", e)
+    } finally {
+      setPosting(false)
+    }
+  }
+
+  async function handleDeleteComment(activityId, commentId) {
+    const before = comments[activityId] || []
+    setComments((prev) => ({
+      ...prev,
+      [activityId]: (prev[activityId] || []).filter((c) => c.id !== commentId),
+    }))
+    try {
+      await deleteActivityComment(commentId)
+    } catch (e) {
+      // RLS refused it, or the network did. Put the comment back rather than leaving the
+      // UI claiming a deletion that did not happen.
+      console.warn("deleteActivityComment failed", e)
+      setComments((prev) => ({ ...prev, [activityId]: before }))
+    }
+  }
+
+  async function handleReportComment(commentId) {
+    if (!reportReason.trim()) return
+    try {
+      await reportContent("activity_comment", commentId, reportReason.trim())
+      setReportingId(null)
+      setReportReason("")
+    } catch (e) {
+      // Leave the report UI open so the user can retry, same as SkiBuddyBoard's
+      // handleReportSubmit. Warned rather than fully swallowed: "activity_comment" is only
+      // an accepted target_type because migration 045 widened the allowlist, so if that
+      // migration were ever rolled back this would be the one visible symptom.
+      console.warn("reportContent(activity_comment) failed", e)
+    }
+  }
+
   if (loading) return <div style={{ padding: 20, fontSize: 13, color: "var(--color-text-3)" }}>Loading…</div>
   if (!items.length) return <div style={{ padding: 20, fontSize: 13, color: "var(--color-text-3)" }}>No recent activity from your crew yet.</div>
 
@@ -66,6 +155,8 @@ export default function ActivityFeed() {
         const actorName = item.profiles?.full_name || item.profiles?.username || "Someone"
         const describe = TYPE_COPY[item.type]
         const itemReactions = reactions[item.id] || []
+        const itemComments = comments[item.id] || []
+        const threadOpen = expandedId === item.id
         // trip_created/default accents have no exact :root token match — left literal as
         // per-type decorative differentiators (rule 5), same precedent as MountainBoard.jsx's
         // CATEGORY_COLORS social/general entries (Task 7).
@@ -124,7 +215,115 @@ export default function ActivityFeed() {
                   </button>
                 )
               })}
+              <button
+                onClick={() => toggleThread(item.id)}
+                aria-expanded={threadOpen}
+                style={{
+                  display: "flex", alignItems: "center", gap: 4, padding: "4px 10px",
+                  borderRadius: "var(--radius-pill)", border: "none", cursor: "pointer", fontSize: 13,
+                  marginLeft: "auto",
+                  background: threadOpen ? "var(--color-accent)" : "rgba(255,255,255,0.06)",
+                  color: threadOpen ? "var(--color-bg)" : "var(--color-text-2)",
+                }}
+              >
+                💬
+                {itemComments.length > 0 && (
+                  <span style={{ fontSize: 11, fontWeight: 700 }}>{itemComments.length}</span>
+                )}
+              </button>
             </div>
+
+            {threadOpen && (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)", display: "grid", gap: 6 }}>
+                {itemComments.length === 0 && (
+                  <div style={{ fontSize: 12, color: "var(--color-text-3)" }}>No comments yet.</div>
+                )}
+
+                {itemComments.map((c) => {
+                  const commenterName = c.profiles?.full_name || c.profiles?.username || "Someone"
+                  const isMine = c.user_id === currentUserId
+                  return (
+                    <div key={c.id} style={{ padding: 8, borderRadius: 10, background: "rgba(255,255,255,0.04)", fontSize: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <Avatar profile={c.profiles} size={20} />
+                        <span style={{ fontWeight: 700, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {commenterName}
+                        </span>
+                        <span style={{ color: "var(--color-text-3)", marginLeft: "auto", flexShrink: 0 }}>
+                          {timeAgo(c.created_at)}
+                        </span>
+                      </div>
+
+                      <div style={{ color: "var(--color-text-2)", marginTop: 3, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                        {c.content}
+                      </div>
+
+                      <div style={{ display: "flex", gap: 12, marginTop: 5 }}>
+                        {isMine ? (
+                          <button
+                            onClick={() => handleDeleteComment(item.id, c.id)}
+                            style={{ background: "none", border: "none", padding: 0, color: "var(--color-text-3)", fontSize: 11, cursor: "pointer" }}
+                          >
+                            Delete
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => { setReportingId(reportingId === c.id ? null : c.id); setReportReason("") }}
+                            style={{ background: "none", border: "none", padding: 0, color: "var(--color-text-3)", fontSize: 11, cursor: "pointer" }}
+                          >
+                            🚩 Report
+                          </button>
+                        )}
+                      </div>
+
+                      {reportingId === c.id && (
+                        <div style={{ marginTop: 6, display: "grid", gap: 6 }}>
+                          <textarea
+                            value={reportReason}
+                            onChange={(e) => setReportReason(e.target.value.slice(0, 300))}
+                            placeholder="Why are you reporting this?"
+                            rows={2}
+                            style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: 8, color: "var(--color-text-1)", fontSize: 12, resize: "none", fontFamily: "inherit" }}
+                          />
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button
+                              onClick={() => { setReportingId(null); setReportReason("") }}
+                              style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "var(--color-text-2)", cursor: "pointer", fontSize: 12 }}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleReportComment(c.id)}
+                              disabled={!reportReason.trim()}
+                              style={{ flex: 2, padding: 8, borderRadius: 8, border: "none", background: "var(--color-danger)", color: "white", fontWeight: 700, cursor: "pointer", fontSize: 12, opacity: reportReason.trim() ? 1 : 0.5 }}
+                            >
+                              Submit Report
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                <div style={{ display: "flex", gap: 6, alignItems: "flex-start", marginTop: 2 }}>
+                  <textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value.slice(0, 500))}
+                    placeholder="Add a comment…"
+                    rows={2}
+                    style={{ flex: 1, minWidth: 0, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: 8, color: "var(--color-text-1)", fontSize: 12, resize: "none", fontFamily: "inherit" }}
+                  />
+                  <button
+                    onClick={() => handlePostComment(item.id)}
+                    disabled={!draft.trim() || posting}
+                    style={{ flexShrink: 0, padding: "8px 14px", borderRadius: 10, border: "none", background: "var(--gradient-primary)", color: "white", fontWeight: 700, cursor: "pointer", fontSize: 12, opacity: !draft.trim() || posting ? 0.5 : 1 }}
+                  >
+                    {posting ? "Sending…" : "Send"}
+                  </button>
+                </div>
+              </div>
+            )}
           </AccentCard>
         )
       })}
