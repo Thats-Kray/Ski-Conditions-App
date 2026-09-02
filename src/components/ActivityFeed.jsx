@@ -116,18 +116,29 @@ export default function ActivityFeed() {
   }
 
   async function handleDeleteComment(activityId, commentId) {
-    const before = comments[activityId] || []
-    setComments((prev) => ({
-      ...prev,
-      [activityId]: (prev[activityId] || []).filter((c) => c.id !== commentId),
-    }))
+    // The removed row is captured from inside this functional updater (not a render-
+    // scoped variable) so two rapid deletes in the same thread can't restore a stale
+    // array on failure and resurrect an already-deleted comment.
+    let removed = null
+    setComments((prev) => {
+      const list = prev[activityId] || []
+      removed = list.find((c) => c.id === commentId) || null
+      return { ...prev, [activityId]: list.filter((c) => c.id !== commentId) }
+    })
     try {
       await deleteActivityComment(commentId)
     } catch (e) {
       // RLS refused it, or the network did. Put the comment back rather than leaving the
-      // UI claiming a deletion that did not happen.
+      // UI claiming a deletion that did not happen — reinserted against CURRENT state at
+      // restore time, not the stale snapshot from before the optimistic removal.
       console.warn("deleteActivityComment failed", e)
-      setComments((prev) => ({ ...prev, [activityId]: before }))
+      if (removed) {
+        setComments((prev) => {
+          const list = [...(prev[activityId] || []), removed]
+          list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+          return { ...prev, [activityId]: list }
+        })
+      }
     }
   }
 
@@ -195,7 +206,7 @@ export default function ActivityFeed() {
               {bodyLine}
             </div>
 
-            <div style={{ display: "flex", gap: 6, marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
               {EMOJIS.map((emoji) => {
                 const count = itemReactions.filter((r) => r.emoji === emoji).length
                 const mine = itemReactions.some((r) => r.user_id === currentUserId && r.emoji === emoji)
@@ -246,7 +257,7 @@ export default function ActivityFeed() {
                     <div key={c.id} style={{ padding: 8, borderRadius: 10, background: "rgba(255,255,255,0.04)", fontSize: 12 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <Avatar profile={c.profiles} size={20} />
-                        <span style={{ fontWeight: 700, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <span style={{ flex: 1, minWidth: 0, fontWeight: 700, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {commenterName}
                         </span>
                         <span style={{ color: "var(--color-text-3)", marginLeft: "auto", flexShrink: 0 }}>
