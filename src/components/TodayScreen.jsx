@@ -3,7 +3,6 @@ import PowderMap from "./PowderMap"
 import Badge, { TIER_COLORS } from "./ui/Badge"
 import ScoreRing from "./ui/ScoreRing"
 import FriendsGoingBadge from "./FriendsGoingBadge"
-import BestBetCard from "./BestBetCard"
 import ResortListRow from "./ResortListRow"
 import PlanEditorModal from "./PlanEditorModal"
 import TodaysCrew from "./TodaysCrew"
@@ -491,8 +490,8 @@ function OffseasonBanner() {
 // source of truth for the sub-tab itself.
 export default function TodayScreen({
   rows,
-  passFilter,
-  setPassFilter,
+  passFilters,
+  setPassFilters,
   query,
   setQuery,
   sortBy,
@@ -518,6 +517,7 @@ export default function TodayScreen({
 }) {
   const [conditionsSubTab, setConditionsSubTab] = useState("conditions")
   const [expandedKeys, setExpandedKeys] = useState(new Set())
+  const [heroExpanded, setHeroExpanded] = useState(true)
   const [skiHereModalResortKey, setSkiHereModalResortKey] = useState(null)
 
   function toggleExpanded(resortKey) {
@@ -590,12 +590,25 @@ export default function TodayScreen({
 
       {conditionsSubTab === "conditions" && topResort && (
         <div style={{ marginBottom: 20 }}>
-          <BestBetCard
-            topResort={topResort}
-            friendsGoing={friendTripsByResort[topResort.resortKey] || []}
-            myTodayPlan={myTodayPlan}
-            onSkiHereToday={setSkiHereModalResortKey}
+          <ResortListRow
+            r={topResort}
+            label="BEST BET TODAY"
+            expanded={heroExpanded}
+            onToggle={() => setHeroExpanded((e) => !e)}
           />
+          {heroExpanded && (
+            <ResortCard
+              r={topResort}
+              skierCounts={skierCounts}
+              skierDetails={skierDetails}
+              activityCount={resortActivityCounts[topResort.resortKey] || 0}
+              friendsGoing={friendTripsByResort[topResort.resortKey] || []}
+              vibeData={vibeData}
+              onOpenMountainPage={setMountainPageResortKey}
+              myTodayPlan={myTodayPlan}
+              onSkiHereToday={setSkiHereModalResortKey}
+            />
+          )}
         </div>
       )}
 
@@ -622,16 +635,33 @@ export default function TodayScreen({
             }}
           >
             <div style={{ display: "flex", gap: 8 }}>
-              {["All", "Epic", "Ikon"].map((p) => (
+              <button
+                onClick={() => setPassFilters(new Set())}
+                style={{
+                  background: passFilters.size === 0 ? "var(--gradient-pass-pill)" : "rgba(255,255,255,0.06)",
+                  color: passFilters.size === 0 ? "var(--color-pass-pill-text)" : "white",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  padding: "7px 12px",
+                  borderRadius: 999,
+                  fontWeight: 800,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                All
+              </button>
+              {["Epic", "Ikon"].map((p) => (
                 <button
                   key={p}
-                  onClick={() => setPassFilter(p)}
+                  onClick={() => setPassFilters((prev) => {
+                    const next = new Set(prev)
+                    if (next.has(p)) next.delete(p)
+                    else next.add(p)
+                    return next
+                  })}
                   style={{
-                    background:
-                      passFilter === p
-                        ? "var(--gradient-pass-pill)"
-                        : "rgba(255,255,255,0.06)",
-                    color: passFilter === p ? "var(--color-pass-pill-text)" : "white",
+                    background: passFilters.has(p) ? "var(--gradient-pass-pill)" : "rgba(255,255,255,0.06)",
+                    color: passFilters.has(p) ? "var(--color-pass-pill-text)" : "white",
                     border: "1px solid rgba(255,255,255,0.1)",
                     padding: "7px 12px",
                     borderRadius: 999,

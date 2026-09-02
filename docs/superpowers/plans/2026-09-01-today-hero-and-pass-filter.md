@@ -23,9 +23,9 @@ manual choice.
 
 - No new npm dependencies.
 - Inline `style={{}}` objects only, matching this file's existing convention.
-- `npm test` baseline: **134 passing** (`node --test src/lib/*.test.js`) — this plan adds no new
-  `src/lib` logic, so the count should stay exactly 134 throughout.
-- `npx eslint .` baseline: **88 problems (80 errors, 8 warnings)** — verify in a fresh
+- `npm test` baseline: **157 passing** (`node --test src/lib/*.test.js`) — this plan adds no new
+  `src/lib` logic, so the count should stay exactly 157 throughout.
+- `npx eslint .` baseline: **89 problems (82 errors, 7 warnings)** — verify in a fresh
   worktree/checkout, not the long-lived main tree, which has shown a persistent unrelated +7
   discrepancy confined to `server/*.js` (environment/node_modules drift, not a code issue). Do
   not raise the 88 baseline.
@@ -271,8 +271,8 @@ expanded/collapsed state below it, and vice versa.
 
 - [ ] **Step 7: Run the full suite and lint**
 
-Run: `npm test` — expect 134/134 passing (unchanged).
-Run: `npx eslint .` — expect 88 problems (80 errors, 8 warnings), unchanged (verify in a fresh
+Run: `npm test` — expect 157/157 passing (unchanged).
+Run: `npx eslint .` — expect 89 problems (82 errors, 7 warnings), unchanged (verify in a fresh
 worktree if this number looks different).
 
 - [ ] **Step 8: Commit**
@@ -503,8 +503,8 @@ this task).
 
 - [ ] **Step 9: Run the full suite and lint**
 
-Run: `npm test` — expect 134/134 passing (unchanged).
-Run: `npx eslint .` — expect 88 problems (80 errors, 8 warnings), unchanged.
+Run: `npm test` — expect 157/157 passing (unchanged).
+Run: `npx eslint .` — expect 89 problems (82 errors, 7 warnings), unchanged.
 
 - [ ] **Step 10: Commit**
 
@@ -517,8 +517,8 @@ git commit -m "feat: default the resort pass filter to the user's own ski_passes
 
 ## Final check (after all 3 tasks)
 
-- [ ] Run `npm test` — expect 134/134 passing.
-- [ ] Run `npx eslint .` — expect 88 problems (80 errors, 8 warnings), not higher.
+- [ ] Run `npm test` — expect 157/157 passing.
+- [ ] Run `npx eslint .` — expect 89 problems (82 errors, 7 warnings), not higher.
 - [ ] Run `npm run build` — expect a clean build.
 - [ ] `npm run dev`, full click-through: hero row (expanded by default, collapses/expands
   independently of the list), chevrons on every row (hero and list), and the pass filter

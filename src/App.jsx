@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import SnowfallBackground from "./components/SnowfallBackground"
 import { useMobile } from "./lib/useMobile"
 import { localDateKey } from "./lib/calendarDates"
@@ -600,7 +600,11 @@ export default function App() {
   // Full-page read-only view of another user's profile (Sprint 34). Same
   // takeover pattern as mountainPageResortKey; cleared in handleTabChange.
   const [viewingProfileId, setViewingProfileId] = useState(null)
-  const [passFilter, setPassFilter] = useState("All")
+  const [passFilters, setPassFilters] = useState(() => new Set())
+  // Guards the one-time default below so a later profile refetch (e.g. the
+  // user edits their passes in Profile mid-session) never silently
+  // overwrites a filter choice they've already made by hand.
+  const passDefaultAppliedRef = useRef(false)
   const [query, setQuery] = useState("")
   const [sortBy, setSortBy] = useState("Powder Score")
   const [loading, setLoading] = useState(false)
@@ -617,6 +621,12 @@ export default function App() {
   const [vibeData, setVibeData] = useState({ checkinCounts: {}, rsvpCounts: {} })
   const [currentUser, setCurrentUser] = useState(null)
   const [currentProfile, setCurrentProfile] = useState(null)
+  useEffect(() => {
+    if (passDefaultAppliedRef.current || !currentProfile) return
+    passDefaultAppliedRef.current = true
+    const owned = (currentProfile.ski_passes || []).filter((p) => p === "Epic" || p === "Ikon")
+    if (owned.length > 0) setPassFilters(new Set(owned))
+  }, [currentProfile])
   const notifCount = useNotificationCount(currentUser)
   const [authModalMode, setAuthModalMode] = useState(null)
   const [isRecoveryMode, setIsRecoveryMode] = useState(false)
@@ -1053,14 +1063,14 @@ export default function App() {
 
   const visibleResorts = useMemo(() => {
     return RESORTS.filter((r) => {
-      const passOk = passFilter === "All" || r.pass === passFilter
+      const passOk = passFilters.size === 0 || passFilters.has(r.pass)
       const qOk = r.name.toLowerCase().includes(query.toLowerCase())
       return passOk && qOk
     }).map((r) => ({
       ...r,
       ...(live[r.name] || {}),
     }))
-  }, [live, passFilter, query])
+  }, [live, passFilters, query])
 
   const rows = useMemo(() => {
     const merged = [...visibleResorts]
@@ -1479,8 +1489,8 @@ export default function App() {
         {activeTab === "today" && (
           <TodayScreen
             rows={rows}
-            passFilter={passFilter}
-            setPassFilter={setPassFilter}
+            passFilters={passFilters}
+            setPassFilters={setPassFilters}
             query={query}
             setQuery={setQuery}
             sortBy={sortBy}
