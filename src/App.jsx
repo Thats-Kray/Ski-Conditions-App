@@ -605,12 +605,6 @@ export default function App() {
   // user edits their passes in Profile mid-session) never silently
   // overwrites a filter choice they've already made by hand.
   const passDefaultAppliedRef = useRef(false)
-  useEffect(() => {
-    if (passDefaultAppliedRef.current || !currentProfile) return
-    passDefaultAppliedRef.current = true
-    const owned = (currentProfile.ski_passes || []).filter((p) => p === "Epic" || p === "Ikon")
-    if (owned.length > 0) setPassFilters(new Set(owned))
-  }, [currentProfile])
   const [query, setQuery] = useState("")
   const [sortBy, setSortBy] = useState("Powder Score")
   const [loading, setLoading] = useState(false)
@@ -627,6 +621,12 @@ export default function App() {
   const [vibeData, setVibeData] = useState({ checkinCounts: {}, rsvpCounts: {} })
   const [currentUser, setCurrentUser] = useState(null)
   const [currentProfile, setCurrentProfile] = useState(null)
+  useEffect(() => {
+    if (passDefaultAppliedRef.current || !currentProfile) return
+    passDefaultAppliedRef.current = true
+    const owned = (currentProfile.ski_passes || []).filter((p) => p === "Epic" || p === "Ikon")
+    if (owned.length > 0) setPassFilters(new Set(owned))
+  }, [currentProfile])
   const notifCount = useNotificationCount(currentUser)
   const [authModalMode, setAuthModalMode] = useState(null)
   const [isRecoveryMode, setIsRecoveryMode] = useState(false)
