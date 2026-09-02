@@ -1441,7 +1441,7 @@ single **1,184 KB** chunk with nothing lazy-loaded.
 
 ---
 
-### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab in progress — Crews, Board, and Leaderboard slices shipped, Feed slice A shipped (B/C queued), Friends slice next; Plans/Profile not yet started)**
+### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab in progress — Crews, Board, and Leaderboard slices shipped, Feed slices A and B shipped (C queued), Friends slice next; Plans/Profile not yet started)**
 
 **Today List View slice: ✅ SHIPPED 2026-08-27, live on `main`** (commit `5062d98`, deploy
 verified by grepping the live bundle for `"Best Bet Today"`/`"Ski here today"` —
@@ -1777,8 +1777,85 @@ from TASK 22.5) on mobile.
 Final state: 157 tests passing (was 145, +12 new), lint 89 problems in a fresh worktree
 (unchanged from baseline).
 
-**Not yet reviewed:** Feed-B (comments), Feed-C (photo attachments), Friends sub-tab of Crew
-(next up after Feed-B/C, per the original 5-slice order), Plans and Profile pages. Group-level
+**Feed-B (comments) slice: ✅ SHIPPED 2026-09-01, merged locally to `main`** (merge commit
+`8f17846`, not yet pushed — same pending-push situation as Crews/Board/Leaderboard/Feed-A).
+Spec at `docs/superpowers/specs/2026-09-01-crew-tab-feed-slice-b-design.md`, plan at
+`docs/superpowers/plans/2026-09-01-crew-tab-feed-slice-b.md`, built in worktree
+`crew-tab-feed-slice-b` (merged + deleted after shipping) via subagent-driven-development: 3
+tasks + a final-review fix wave, 5 commits. **The plan itself was written by an Opus subagent
+per Kyle's standing "OpusPlan" preference** (dispatch plan-writing to a Plan-type agent on
+Opus, delegate implementation to Sonnet) — that agent caught 2 real bugs before any code was
+written, by reading the live schema instead of trusting the design spec: (1) the spec said
+reporting a comment needed no schema change because `moderation_flags.content_type` has no
+CHECK constraint — true but irrelevant, since `reportContent()` actually routes through the
+`report_content` RPC into a *different* table, `content_reports`, gated by both a CHECK
+constraint and a redundant RPC guard, both rejecting anything outside 4 unrelated values;
+would have thrown `INVALID_TARGET_TYPE` and failed silently on every report attempt. (2) the
+spec's SQL for the new `activity_feed_comments` table never included
+`ALTER TABLE ... ENABLE ROW LEVEL SECURITY` — without it, Supabase's default grants make a new
+table world-readable/writable regardless of the policies defined on it. Both fixed in the
+migration; the spec doc corrected post-hoc (commit matching prior slices' precedent).
+**Shipped:** a new `activity_feed_comments` table + `can_see_activity(activity_id)` RLS helper
+(migration 045, applied and live-verified against production via the Supabase MCP tool,
+including a mandatory real friend-can-comment *success* test via session impersonation, not
+just denial tests — closing the exact failure mode migration 041 shipped once before);
+`getActivityComments`/`addActivityComment`/`deleteActivityComment` in `socialApi.js` plus a
+pure `groupCommentsByActivity()` helper (8 unit tests); an inline expand-in-place comment
+thread on `ActivityFeed.jsx` cards (matching `SkiBuddyBoard.jsx`'s `ResponseThread` pattern,
+not `TripChatView`'s full-chat-screen pattern), a comment count next to the reaction buttons, a
+composer, delete-your-own, and report-others'-via-the-existing-`reportContent()`-path. No
+realtime subscription anywhere (deliberate). **Also fixed in the same migration, found while
+designing this slice:** `activity_feed_reactions` had a real, live, pre-existing open
+`USING (true)` SELECT policy — any authenticated user could read any reaction regardless of
+friendship, the identical vulnerability class migration 042 fixed across 7 trip-content tables.
+Closed via the same `can_see_activity()` helper.
+**The whole-branch final review (opus) found something much bigger than a code-quality
+nit.** It discovered, and Claude independently confirmed live via `curl` against the
+production Supabase REST API with the project's anon key, that **the entire Feed sub-tab has
+been silently broken in production since before this session** — `getActivityFeed()`'s
+`profiles:actor_id(...)` PostgREST embed syntax returns HTTP 400 (`PGRST200`, no FK
+relationship found) because `activity_feed.actor_id` only FKs to `auth.users`, never directly
+to `public.profiles` — the exact situation a comment already sitting in this codebase's own
+`getBoardPosts()` warns about ("always 400s"). Every `getActivityFeed()` call has been
+throwing, caught by a `.catch(() => setItems([]))`, silently rendering "No recent activity from
+your crew yet." regardless of real data (11 live activity rows confirmed). This slice's own two
+new comment functions copied the identical broken embed pattern and would have shipped equally
+inert. **Kyle's call: fix all three functions in the same wave**, not just this slice's own
+code — `getActivityFeed`, `getActivityComments`, and `addActivityComment` all switched to the
+established second-query profile-resolve pattern `getBoardPosts()` already uses elsewhere in
+the same file. Also fixed in the same wave: a comment-author name missing `minWidth: 0` (same
+ellipsis-doesn't-engage bug class Board/Leaderboard have hit before), a button-row `flexWrap`
+safety net, and a `handleDeleteComment` stale-closure race on rapid double-deletes. Re-review
+confirmed all fixes correct, and Claude independently re-verified via `curl` + `grep` that the
+broken embed syntax is fully gone.
+**Deferred, logged, not fixed:** `REVOKE ALL ... FROM PUBLIC` on the new helper function doesn't
+actually restrict `anon` execution (Supabase's default privileges grant `anon` EXECUTE
+explicitly at creation; revoking from `PUBLIC` only strips the implicit grant) — confirmed zero
+live security impact (anon's `auth.uid()` is null, so the helper always returns false for anon;
+`report_content` would fail on a NOT NULL FK), and the identical pattern already exists
+unmodified on two prior migrations (032, 042) — not this slice's error, worth remembering if a
+future helper's anon-non-executability ever actually matters. Three inert em-dash→hyphen
+character substitutions in the migration's SQL comments (zero functional effect, not worth a
+second production touch). A few smaller UX notes (no DB-level length constraint on comment
+content, matching `trip_comments`' own lack of one; report submission gives no success
+confirmation, matching `SkiBuddyBoard.jsx`'s identical existing gap).
+**Verification note, same recurring gap as every prior slice, PLUS a genuine exception this
+time:** no subagent in this environment has browser or Supabase-auth tooling for UI
+verification — every UI-facing task was verified via `npm test`/`npx eslint .`/`npm run
+build`/diff review only. **Task 1 (the migration) was the deliberate exception** — it used real
+database tooling (Supabase MCP `apply_migration`/`execute_sql`) and ran a genuine live,
+impersonated RLS test suite against production, success case first. **The final review's
+Critical finding was also independently confirmed live**, via direct `curl` calls against the
+production REST API — the first time in this slice sequence a review's claim was verified
+against the actual live service rather than taken on the strength of source reading alone.
+**Still not yet click-tested by Kyle** — do that first, especially confirming the Feed sub-tab
+now actually shows activity (it may never have, in this app's history) and that posting/
+reading/deleting/reporting a comment all work end to end.
+Final state: 165 tests passing (was 157, +8 new), lint 89 problems in a fresh worktree
+(unchanged from baseline).
+
+**Not yet reviewed:** Feed-C (photo attachments), Friends sub-tab of Crew
+(next up after Feed-C, per the original 5-slice order), Plans and Profile pages. Group-level
 Feed activity cards are backlogged, not yet scheduled.
 
 ---
