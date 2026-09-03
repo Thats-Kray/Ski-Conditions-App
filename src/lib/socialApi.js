@@ -3,6 +3,7 @@ import { localDateKey } from "./calendarDates";
 import { OPEN_RESORT_KEY, resortName } from "./resorts";
 import { formatDate } from "./format";
 import { buildPlanUpsert } from "./planUpsert";
+import { clampTitle } from "./skiDayDetails";
 
 /* -----------------------------
    Constants
@@ -4067,6 +4068,318 @@ export async function addActivityComment(activityId, content) {
 export async function deleteActivityComment(commentId) {
   const { error } = await supabase.from("activity_feed_comments").delete().eq("id", commentId)
   if (error) throw error
+}
+
+// ─── Ski day details: title, photos, friend tags (Feed slice C1, migration 046) ──
+
+/**
+ * Set (or clear) a ski day's title.
+ *
+ * Lives here and not in leaderboardApi.js on purpose: leaderboardApi.js:4 already imports
+ * from this module, so putting it there and calling it from saveSkiDayDetails() below
+ * would make the two modules mutually dependent.
+ *
+ * clampTitle() is applied server-bound as well as in the input's onChange, so a caller
+ * that skips the form (or a future caller that does not exist yet) cannot trip the
+ * ski_sessions_title_length CHECK and get a 400 instead of a clamp. "" becomes SQL NULL —
+ * an empty-string title would render as a blank line in the Feed.
+ *
+ * .select("id, title").single() rather than a bare update: ski_sessions' UPDATE policy is
+ * owner-only, and a refusal matches zero rows. Without the select that returns success
+ * and silently saves nothing; with it, .single() raises and the caller can show the error.
+ * Only two columns are named because a bare .select() makes PostgREST issue RETURNING *,
+ * and this file's PROFILE_SELECT_COLUMNS comment explains why that pattern is avoided.
+ */
+export async function updateSessionTitle(sessionId, title) {
+  const clamped = clampTitle(title)
+  const { data, error } = await supabase
+    .from("ski_sessions")
+    .update({ title: clamped || null })
+    .eq("id", sessionId)
+    .select("id, title")
+    .single()
+  if (error) throw error
+  return data?.title ?? null
+}
+
+/**
+ * Every photo on a batch of sessions, in one query, with its public URL resolved at read
+ * time — the batched shape of getActivityReactions/getActivityComments, not a per-card
+ * lazy fetch. Single-session callers pass [sessionId].
+ *
+ * No visibility filtering belongs here: ski_session_photos_select routes through
+ * can_see_ski_session(), so Postgres has already restricted this to days the caller can
+ * see (migration 046).
+ *
+ * getPublicUrl() is synchronous and read-time, exactly as getTripMedia does it, so the
+ * bucket can be renamed or fronted by a CDN without rewriting stored rows.
+ */
+export async function getSessionPhotos(sessionIds) {
+  if (!sessionIds?.length) return []
+  const { data, error } = await supabase
+    .from("ski_session_photos")
+    .select("id, session_id, user_id, storage_path, created_at")
+    .in("session_id", sessionIds)
+    .order("created_at", { ascending: true })
+  if (error) throw error
+
+  return (data || []).map((p) => {
+    const { data: urlData } = supabase.storage.from("ski-day-media").getPublicUrl(p.storage_path)
+    return { ...p, url: urlData?.publicUrl || null }
+  })
+}
+
+/**
+ * Upload one photo and insert the row that points at it.
+ *
+ * Path is `${user.id}/${sessionId}/${timestamp}-${suffix}.${ext}` — USER ID FIRST, so the
+ * bucket's self-delete policy's (storage.foldername(name))[1] = auth.uid()::text matches
+ * (chat-media's shape, not trip-media's).
+ *
+ * The random suffix is a deliberate addition to the path convention migration 046
+ * documents, and it is fully compatible with it: the migration constrains only the FIRST
+ * folder segment, never the filename. uploadTripMedia uses a bare Date.now(), which is
+ * safe there because a trip photo is picked one at a time — here a user picks up to six
+ * at once, and two uploads landing in the same millisecond would collide under
+ * `upsert: false` and fail the second one with a confusing storage error.
+ *
+ * On a failed DB insert the just-uploaded object is removed. uploadTripMedia does not do
+ * this, and that is a gap rather than a precedent: ski_session_photos_insert can genuinely
+ * refuse (it requires owns_ski_session(session_id)), and an orphaned object is invisible
+ * to every UI in the app, so nothing would ever clean it up.
+ */
+export async function addSessionPhoto(sessionId, file) {
+  const user = await getCurrentUser()
+  const ext = (file?.name?.split(".").pop() || "jpg").toLowerCase()
+  const suffix = Math.random().toString(36).slice(2, 8)
+  const path = `${user.id}/${sessionId}/${Date.now()}-${suffix}.${ext}`
+
+  const { error: uploadError } = await supabase.storage
+    .from("ski-day-media")
+    .upload(path, file, { upsert: false })
+  if (uploadError) throw uploadError
+
+  const { data, error: dbError } = await supabase
+    .from("ski_session_photos")
+    .insert({ session_id: sessionId, user_id: user.id, storage_path: path })
+    .select("id, session_id, user_id, storage_path, created_at")
+    .single()
+
+  if (dbError) {
+    try {
+      await supabase.storage.from("ski-day-media").remove([path])
+    } catch {
+      // Best effort. The insert error is the one worth surfacing — a leftover object is a
+      // storage-cost problem, a swallowed insert failure is a data-loss problem.
+    }
+    throw dbError
+  }
+
+  const { data: urlData } = supabase.storage.from("ski-day-media").getPublicUrl(path)
+  return { ...data, url: urlData?.publicUrl || null }
+}
+
+/**
+ * Remove a photo: the stored object first, then the row that points at it — the same order
+ * deleteTripMedia uses.
+ *
+ * That order is the safer failure mode of the two. If storage fails, the row survives and
+ * still names the path, so the delete is retryable. If the row delete failed after storage
+ * succeeded, the row would point at a missing object and render as a broken thumbnail —
+ * bad, but recoverable by the user pressing remove again.
+ *
+ * Ownership is enforced by ski_session_photos_delete (owns_ski_session), which makes
+ * someone else's photo match zero rows rather than error, so there is deliberately no
+ * second ownership check here.
+ */
+export async function deleteSessionPhoto(photoId, storagePath) {
+  const { error: storErr } = await supabase.storage.from("ski-day-media").remove([storagePath])
+  if (storErr) throw storErr
+  const { error } = await supabase.from("ski_session_photos").delete().eq("id", photoId)
+  if (error) throw error
+}
+
+/**
+ * Every tag on a batch of sessions, in one query, with the tagged person's profile
+ * resolved. Single-session callers pass [sessionId].
+ *
+ * The profile resolve is a SECOND QUERY, not a `profiles:tagged_user_id(...)` embed. No FK
+ * exists from ski_session_tags to profiles (only to auth.users), so an embed 400s at
+ * runtime and the tagged-friends line would read as "nobody was tagged" forever — the
+ * exact failure Feed-B's fix wave (commit 06404c9) had to undo across this file.
+ */
+export async function getSessionTags(sessionIds) {
+  if (!sessionIds?.length) return []
+  const { data, error } = await supabase
+    .from("ski_session_tags")
+    .select("id, session_id, tagged_user_id, tagged_by, created_at")
+    .in("session_id", sessionIds)
+    .order("created_at", { ascending: true })
+  if (error) throw error
+  const tags = data || []
+  if (!tags.length) return tags
+
+  const userIds = [...new Set(tags.map((t) => t.tagged_user_id))]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .in("id", userIds)
+  const pm = new Map((profiles || []).map((p) => [p.id, p]))
+  return tags.map((t) => ({ ...t, profiles: pm.get(t.tagged_user_id) || null }))
+}
+
+/**
+ * Tag one friend onto one session. Returns the new row with its profile resolved, or null
+ * if that person was already tagged.
+ *
+ * `ignoreDuplicates: true` matters and is not cosmetic. It makes PostgREST emit
+ * ON CONFLICT DO NOTHING. A plain upsert would emit ON CONFLICT DO UPDATE, and
+ * migration 046 creates **no UPDATE policy** on ski_session_tags — so the update branch
+ * would be refused by RLS and a harmless re-tag (two devices saving the same set) would
+ * surface as a permission error. DO NOTHING needs no UPDATE policy, and it is exactly the
+ * idempotency the UNIQUE (session_id, tagged_user_id) constraint exists to provide.
+ *
+ * .maybeSingle(), not .single(): with DO NOTHING a duplicate returns zero rows, which
+ * .single() would raise on.
+ *
+ * There is deliberately no client-side friendship check. ski_session_tags_insert requires
+ * tagged_by = auth.uid() AND owns_ski_session(session_id) AND are_friends(tagged_user_id),
+ * so tagging a stranger is refused by Postgres — the real boundary — not by a JS guard an
+ * attacker never runs. And no notification row is written: tagging is silent by design.
+ */
+export async function addSessionTag(sessionId, friendUserId) {
+  const user = await getCurrentUser()
+  const { data, error } = await supabase
+    .from("ski_session_tags")
+    .upsert(
+      { session_id: sessionId, tagged_user_id: friendUserId, tagged_by: user.id },
+      { onConflict: "session_id,tagged_user_id", ignoreDuplicates: true }
+    )
+    .select("id, session_id, tagged_user_id, tagged_by, created_at")
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return null
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .eq("id", friendUserId)
+    .maybeSingle()
+
+  return { ...data, profiles: profile || null }
+}
+
+/**
+ * Remove one tag by id. Used both by the owner (untag someone) and by the tagged person
+ * (self-untag) — ski_session_tags_delete permits both and makes anything else match zero
+ * rows, so no ownership branch is needed here.
+ */
+export async function removeSessionTag(tagId) {
+  const { error } = await supabase.from("ski_session_tags").delete().eq("id", tagId)
+  if (error) throw error
+}
+
+/**
+ * Make the session's tag set equal `wantedUserIds`, adding and removing the difference.
+ *
+ * The UI is a checkbox list — it naturally produces a full wanted set, not a delta — but
+ * writing that set blindly would either duplicate rows or need an UPDATE policy that does
+ * not exist. So the diff is computed here, once, against the CURRENT rows read fresh at
+ * save time (not against whatever the form was seeded with, which may be minutes stale if
+ * the day was edited on another device meanwhile).
+ *
+ * Sequential awaits, not Promise.all: N is at most the caller's friend count, and a
+ * partial failure inside Promise.all leaves an unpredictable half-applied set while
+ * reporting only one of the errors. Adds run before removes so an interrupted reconcile
+ * errs toward keeping people tagged rather than silently dropping them.
+ *
+ * @param {string} sessionId
+ * @param {Array<string>|Set<string>|null|undefined} wantedUserIds the FULL wanted set
+ * @returns {Promise<{added: number, removed: number}>}
+ */
+export async function reconcileSessionTags(sessionId, wantedUserIds) {
+  const wanted = new Set([...(wantedUserIds || [])].filter(Boolean))
+  const current = await getSessionTags([sessionId])
+  const currentIds = new Set(current.map((t) => t.tagged_user_id))
+
+  const toAdd = [...wanted].filter((id) => !currentIds.has(id))
+  const toRemove = current.filter((t) => !wanted.has(t.tagged_user_id))
+
+  for (const id of toAdd) {
+    await addSessionTag(sessionId, id)
+  }
+  for (const t of toRemove) {
+    await removeSessionTag(t.id)
+  }
+
+  return { added: toAdd.length, removed: toRemove.length }
+}
+
+/**
+ * The single orchestrator all three UI consumers (LogDayModal, SessionRecapModal,
+ * SessionEditForm) call, so the diff→API translation exists exactly once.
+ *
+ * `diff` is what SkiDayDetailsForm's onSave emits:
+ *   { title, addedPhotoFiles, removedPhotoIds, tagUserIds }
+ *
+ * Two properties of that shape are load-bearing:
+ *
+ *   - `tagUserIds` is the FULL WANTED SET, never a delta. reconcileSessionTags does the
+ *     diffing.
+ *   - **An ABSENT key means "do not touch this".** `tagUserIds: undefined` leaves tags
+ *     exactly as they are; `tagUserIds: []` clears them. That distinction is the whole
+ *     mechanism behind Task 9's tag-wipe guard — a user who opens the edit modal, changes
+ *     only the resort, and saves must not have every existing tag deleted. Same for
+ *     `title: undefined` vs `title: ""`.
+ *
+ * Removals run before additions so a user who deletes two photos and adds two in one save
+ * is never transiently over MAX_PHOTOS_PER_SESSION and refused by the picker's own count.
+ *
+ * Storage paths are re-read from the DB rather than trusted from the caller: a client-
+ * supplied path would let a caller name any object in the bucket, and RLS on
+ * storage.objects is keyed on the path's first folder — not on the ski_session_photos row.
+ * Reading the row first means only paths that genuinely belong to this session are removed.
+ *
+ * Returns the session's photos and tags AFTER the save so the caller can reseed its form
+ * (or splice the Feed) without a second refetch. No realtime anywhere in this slice.
+ */
+export async function saveSkiDayDetails(sessionId, diff) {
+  if (!sessionId) throw new Error("saveSkiDayDetails needs a session id.")
+
+  const { title, addedPhotoFiles, removedPhotoIds, tagUserIds } = diff || {}
+
+  if (title !== undefined) {
+    await updateSessionTitle(sessionId, title)
+  }
+
+  if (removedPhotoIds?.length) {
+    const existing = await getSessionPhotos([sessionId])
+    const byId = new Map(existing.map((p) => [p.id, p]))
+    for (const photoId of removedPhotoIds) {
+      const row = byId.get(photoId)
+      // Already gone (a double-tap on remove, or another device deleted it). Skipping is
+      // correct — calling storage remove on a missing object is not an error worth
+      // failing the whole save over.
+      if (!row) continue
+      await deleteSessionPhoto(row.id, row.storage_path)
+    }
+  }
+
+  if (addedPhotoFiles?.length) {
+    for (const file of addedPhotoFiles) {
+      await addSessionPhoto(sessionId, file)
+    }
+  }
+
+  if (tagUserIds !== undefined) {
+    await reconcileSessionTags(sessionId, tagUserIds)
+  }
+
+  const [photos, tags] = await Promise.all([
+    getSessionPhotos([sessionId]),
+    getSessionTags([sessionId]),
+  ])
+  return { photos, tags }
 }
 
 // ─── Mountain Board (sprint-29) ─────────────────────────────────────────────
