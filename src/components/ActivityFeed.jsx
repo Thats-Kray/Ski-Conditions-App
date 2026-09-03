@@ -14,6 +14,7 @@ import AccentCard from "./ui/AccentCard"
 import { timeAgo, formatSessionStat } from "../lib/format"
 import { resortName } from "../lib/resorts"
 import { groupCommentsByActivity } from "../lib/activityComments"
+import { formatTaggedNames } from "../lib/skiDayDetails"
 
 const TYPE_COPY = {
   // Name is deliberately omitted from these sentences — the card header above already
@@ -190,6 +191,18 @@ export default function ActivityFeed() {
         const statLine = item.type === "ski_session" ? formatSessionStat(item.sessionStats) : ""
         const bodyLine = statLine || sentence
 
+        // The three fields getActivityFeed attaches to ski_session items (Task 6). The
+        // `|| []` fallbacks are not defensive noise: non-ski_session items never get these
+        // keys at all, and .length on undefined throws INSIDE this render map, which would
+        // blank the entire feed rather than one card.
+        const sessionTitle = item.type === "ski_session" ? item.sessionStats?.title || "" : ""
+        const sessionPhotos = item.sessionPhotos || []
+        const sessionTags = item.sessionTags || []
+        // Two names then "and N others". The avatar cap below is 3, deliberately higher:
+        // three overlapped 18px avatars cost ~42px of width, whereas a third display name
+        // can be twenty characters and would push the line into an ellipsis at 375px.
+        const taggedNames = formatTaggedNames(sessionTags)
+
         return (
           <AccentCard key={item.id} accentColor={typeAccent}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -202,9 +215,68 @@ export default function ActivityFeed() {
               </div>
             </div>
 
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-1)", lineHeight: 1.4, marginTop: 10 }}>
+            {sessionTitle && (
+              /* The user's own words, so it outranks the generated stat line visually and
+                 sits above it. wordBreak: break-word because a 60-char title with no
+                 spaces (a URL, a hashtag run) would otherwise overflow the card at 375px
+                 instead of wrapping. */
+              <div style={{ fontSize: 14, fontWeight: 900, color: "var(--color-text-1)", lineHeight: 1.3, marginTop: 10, wordBreak: "break-word" }}>
+                {sessionTitle}
+              </div>
+            )}
+
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-1)", lineHeight: 1.4, marginTop: sessionTitle ? 4 : 10 }}>
               {bodyLine}
             </div>
+
+            {taggedNames && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, fontSize: 12, color: "var(--color-text-3)", minWidth: 0 }}>
+                <span style={{ flexShrink: 0 }}>with</span>
+                <div style={{ display: "flex", flexShrink: 0 }}>
+                  {sessionTags.slice(0, 3).map((t, i) => (
+                    /* Overlapped by -6px, with a bg-coloured ring so the stack reads as
+                       separate faces. flexShrink: 0 on the stack and on "with" means the
+                       NAMES absorb the ellipsis, not the avatars. */
+                    <div
+                      key={t.id}
+                      style={{ marginLeft: i === 0 ? 0 : -6, borderRadius: "50%", border: "1.5px solid var(--color-bg)", display: "flex" }}
+                    >
+                      <Avatar profile={t.profiles} size={18} />
+                    </div>
+                  ))}
+                </div>
+                <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {taggedNames}
+                </span>
+              </div>
+            )}
+
+            {sessionPhotos.length > 0 && (
+              /* flexWrap, NOT overflowX: auto. A horizontally-scrolling strip nested
+                 inside TodayScreen's own scrolling page is a touch-gesture conflict, and
+                 the Board slice already shipped two mobile-layout regressions this
+                 session. Width arithmetic at a 375px viewport: 375 − 32 (parent padding)
+                 − 3 (AccentCard's accent border) − 24 (AccentCard's 12px padding each
+                 side) ≈ 316px usable. Four 72px thumbs plus three 6px gaps = 306px, so
+                 four fit per row and six photos wrap to two rows. Nothing overflows and
+                 nothing scrolls sideways. */
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                {sessionPhotos.map((p) => (
+                  /* Plain, non-interactive <img>. No onClick, no lightbox, no role, no
+                     tabIndex — thumbnails only, per the Global Constraints. loading="lazy"
+                     because a 30-card page can carry up to 180 images. alt="" because the
+                     photo is decorative here: the card's title, stat line and "with" line
+                     already carry the meaning, and there are no captions in this slice. */
+                  <img
+                    key={p.id}
+                    src={p.url}
+                    alt=""
+                    loading="lazy"
+                    style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 10, flexShrink: 0, display: "block" }}
+                  />
+                ))}
+              </div>
+            )}
 
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
               {EMOJIS.map((emoji) => {
