@@ -3902,9 +3902,16 @@ export async function getActivityFeed(limit = 30) {
   // No FK exists from activity_feed.actor_id to profiles (only to auth.users), so a
   // PostgREST embedded select here always 400s — the exact situation getBoardPosts
   // documents and fixes below. Resolve profiles with a separate query instead.
+  //
+  // Filtered to completed ski days only. trip_rsvp/trip_created rows are still written
+  // (createSkiTrip/rsvpToTrip) and still exist in the table — nothing else reads them —
+  // but Kyle found the Feed itself unusable once trip planning activity outnumbered
+  // actual ski days. "Who's planning what" already has its own surface (TodaysCrew on
+  // the Today tab, the trip pages themselves); the Feed is for what people actually did.
   const { data, error } = await supabase
     .from("activity_feed")
     .select("*")
+    .eq("type", "ski_session")
     .order("created_at", { ascending: false })
     .limit(limit)
   if (error) throw error
