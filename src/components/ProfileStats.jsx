@@ -276,7 +276,20 @@ export function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fu
           onClick={() => { setEditError(""); setEditingSessionId(null) }}
         >
           <div
-            style={{ background: "var(--color-modal-bg)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 480 }}
+            /* maxHeight + overflowY are load-bearing, not polish. This sheet is a child of
+               a `position: fixed; inset: 0` flex container with `alignItems: flex-end`, so
+               a sheet taller than the viewport overflows the TOP of the screen — and a
+               fixed container with no overflow gives the user no way to scroll to it. That
+               content is simply unreachable.
+
+               Feed slice C1 grew this one form by ~440-510px (a new Title field plus
+               SkiDayDetailsForm's photo strip, friend picker and Save Details button) on
+               top of an already ~700px form. At 375x667 that put Title, Notes and the
+               Mountain picker — including the Title field this whole slice exists to add —
+               off the top of the screen with no way back. Capping the sheet at 90vh and
+               making it its own scroll container is SessionRecapModal.jsx:201-202's exact
+               shape, one modal over. */
+            style={{ background: "var(--color-modal-bg)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
