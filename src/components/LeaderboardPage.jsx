@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { getLeaderboard, getPublicLeaderboard, getMySessions, logSkiDay, updateSessionStats, deleteSkiDay, getCurrentSeason, getLeaderboardReactions, addLeaderboardReaction } from "../lib/leaderboardApi"
-import { logActivityOnce } from "../lib/socialApi"
+import { logActivityOnce, saveSkiDayDetails } from "../lib/socialApi"
 import { localDateKey } from "../lib/calendarDates"
 import { resortName } from "../lib/resorts"
 import Avatar from "./ui/Avatar"
 import SessionStatsForm from "./SessionStatsForm"
+import SkiDayDetailsForm from "./SkiDayDetailsForm"
 import ResortPicker from "./ui/ResortPicker"
 
 // Order and set match the mockup's 7-chip Leaderboard row exactly (TASK 22.0
@@ -37,11 +38,14 @@ function LogDayModal({ onClose, onLogged }) {
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState("")
 
-  // Step 2 — optional post-submit "add your stats" step
-  const [step, setStep]                 = useState("basic") // "basic" | "stats"
-  const [savedSession, setSavedSession] = useState(null)
-  const [statsSaving, setStatsSaving]   = useState(false)
-  const [statsError, setStatsError]     = useState("")
+  // Steps 2 and 3 — optional post-submit "add your stats" then "add details" steps.
+  // Both are skippable; the day itself is already logged by the time either is reached.
+  const [step, setStep]                     = useState("basic") // "basic" | "stats" | "details"
+  const [savedSession, setSavedSession]     = useState(null)
+  const [statsSaving, setStatsSaving]       = useState(false)
+  const [statsError, setStatsError]         = useState("")
+  const [detailsSaving, setDetailsSaving]   = useState(false)
+  const [detailsError, setDetailsError]     = useState("")
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -77,11 +81,31 @@ function LogDayModal({ onClose, onLogged }) {
     setStatsError("")
     try {
       await updateSessionStats(savedSession.id, stats)
-      onClose()
+      // Correction 6: this used to be onClose(). Both exits of the stats step have to
+      // route into "details" or the new step is unreachable — onSkip is rewired the same
+      // way at the SessionStatsForm call site below. onClose() now lives only on the
+      // details step's own save and skip.
+      setStep("details")
     } catch (err) {
       setStatsError(err.message || "Could not save stats.")
     } finally {
       setStatsSaving(false)
+    }
+  }
+
+  async function handleSaveDetails(diff) {
+    setDetailsSaving(true)
+    setDetailsError("")
+    try {
+      await saveSkiDayDetails(savedSession.id, diff)
+      onClose()
+    } catch (err) {
+      // Keep the modal open with the reason showing. The day and its stats are already
+      // saved at this point, so a failure here costs the user only the details — closing
+      // would silently discard photos they picked and friends they checked.
+      setDetailsError(err.message || "Could not save details.")
+    } finally {
+      setDetailsSaving(false)
     }
   }
 
@@ -96,12 +120,31 @@ function LogDayModal({ onClose, onLogged }) {
       <div style={{ background: "var(--color-modal-bg)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
           <div style={{ fontSize: 18, fontWeight: 900, color: "white" }}>
-            {step === "basic" ? "🎿 Log a Ski Day" : "📊 Add Your Stats"}
+            {step === "basic" ? "🎿 Log a Ski Day" : step === "stats" ? "📊 Add Your Stats" : "📸 Add Details"}
           </div>
           <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}>✕</button>
         </div>
 
-        {step === "stats" ? (
+        {step === "details" ? (
+          <div style={{ display: "grid", gap: 14 }}>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginTop: -10 }}>
+              Add a title, a few photos, and tag who you skied with.
+            </div>
+            {detailsError && <div style={{ fontSize: 13, color: "var(--color-danger)", padding: "8px 12px", background: "rgba(248,113,113,0.1)", borderRadius: 8 }}>{detailsError}</div>}
+            {/* A day that was just created has no photos and no tags, so the empty
+                initial arrays are correct rather than a placeholder — nothing async has
+                to load before this can be mounted (Task 5's contract rule 3).
+                initialTitle="" (not omitted) is what makes the title input appear. */}
+            <SkiDayDetailsForm
+              initialTitle=""
+              initialPhotos={[]}
+              initialTags={[]}
+              saving={detailsSaving}
+              onSave={handleSaveDetails}
+              onSkip={onClose}
+            />
+          </div>
+        ) : step === "stats" ? (
           <div style={{ display: "grid", gap: 14 }}>
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginTop: -10 }}>
               Nice — {resortName(savedSession?.resort_name) || "your day"} is logged. Want to add stats now?
@@ -110,7 +153,7 @@ function LogDayModal({ onClose, onLogged }) {
             <SessionStatsForm
               saving={statsSaving}
               onSave={handleSaveStats}
-              onSkip={onClose}
+              onSkip={() => setStep("details")}
             />
           </div>
         ) : (
