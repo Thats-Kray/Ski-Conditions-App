@@ -1441,7 +1441,7 @@ single **1,184 KB** chunk with nothing lazy-loaded.
 
 ---
 
-### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab in progress — Crews, Board, and Leaderboard slices shipped, Feed slices A and B shipped (C queued), Friends slice next; Plans/Profile not yet started)**
+### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab in progress — Crews, Board, and Leaderboard slices shipped, Feed slices A/B/C1 shipped (C2 next), Friends slice after that; Plans/Profile not yet started)**
 
 **Today List View slice: ✅ SHIPPED 2026-08-27, live on `main`** (commit `5062d98`, deploy
 verified by grepping the live bundle for `"Best Bet Today"`/`"Ski here today"` —
@@ -1854,9 +1854,102 @@ reading/deleting/reporting a comment all work end to end.
 Final state: 165 tests passing (was 157, +8 new), lint 89 problems in a fresh worktree
 (unchanged from baseline).
 
-**Not yet reviewed:** Feed-C (photo attachments), Friends sub-tab of Crew
-(next up after Feed-C, per the original 5-slice order), Plans and Profile pages. Group-level
-Feed activity cards are backlogged, not yet scheduled.
+**Feed sub-tab slice C1 (title, photos, friend-tagging): ✅ SHIPPED AND LIVE 2026-09-03** (merge
+`737f967`, pushed and deploy-verified by grepping the live bundle — `assets/index-CTBimj5e.js` —
+for `ski-day-media`, the `LogDayModal` details-step copy, and the fetch-failure guard copy).
+Spec at `docs/superpowers/specs/2026-09-02-crew-tab-feed-slice-c1-design.md`, plan at
+`docs/superpowers/plans/2026-09-02-crew-tab-feed-slice-c1.md`, built in worktree
+`crew-tab-feed-slice-c1` via subagent-driven-development: 11 tasks (a migration task plus 10
+implementation tasks) + a whole-branch final-review fix wave. Feed itself was split at
+brainstorm time into **Feed-C1 (title + photos + friend-tagging on the log/edit flows, this
+slice) → Feed-C2 (next-login nudge for incomplete recent activity, not started)** — C1 is
+useful standalone, C2 depends on it.
+Shipped: `ski_sessions.title` (new nullable column, 60-char CHECK), two new join tables
+(`ski_session_photos`, `ski_session_tags`, both RLS-enabled, friends-only visibility routed
+through two new `SECURITY DEFINER STABLE` helpers — `owns_ski_session()`/
+`can_see_ski_session()` — never an inline `ski_sessions` read), a new `ski-day-media` storage
+bucket (created in-migration, matching `crew-photos`'/`chat-media`'s pattern not `trip-media`'s
+manual-bucket gap), two new shared components (`FriendTagPicker`, `SkiDayDetailsForm`), and
+integration into all three places a day gets created or edited: `LogDayModal` (new 3rd step,
+reachable from both exits of the existing stats step), `SessionRecapModal` (new persistent
+details section, GPS end-of-session), and `SessionEditForm`/`ProfileStats` (new Title field,
+"Activity Name" relabelled to "Notes", plus a **four-layer tag-wipe guard** so editing a day's
+mountain can never silently delete its existing tags).
+**The plan-writing pass (dispatched to an Opus agent per the established "OpusPlan" workflow)
+caught six real spec bugs before any code was written**, all verified against live production
+or real source rather than the spec's paraphrase: `are_friends()` takes ONE argument, not two
+(the spec's version would have failed at `CREATE POLICY` time); RLS policies must route through
+a helper, never read `ski_sessions` inline; the spec's `profiles:...` embed guidance was already
+stale (Feed-B's fix wave had replaced that pattern); `SessionEditForm` already had a de-facto
+title field under a misleading "Activity Name" label; `updateSessionTitle` was assigned to the
+wrong module (would have created an import cycle); and `LogDayModal`'s new step was originally
+unreachable from one of the stats step's two exits. **Migration 046 was applied to production
+and live-verified with real friend-can-see/friend-can-self-untag SUCCESS tests via session
+impersonation, not just denial tests** — same discipline as every prior migration this session.
+**Three fix rounds during task-level review, plus one during the final whole-branch review:**
+(1) a title that was just saved would visually revert after the post-save remount, because
+`saveSkiDayDetails` doesn't return the title and the form reseeded from stale data — fixed with
+a `savedTitle` state; (2) a failed photo/tag fetch during edit would silently seed the picker
+empty, so touching it could wipe real tags — Kyle's call (asked live via `AskUserQuestion`): block
+editing entirely until the fetch succeeds, don't seed empty; (3) the two-Save-buttons shape
+(mountain/stats vs. photos/tags) risked silent data loss if the wrong one was pressed — Kyle's
+call: relabel the top button "Save Mountain & Stats" for clarity; (4) **the whole-branch review
+found the edit-session sheet had no `maxHeight`/scroll bound, and this slice's new fields pushed
+its total height past the viewport on every current iPhone — the Title field this slice exists
+to add was literally unreachable.** Fixed with the same `maxHeight: 90vh` + `overflowY: auto`
+shape `SessionRecapModal` already used. Also independently re-verified live: `anon` holding
+EXECUTE on the new RLS helpers (Supabase's default-privilege behavior, not exploitable, same
+pattern on 2 pre-existing helpers) — recorded, not fixed.
+Final state: 191 tests passing (was 165, +26 — the plan's own "+24" was a miscount in its
+prose, the actual embedded test code had 26), lint 89 problems in a fresh worktree (unchanged
+from baseline). **One recorded, deliberately out-of-scope finding, same as Feed-B's:**
+`ski_sessions` still carries a live `"authenticated users can view all sessions"` SELECT
+policy — the two new tables are strictly tighter than the table they hang off; closing that
+hole is its own slice (affects the leaderboard, `getMySessions`, the trip backfill, the arrival
+trigger).
+**Immediately after shipping, Kyle found a real UX bug by actually using the Feed:** it was
+flooded with trip-planning activity (`trip_created`/`trip_rsvp` — "planned a trip"/"is going on
+a trip") crowding out actual logged ski days. **Fixed same-session, shipped and live 2026-09-03**
+(commit `323359d`, deploy-verified by bundle-hash change to `assets/index-Ck0uok8U.js` — a
+pure-logic filter has no unique renderable string to grep, so the content-hash change is the
+strongest available signal): `getActivityFeed()` now filters `.eq("type", "ski_session")`.
+Confirmed via a research pass that `trip_created`/`trip_rsvp` rows in `activity_feed` are
+consumed nowhere else (no notifications, no other query), so this is a pure display-scope
+narrowing with zero side effects — those rows are still written and still exist, just not
+fetched by the Feed. Handled as a lightweight direct fix (isolated worktree, no schema change,
+no new tests needed — same "no Supabase mocking harness" constraint as every I/O function in
+this file — but still merged through the same test/lint/build verification and explicit
+push-confirmation discipline as every other change this session), not the full brainstorm →
+spec → plan → SDD ceremony, since it was a single well-scoped filter with one clear decision
+point already confirmed by Kyle's own description of the problem.
+**Not yet click-tested end-to-end by Kyle** — the whole-branch review's 8-step multi-account
+checklist (log a day skipping stats to reach the details step; confirm a friend's Feed shows
+title+photos+tag; confirm a non-friend's Feed shows nothing; edit-only-the-mountain and confirm
+tags/photos survive; confirm self-untag works; GPS recap path) is the real verification for the
+friends-see/non-friends-don't privacy property and the tag-wipe guard — no browser tooling
+exists in this environment, so nothing here has been rendered and observed by an agent.
+
+**Remaining activities under TASK 22.0, in the order Kyle set for Crew tab (Crews → Board →
+Leaderboard → Feed → Friends), plus the two pages after it:**
+
+1. **Feed-C2 — next-login nudge for incomplete recent activity.** Design groundwork already
+   exists from the original Feed decomposition brainstorm (before the C1/C2 split): Kyle chose a
+   **dismissible banner/card** (not a blocking modal), matching the existing `OffseasonBanner`
+   pattern, and confirmed it should **also cover days logged via the simple "Arrived" check-in
+   button** — which today creates a bare `ski_sessions` row via the migration-039 trigger with
+   **no accompanying `activity_feed` row at all**, so those days are currently invisible to the
+   Feed entirely. Completing the prompt for one of those days would need to create the missing
+   `activity_feed` row as part of the fix — a real, if small, behavior change to that path, not
+   just a new banner. Open decisions still needed: the exact "incomplete" definition (no title
+   AND no photos AND no tags, vs. any one missing), a recency window so old sessions stop being
+   nudged, and per-session dismissal persistence (`localStorage`, matching `OffseasonBanner`).
+2. **Friends sub-tab of Crew** — the last of the original 5-way Crew-tab split. Not yet gap-audited
+   against the mockup's Friends screen.
+3. **Plans page** — not yet started, no gap audit yet.
+4. **Profile page** — not yet started, no gap audit yet.
+
+Group-level Feed activity cards (a whole crew skiing together as one card) remain backlogged,
+not yet scheduled into this sequence.
 
 ---
 
