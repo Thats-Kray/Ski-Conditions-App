@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { updateSessionStats } from "../lib/leaderboardApi"
+import { saveSkiDayDetails, getSessionPhotos, getSessionTags } from "../lib/socialApi"
 import { formatMinutes } from "../lib/profileStats"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { fmt } from "../lib/format"
@@ -160,6 +161,36 @@ export function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fu
   const [editError, setEditError]                 = useState("")
   const [shareSession, setShareSession]           = useState(null)
 
+  // { photos, tags } for the session currently being edited, or null while loading.
+  // Declared here, above the `if (!sessions.length)` early return on line 163 — a hook
+  // below it would change the hook count between the empty and non-empty renders.
+  const [sessionDetails, setSessionDetails] = useState(null)
+
+  useEffect(() => {
+    if (!editingSessionId) {
+      // Cleared on close so reopening a DIFFERENT session can never show the previous
+      // one's photos, and can never seed SkiDayDetailsForm with another day's tags.
+      setSessionDetails(null)
+      return
+    }
+    let cancelled = false
+    Promise.all([
+      getSessionPhotos([editingSessionId]).catch((e) => {
+        console.warn("RecentSessionsFeed: getSessionPhotos failed", e)
+        return []
+      }),
+      getSessionTags([editingSessionId]).catch((e) => {
+        console.warn("RecentSessionsFeed: getSessionTags failed", e)
+        return []
+      }),
+    ]).then(([photos, tags]) => {
+      if (!cancelled) setSessionDetails({ photos, tags })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [editingSessionId])
+
   if (!sessions.length) {
     return (
       <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "18px 16px", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
@@ -235,14 +266,21 @@ export function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fu
             </div>
             <SessionEditForm
               session={editingSession}
+              details={sessionDetails}
               saving={savingStatsFor === editingSession.id}
               error={editError}
               onError={setEditError}
-              onSave={async (fields) => {
+              onSave={async (fields, detailsDiff) => {
                 setSavingStatsFor(editingSession.id)
                 setEditError("")
                 try {
                   await updateSessionStats(editingSession.id, fields)
+                  // Guard layer 1: only reached when SkiDayDetailsForm's own Save fired.
+                  // The plain Save button passes no second argument, so a stats-only edit
+                  // never runs a reconcile and cannot delete an existing tag or photo.
+                  if (detailsDiff) {
+                    await saveSkiDayDetails(editingSession.id, detailsDiff)
+                  }
                   await onRefresh?.()
                   // Only close on success — a failure here is a real, expected
                   // outcome (renaming onto a date+mountain the user already

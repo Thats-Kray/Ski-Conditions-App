@@ -1,5 +1,7 @@
 import { useState } from "react"
 import ResortPicker from "./ui/ResortPicker"
+import SkiDayDetailsForm from "./SkiDayDetailsForm"
+import { clampTitle } from "../lib/skiDayDetails"
 
 const inputStyle = {
   width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
@@ -26,7 +28,8 @@ function hasStats(session) {
   return session.vertical_feet != null || session.miles_skied != null || session.top_speed_mph != null
 }
 
-export default function SessionEditForm({ session, onSave, saving, error, onError }) {
+export default function SessionEditForm({ session, details, onSave, saving, error, onError }) {
+  const [title, setTitle] = useState(session?.title ?? "")
   const [notes, setNotes]   = useState(session?.notes ?? "")
   const [resort, setResort] = useState(session?.resort_name ?? "")
 
@@ -39,7 +42,12 @@ export default function SessionEditForm({ session, onSave, saving, error, onErro
   const [miles, setMiles]       = useState(session?.miles_skied ?? "")
   const [topSpeed, setTopSpeed] = useState(session?.top_speed_mph ?? "")
 
-  function handleSave() {
+  // detailsDiff is UNDEFINED when the plain Save button below is pressed, and only
+  // populated when SkiDayDetailsForm's own "Save Details" button fires. That is layer 1
+  // of the tag-wipe guard and it is structural, not a heuristic: on the stats-only path
+  // ProfileStats never calls saveSkiDayDetails, so no reconcile can run and no existing
+  // tag or photo can be removed by someone who only renamed a mountain.
+  function handleSave(detailsDiff) {
     // ResortPicker only reports a name to its parent once a suggestion is
     // actually clicked — typing clears `value` back to "". So an empty
     // `resort` here means the field was typed into and never confirmed, and
@@ -53,6 +61,12 @@ export default function SessionEditForm({ session, onSave, saving, error, onErro
     onError?.("")
 
     const fields = {
+      // Correction 4: `notes` keeps its column and loses its misleading "Activity Name"
+      // label. `title` is the new, Feed-visible field. Both are saved here, independently,
+      // through the same existing updateSessionStats(.update(fields)) call — Correction 5,
+      // no change to leaderboardApi.js. clampTitle mirrors the ski_sessions_title_length
+      // CHECK so a 61-char paste is trimmed rather than 400ing.
+      title: clampTitle(title) || null,
       notes: notes.trim() || null,
       resort_name: resort,
     }
@@ -62,18 +76,33 @@ export default function SessionEditForm({ session, onSave, saving, error, onErro
       fields.miles_skied   = miles === "" ? null : Number(miles)
       fields.top_speed_mph = topSpeed === "" ? null : Number(topSpeed)
     }
-    onSave(fields)
+    onSave(fields, detailsDiff)
   }
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
       <label style={labelStyle}>
-        Activity Name
+        Title
+        <input
+          style={{ ...inputStyle, marginTop: 6 }}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Bluebird laps on the back bowls"
+        />
+      </label>
+
+      {/* Correction 4: this input was labelled "Activity Name" and is bound to `notes`.
+          The label is wrong, not the binding — `notes` is private free text that nothing
+          in the app displays, and 112 production rows hold a mix of titles and genuine
+          notes. It is relabelled rather than migrated: copying notes into the new,
+          Feed-visible `title` column would publish private text. */}
+      <label style={labelStyle}>
+        Notes
         <input
           style={{ ...inputStyle, marginTop: 6 }}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="e.g. Powder day at Vail"
+          placeholder="Best run, who you went with…"
         />
       </label>
 
@@ -129,11 +158,28 @@ export default function SessionEditForm({ session, onSave, saving, error, onErro
         />
       </label>
 
+      {/* Photos and friend tags. Its own "Save Details" button (SkiDayDetailsForm renders
+          no Skip when onSkip is omitted) is the persistent save the design spec asks for
+          here, and it is also guard layer 1: the plain Save above emits no details diff,
+          so a stats-only edit provably cannot reach the tag or photo code.
+          No title input appears inside it — initialTitle is deliberately NOT passed, which
+          is what stops this modal shipping two title fields (Correction 4). */}
+      {details ? (
+        <SkiDayDetailsForm
+          initialPhotos={details.photos}
+          initialTags={details.tags}
+          saving={saving}
+          onSave={(diff) => handleSave(diff)}
+        />
+      ) : (
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>Loading photos and tags…</div>
+      )}
+
       {error && <div style={{ fontSize: 13, color: "var(--color-danger)" }}>{error}</div>}
 
       <button
         type="button"
-        onClick={handleSave}
+        onClick={() => handleSave()}
         disabled={saving}
         style={{
           background: "var(--gradient-cta)", color: "white", border: "none",
