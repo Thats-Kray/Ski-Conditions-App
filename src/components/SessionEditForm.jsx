@@ -28,7 +28,7 @@ function hasStats(session) {
   return session.vertical_feet != null || session.miles_skied != null || session.top_speed_mph != null
 }
 
-export default function SessionEditForm({ session, details, onSave, saving, error, onError }) {
+export default function SessionEditForm({ session, details, detailsLoadFailed, onSave, saving, error, onError }) {
   const [title, setTitle] = useState(session?.title ?? "")
   const [notes, setNotes]   = useState(session?.notes ?? "")
   const [resort, setResort] = useState(session?.resort_name ?? "")
@@ -163,8 +163,16 @@ export default function SessionEditForm({ session, details, onSave, saving, erro
           here, and it is also guard layer 1: the plain Save above emits no details diff,
           so a stats-only edit provably cannot reach the tag or photo code.
           No title input appears inside it — initialTitle is deliberately NOT passed, which
-          is what stops this modal shipping two title fields (Correction 4). */}
-      {details ? (
+          is what stops this modal shipping two title fields (Correction 4).
+
+          Fix 1: If the fetch fails, block editing entirely — a failed fetch looks like
+          "no photos/tags exist" but they might actually exist, and reconciling against
+          empty arrays would silently delete existing tags (the tag-wipe bug). */}
+      {detailsLoadFailed ? (
+        <div style={{ fontSize: 12, color: "var(--color-danger)", background: "rgba(220,38,38,0.1)", border: "1px solid rgba(220,38,38,0.3)", borderRadius: 10, padding: "10px 12px" }}>
+          Couldn't load your photos and tags — close and reopen this session to try again.
+        </div>
+      ) : details ? (
         <SkiDayDetailsForm
           initialPhotos={details.photos}
           initialTags={details.tags}
@@ -180,14 +188,14 @@ export default function SessionEditForm({ session, details, onSave, saving, erro
       <button
         type="button"
         onClick={() => handleSave()}
-        disabled={saving}
+        disabled={saving || detailsLoadFailed}
         style={{
           background: "var(--gradient-cta)", color: "white", border: "none",
           borderRadius: 12, padding: "12px 20px", fontSize: 14, fontWeight: 900,
-          cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1,
+          cursor: saving || detailsLoadFailed ? "not-allowed" : "pointer", opacity: saving || detailsLoadFailed ? 0.7 : 1,
         }}
       >
-        {saving ? "Saving…" : "Save"}
+        {saving ? "Saving…" : "Save Mountain & Stats"}
       </button>
     </div>
   )

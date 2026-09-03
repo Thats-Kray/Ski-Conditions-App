@@ -166,25 +166,47 @@ export function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fu
   // below it would change the hook count between the empty and non-empty renders.
   const [sessionDetails, setSessionDetails] = useState(null)
 
+  // If the photo/tag fetch fails, block editing to prevent silent tag deletion. A failed
+  // fetch would seed the form with empty arrays, making the picker think there are no tags
+  // when tags might exist — leading to reconcile deleting them on a "Save Details" click.
+  const [detailsLoadFailed, setDetailsLoadFailed] = useState(false)
+
   useEffect(() => {
     if (!editingSessionId) {
       // Cleared on close so reopening a DIFFERENT session can never show the previous
       // one's photos, and can never seed SkiDayDetailsForm with another day's tags.
       setSessionDetails(null)
+      setDetailsLoadFailed(false)
       return
     }
     let cancelled = false
+    let photosErr = false
+    let tagsErr = false
+
     Promise.all([
       getSessionPhotos([editingSessionId]).catch((e) => {
         console.warn("RecentSessionsFeed: getSessionPhotos failed", e)
+        photosErr = true
         return []
       }),
       getSessionTags([editingSessionId]).catch((e) => {
         console.warn("RecentSessionsFeed: getSessionTags failed", e)
+        tagsErr = true
         return []
       }),
     ]).then(([photos, tags]) => {
-      if (!cancelled) setSessionDetails({ photos, tags })
+      if (!cancelled) {
+        // If either fetch failed, block editing. A failed fetch would look like "no photos/tags"
+        // but they might actually exist — reconciling against empty arrays would silently delete
+        // existing tags (the exact silent tag-wipe this guard prevents).
+        if (photosErr || tagsErr) {
+          setDetailsLoadFailed(true)
+          setSessionDetails(null)
+        } else {
+          setDetailsLoadFailed(false)
+          setSessionDetails({ photos, tags })
+        }
+      }
     })
     return () => {
       cancelled = true
@@ -267,6 +289,7 @@ export function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fu
             <SessionEditForm
               session={editingSession}
               details={sessionDetails}
+              detailsLoadFailed={detailsLoadFailed}
               saving={savingStatsFor === editingSession.id}
               error={editError}
               onError={setEditError}
