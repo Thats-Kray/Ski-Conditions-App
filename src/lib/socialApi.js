@@ -3,7 +3,7 @@ import { localDateKey } from "./calendarDates";
 import { OPEN_RESORT_KEY, resortName } from "./resorts";
 import { formatDate } from "./format";
 import { buildPlanUpsert } from "./planUpsert";
-import { clampTitle } from "./skiDayDetails";
+import { clampTitle, groupPhotosBySession, groupTagsBySession } from "./skiDayDetails";
 
 /* -----------------------------
    Constants
@@ -3935,22 +3935,50 @@ export async function getActivityFeed(limit = 30) {
   // column — selecting either name here would fail the request.
   const { data: sessions, error: sessionErr } = await supabase
     .from("ski_sessions")
-    .select("id, runs_logged, vertical_feet, is_powder_day")
+    .select("id, runs_logged, vertical_feet, is_powder_day, title")
     .in("id", sessionIds)
 
-  // Non-fatal by design: a failed stat lookup degrades ski_session cards to their
-  // existing sentence copy instead of blanking the whole feed. Warned rather than
-  // discarded, because a silently-empty result is indistinguishable from "nobody has
-  // logged stats yet" — which is exactly how a wrong column name would hide.
+  // Non-fatal, and no longer an early return. A failed stat lookup used to abandon the
+  // whole enrichment pass; now it degrades to an empty stats map so that photos and tags
+  // — three independent queries against three independent tables — still land. A wrong
+  // column name in one select should not blank two unrelated features.
   if (sessionErr) {
     console.warn("getActivityFeed session stats lookup failed", sessionErr)
-    return withProfiles
   }
-
   const statsById = new Map((sessions || []).map((s) => [s.id, s]))
-  return withProfiles.map((i) =>
-    i.type === "ski_session" ? { ...i, sessionStats: statsById.get(i.subject_id) || null } : i
-  )
+
+  // Two more batched second-queries, the same read-time-not-snapshot pattern as the stats
+  // lookup above and the same shape getActivityReactions/getActivityComments use: one
+  // query for the whole page, not one per card. getSessionPhotos and getSessionTags are
+  // declared further down this file — `export async function` declarations are hoisted, so
+  // calling them from here is fine despite reading backwards.
+  //
+  // Each is independently non-fatal. A refused or broken photo query must degrade a card
+  // to "no photos", not blank the feed, and — because an empty result is otherwise
+  // indistinguishable from "nobody attached photos yet" — it warns rather than swallowing.
+  const [photoRows, tagRows] = await Promise.all([
+    getSessionPhotos(sessionIds).catch((e) => {
+      console.warn("getActivityFeed session photos lookup failed", e)
+      return []
+    }),
+    getSessionTags(sessionIds).catch((e) => {
+      console.warn("getActivityFeed session tags lookup failed", e)
+      return []
+    }),
+  ])
+
+  const photosBySession = groupPhotosBySession(photoRows)
+  const tagsBySession = groupTagsBySession(tagRows)
+
+  return withProfiles.map((i) => {
+    if (i.type !== "ski_session") return i
+    return {
+      ...i,
+      sessionStats: statsById.get(i.subject_id) || null,
+      sessionPhotos: photosBySession[i.subject_id] || [],
+      sessionTags: tagsBySession[i.subject_id] || [],
+    }
+  })
 }
 
 export async function getActivityReactions(activityIds) {
