@@ -70,6 +70,10 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
   // previews it just uploaded (Task 5's unmount cleanup) — a form left mounted would hold
   // every blob for as long as the modal stays open.
   const [detailsKey, setDetailsKey] = useState(0)
+  // Tracks the most recent title save. When SkiDayDetailsForm remounts after a successful
+  // save (via detailsKey bump), initialTitle reads this instead of the stale session.title,
+  // so the user sees the title they just saved, not a blank revert.
+  const [savedTitle, setSavedTitle] = useState(null)
 
   // A GPS session is usually brand new here, but flushSessionToSupabase can land on an
   // EXISTING ski_sessions row when a user tracks twice in one day — so photos and tags are
@@ -78,6 +82,7 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
   // touches the picker, the wanted set is missing the unloaded tags, and reconcile deletes
   // them. Loading first removes the hazard instead of relying on the guard.
   useEffect(() => {
+    setDetails(null)
     const sessionId = session?.id
     if (!sessionId) return
     let cancelled = false
@@ -101,10 +106,12 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
   async function handleSaveDetails(diff) {
     setDetailsSaving(true)
     setDetailsError("")
+    setDetailsSaved(false)
     try {
       const saved = await saveSkiDayDetails(session.id, diff)
       setDetails(saved)
       setDetailsKey((k) => k + 1)
+      if (diff.title !== undefined) setSavedTitle(diff.title)
       setDetailsSaved(true)
     } catch (err) {
       // The modal stays open with the reason showing. The session and its stats are
@@ -308,7 +315,7 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
           {details ? (
             <SkiDayDetailsForm
               key={detailsKey}
-              initialTitle={session.title || ""}
+              initialTitle={savedTitle ?? session.title ?? ""}
               initialPhotos={details.photos}
               initialTags={details.tags}
               saving={detailsSaving}
