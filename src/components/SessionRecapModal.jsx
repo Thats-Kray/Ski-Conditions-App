@@ -1,7 +1,9 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { runsToGpx, gpxDownload } from "../lib/gpxExport"
 import { resortName } from "../lib/resorts"
 import ShareStatCard from "./ShareStatCard"
+import SkiDayDetailsForm from "./SkiDayDetailsForm"
+import { saveSkiDayDetails, getSessionPhotos, getSessionTags } from "../lib/socialApi"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -55,6 +57,64 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
   const [stravaUrl, setStravaUrl] = useState(null)
   const [uploadError, setUploadError] = useState(null)
   const [showShareCard, setShowShareCard] = useState(false)
+
+  // Details section state. All of it declared above the `if (!session) return null` guard
+  // on line 59 — a hook below that guard would change the hook count between the
+  // session-null and session-present renders and React would throw.
+  const [details, setDetails] = useState(null) // { photos, tags } once loaded
+  const [detailsSaving, setDetailsSaving] = useState(false)
+  const [detailsError, setDetailsError] = useState("")
+  const [detailsSaved, setDetailsSaved] = useState(false)
+  // Bumped after a successful save so SkiDayDetailsForm remounts and reseeds from the
+  // freshly-returned rows. That remount is also what revokes the object URLs of the
+  // previews it just uploaded (Task 5's unmount cleanup) — a form left mounted would hold
+  // every blob for as long as the modal stays open.
+  const [detailsKey, setDetailsKey] = useState(0)
+
+  // A GPS session is usually brand new here, but flushSessionToSupabase can land on an
+  // EXISTING ski_sessions row when a user tracks twice in one day — so photos and tags are
+  // fetched rather than assumed empty. Seeding SkiDayDetailsForm with [] against a session
+  // that already has tags is exactly the wipe hazard Task 9's guard exists for: the user
+  // touches the picker, the wanted set is missing the unloaded tags, and reconcile deletes
+  // them. Loading first removes the hazard instead of relying on the guard.
+  useEffect(() => {
+    const sessionId = session?.id
+    if (!sessionId) return
+    let cancelled = false
+    Promise.all([
+      getSessionPhotos([sessionId]).catch((e) => {
+        console.warn("SessionRecapModal: getSessionPhotos failed", e)
+        return []
+      }),
+      getSessionTags([sessionId]).catch((e) => {
+        console.warn("SessionRecapModal: getSessionTags failed", e)
+        return []
+      }),
+    ]).then(([photos, tags]) => {
+      if (!cancelled) setDetails({ photos, tags })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [session?.id])
+
+  async function handleSaveDetails(diff) {
+    setDetailsSaving(true)
+    setDetailsError("")
+    try {
+      const saved = await saveSkiDayDetails(session.id, diff)
+      setDetails(saved)
+      setDetailsKey((k) => k + 1)
+      setDetailsSaved(true)
+    } catch (err) {
+      // The modal stays open with the reason showing. The session and its stats are
+      // already persisted by the time this modal appears, so a failure here costs only
+      // the details — and closing would discard picked files silently.
+      setDetailsError(err.message || "Could not save details.")
+    } finally {
+      setDetailsSaving(false)
+    }
+  }
 
   if (!session) return null
 
@@ -227,6 +287,35 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
                 </div>
               ))}
             </div>
+          )}
+        </div>
+
+        {/* Ski day details — a persistent section with its own Save, not a modal step.
+            This modal has no step machine, and adding one for three fields would rewire
+            every existing action button. "Done" in the action row below is the skip. */}
+        <div style={{ marginBottom: 20, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: "white", marginBottom: 10 }}>
+            📸 Day Details
+          </div>
+
+          {detailsError && (
+            <div style={{ fontSize: 12, color: "var(--color-danger)", marginBottom: 8 }}>{detailsError}</div>
+          )}
+          {detailsSaved && !detailsError && (
+            <div style={{ fontSize: 12, color: "var(--color-success-strong)", marginBottom: 8 }}>Details saved ✓</div>
+          )}
+
+          {details ? (
+            <SkiDayDetailsForm
+              key={detailsKey}
+              initialTitle={session.title || ""}
+              initialPhotos={details.photos}
+              initialTags={details.tags}
+              saving={detailsSaving}
+              onSave={handleSaveDetails}
+            />
+          ) : (
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>Loading details…</div>
           )}
         </div>
 
