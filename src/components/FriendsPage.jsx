@@ -13,7 +13,9 @@ import {
   respondToPing,
   getMyDatePolls,
   voteOnDateOption,
+  getMutualFriendCount,
 } from "../lib/socialApi";
+import { formatMutualFriends } from "../lib/friendSubtitle";
 import { PingCard } from "./SkiPingModal";
 import { DateMatchmakerComposer, DatePollCard } from "./DateMatchmaker";
 import { resortName, resortEmoji as getResortEmoji } from "../lib/resorts";
@@ -62,6 +64,7 @@ export default function FriendsPage({ onMessageFriend = null }) {
   const [datePolls, setDatePolls]             = useState({ created: [], received: [] })
   const [votingOptionId, setVotingOptionId]   = useState(null)
   const [viewingUserId, setViewingUserId]         = useState(null)
+  const [mutualCounts, setMutualCounts]       = useState({}) // requester_id -> count
 
   function showToast(type, text) {
     setToast({ type, text })
@@ -120,6 +123,45 @@ export default function FriendsPage({ onMessageFriend = null }) {
   }
 
   useEffect(() => { loadPageData() }, [])
+
+  /**
+   * Mutual-friend counts for the incoming-request rows.
+   *
+   * One RPC per row, not a batch: request volume is inherently tiny, and this matches the
+   * N-small-calls shape socialApi.js uses everywhere else. See getMutualFriendCount for
+   * why this cannot be an intersection computed here (friend_requests' SELECT policy is
+   * caller-scoped, so the requester's own friend list is unreadable from the client).
+   *
+   * A failure resolves to null, not a thrown error and not a retry row. This is the one
+   * place in this file where a swallow is right: the count is a decoration on a row that
+   * renders fine without it, so a failed count falls back to the @username subtitle the
+   * row showed before this slice. The loader registry above exists for the opposite case
+   * -- a whole section silently rendering empty -- which is not what this is.
+   *
+   * Keyed on the joined id list rather than the array itself: loadPageData() rebuilds
+   * incomingRequests with a fresh identity on every refresh, and depending on the array
+   * would re-run this whole fetch after every accept, decline and search.
+   */
+  const incomingRequesterKey = useMemo(
+    () => incomingRequests.map(r => r.requester_id).filter(Boolean).join(","),
+    [incomingRequests],
+  )
+
+  useEffect(() => {
+    const ids = incomingRequesterKey ? incomingRequesterKey.split(",") : []
+    if (ids.length === 0) { setMutualCounts({}); return }
+
+    let cancelled = false
+    ;(async () => {
+      const entries = await Promise.all(ids.map(async (id) => {
+        try { return [id, await getMutualFriendCount(id)] }
+        catch { return [id, null] }
+      }))
+      if (!cancelled) setMutualCounts(Object.fromEntries(entries))
+    })()
+
+    return () => { cancelled = true }
+  }, [incomingRequesterKey])
 
   async function handleSearch(e) {
     e?.preventDefault()
@@ -215,10 +257,10 @@ export default function FriendsPage({ onMessageFriend = null }) {
   // #04080f is --color-bg. Tokens are used rather than the hexes because the app ships
   // five themes (index.css:157-236) and a hardcoded accent breaks four of them.
 
-  // Not yet consumed in this task -- Tasks 7-10 (Requests/Friends/pending-disclosure
-  // rows) wire these in as they restyle their own sections. Defined here, once, so
-  // every later task shares the exact same row shape instead of re-deriving it.
-  /* eslint-disable no-unused-vars */
+  // Shared row shape consumed by the Requests section below and by Tasks 8-10
+  // (Friends/pending-disclosure rows) as they restyle their own sections. Defined
+  // here, once, so every section shares the exact same row shape instead of
+  // re-deriving it.
   const sectionLabelStyle = {
     fontSize: 11, fontWeight: 800, letterSpacing: 0.8,
     textTransform: "uppercase", color: "var(--color-text-3)",
@@ -240,7 +282,6 @@ export default function FriendsPage({ onMessageFriend = null }) {
     fontSize: 11, color: "var(--color-text-3)",
     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
   }
-  /* eslint-enable no-unused-vars */
 
   // 32x32 per the mockup. Smaller than the 44px minimum used elsewhere in this file --
   // a deliberate, spec-confirmed mockup match. Flag at click-through if it is hard to
@@ -425,47 +466,78 @@ export default function FriendsPage({ onMessageFriend = null }) {
           </div>
         )}
 
-        {/* 3 ── Incoming friend requests (priority surface) ── */}
+        {/* 2 ── Requests ── */}
         {incomingRequests.length > 0 && (
-          <div style={{
-            borderRadius: 16,
-            background: "linear-gradient(135deg, rgba(59,130,246,0.14), rgba(139,92,246,0.1))",
-            border: "1px solid rgba(96,165,250,0.28)",
-            padding: "14px 16px",
-          }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "var(--color-accent-soft)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-              {incomingRequests.length} Friend Request{incomingRequests.length > 1 ? "s" : ""}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={sectionLabelStyle}>Requests</div>
+              <span style={{
+                fontSize: 11, fontWeight: 800,
+                color: "var(--color-bg)", background: "var(--color-accent)",
+                borderRadius: 999, padding: "2px 8px",
+              }}>
+                {incomingRequests.length}
+              </span>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {incomingRequests.map((req) => (
-                <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <button onClick={() => setViewingUserId(req.requester_profile?.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
-                    <Avatar profile={req.requester_profile} size={38} />
-                  </button>
-                  <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(req.requester_profile?.id)}>
-                    <div style={{ fontWeight: 800, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {getDisplayName(req.requester_profile)}
+
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+              {incomingRequests.map((req) => {
+                // null while loading and after a failed count -- formatMutualFriends
+                // returns null for both, and for 0, so the row falls back to @username
+                // rather than flashing "0 mutual friends".
+                const mutual = formatMutualFriends(mutualCounts[req.requester_id])
+                const subtitle = mutual || `@${req.requester_profile?.username || "—"}`
+                return (
+                  <div key={req.id} style={rowStyle}>
+                    <button
+                      onClick={() => setViewingUserId(req.requester_profile?.id)}
+                      style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}
+                      aria-label={`View ${getDisplayName(req.requester_profile)}'s profile`}
+                    >
+                      <Avatar profile={req.requester_profile} size={38} />
+                    </button>
+
+                    <div
+                      style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
+                      onClick={() => setViewingUserId(req.requester_profile?.id)}
+                    >
+                      <div style={rowNameStyle}>{getDisplayName(req.requester_profile)}</div>
+                      <div style={rowSubStyle}>{subtitle}</div>
                     </div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", marginTop: 1 }}>
-                      @{req.requester_profile?.username || "—"}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+
                     <button
                       onClick={() => handleRespondToRequest(req.id, "accepted")}
                       disabled={workingId === req.id}
-                      style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                      Accept
+                      aria-label={`Accept ${getDisplayName(req.requester_profile)}'s friend request`}
+                      style={{
+                        ...iconButtonBase,
+                        background: "var(--gradient-primary)",
+                        border: "none", color: "var(--color-bg)",
+                        fontSize: 15, fontWeight: 900,
+                        opacity: workingId === req.id ? 0.5 : 1,
+                      }}
+                    >
+                      ✓
                     </button>
+
                     <button
                       onClick={() => handleRespondToRequest(req.id, "declined")}
                       disabled={workingId === req.id}
-                      style={{ padding: "7px 10px", borderRadius: 8, border: "none", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 16, cursor: "pointer", lineHeight: 1 }}>
+                      aria-label={`Decline ${getDisplayName(req.requester_profile)}'s friend request`}
+                      style={{
+                        ...iconButtonBase,
+                        background: "transparent",
+                        border: "1px solid rgba(255,255,255,0.14)",
+                        color: "var(--color-text-3)",
+                        fontSize: 15,
+                        opacity: workingId === req.id ? 0.5 : 1,
+                      }}
+                    >
                       ✕
                     </button>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
