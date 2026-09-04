@@ -61,3 +61,64 @@ export function weekDayKeys(d) {
     localDateKey(new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + i))
   )
 }
+
+/**
+ * How far the Plans agenda list reaches, in days.
+ *
+ * Not a mockup-stated number: the mockup shows a plain scrolling list with no
+ * navigator, so the window size is this app's choice (design spec decision #1).
+ * 21 days forward covers "this weekend and the next two", which is the horizon
+ * people actually plan on; 7 days back is what the "Show past days" disclosure
+ * reveals and nothing more, because a plan you can no longer act on is history.
+ */
+export const AGENDA_PAST_DAYS = 7
+export const AGENDA_FORWARD_DAYS = 21
+
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * The rolling agenda window around `todayKey`, as local date keys.
+ *
+ * Takes a date KEY, not a Date, on purpose: the caller already holds one from
+ * localDateKey(), and a string argument makes the result stable under useMemo —
+ * `new Date()` is a fresh object on every render and would refetch the calendar
+ * forever.
+ *
+ * Day arithmetic goes through `new Date(y, m, d + i)`, which normalises month and
+ * year rollover for free and is immune to DST. Adding 86_400_000ms would duplicate
+ * a key across the spring-forward Sunday; there is a test for exactly that.
+ *
+ * @param {string} todayKey "YYYY-MM-DD", local, from localDateKey()
+ * @param {Object} [opts]
+ * @param {number} [opts.past=AGENDA_PAST_DAYS] days before todayKey
+ * @param {number} [opts.forward=AGENDA_FORWARD_DAYS] days after todayKey
+ * @param {string|null} [opts.includeKey=null] a day that MUST be inside the
+ *   window. A notification can point at a ski day past either edge, and a
+ *   calendar that cannot show the day you tapped is a dead end. Widens the
+ *   relevant side only; never narrows either.
+ * @returns {{start: string, end: string, keys: string[]}}
+ */
+export function agendaRange(todayKey, {
+  past = AGENDA_PAST_DAYS, forward = AGENDA_FORWARD_DAYS, includeKey = null,
+} = {}) {
+  const [y, m, d] = todayKey.split("-").map(Number)
+  let back = Math.max(0, past)
+  let ahead = Math.max(0, forward)
+
+  if (includeKey && DATE_KEY_RE.test(includeKey) && includeKey !== todayKey) {
+    const [iy, im, id] = includeKey.split("-").map(Number)
+    // Date.UTC on both sides: same construction, so the difference is exact whole
+    // days with no DST hour left over to round away.
+    const delta = Math.round(
+      (Date.UTC(iy, im - 1, id) - Date.UTC(y, m - 1, d)) / 86400000
+    )
+    if (delta > 0) ahead = Math.max(ahead, delta)
+    else back = Math.max(back, -delta)
+  }
+
+  const keys = []
+  for (let i = -back; i <= ahead; i++) {
+    keys.push(localDateKey(new Date(y, m - 1, d + i)))
+  }
+  return { start: keys[0], end: keys[keys.length - 1], keys }
+}
