@@ -2100,15 +2100,32 @@ Leaderboard → Feed → Friends), plus the two pages after it:**
    stranded production row — documented, deliberately not touched. Final state: **223 tests
    passing (was 207, +16 from the new `src/lib/friendSubtitle.js`)**, lint 89 problems (unchanged
    baseline), build clean.
-   **Not yet click-tested by Kyle** — same recurring gap as every other TASK 22.0 slice (no
-   subagent in this environment has browser/Supabase-auth tooling). Specifically worth checking:
-   the mutual-friend-count subtitle's load-in (renders `@username` first, swaps to "N mutual
-   friends" once each row's RPC resolves), the friend-row layout with the kept secondary badge at
-   real mobile widths (the exact layout class the Board slice's review once caught a real bug in),
-   the "···" overflow menu's tap-and-close on a real touch device (it's now the *only* way to
-   create a date poll in the whole app), and the 32×32 accept/decline/message icon buttons (below
-   this app's usual 44px tap-target minimum — a deliberate, spec-confirmed mockup match, flagged
-   for a possible bump to 36-40px if it proves fiddly in hand).
+   **Click-tested by Kyle 2026-09-04: friend-row layout and the "···" overflow menu both
+   confirmed working well, no issues.** One real gap found by using it, fixed same-day, live
+   (commit `2e5ad97`, deploy verified by grepping the live bundle —
+   `assets/index-BDPzy9d3.js` — for `"Crew Chat"`): the search-results row was still showing
+   `favorite_mountain` instead of a mutual-friend-count, inconsistent with the Requests row
+   right above it doing the same job for the same "people you might add" context. Fixed by
+   extending the existing `mutualCounts` fetch (built for Requests) to also cover search-result
+   ids, merged via a functional state update rather than a second bucket, and swapping the
+   search row's subtitle to the same `formatMutualFriends()`/`@username`-fallback pattern.
+   **Two more small UX requests from the same click-through, also shipped same-day:** the Crew
+   tab's own 5-way tab bar (`MessagingCenter.jsx`) relabeled "Crews" → "Crew Chat" (clarifies
+   that's where crew messaging lives, matching the underlying `CrewGroupChat` component name),
+   and the tab order changed from Crews/Friends/Feed/Board/Leaderboard to
+   Crews/Friends/Feed/**Leaderboard**/**Board** (Leaderboard moved up, Board moved to the end)
+   — both are Kyle's explicit ordering/naming preference, not a mockup-fidelity call. All
+   verified via `npm test` (223/223, unchanged) and `npm run build` in an isolated worktree,
+   handled as a direct fix (no full brainstorm/plan ceremony — three small, independently
+   obvious changes with Kyle's own stated answer already in hand), same as the Feed-C1
+   same-day-fix precedent.
+   **Still not click-tested:** the mutual-friend-count subtitle's load-in on the Requests
+   section specifically (renders `@username` first, swaps to "N mutual friends" once the RPC
+   resolves — same pattern now also on Search, not yet separately confirmed there), and the
+   32×32 accept/decline/message icon buttons (below this app's usual 44px tap-target minimum —
+   a deliberate, spec-confirmed mockup match, flagged for a possible bump to 36-40px if it
+   proves fiddly in hand — Kyle did not report an issue with these, but didn't explicitly call
+   them out either).
 2. **Plans page** — not yet started, no gap audit yet.
 3. **Profile page** — not yet started, no gap audit yet.
 
