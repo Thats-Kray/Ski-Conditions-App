@@ -12,24 +12,14 @@ import {
   respondToFriendRequest,
   getAcceptedFriends,
   getFriendsLeaderboard,
-  createCrewInvite,
-  getReceivedCrewInvites,
-  getIncomingTripRequests,
-  approveTripRequest,
-  declineTripRequest,
-  getSentCrewInvites,
-  respondToCrewInvite,
-  getMySkiPlans,
-  getFriendsUpcomingTrips,
   getMyPings,
   respondToPing,
   getMyDatePolls,
   voteOnDateOption,
 } from "../lib/socialApi";
-import { SkiPingComposer, PingCard } from "./SkiPingModal";
+import { PingCard } from "./SkiPingModal";
 import { DateMatchmakerComposer, DatePollCard } from "./DateMatchmaker";
 import { resortName, resortEmoji as getResortEmoji } from "../lib/resorts";
-import { formatDate } from "../lib/format";
 import Avatar from "./ui/Avatar";
 import FailureNotice from "./ui/FailureNotice";
 import { runLoaders, mergeFailed, selectLoaders } from "../lib/loaderRegistry";
@@ -53,139 +43,6 @@ function formatResortName(v) {
   return resortName(s) || s.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())
 }
 
-function isPast(plan) {
-  if (!plan?.ski_date) return false
-  const today = new Date(); today.setHours(0,0,0,0)
-  const d = new Date(`${plan.ski_date}T12:00:00`)
-  return !isNaN(d) && d < today
-}
-
-// ── Shared UI atoms ───────────────────────────────────────────────────────────
-
-function FriendAvatar({ profile, size = 26 }) {
-  const name = profile?.full_name || profile?.username || "?"
-  if (profile?.avatar_url) {
-    return <img src={profile.avatar_url} alt={name} title={name}
-      style={{ width: size, height: size, borderRadius: 999, objectFit: "cover", border: "2px solid rgba(10,14,30,0.8)", flexShrink: 0 }} />
-  }
-  return (
-    <div title={name} style={{
-      width: size, height: size, borderRadius: 999, flexShrink: 0,
-      background: "rgba(96,165,250,0.2)", border: "2px solid rgba(96,165,250,0.35)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: size * 0.42, fontWeight: 800, color: "var(--color-banner-highlight)",
-    }}>
-      {name.charAt(0).toUpperCase()}
-    </div>
-  )
-}
-
-// ── Weekend Planner ───────────────────────────────────────────────────────────
-
-function WeekendPlanner({ days }) {
-  if (!days?.length) return null
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8 }}>
-          Friends' Ski Plans
-        </div>
-        <div style={{ background: "rgba(96,165,250,0.15)", border: "1px solid rgba(96,165,250,0.25)", borderRadius: 999, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "var(--color-accent-soft)" }}>
-          Next 2 weeks
-        </div>
-      </div>
-      <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
-        {days.map((day) => (
-          <div key={day.date} style={{
-            flexShrink: 0, minWidth: 148,
-            background: day.isWeekend ? "linear-gradient(145deg, rgba(37,99,235,0.2), rgba(8,145,178,0.12))" : "rgba(255,255,255,0.04)",
-            border: day.isWeekend ? "1px solid rgba(96,165,250,0.25)" : "1px solid rgba(255,255,255,0.07)",
-            borderRadius: 14, padding: "10px 12px",
-          }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 5, marginBottom: 8 }}>
-              <div style={{ fontSize: 12, fontWeight: 900, color: day.isWeekend ? "var(--color-accent-soft)" : "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                {day.dayName}
-              </div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{day.dateLabel}</div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {day.trips.map((trip) => (
-                <div key={trip.id} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "7px 9px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
-                    <span style={{ fontSize: 12 }}>{getResortEmoji(trip.resort_key)}</span>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: "white" }}>{trip.resort_name}</div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center" }}>
-                    {trip.friends.slice(0, 4).map((f, i) => (
-                      <div key={f.id} style={{ marginLeft: i === 0 ? 0 : -6, zIndex: 10 - i }}>
-                        <FriendAvatar profile={f} size={20} />
-                      </div>
-                    ))}
-                    {trip.friends.length > 4 && (
-                      <div style={{ marginLeft: 4, fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: 700 }}>+{trip.friends.length - 4}</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Crew Invite Card (legacy) ─────────────────────────────────────────────────
-
-function CrewInviteCard({ invite, onAccept, onDecline, working }) {
-  const profile = invite.inviter_profile
-  // Both directions land in this same inbox, because both are crew_invites rows addressed to
-  // me. Without this the copy is inverted and actively misleading: someone asking to join YOUR
-  // day would read as them inviting you to theirs.
-  const isRequest = invite.kind === "request"
-  const headline = isRequest
-    ? `${getDisplayName(profile)} asked to join your day`
-    : `${getDisplayName(profile)} invited you to ski`
-  return (
-    <div style={{
-      borderRadius: 14, padding: "12px 14px",
-      background: "linear-gradient(135deg, rgba(236,72,153,0.1), rgba(59,130,246,0.1))",
-      border: "1px solid rgba(236,72,153,0.2)",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-        <Avatar profile={profile} size={34} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{headline}</div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 1 }}>
-            {formatResortName(invite.resort_key)} · {formatDate(invite.ski_date)}
-          </div>
-        </div>
-      </div>
-      {invite.message && (
-        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", background: "rgba(255,255,255,0.06)", borderRadius: 10, padding: "8px 10px", marginBottom: 8, lineHeight: 1.4 }}>
-          {invite.message}
-        </div>
-      )}
-      {invite.status === "pending" ? (
-        <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={() => onAccept(invite.id)} disabled={working === invite.id}
-            style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-            {isRequest ? "Approve" : "Accept"}
-          </button>
-          <button onClick={() => onDecline(invite.id)} disabled={working === invite.id}
-            style={{ padding: "7px 12px", borderRadius: 8, border: "none", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-            Decline
-          </button>
-        </div>
-      ) : (
-        <div style={{ fontSize: 12, fontWeight: 700, color: invite.status === "accepted" ? "var(--color-success)" : "rgba(255,255,255,0.4)" }}>
-          {invite.status === "accepted" ? "Accepted" : "Declined"}
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function FriendsPage({ hideCrew = false, onMessageFriend = null, hideTabBar = false, initialSection = "leaderboard" }) {
@@ -195,11 +52,6 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
   const [outgoingRequests, setOutgoingRequests] = useState([])
   const [acceptedFriends, setAcceptedFriends] = useState([])
   const [leaderboard, setLeaderboard]         = useState([])
-  const [receivedInvites, setReceivedInvites] = useState([])
-  const [tripRequests, setTripRequests]       = useState([])
-  const [sentInvites, setSentInvites]         = useState([])
-  const [skiPlans, setSkiPlans]               = useState([])
-  const [friendsWeekend, setFriendsWeekend]   = useState([])
   const [loadingPage, setLoadingPage]         = useState(true)
   const [failed, setFailed]                   = useState({}) // loader key -> true
   const [searching, setSearching]             = useState(false)
@@ -207,16 +59,11 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
   const [toast, setToast]                     = useState(null) // { type: "success"|"error", text }
   const [activeSection, setActiveSection]     = useState(initialSection)
   const [friendsFilter, setFriendsFilter]     = useState("all") // "all" | "pending"
-  const [showInviteId, setShowInviteId]       = useState(null)
-  const [inviteForm, setInviteForm]           = useState({ resort_key: "", ski_date: "", departure_time: "06:00 AM", seats_available: 3, message: "" })
-  const [showPingComposer, setShowPingComposer] = useState(false)
   const [pings, setPings]                     = useState({ sent: [], received: [] })
   const [respondingPingId, setRespondingPingId] = useState(null)
   const [showDateComposer, setShowDateComposer] = useState(false)
   const [datePolls, setDatePolls]             = useState({ created: [], received: [] })
   const [votingOptionId, setVotingOptionId]   = useState(null)
-  const [showPastPlans, setShowPastPlans]     = useState(false)
-  const [showLegacyInvites, setShowLegacyInvites] = useState(false)
   const [viewingUserId, setViewingUserId]         = useState(null)
 
   function showToast(type, text) {
@@ -225,10 +72,10 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
   }
 
   /**
-   * The page's ten data blocks, as loader descriptors.
+   * The page's six data blocks, as loader descriptors.
    *
    * These were ten calls in a single Promise.all. Because Promise.all is all-or-
-   * nothing, ONE rejection skipped all ten setters and left nine healthy sections
+   * nothing, ONE rejection skipped all six setters and left five healthy sections
    * rendering as empty behind a toast that vanished after three seconds — which is
    * exactly what a stale-bundle 403 on `profiles` did to the whole Social tab on
    * 2026-08-18.
@@ -241,39 +88,14 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
    * The setters are stable across renders, so rebuilding this array per call costs
    * nothing and avoids a memo whose deps could drift.
    */
-  /**
-   * Approve or decline someone asking to join a trip I host.
-   *
-   * Approving goes through the RPC: the host is the caller but the REQUESTER is the one who
-   * needs the RSVP row, so it cannot be a plain client write under the new policy.
-   */
-  async function handleTripRequest(inviteId, decision) {
-    setWorkingId(inviteId)
-    try {
-      if (decision === "approve") await approveTripRequest(inviteId)
-      else await declineTripRequest(inviteId)
-      await loadPageData(["tripRequests"])
-      showToast("success", decision === "approve" ? "They're on the trip." : "Let them know it's full.")
-    } catch (e) {
-      showToast("error", e.message || "Couldn't respond to that request.")
-    } finally {
-      setWorkingId(null)
-    }
-  }
-
   function pageLoaders() {
     return [
-      { key: "incoming",     label: "your friend requests",        fn: getIncomingFriendRequests, fallback: [], apply: setIncomingRequests },
-      { key: "outgoing",     label: "your sent requests",          fn: getOutgoingFriendRequests, fallback: [], apply: setOutgoingRequests },
-      { key: "friends",      label: "your friends list",           fn: getAcceptedFriends,        fallback: [], apply: setAcceptedFriends },
-      { key: "leaderboard",  label: "the leaderboard",             fn: getFriendsLeaderboard,     fallback: [], apply: setLeaderboard },
-      { key: "crewInvites",  label: "your crew invites",           fn: getReceivedCrewInvites,    fallback: [], apply: setReceivedInvites },
-      { key: "tripRequests", label: "requests to join your trips", fn: getIncomingTripRequests,   fallback: [], apply: setTripRequests },
-      { key: "sentInvites",  label: "the invites you sent",        fn: getSentCrewInvites,        fallback: [], apply: setSentInvites },
-      { key: "skiPlans",     label: "your ski plans",              fn: getMySkiPlans,             fallback: [], apply: setSkiPlans },
-      { key: "friendsTrips", label: "your friends' upcoming trips", fn: getFriendsUpcomingTrips,  fallback: [], apply: setFriendsWeekend },
-      { key: "pings",        label: "your ski pings",              fn: getMyPings,                fallback: { sent: [], received: [] },    apply: setPings },
-      { key: "datePolls",    label: "your date polls",             fn: getMyDatePolls,            fallback: { created: [], received: [] }, apply: setDatePolls },
+      { key: "incoming",     label: "your friend requests", fn: getIncomingFriendRequests, fallback: [], apply: setIncomingRequests },
+      { key: "outgoing",     label: "your sent requests",   fn: getOutgoingFriendRequests, fallback: [], apply: setOutgoingRequests },
+      { key: "friends",      label: "your friends list",    fn: getAcceptedFriends,        fallback: [], apply: setAcceptedFriends },
+      { key: "leaderboard",  label: "the leaderboard",      fn: getFriendsLeaderboard,     fallback: [], apply: setLeaderboard },
+      { key: "pings",        label: "your ski pings",       fn: getMyPings,                fallback: { sent: [], received: [] },    apply: setPings },
+      { key: "datePolls",    label: "your date polls",      fn: getMyDatePolls,            fallback: { created: [], received: [] }, apply: setDatePolls },
     ]
   }
 
@@ -365,27 +187,6 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
     finally { setVotingOptionId(null) }
   }
 
-  async function handleSendCrewInvite(friendId) {
-    setWorkingId(friendId)
-    try {
-      const r = await createCrewInvite(friendId, inviteForm)
-      await loadPageData()
-      setShowInviteId(null)
-      showToast("success", r?.action === "updated" ? "Invite updated." : "Invite sent!")
-    } catch (e) { showToast("error", e.message || "Could not send invite.") }
-    finally { setWorkingId(null) }
-  }
-
-  async function handleRespondToCrewInvite(inviteId, status) {
-    setWorkingId(inviteId)
-    try {
-      await respondToCrewInvite(inviteId, status)
-      await loadPageData()
-      showToast("success", status === "accepted" ? "Invite accepted!" : "Invite declined.")
-    } catch (e) { showToast("error", e.message || "Could not respond.") }
-    finally { setWorkingId(null) }
-  }
-
   // ── Derived data ─────────────────────────────────────────────────────────
 
   const outgoingRecipientIds = useMemo(() => new Set(outgoingRequests.map(r => r.recipient_id)), [outgoingRequests])
@@ -408,11 +209,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
     topResort: leaderboardById.get(f.id)?.topResort ?? null,
   })), [acceptedFriends, leaderboardById])
 
-  const upcomingPlans = useMemo(() => skiPlans.filter(p => !isPast(p)).sort((a,b) => new Date(a.ski_date) - new Date(b.ski_date)), [skiPlans])
-  const pastPlans     = useMemo(() => skiPlans.filter(p => isPast(p)).sort((a,b) => new Date(b.ski_date) - new Date(a.ski_date)), [skiPlans])
-
   const hasActivity = pings.received.length > 0 || pings.sent.length > 0 || datePolls.received.length > 0 || datePolls.created.length > 0
-  const hasLegacyInvites = receivedInvites.length > 0 || sentInvites.length > 0
 
   // ── Styles ────────────────────────────────────────────────────────────────
 
@@ -470,60 +267,6 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
             onRetry={() => loadPageData([l.key])}
           />
         ))}
-
-      {/* ── People asking to join a trip I host ──
-          Surfaced at the top level rather than inside the trip card: the host is not
-          necessarily looking at that trip when someone asks. */}
-      {tripRequests.length > 0 && (
-        <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
-          {tripRequests.map((r) => (
-            <div key={r.id} style={{
-              display: "flex", alignItems: "center", gap: 10,
-              borderRadius: 14, padding: "10px 14px",
-              background: "linear-gradient(135deg, rgba(96,165,250,0.10), rgba(139,92,246,0.10))",
-              border: "1px solid rgba(96,165,250,0.28)",
-            }}>
-              <Avatar profile={r.requester_profile} size={32} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>
-                  {getDisplayName(r.requester_profile)} asked to join
-                </div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 1 }}>
-                  {r.trip?.title || formatResortName(r.trip?.resort_key)} · {formatDate(r.trip?.ski_date)}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                <button
-                  onClick={() => handleTripRequest(r.id, "approve")}
-                  disabled={workingId === r.id}
-                  style={{
-                    padding: "7px 14px", borderRadius: 8, border: "none",
-                    background: "var(--color-accent-deep)", color: "white",
-                    fontWeight: 700, fontSize: 13, cursor: "pointer",
-                  }}
-                >
-                  Approve
-                </button>
-                {/* "Full", matching the trip's own INTERESTED section. No note field here on
-                    purpose: this inbox is a quick triage surface, and a host who wants to say
-                    something can open the trip. The message still sends, with the standard
-                    wording. */}
-                <button
-                  onClick={() => handleTripRequest(r.id, "decline")}
-                  disabled={workingId === r.id}
-                  style={{
-                    padding: "7px 12px", borderRadius: 8, border: "none",
-                    background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)",
-                    fontWeight: 700, fontSize: 13, cursor: "pointer",
-                  }}
-                >
-                  Full
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* ── Toast ── */}
       {toast && (
@@ -599,7 +342,6 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
           {/* 2 ── Quick action strip ── */}
           <div style={{ display: "flex", gap: 8 }}>
             {[
-              { icon: "👋", label: "Ping Crew", onClick: () => setShowPingComposer(true), accent: "rgba(59,130,246,0.8)" },
               { icon: "📅", label: "Pick a Date", onClick: () => setShowDateComposer(true), accent: "rgba(139,92,246,0.8)" },
             ].map(({ icon, label, onClick, accent }) => (
               <button key={label} onClick={onClick} style={{
@@ -613,9 +355,6 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
               </button>
             ))}
           </div>
-
-          {/* 3 ── Friends' Ski Plans (weekend planner) ── */}
-          <WeekendPlanner days={friendsWeekend} />
 
           {/* 4 ── Activity feed (pings + date polls) ── */}
           {hasActivity && (
@@ -787,51 +526,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
                             💬
                           </button>
                         )}
-                        <button
-                          onClick={() => setShowInviteId(showInviteId === friend.id ? null : friend.id)}
-                          style={{
-                            padding: "10px 14px", borderRadius: 10, border: "none", flexShrink: 0, minHeight: 40,
-                            background: showInviteId === friend.id ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.07)",
-                            color: showInviteId === friend.id ? "var(--color-accent-soft)" : "rgba(255,255,255,0.5)",
-                            fontWeight: 700, fontSize: 13, cursor: "pointer",
-                          }}>
-                          {showInviteId === friend.id ? "✕" : "Invite"}
-                        </button>
                       </div>
-
-                      {/* Inline invite composer */}
-                      {showInviteId === friend.id && (
-                        <div style={{
-                          margin: "2px 0 4px", borderRadius: "0 0 14px 14px",
-                          padding: "14px 14px 16px",
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          borderTop: "none",
-                        }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: 10 }}>
-                            Invite {getDisplayName(friend)} to ski
-                          </div>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                            <input value={inviteForm.resort_key} onChange={e => setInviteForm(f => ({ ...f, resort_key: e.target.value }))}
-                              placeholder="Resort (e.g. vail)" style={{ ...inputStyle, fontSize: 13, padding: "8px 10px" }} />
-                            <input type="date" value={inviteForm.ski_date} onChange={e => setInviteForm(f => ({ ...f, ski_date: e.target.value }))}
-                              style={{ ...inputStyle, fontSize: 13, padding: "8px 10px" }} />
-                          </div>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                            <input value={inviteForm.departure_time} onChange={e => setInviteForm(f => ({ ...f, departure_time: e.target.value }))}
-                              placeholder="Departure time" style={{ ...inputStyle, fontSize: 13, padding: "8px 10px" }} />
-                            <input type="number" min="0" value={inviteForm.seats_available} onChange={e => setInviteForm(f => ({ ...f, seats_available: e.target.value }))}
-                              placeholder="Extra seats" style={{ ...inputStyle, fontSize: 13, padding: "8px 10px" }} />
-                          </div>
-                          <textarea value={inviteForm.message} onChange={e => setInviteForm(f => ({ ...f, message: e.target.value }))}
-                            placeholder="Add a note…" rows={2}
-                            style={{ ...inputStyle, fontSize: 13, padding: "8px 10px", resize: "none", marginBottom: 8 }} />
-                          <button onClick={() => handleSendCrewInvite(friend.id)} disabled={workingId === friend.id}
-                            style={{ width: "100%", padding: "9px", borderRadius: 10, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                            {workingId === friend.id ? "Sending…" : "Send Invite"}
-                          </button>
-                        </div>
-                      )}
                     </div>
                   ))
                 )}
@@ -866,104 +561,10 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
             )}
           </div>
 
-          {/* 6 ── Upcoming Ski Plans ── */}
-          {(upcomingPlans.length > 0 || !loadingPage) && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-                My Ski Plans
-              </div>
-              {upcomingPlans.length === 0 ? (
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", padding: "12px 0" }}>No upcoming plans yet.</div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {upcomingPlans.map((plan) => (
-                    <div key={plan.id} style={{
-                      display: "flex", alignItems: "center", gap: 10, padding: "11px 14px",
-                      borderRadius: 12,
-                      background: "linear-gradient(135deg, rgba(37,99,235,0.12), rgba(8,145,178,0.08))",
-                      border: "1px solid rgba(96,165,250,0.15)",
-                    }}>
-                      <span style={{ fontSize: 22, flexShrink: 0 }}>{getResortEmoji(plan.resort_key)}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 800, fontSize: 14, color: "white" }}>{formatResortName(plan.resort_key)}</div>
-                        <div style={{ fontSize: 12, color: "var(--color-banner-highlight)", marginTop: 1 }}>{formatDate(plan.ski_date)}</div>
-                      </div>
-                      {plan.note && (
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{plan.note}</div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {pastPlans.length > 0 && (
-                <button onClick={() => setShowPastPlans(v => !v)}
-                  style={{ marginTop: 8, padding: "6px 12px", borderRadius: 8, border: "none", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                  {showPastPlans ? "Hide" : `Show ${pastPlans.length} past plan${pastPlans.length > 1 ? "s" : ""}`}
-                </button>
-              )}
-              {showPastPlans && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
-                  {pastPlans.map((plan) => (
-                    <div key={plan.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                      <span style={{ fontSize: 16 }}>{getResortEmoji(plan.resort_key)}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 13, color: "rgba(255,255,255,0.7)" }}>{formatResortName(plan.resort_key)}</div>
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>{formatDate(plan.ski_date)}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 7 ── Legacy crew invites (collapsed by default) ── */}
-          {hasLegacyInvites && (
-            <div>
-              <button onClick={() => setShowLegacyInvites(v => !v)} style={{
-                display: "flex", alignItems: "center", gap: 6, padding: "8px 0",
-                background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontWeight: 700, fontSize: 12,
-              }}>
-                <span style={{ transform: showLegacyInvites ? "rotate(90deg)" : "none", display: "inline-block", transition: "transform 0.15s" }}>›</span>
-                Ski Invites ({receivedInvites.filter(i => i.status === "pending").length} pending)
-              </button>
-              {showLegacyInvites && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6 }}>
-                  {receivedInvites.map((invite) => (
-                    <CrewInviteCard
-                      key={invite.id}
-                      invite={invite}
-                      onAccept={(id) => handleRespondToCrewInvite(id, "accepted")}
-                      onDecline={(id) => handleRespondToCrewInvite(id, "declined")}
-                      working={workingId}
-                    />
-                  ))}
-                  {sentInvites.map((invite) => (
-                    <div key={invite.id} style={{ padding: "10px 14px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>
-                        Invited {getDisplayName(invite.invitee_profile)} · {formatResortName(invite.resort_key)} · {formatDate(invite.ski_date)}
-                      </div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 3, fontWeight: 600 }}>
-                        Status: {invite.status}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
         </div>
       )}
 
       {/* ── Modals ── */}
-      {showPingComposer && (
-        <SkiPingComposer
-          friends={acceptedFriends}
-          onClose={() => setShowPingComposer(false)}
-          onSent={async () => setPings(await getMyPings().catch(() => ({ sent: [], received: [] })))}
-        />
-      )}
       {showDateComposer && (
         <DateMatchmakerComposer
           friends={acceptedFriends}
