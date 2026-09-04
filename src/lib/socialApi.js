@@ -4,6 +4,7 @@ import { OPEN_RESORT_KEY, resortName } from "./resorts";
 import { formatDate } from "./format";
 import { buildPlanUpsert } from "./planUpsert";
 import { clampTitle, groupPhotosBySession, groupTagsBySession } from "./skiDayDetails";
+import { nudgeCutoffDateKey, isSessionUntouched } from "./skiDayNudge";
 
 /* -----------------------------
    Constants
@@ -4415,6 +4416,68 @@ export async function saveSkiDayDetails(sessionId, diff) {
     getSessionTags([sessionId]),
   ])
   return { photos, tags }
+}
+
+/**
+ * The single most recent ski day nobody has touched — the Feed slice C2 nudge's candidate,
+ * or null. Read-only; writes nothing.
+ *
+ * Ordered and windowed by session_date (the day that was skied), NOT created_at (when the
+ * row was written). A day logged retroactively on Sunday for a Thursday trip is a Thursday
+ * ski day, and the banner's copy names that date back to the user.
+ *
+ * The secondary .order("created_at") is not decoration. ski_sessions is UNIQUE on
+ * (user_id, session_date, resort_name), so one user can hold several rows for the same
+ * day — two resorts, or the same resort under both spellings ('vail' from the arrival
+ * trigger and trip backfill, 'Vail' from a manual log; migration 039 documents that these
+ * are genuinely distinct rows). Without a tiebreak, .limit(1) picks arbitrarily and can
+ * flip between page loads, so the user would dismiss one row and be re-nudged for its
+ * twin.
+ *
+ * Cost: ONE query in the common case. Almost every user's most recent day either does not
+ * exist, is outside the window, or already has a title — and title alone rules a session
+ * out, so the two batched photo/tag lookups only run for a genuine candidate. They are
+ * called with a single-element array because getSessionPhotos/getSessionTags are batched
+ * (array-taking) by design from Feed-C1.
+ *
+ * .eq("user_id", user.id) is mandatory and is not made redundant by RLS: ski_sessions
+ * carries a permissive SELECT policy for authenticated users, so an unfiltered query would
+ * return other people's days.
+ *
+ * Throws rather than returning null on failure, so the caller can decide. NudgeBanner
+ * catches and simply renders nothing — a nudge is the most skippable thing in the app and
+ * must never surface an error to the user.
+ */
+export async function getRecentIncompleteSession() {
+  const user = await getCurrentUser()
+
+  const { data, error } = await supabase
+    .from("ski_sessions")
+    .select("id, user_id, resort_name, session_date, is_powder_day, title")
+    .eq("user_id", user.id)
+    .gte("session_date", nudgeCutoffDateKey())
+    .order("session_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    // .limit(1) BEFORE .maybeSingle(), the pattern logActivityOnce documents at :3880-3883:
+    // a bare .maybeSingle() errors when more than one row matches, and same-day duplicates
+    // genuinely exist.
+    .maybeSingle()
+  if (error) throw error
+
+  const session = data || null
+  if (!session) return null
+
+  // Title alone rules the session out, so this short-circuits before any further I/O.
+  if (!isSessionUntouched({ title: session.title })) return null
+
+  const [photos, tags] = await Promise.all([
+    getSessionPhotos([session.id]),
+    getSessionTags([session.id]),
+  ])
+  if (!isSessionUntouched({ title: session.title, photos, tags })) return null
+
+  return session
 }
 
 // ─── Mountain Board (sprint-29) ─────────────────────────────────────────────
