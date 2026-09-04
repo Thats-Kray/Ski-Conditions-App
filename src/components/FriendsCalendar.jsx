@@ -573,23 +573,6 @@ export default function FriendsCalendar({
         </div>
       )}
 
-      {/* Add a ski day without leaving the Plans tab. This used to live only on
-          Profile > Ski Plans, so planning a day meant going to your profile and coming back
-          to the calendar you were already looking at. */}
-      {currentUserId && (
-        <button
-          onClick={handleAddSkiDay}
-          style={{
-            justifySelf: "start", display: "inline-flex", alignItems: "center", gap: 6,
-            background: "var(--gradient-cta)", color: "white", border: "none",
-            borderRadius: 12, padding: "9px 16px", minHeight: 44,
-            fontSize: 13, fontWeight: 900, cursor: "pointer",
-          }}
-        >
-          + Add ski day
-        </button>
-      )}
-
       {failed.plans && <FailureNotice label="these days' plans" onRetry={loadPlans} />}
       {failed.crews && <FailureNotice label="your crews" onRetry={() => runStatic(["crews"])} />}
       {failed.friends && <FailureNotice label="your friends list" onRetry={() => runStatic(["friends"])} />}
