@@ -1673,10 +1673,14 @@ just relocated; a null/missing `post.profiles` shows two different fallbacks sid
 in production (`passBadgeStyle()` duplicates its lookup instead of calling it); `SkiBuddyBoard`'s
 new chip row's only CSS rule (`.pd-x`'s scrollbar-hiding) lives in a sibling `MessagingCenter.jsx`
 `<style>` tag rather than `index.css` — harmless today since they're always co-mounted, but
-`SkiBuddyBoard` has a second, currently-unreachable mount site at `FriendsPage.jsx:548` that the
-**Friends slice will make reachable** — move that rule into `index.css` when that slice touches
-`FriendsPage.jsx`; the 6 filter/toggle chips (here and in `MessagingCenter.jsx`'s own tab bar)
-have no `aria-pressed`.
+`SkiBuddyBoard` had a second, currently-unreachable mount site at `FriendsPage.jsx:548` that this
+note originally flagged the Friends slice would make reachable, requiring the `.pd-x` rule to
+move into `index.css`. **RESOLVED, not by the anticipated move: the Friends slice (2026-09-03/04)
+deleted that unreachable second mount entirely** (one of the dead internal-routing branches
+removed in its Task 5), rather than making it reachable. `SkiBuddyBoard`'s only remaining mount is
+in `MessagingCenter.jsx`, still co-mounted with the CSS rule's owner, so the rule is correctly
+fine staying exactly where it is — no follow-up migration is needed here; the 6 filter/toggle
+chips (here and in `MessagingCenter.jsx`'s own tab bar) still have no `aria-pressed`.
 **Verification note, same recurring gap as every prior slice:** no subagent in this environment
 has browser or Supabase-auth tooling — every task, the final review, and the fix wave were
 verified via `npm test`/`npx eslint .`/`npm run build`/diff review only. **Not yet click-tested by
@@ -2016,6 +2020,29 @@ whole-branch review's 9-item checklist is the actual verification; the highest-v
 confirming a purely-check-in-logged day is genuinely invisible on Crew → Feed beforehand and
 genuinely appears after completing the nudge for it — that's the property this slice mainly
 exists to establish, and no source review substitutes for seeing it happen.
+
+**Friends sub-tab slice — final-review finding on legacy crew-invite plumbing (2026-09-04):**
+this slice's Task 4 deleted the legacy crew-invite inbox from `FriendsPage.jsx`, which turned out
+to remove the LAST consumer of `getReceivedCrewInvites()`/`getSentCrewInvites()` in the whole app.
+That retires the `crew_invites.kind='invite'` direction entirely: the surviving reader,
+`FriendsCalendar.jsx`'s `getIncomingPartyRequests()`, only reads `kind='request'` rows, so no UI
+anywhere can read or respond to a `kind='invite'` row anymore. Production currently holds one
+stranded `kind='invite', status='pending'` row (id starting `5b71d244`, ski_date 2026-04-04,
+created 2026-03-24) that can never be accepted or declined through the app going forward — its
+ski date is already in the past relative to today, so it's inert, not a live problem, and was
+deliberately left untouched (no SQL run against it; flagged for awareness, not urgency). No NEW
+stranded rows can be created: the only remaining caller of `createCrewInvite` is
+`requestToJoinParty`, which hardcodes `kind: "request"`. Also now dead/unused app-wide as of this
+slice: `getReceivedCrewInvites`, `getSentCrewInvites`, `getIncomingTripRequests`,
+`getMySkiPlans`, and `getFriendsUpcomingTrips` (all in `src/lib/socialApi.js`) — candidates for a
+follow-up removal pass, deliberately not removed in this slice (pulling exported functions out of
+a 3700+ line file is its own deliberate cleanup, not implicit scope of a UI restyle).
+**Informational note, not a defect:** `get_mutual_friend_count()` (migration 047) can be called
+by any authenticated user against any other user id — it is not gated to only pending-request
+pairs — and `searchProfiles()` hands out user ids to any authenticated caller. This is standard,
+expected behavior for an "N mutual friends" feature (every social app with this feature works the
+same way) and leaks nothing beyond a count, but is recorded here once as a known, accepted
+property rather than a future surprise if someone re-derives it independently later.
 
 **Remaining activities under TASK 22.0, in the order Kyle set for Crew tab (Crews → Board →
 Leaderboard → Feed → Friends), plus the two pages after it:**

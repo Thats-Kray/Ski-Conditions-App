@@ -49,6 +49,18 @@
 -- make every count off by one rather than fail. Documented as a deliberate no-op so a
 -- future reader does not "simplify" them away without also checking the constraint.
 --
+-- WHY COUNT(*) IS CORRECT TODAY: THE UNIQUE INDEX IS LOAD-BEARING
+--
+-- The two <> exclusions above guard against a self-friendship row; they do NOT guard
+-- against a reciprocal duplicate (requester/recipient swapped for the same pair) double-
+-- counting a shared friend in the join above. What actually prevents that is a separate,
+-- pre-existing constraint on friend_requests: a unique index on the normalized pair,
+-- UNIQUE (LEAST(requester_id, recipient_id), GREATEST(requester_id, recipient_id))
+-- (friend_requests_unique_pair_idx, live-verified). That index is what makes COUNT(*)
+-- correct rather than merely usually-correct -- if it were ever dropped, a duplicated
+-- reciprocal pair for the same two people would silently double-count that shared friend,
+-- the same "off by one, not a failure" risk the <> exclusions call out above.
+--
 -- WHAT THIS MIGRATION DELIBERATELY DOES NOT DO
 --
 -- No policy is created, altered or dropped. No table is created. No notification is

@@ -112,7 +112,7 @@ export default function FriendsPage({ onMessageFriend = null }) {
     const list = selectLoaders(pageLoaders(), keys)
 
     // Only the full load owns the page-level spinner; a single-block retry should
-    // not blank the nine sections that are fine.
+    // not blank the six sections that are fine.
     if (!keys) setLoadingPage(true)
 
     const { values, failed: nowFailed } = await runLoaders(list, { logPrefix: "FriendsPage" })
@@ -238,13 +238,11 @@ export default function FriendsPage({ onMessageFriend = null }) {
     isPending: outgoingRecipientIds.has(p.id),
     hasIncoming: incomingRequesterIds.has(p.id),
     isFriend: acceptedFriendIds.has(p.id),
-    daysTogether: leaderboardById.get(p.id)?.daysTogether ?? 0,
-  })), [searchResults, outgoingRecipientIds, incomingRequesterIds, acceptedFriendIds, leaderboardById])
+  })), [searchResults, outgoingRecipientIds, incomingRequesterIds, acceptedFriendIds])
 
   const decoratedFriends = useMemo(() => acceptedFriends.map(f => ({
     ...f,
     daysTogether: leaderboardById.get(f.id)?.daysTogether ?? 0,
-    daysOnMountain: leaderboardById.get(f.id)?.daysOnMountain ?? 0,
     topResort: leaderboardById.get(f.id)?.topResort ?? null,
   })), [acceptedFriends, leaderboardById])
 
