@@ -687,6 +687,24 @@ what Sprint 35 shipped. The checkbox was left live under a DONE heading for thre
 - [ ] A project-wide revoke is its own pass with real regression risk for the
       logged-out/landing experience (which legitimately reads as `anon`). Needs an audit
       of what `anon` actually requires, table by table, not a blanket statement.
+- [ ] **Same class of gap found on FUNCTIONS, not just tables, 2026-09-03 (Crew tab
+      Friends slice, migration 047's own verification).** This Supabase project has
+      `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO anon` set
+      (stock provisioning, confirmed via `pg_default_acl`), which fires at `CREATE
+      FUNCTION` time and grants EXECUTE directly to `anon` — a subsequent
+      `REVOKE ALL ... FROM PUBLIC` (the pattern migrations 032/045/046/047 all use) never
+      touches it, since that revokes only the PUBLIC pseudo-role grant, not an explicit
+      per-role grant already made. Confirmed live: `are_friends()`, `can_see_activity()`,
+      and `can_see_ski_session()` are all `anon`-executable today despite each shipping
+      with the "REVOKE ALL FROM PUBLIC" line. Not currently exploitable — all three (and
+      the new `get_mutual_friend_count()`) key off `auth.uid()`, which is NULL for `anon`,
+      so each degrades safely to 0/false. Migration 047 added an explicit
+      `REVOKE EXECUTE ... FROM anon` for its own function only (Kyle's call — scoped fix
+      now, not a piecemeal patch of the other three). When this sprint runs, also do:
+      `ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM anon`
+      (fixes every *future* `SECURITY DEFINER` function automatically) plus explicit
+      `REVOKE EXECUTE ... FROM anon` on `are_friends()`/`can_see_activity()`/
+      `can_see_ski_session()`.
 
 **Whole-branch review caught 8 issues, all fixed the same session** — none were
 visible to any single task's reviewer:
