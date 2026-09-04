@@ -194,7 +194,7 @@ export default function MessagingCenter() {
         <CrewGroupChat friends={friends} onCrewChatOpenChange={setCrewChatOpen} />
       )}
       {crewSubTab === "friends" && (
-        <FriendsPage hideTabBar initialSection="friends" onMessageFriend={handleMessageFriend} />
+        <FriendsPage onMessageFriend={handleMessageFriend} />
       )}
       {crewSubTab === "feed" && <ActivityFeed />}
       {crewSubTab === "board" && <SkiBuddyBoard />}

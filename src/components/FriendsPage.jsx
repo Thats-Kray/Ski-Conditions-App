@@ -1,7 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import CrewGroupChat from "./CrewGroupChat";
-import LeaderboardPage from "./LeaderboardPage";
-import SkiBuddyBoard from "./SkiBuddyBoard";
 import UserProfileModal from "./UserProfileModal";
 import {
   searchProfiles,
@@ -12,24 +9,16 @@ import {
   respondToFriendRequest,
   getAcceptedFriends,
   getFriendsLeaderboard,
-  createCrewInvite,
-  getReceivedCrewInvites,
-  getIncomingTripRequests,
-  approveTripRequest,
-  declineTripRequest,
-  getSentCrewInvites,
-  respondToCrewInvite,
-  getMySkiPlans,
-  getFriendsUpcomingTrips,
   getMyPings,
   respondToPing,
   getMyDatePolls,
   voteOnDateOption,
+  getMutualFriendCount,
 } from "../lib/socialApi";
-import { SkiPingComposer, PingCard } from "./SkiPingModal";
+import { formatMutualFriends, formatFriendSubtitle } from "../lib/friendSubtitle";
+import { PingCard } from "./SkiPingModal";
 import { DateMatchmakerComposer, DatePollCard } from "./DateMatchmaker";
 import { resortName, resortEmoji as getResortEmoji } from "../lib/resorts";
-import { formatDate } from "../lib/format";
 import Avatar from "./ui/Avatar";
 import FailureNotice from "./ui/FailureNotice";
 import { runLoaders, mergeFailed, selectLoaders } from "../lib/loaderRegistry";
@@ -53,171 +42,29 @@ function formatResortName(v) {
   return resortName(s) || s.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())
 }
 
-function isPast(plan) {
-  if (!plan?.ski_date) return false
-  const today = new Date(); today.setHours(0,0,0,0)
-  const d = new Date(`${plan.ski_date}T12:00:00`)
-  return !isNaN(d) && d < today
-}
-
-// ── Shared UI atoms ───────────────────────────────────────────────────────────
-
-function FriendAvatar({ profile, size = 26 }) {
-  const name = profile?.full_name || profile?.username || "?"
-  if (profile?.avatar_url) {
-    return <img src={profile.avatar_url} alt={name} title={name}
-      style={{ width: size, height: size, borderRadius: 999, objectFit: "cover", border: "2px solid rgba(10,14,30,0.8)", flexShrink: 0 }} />
-  }
-  return (
-    <div title={name} style={{
-      width: size, height: size, borderRadius: 999, flexShrink: 0,
-      background: "rgba(96,165,250,0.2)", border: "2px solid rgba(96,165,250,0.35)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: size * 0.42, fontWeight: 800, color: "var(--color-banner-highlight)",
-    }}>
-      {name.charAt(0).toUpperCase()}
-    </div>
-  )
-}
-
-// ── Weekend Planner ───────────────────────────────────────────────────────────
-
-function WeekendPlanner({ days }) {
-  if (!days?.length) return null
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8 }}>
-          Friends' Ski Plans
-        </div>
-        <div style={{ background: "rgba(96,165,250,0.15)", border: "1px solid rgba(96,165,250,0.25)", borderRadius: 999, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "var(--color-accent-soft)" }}>
-          Next 2 weeks
-        </div>
-      </div>
-      <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
-        {days.map((day) => (
-          <div key={day.date} style={{
-            flexShrink: 0, minWidth: 148,
-            background: day.isWeekend ? "linear-gradient(145deg, rgba(37,99,235,0.2), rgba(8,145,178,0.12))" : "rgba(255,255,255,0.04)",
-            border: day.isWeekend ? "1px solid rgba(96,165,250,0.25)" : "1px solid rgba(255,255,255,0.07)",
-            borderRadius: 14, padding: "10px 12px",
-          }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 5, marginBottom: 8 }}>
-              <div style={{ fontSize: 12, fontWeight: 900, color: day.isWeekend ? "var(--color-accent-soft)" : "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                {day.dayName}
-              </div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{day.dateLabel}</div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {day.trips.map((trip) => (
-                <div key={trip.id} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "7px 9px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
-                    <span style={{ fontSize: 12 }}>{getResortEmoji(trip.resort_key)}</span>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: "white" }}>{trip.resort_name}</div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center" }}>
-                    {trip.friends.slice(0, 4).map((f, i) => (
-                      <div key={f.id} style={{ marginLeft: i === 0 ? 0 : -6, zIndex: 10 - i }}>
-                        <FriendAvatar profile={f} size={20} />
-                      </div>
-                    ))}
-                    {trip.friends.length > 4 && (
-                      <div style={{ marginLeft: 4, fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: 700 }}>+{trip.friends.length - 4}</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Crew Invite Card (legacy) ─────────────────────────────────────────────────
-
-function CrewInviteCard({ invite, onAccept, onDecline, working }) {
-  const profile = invite.inviter_profile
-  // Both directions land in this same inbox, because both are crew_invites rows addressed to
-  // me. Without this the copy is inverted and actively misleading: someone asking to join YOUR
-  // day would read as them inviting you to theirs.
-  const isRequest = invite.kind === "request"
-  const headline = isRequest
-    ? `${getDisplayName(profile)} asked to join your day`
-    : `${getDisplayName(profile)} invited you to ski`
-  return (
-    <div style={{
-      borderRadius: 14, padding: "12px 14px",
-      background: "linear-gradient(135deg, rgba(236,72,153,0.1), rgba(59,130,246,0.1))",
-      border: "1px solid rgba(236,72,153,0.2)",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-        <Avatar profile={profile} size={34} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{headline}</div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 1 }}>
-            {formatResortName(invite.resort_key)} · {formatDate(invite.ski_date)}
-          </div>
-        </div>
-      </div>
-      {invite.message && (
-        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", background: "rgba(255,255,255,0.06)", borderRadius: 10, padding: "8px 10px", marginBottom: 8, lineHeight: 1.4 }}>
-          {invite.message}
-        </div>
-      )}
-      {invite.status === "pending" ? (
-        <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={() => onAccept(invite.id)} disabled={working === invite.id}
-            style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-            {isRequest ? "Approve" : "Accept"}
-          </button>
-          <button onClick={() => onDecline(invite.id)} disabled={working === invite.id}
-            style={{ padding: "7px 12px", borderRadius: 8, border: "none", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-            Decline
-          </button>
-        </div>
-      ) : (
-        <div style={{ fontSize: 12, fontWeight: 700, color: invite.status === "accepted" ? "var(--color-success)" : "rgba(255,255,255,0.4)" }}>
-          {invite.status === "accepted" ? "Accepted" : "Declined"}
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function FriendsPage({ hideCrew = false, onMessageFriend = null, hideTabBar = false, initialSection = "leaderboard" }) {
+export default function FriendsPage({ onMessageFriend = null }) {
   const [searchText, setSearchText]           = useState("")
   const [searchResults, setSearchResults]     = useState([])
   const [incomingRequests, setIncomingRequests] = useState([])
   const [outgoingRequests, setOutgoingRequests] = useState([])
   const [acceptedFriends, setAcceptedFriends] = useState([])
   const [leaderboard, setLeaderboard]         = useState([])
-  const [receivedInvites, setReceivedInvites] = useState([])
-  const [tripRequests, setTripRequests]       = useState([])
-  const [sentInvites, setSentInvites]         = useState([])
-  const [skiPlans, setSkiPlans]               = useState([])
-  const [friendsWeekend, setFriendsWeekend]   = useState([])
   const [loadingPage, setLoadingPage]         = useState(true)
   const [failed, setFailed]                   = useState({}) // loader key -> true
   const [searching, setSearching]             = useState(false)
   const [workingId, setWorkingId]             = useState(null)
   const [toast, setToast]                     = useState(null) // { type: "success"|"error", text }
-  const [activeSection, setActiveSection]     = useState(initialSection)
-  const [friendsFilter, setFriendsFilter]     = useState("all") // "all" | "pending"
-  const [showInviteId, setShowInviteId]       = useState(null)
-  const [inviteForm, setInviteForm]           = useState({ resort_key: "", ski_date: "", departure_time: "06:00 AM", seats_available: 3, message: "" })
-  const [showPingComposer, setShowPingComposer] = useState(false)
   const [pings, setPings]                     = useState({ sent: [], received: [] })
   const [respondingPingId, setRespondingPingId] = useState(null)
   const [showDateComposer, setShowDateComposer] = useState(false)
+  const [showOverflow, setShowOverflow]       = useState(false)
   const [datePolls, setDatePolls]             = useState({ created: [], received: [] })
   const [votingOptionId, setVotingOptionId]   = useState(null)
-  const [showPastPlans, setShowPastPlans]     = useState(false)
-  const [showLegacyInvites, setShowLegacyInvites] = useState(false)
   const [viewingUserId, setViewingUserId]         = useState(null)
+  const [mutualCounts, setMutualCounts]       = useState({}) // requester_id -> count
+  const [showPending, setShowPending]         = useState(false)
 
   function showToast(type, text) {
     setToast({ type, text })
@@ -225,10 +72,10 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
   }
 
   /**
-   * The page's ten data blocks, as loader descriptors.
+   * The page's six data blocks, as loader descriptors.
    *
    * These were ten calls in a single Promise.all. Because Promise.all is all-or-
-   * nothing, ONE rejection skipped all ten setters and left nine healthy sections
+   * nothing, ONE rejection skipped all six setters and left five healthy sections
    * rendering as empty behind a toast that vanished after three seconds — which is
    * exactly what a stale-bundle 403 on `profiles` did to the whole Social tab on
    * 2026-08-18.
@@ -241,39 +88,14 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
    * The setters are stable across renders, so rebuilding this array per call costs
    * nothing and avoids a memo whose deps could drift.
    */
-  /**
-   * Approve or decline someone asking to join a trip I host.
-   *
-   * Approving goes through the RPC: the host is the caller but the REQUESTER is the one who
-   * needs the RSVP row, so it cannot be a plain client write under the new policy.
-   */
-  async function handleTripRequest(inviteId, decision) {
-    setWorkingId(inviteId)
-    try {
-      if (decision === "approve") await approveTripRequest(inviteId)
-      else await declineTripRequest(inviteId)
-      await loadPageData(["tripRequests"])
-      showToast("success", decision === "approve" ? "They're on the trip." : "Let them know it's full.")
-    } catch (e) {
-      showToast("error", e.message || "Couldn't respond to that request.")
-    } finally {
-      setWorkingId(null)
-    }
-  }
-
   function pageLoaders() {
     return [
-      { key: "incoming",     label: "your friend requests",        fn: getIncomingFriendRequests, fallback: [], apply: setIncomingRequests },
-      { key: "outgoing",     label: "your sent requests",          fn: getOutgoingFriendRequests, fallback: [], apply: setOutgoingRequests },
-      { key: "friends",      label: "your friends list",           fn: getAcceptedFriends,        fallback: [], apply: setAcceptedFriends },
-      { key: "leaderboard",  label: "the leaderboard",             fn: getFriendsLeaderboard,     fallback: [], apply: setLeaderboard },
-      { key: "crewInvites",  label: "your crew invites",           fn: getReceivedCrewInvites,    fallback: [], apply: setReceivedInvites },
-      { key: "tripRequests", label: "requests to join your trips", fn: getIncomingTripRequests,   fallback: [], apply: setTripRequests },
-      { key: "sentInvites",  label: "the invites you sent",        fn: getSentCrewInvites,        fallback: [], apply: setSentInvites },
-      { key: "skiPlans",     label: "your ski plans",              fn: getMySkiPlans,             fallback: [], apply: setSkiPlans },
-      { key: "friendsTrips", label: "your friends' upcoming trips", fn: getFriendsUpcomingTrips,  fallback: [], apply: setFriendsWeekend },
-      { key: "pings",        label: "your ski pings",              fn: getMyPings,                fallback: { sent: [], received: [] },    apply: setPings },
-      { key: "datePolls",    label: "your date polls",             fn: getMyDatePolls,            fallback: { created: [], received: [] }, apply: setDatePolls },
+      { key: "incoming",     label: "your friend requests", fn: getIncomingFriendRequests, fallback: [], apply: setIncomingRequests },
+      { key: "outgoing",     label: "your sent requests",   fn: getOutgoingFriendRequests, fallback: [], apply: setOutgoingRequests },
+      { key: "friends",      label: "your friends list",    fn: getAcceptedFriends,        fallback: [], apply: setAcceptedFriends },
+      { key: "leaderboard",  label: "the leaderboard",      fn: getFriendsLeaderboard,     fallback: [], apply: setLeaderboard },
+      { key: "pings",        label: "your ski pings",       fn: getMyPings,                fallback: { sent: [], received: [] },    apply: setPings },
+      { key: "datePolls",    label: "your date polls",      fn: getMyDatePolls,            fallback: { created: [], received: [] }, apply: setDatePolls },
     ]
   }
 
@@ -290,7 +112,7 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
     const list = selectLoaders(pageLoaders(), keys)
 
     // Only the full load owns the page-level spinner; a single-block retry should
-    // not blank the nine sections that are fine.
+    // not blank the six sections that are fine.
     if (!keys) setLoadingPage(true)
 
     const { values, failed: nowFailed } = await runLoaders(list, { logPrefix: "FriendsPage" })
@@ -301,6 +123,45 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
   }
 
   useEffect(() => { loadPageData() }, [])
+
+  /**
+   * Mutual-friend counts for the incoming-request rows.
+   *
+   * One RPC per row, not a batch: request volume is inherently tiny, and this matches the
+   * N-small-calls shape socialApi.js uses everywhere else. See getMutualFriendCount for
+   * why this cannot be an intersection computed here (friend_requests' SELECT policy is
+   * caller-scoped, so the requester's own friend list is unreadable from the client).
+   *
+   * A failure resolves to null, not a thrown error and not a retry row. This is the one
+   * place in this file where a swallow is right: the count is a decoration on a row that
+   * renders fine without it, so a failed count falls back to the @username subtitle the
+   * row showed before this slice. The loader registry above exists for the opposite case
+   * -- a whole section silently rendering empty -- which is not what this is.
+   *
+   * Keyed on the joined id list rather than the array itself: loadPageData() rebuilds
+   * incomingRequests with a fresh identity on every refresh, and depending on the array
+   * would re-run this whole fetch after every accept, decline and search.
+   */
+  const incomingRequesterKey = useMemo(
+    () => incomingRequests.map(r => r.requester_id).filter(Boolean).join(","),
+    [incomingRequests],
+  )
+
+  useEffect(() => {
+    const ids = incomingRequesterKey ? incomingRequesterKey.split(",") : []
+    if (ids.length === 0) { setMutualCounts({}); return }
+
+    let cancelled = false
+    ;(async () => {
+      const entries = await Promise.all(ids.map(async (id) => {
+        try { return [id, await getMutualFriendCount(id)] }
+        catch { return [id, null] }
+      }))
+      if (!cancelled) setMutualCounts(Object.fromEntries(entries))
+    })()
+
+    return () => { cancelled = true }
+  }, [incomingRequesterKey])
 
   async function handleSearch(e) {
     e?.preventDefault()
@@ -365,27 +226,6 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
     finally { setVotingOptionId(null) }
   }
 
-  async function handleSendCrewInvite(friendId) {
-    setWorkingId(friendId)
-    try {
-      const r = await createCrewInvite(friendId, inviteForm)
-      await loadPageData()
-      setShowInviteId(null)
-      showToast("success", r?.action === "updated" ? "Invite updated." : "Invite sent!")
-    } catch (e) { showToast("error", e.message || "Could not send invite.") }
-    finally { setWorkingId(null) }
-  }
-
-  async function handleRespondToCrewInvite(inviteId, status) {
-    setWorkingId(inviteId)
-    try {
-      await respondToCrewInvite(inviteId, status)
-      await loadPageData()
-      showToast("success", status === "accepted" ? "Invite accepted!" : "Invite declined.")
-    } catch (e) { showToast("error", e.message || "Could not respond.") }
-    finally { setWorkingId(null) }
-  }
-
   // ── Derived data ─────────────────────────────────────────────────────────
 
   const outgoingRecipientIds = useMemo(() => new Set(outgoingRequests.map(r => r.recipient_id)), [outgoingRequests])
@@ -398,63 +238,62 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
     isPending: outgoingRecipientIds.has(p.id),
     hasIncoming: incomingRequesterIds.has(p.id),
     isFriend: acceptedFriendIds.has(p.id),
-    daysTogether: leaderboardById.get(p.id)?.daysTogether ?? 0,
-  })), [searchResults, outgoingRecipientIds, incomingRequesterIds, acceptedFriendIds, leaderboardById])
+  })), [searchResults, outgoingRecipientIds, incomingRequesterIds, acceptedFriendIds])
 
   const decoratedFriends = useMemo(() => acceptedFriends.map(f => ({
     ...f,
     daysTogether: leaderboardById.get(f.id)?.daysTogether ?? 0,
-    daysOnMountain: leaderboardById.get(f.id)?.daysOnMountain ?? 0,
     topResort: leaderboardById.get(f.id)?.topResort ?? null,
   })), [acceptedFriends, leaderboardById])
 
-  const upcomingPlans = useMemo(() => skiPlans.filter(p => !isPast(p)).sort((a,b) => new Date(a.ski_date) - new Date(b.ski_date)), [skiPlans])
-  const pastPlans     = useMemo(() => skiPlans.filter(p => isPast(p)).sort((a,b) => new Date(b.ski_date) - new Date(a.ski_date)), [skiPlans])
-
   const hasActivity = pings.received.length > 0 || pings.sent.length > 0 || datePolls.received.length > 0 || datePolls.created.length > 0
-  const hasLegacyInvites = receivedInvites.length > 0 || sentInvites.length > 0
 
   // ── Styles ────────────────────────────────────────────────────────────────
+  // Values transcribed from the mockup (PowDays Reorg Mockup.dc.html:318-351). The
+  // mockup is drawn in the default Blizzard theme, so its literals ARE this app's
+  // tokens: #38bdf8 is --color-accent, rgba(125,211,252,0.45) is --color-text-3,
+  // #04080f is --color-bg. Tokens are used rather than the hexes because the app ships
+  // five themes (index.css:157-236) and a hardcoded accent breaks four of them.
 
-  const inputStyle = {
-    width: "100%", padding: "12px 14px", borderRadius: 12, fontSize: 16,
-    border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.07)",
-    color: "white", outline: "none", boxSizing: "border-box", minHeight: 48,
+  // Shared row shape consumed by the Requests section below and by Tasks 8-10
+  // (Friends/pending-disclosure rows) as they restyle their own sections. Defined
+  // here, once, so every section shares the exact same row shape instead of
+  // re-deriving it.
+  const sectionLabelStyle = {
+    fontSize: 11, fontWeight: 800, letterSpacing: 0.8,
+    textTransform: "uppercase", color: "var(--color-text-3)",
+  }
+
+  const rowStyle = {
+    display: "flex", alignItems: "center", gap: 11,
+    background: "rgba(255,255,255,0.03)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 14, padding: "10px 12px",
+  }
+
+  const rowNameStyle = {
+    fontSize: 13, fontWeight: 800, color: "var(--color-text-1)",
+    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+  }
+
+  const rowSubStyle = {
+    fontSize: 11, color: "var(--color-text-3)",
+    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+  }
+
+  // 32x32 per the mockup. Smaller than the 44px minimum used elsewhere in this file --
+  // a deliberate, spec-confirmed mockup match. Flag at click-through if it is hard to
+  // hit on a real phone; bumping to 36-40 is a one-line change here.
+  const iconButtonBase = {
+    width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+    display: "grid", placeItems: "center",
+    cursor: "pointer", padding: 0,
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div style={{ padding: "0 0 80px", color: "var(--color-text-1)" }}>
-
-      {/* ── Top tab bar ── */}
-      {!hideTabBar && (
-        <div style={{ display: "flex", gap: 2, marginBottom: 16, background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 4 }}>
-          {[
-            { key: "leaderboard", label: "🏆 Friend Leaderboard" },
-            ...(hideCrew ? [] : [{ key: "crews", label: "🤙 Crews" }]),
-            { key: "friends",     label: "👥 Friends" },
-            { key: "community",   label: "🎿 Community" },
-          ].map(({ key, label }) => (
-            <button key={key} onClick={() => setActiveSection(key)} style={{
-              flex: 1, padding: "11px 8px", borderRadius: 9, border: "none", cursor: "pointer",
-              fontWeight: 800, fontSize: 14, minHeight: 44,
-              background: activeSection === key ? "rgba(255,255,255,0.14)" : "transparent",
-              color: activeSection === key ? "white" : "rgba(255,255,255,0.4)",
-              position: "relative",
-            }}>
-              {label}
-              {key === "friends" && incomingRequests.length > 0 && (
-                <span style={{
-                  position: "absolute", top: 6, right: 8,
-                  width: 7, height: 7, borderRadius: 999,
-                  background: "var(--color-danger)",
-                }} />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* ── Per-block load failures ──
           One row per block that failed, each with its own Retry. Persistent by
@@ -471,60 +310,6 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
           />
         ))}
 
-      {/* ── People asking to join a trip I host ──
-          Surfaced at the top level rather than inside the trip card: the host is not
-          necessarily looking at that trip when someone asks. */}
-      {tripRequests.length > 0 && (
-        <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
-          {tripRequests.map((r) => (
-            <div key={r.id} style={{
-              display: "flex", alignItems: "center", gap: 10,
-              borderRadius: 14, padding: "10px 14px",
-              background: "linear-gradient(135deg, rgba(96,165,250,0.10), rgba(139,92,246,0.10))",
-              border: "1px solid rgba(96,165,250,0.28)",
-            }}>
-              <Avatar profile={r.requester_profile} size={32} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>
-                  {getDisplayName(r.requester_profile)} asked to join
-                </div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 1 }}>
-                  {r.trip?.title || formatResortName(r.trip?.resort_key)} · {formatDate(r.trip?.ski_date)}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                <button
-                  onClick={() => handleTripRequest(r.id, "approve")}
-                  disabled={workingId === r.id}
-                  style={{
-                    padding: "7px 14px", borderRadius: 8, border: "none",
-                    background: "var(--color-accent-deep)", color: "white",
-                    fontWeight: 700, fontSize: 13, cursor: "pointer",
-                  }}
-                >
-                  Approve
-                </button>
-                {/* "Full", matching the trip's own INTERESTED section. No note field here on
-                    purpose: this inbox is a quick triage surface, and a host who wants to say
-                    something can open the trip. The message still sends, with the standard
-                    wording. */}
-                <button
-                  onClick={() => handleTripRequest(r.id, "decline")}
-                  disabled={workingId === r.id}
-                  style={{
-                    padding: "7px 12px", borderRadius: 8, border: "none",
-                    background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)",
-                    fontWeight: 700, fontSize: 13, cursor: "pointer",
-                  }}
-                >
-                  Full
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* ── Toast ── */}
       {toast && (
         <div style={{
@@ -538,432 +323,392 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
         </div>
       )}
 
-      {/* ══ LEADERBOARD TAB ══ */}
-      {activeSection === "leaderboard" && <LeaderboardPage />}
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-      {/* ══ CREWS TAB ══ */}
-      {activeSection === "crews" && <CrewGroupChat friends={acceptedFriends} />}
-
-      {/* ══ COMMUNITY TAB (Ski Buddy board) ══ */}
-      {activeSection === "community" && <SkiBuddyBoard />}
-
-      {/* ══ FRIENDS TAB ══ */}
-      {activeSection === "friends" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-          {/* 1 ── Incoming friend requests (priority surface) ── */}
-          {incomingRequests.length > 0 && (
+        {/* 1 ── Search + overflow ──
+            Mockup order puts search first. The "···" button is the only home for the
+            Date Matchmaker composer now that the quick-action strip is gone --
+            DateMatchmakerComposer is not reachable from anywhere else in the app, and
+            createDatePoll writes no notification, so losing this trigger would make
+            date polls uncreatable. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <form onSubmit={handleSearch} style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-              borderRadius: 16,
-              background: "linear-gradient(135deg, rgba(59,130,246,0.14), rgba(139,92,246,0.1))",
-              border: "1px solid rgba(96,165,250,0.28)",
-              padding: "14px 16px",
+              display: "flex", alignItems: "center", gap: 9,
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 12, padding: "10px 12px",
             }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "var(--color-accent-soft)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-                {incomingRequests.length} Friend Request{incomingRequests.length > 1 ? "s" : ""}
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {incomingRequests.map((req) => (
-                  <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <button onClick={() => setViewingUserId(req.requester_profile?.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
-                      <Avatar profile={req.requester_profile} size={38} />
-                    </button>
-                    <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(req.requester_profile?.id)}>
-                      <div style={{ fontWeight: 800, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {getDisplayName(req.requester_profile)}
-                      </div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", marginTop: 1 }}>
-                        @{req.requester_profile?.username || "—"}
-                      </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                   stroke="var(--color-text-3)" strokeWidth="2" style={{ flexShrink: 0 }}>
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+              <input
+                value={searchText}
+                onChange={e => { setSearchText(e.target.value); if (!e.target.value) setSearchResults([]) }}
+                placeholder="Search skiers"
+                aria-label="Search skiers by name or username"
+                style={{
+                  flex: 1, minWidth: 0, background: "transparent", border: "none",
+                  outline: "none", color: "var(--color-text-1)",
+                  fontSize: 16, padding: 0,
+                }}
+              />
+              {searching && (
+                <span style={{ fontSize: 12, color: "var(--color-text-3)", flexShrink: 0 }}>…</span>
+              )}
+            </div>
+            {/* Submit-on-Enter only. The mockup has no Search button, and the form's
+                native submit already covers the Enter key -- so the old explicit
+                onKeyDown handler is gone rather than duplicated. */}
+          </form>
+
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => setShowOverflow(v => !v)}
+              aria-label="More friend actions"
+              aria-expanded={showOverflow}
+              style={{
+                ...iconButtonBase,
+                width: 36, height: 36,
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                color: "var(--color-text-3)",
+                fontSize: 16, fontWeight: 900, lineHeight: 1,
+              }}
+            >
+              ···
+            </button>
+
+            {showOverflow && (
+              <>
+                {/* Full-screen click-catcher: without it the menu can only be closed
+                    by picking an item, which on touch means it sticks. */}
+                <div
+                  onClick={() => setShowOverflow(false)}
+                  style={{ position: "fixed", inset: 0, zIndex: 40 }}
+                />
+                <div style={{
+                  position: "absolute", top: 42, right: 0, zIndex: 41,
+                  minWidth: 172,
+                  background: "var(--color-surface-popover)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 12, padding: 4,
+                  boxShadow: "var(--shadow-card)",
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => { setShowOverflow(false); setShowDateComposer(true) }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8, width: "100%",
+                      padding: "10px 12px", borderRadius: 9, minHeight: 44,
+                      background: "transparent", border: "none",
+                      color: "var(--color-text-1)", fontSize: 13, fontWeight: 700,
+                      cursor: "pointer", textAlign: "left",
+                    }}
+                  >
+                    📅 Pick a Date
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* 2 ── Search results ── */}
+        {searchResults.length > 0 && (
+          <div>
+            <div style={sectionLabelStyle}>
+              Search Results
+            </div>
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+              {decoratedSearch.map((p) => (
+                <div key={p.id} style={rowStyle}>
+                  <button onClick={() => setViewingUserId(p.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+                    <Avatar profile={p} size={40} />
+                  </button>
+                  <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(p.id)}>
+                    <div style={rowNameStyle}>{getDisplayName(p)}</div>
+                    <div style={rowSubStyle}>
+                      @{p.username || "—"}
+                      {p.favorite_mountain ? ` · ${p.favorite_mountain}` : ""}
                     </div>
-                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                      <button
-                        onClick={() => handleRespondToRequest(req.id, "accepted")}
-                        disabled={workingId === req.id}
-                        style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                  </div>
+                  <div style={{ flexShrink: 0 }}>
+                    {p.isFriend ? (
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-success)", background: "rgba(134,239,172,0.12)", borderRadius: 8, padding: "5px 10px" }}>Friends</span>
+                    ) : p.hasIncoming ? (
+                      <button onClick={() => handleRespondToRequest(incomingRequests.find(r => r.requester_id === p.id)?.id, "accepted")}
+                        style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "rgba(250,204,21,0.15)", color: "var(--color-warning)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                         Accept
                       </button>
-                      <button
-                        onClick={() => handleRespondToRequest(req.id, "declined")}
-                        disabled={workingId === req.id}
-                        style={{ padding: "7px 10px", borderRadius: 8, border: "none", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 16, cursor: "pointer", lineHeight: 1 }}>
-                        ✕
+                    ) : p.isPending ? (
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.07)", borderRadius: 8, padding: "5px 10px" }}>Pending</span>
+                    ) : (
+                      <button onClick={() => handleSendRequest(p.id)} disabled={workingId === p.id}
+                        style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                        {workingId === p.id ? "…" : "+ Add"}
                       </button>
-                    </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 2 ── Quick action strip ── */}
-          <div style={{ display: "flex", gap: 8 }}>
-            {[
-              { icon: "👋", label: "Ping Crew", onClick: () => setShowPingComposer(true), accent: "rgba(59,130,246,0.8)" },
-              { icon: "📅", label: "Pick a Date", onClick: () => setShowDateComposer(true), accent: "rgba(139,92,246,0.8)" },
-            ].map(({ icon, label, onClick, accent }) => (
-              <button key={label} onClick={onClick} style={{
-                flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                padding: "13px 14px", borderRadius: 12, minHeight: 48,
-                border: `1px solid ${accent.replace("0.8", "0.3")}`,
-                background: accent.replace("0.8", "0.12"),
-                color: "white", fontWeight: 700, fontSize: 14, cursor: "pointer",
-              }}>
-                {icon} {label}
-              </button>
-            ))}
-          </div>
-
-          {/* 3 ── Friends' Ski Plans (weekend planner) ── */}
-          <WeekendPlanner days={friendsWeekend} />
-
-          {/* 4 ── Activity feed (pings + date polls) ── */}
-          {hasActivity && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-                Activity
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {pings.received.map(p => (
-                  <PingCard key={p.id} ping={p} onRespond={handleRespondToPing} responding={respondingPingId} />
-                ))}
-                {datePolls.received.map(p => (
-                  <DatePollCard key={p.id} poll={p} onVote={handleVoteOnDate} voting={votingOptionId} />
-                ))}
-                {pings.sent.map(p => <PingCard key={p.id} ping={p} />)}
-                {datePolls.created.map(p => <DatePollCard key={p.id} poll={p} />)}
-              </div>
-            </div>
-          )}
-
-          {/* 5 ── Friends list ── */}
-          <div>
-            {/* Search bar */}
-            <form onSubmit={handleSearch} style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-              <div style={{ flex: 1, position: "relative" }}>
-                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, color: "rgba(255,255,255,0.35)", pointerEvents: "none" }}>
-                  🔍
-                </span>
-                <input
-                  value={searchText}
-                  onChange={e => { setSearchText(e.target.value); if (!e.target.value) setSearchResults([]) }}
-                  onKeyDown={e => e.key === "Enter" && handleSearch(e)}
-                  placeholder="Find skiers by name or username…"
-                  style={{ ...inputStyle, paddingLeft: 38 }}
-                />
-              </div>
-              <button type="submit" disabled={searching || !searchText.trim()} style={{
-                padding: "12px 18px", borderRadius: 12, border: "none", flexShrink: 0, minHeight: 48,
-                background: searchText.trim() ? "var(--color-accent-deep)" : "rgba(255,255,255,0.07)",
-                color: searchText.trim() ? "white" : "rgba(255,255,255,0.3)",
-                fontWeight: 700, fontSize: 14, cursor: searchText.trim() ? "pointer" : "default",
-              }}>
-                {searching ? "…" : "Search"}
-              </button>
-            </form>
-
-            {/* Search results */}
-            {searchResults.length > 0 && (
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
-                  Search Results
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  {decoratedSearch.map((p) => (
-                    <div key={p.id} style={{
-                      display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
-                      borderRadius: 12, background: "rgba(255,255,255,0.04)",
-                    }}>
-                      <button onClick={() => setViewingUserId(p.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
-                        <Avatar profile={p} size={40} />
-                      </button>
-                      <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(p.id)}>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {getDisplayName(p)}
-                        </div>
-                        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 1 }}>
-                          @{p.username || "—"}
-                          {p.favorite_mountain ? ` · ${p.favorite_mountain}` : ""}
-                        </div>
-                      </div>
-                      <div style={{ flexShrink: 0 }}>
-                        {p.isFriend ? (
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-success)", background: "rgba(134,239,172,0.12)", borderRadius: 8, padding: "5px 10px" }}>Friends</span>
-                        ) : p.hasIncoming ? (
-                          <button onClick={() => handleRespondToRequest(incomingRequests.find(r => r.requester_id === p.id)?.id, "accepted")}
-                            style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "rgba(250,204,21,0.15)", color: "var(--color-warning)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                            Accept
-                          </button>
-                        ) : p.isPending ? (
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.07)", borderRadius: 8, padding: "5px 10px" }}>Pending</span>
-                        ) : (
-                          <button onClick={() => handleSendRequest(p.id)} disabled={workingId === p.id}
-                            style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                            {workingId === p.id ? "…" : "+ Add"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Filter tabs */}
-            <div style={{ display: "flex", gap: 2, marginBottom: 10, background: "rgba(255,255,255,0.05)", borderRadius: 10, padding: 3 }}>
-              {[
-                { key: "all", label: "Friends", count: decoratedFriends.length },
-                { key: "pending", label: "Pending", count: outgoingRequests.length },
-              ].map(({ key, label, count }) => (
-                <button key={key} onClick={() => setFriendsFilter(key)} style={{
-                  flex: 1, padding: "10px 8px", borderRadius: 8, border: "none", cursor: "pointer",
-                  fontWeight: 700, fontSize: 14, minHeight: 44,
-                  background: friendsFilter === key ? "rgba(255,255,255,0.13)" : "transparent",
-                  color: friendsFilter === key ? "white" : "rgba(255,255,255,0.4)",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                }}>
-                  {label}
-                  {count > 0 && (
-                    <span style={{
-                      background: friendsFilter === key ? "var(--color-accent-deep)" : "rgba(255,255,255,0.12)",
-                      color: friendsFilter === key ? "white" : "rgba(255,255,255,0.45)",
-                      borderRadius: 999, padding: "1px 7px", fontSize: 11, fontWeight: 800,
-                    }}>
-                      {count}
-                    </span>
-                  )}
-                </button>
               ))}
             </div>
+          </div>
+        )}
 
-            {/* Friends list */}
-            {friendsFilter === "all" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {loadingPage ? (
-                  <div style={{ padding: "20px 0", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>Loading…</div>
-                ) : decoratedFriends.length === 0 ? (
-                  <div style={{ padding: "28px 20px", textAlign: "center", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16 }}>
-                    <div style={{ fontSize: 32, marginBottom: 8 }}>🎿</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.5)" }}>No friends yet</div>
-                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>Search for skiers above to get started</div>
+        {/* 3 ── Requests ── */}
+        {incomingRequests.length > 0 && (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={sectionLabelStyle}>Requests</div>
+              <span style={{
+                fontSize: 11, fontWeight: 800,
+                color: "var(--color-bg)", background: "var(--color-accent)",
+                borderRadius: 999, padding: "2px 8px",
+              }}>
+                {incomingRequests.length}
+              </span>
+            </div>
+
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+              {incomingRequests.map((req) => {
+                // null while loading and after a failed count -- formatMutualFriends
+                // returns null for both, and for 0, so the row falls back to @username
+                // rather than flashing "0 mutual friends".
+                const mutual = formatMutualFriends(mutualCounts[req.requester_id])
+                const subtitle = mutual || `@${req.requester_profile?.username || "—"}`
+                return (
+                  <div key={req.id} style={rowStyle}>
+                    <button
+                      onClick={() => setViewingUserId(req.requester_profile?.id)}
+                      style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}
+                      aria-label={`View ${getDisplayName(req.requester_profile)}'s profile`}
+                    >
+                      <Avatar profile={req.requester_profile} size={38} />
+                    </button>
+
+                    <div
+                      style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
+                      onClick={() => setViewingUserId(req.requester_profile?.id)}
+                    >
+                      <div style={rowNameStyle}>{getDisplayName(req.requester_profile)}</div>
+                      <div style={rowSubStyle}>{subtitle}</div>
+                    </div>
+
+                    <button
+                      onClick={() => handleRespondToRequest(req.id, "accepted")}
+                      disabled={workingId === req.id}
+                      aria-label={`Accept ${getDisplayName(req.requester_profile)}'s friend request`}
+                      style={{
+                        ...iconButtonBase,
+                        background: "var(--gradient-primary)",
+                        border: "none", color: "var(--color-bg)",
+                        fontSize: 15, fontWeight: 900,
+                        opacity: workingId === req.id ? 0.5 : 1,
+                      }}
+                    >
+                      ✓
+                    </button>
+
+                    <button
+                      onClick={() => handleRespondToRequest(req.id, "declined")}
+                      disabled={workingId === req.id}
+                      aria-label={`Decline ${getDisplayName(req.requester_profile)}'s friend request`}
+                      style={{
+                        ...iconButtonBase,
+                        background: "transparent",
+                        border: "1px solid rgba(255,255,255,0.14)",
+                        color: "var(--color-text-3)",
+                        fontSize: 15,
+                        opacity: workingId === req.id ? 0.5 : 1,
+                      }}
+                    >
+                      ✕
+                    </button>
                   </div>
-                ) : (
-                  decoratedFriends.map((friend) => (
-                    <div key={friend.id}>
-                      <div style={{
-                        display: "flex", alignItems: "center", gap: 12, padding: "12px 12px",
-                        borderRadius: 12, background: "rgba(255,255,255,0.04)",
-                        border: "1px solid transparent", minHeight: 64,
-                      }}>
-                        <button onClick={() => setViewingUserId(friend.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
-                          <Avatar profile={friend} size={42} />
-                        </button>
-                        <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(friend.id)}>
-                          <div style={{ fontWeight: 800, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {getDisplayName(friend)}
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2, flexWrap: "wrap" }}>
-                            {friend.username && (
-                              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>@{friend.username}</span>
-                            )}
-                            {friend.daysTogether > 0 && (
-                              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-accent-soft)", background: "rgba(96,165,250,0.12)", borderRadius: 6, padding: "2px 7px" }}>
-                                {friend.daysTogether} shared day{friend.daysTogether !== 1 ? "s" : ""}
-                              </span>
-                            )}
-                            {friend.topResort && (
-                              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
-                                {getResortEmoji(friend.topResort)} {formatResortName(friend.topResort)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {onMessageFriend && (
-                          <button
-                            onClick={() => onMessageFriend(friend)}
-                            title="Message"
-                            style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(96,165,250,0.25)", background: "rgba(37,99,235,0.12)", color: "var(--color-accent-soft)", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, minHeight: 40 }}
-                          >
-                            💬
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setShowInviteId(showInviteId === friend.id ? null : friend.id)}
-                          style={{
-                            padding: "10px 14px", borderRadius: 10, border: "none", flexShrink: 0, minHeight: 40,
-                            background: showInviteId === friend.id ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.07)",
-                            color: showInviteId === friend.id ? "var(--color-accent-soft)" : "rgba(255,255,255,0.5)",
-                            fontWeight: 700, fontSize: 13, cursor: "pointer",
-                          }}>
-                          {showInviteId === friend.id ? "✕" : "Invite"}
-                        </button>
-                      </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
-                      {/* Inline invite composer */}
-                      {showInviteId === friend.id && (
-                        <div style={{
-                          margin: "2px 0 4px", borderRadius: "0 0 14px 14px",
-                          padding: "14px 14px 16px",
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          borderTop: "none",
-                        }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: 10 }}>
-                            Invite {getDisplayName(friend)} to ski
-                          </div>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                            <input value={inviteForm.resort_key} onChange={e => setInviteForm(f => ({ ...f, resort_key: e.target.value }))}
-                              placeholder="Resort (e.g. vail)" style={{ ...inputStyle, fontSize: 13, padding: "8px 10px" }} />
-                            <input type="date" value={inviteForm.ski_date} onChange={e => setInviteForm(f => ({ ...f, ski_date: e.target.value }))}
-                              style={{ ...inputStyle, fontSize: 13, padding: "8px 10px" }} />
-                          </div>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                            <input value={inviteForm.departure_time} onChange={e => setInviteForm(f => ({ ...f, departure_time: e.target.value }))}
-                              placeholder="Departure time" style={{ ...inputStyle, fontSize: 13, padding: "8px 10px" }} />
-                            <input type="number" min="0" value={inviteForm.seats_available} onChange={e => setInviteForm(f => ({ ...f, seats_available: e.target.value }))}
-                              placeholder="Extra seats" style={{ ...inputStyle, fontSize: 13, padding: "8px 10px" }} />
-                          </div>
-                          <textarea value={inviteForm.message} onChange={e => setInviteForm(f => ({ ...f, message: e.target.value }))}
-                            placeholder="Add a note…" rows={2}
-                            style={{ ...inputStyle, fontSize: 13, padding: "8px 10px", resize: "none", marginBottom: 8 }} />
-                          <button onClick={() => handleSendCrewInvite(friend.id)} disabled={workingId === friend.id}
-                            style={{ width: "100%", padding: "9px", borderRadius: 10, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                            {workingId === friend.id ? "Sending…" : "Send Invite"}
-                          </button>
+        {/* 4 ── Friends ── */}
+        <div>
+          <div style={sectionLabelStyle}>
+            Friends{decoratedFriends.length > 0 ? ` · ${decoratedFriends.length}` : ""}
+          </div>
+
+          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+            {loadingPage ? (
+              <div style={{ padding: "20px 0", textAlign: "center", color: "var(--color-text-3)", fontSize: 13 }}>
+                Loading…
+              </div>
+            ) : decoratedFriends.length === 0 ? (
+              <div style={{
+                padding: "28px 20px", textAlign: "center",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 14,
+              }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>🎿</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-3)" }}>No friends yet</div>
+                <div style={{ fontSize: 12, color: "var(--color-text-3)", marginTop: 4 }}>
+                  Search for skiers above to get started
+                </div>
+              </div>
+            ) : (
+              decoratedFriends.map((friend) => {
+                const subtitle = formatFriendSubtitle(friend)
+                const hasBadges = friend.daysTogether > 0 || friend.topResort
+                return (
+                  <div key={friend.id} style={rowStyle}>
+                    <button
+                      onClick={() => setViewingUserId(friend.id)}
+                      style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}
+                      aria-label={`View ${getDisplayName(friend)}'s profile`}
+                    >
+                      <Avatar profile={friend} size={38} />
+                    </button>
+
+                    <div
+                      style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
+                      onClick={() => setViewingUserId(friend.id)}
+                    >
+                      <div style={rowNameStyle}>{getDisplayName(friend)}</div>
+                      {subtitle && <div style={rowSubStyle}>{subtitle}</div>}
+
+                      {/* Secondary badges -- a deliberate deviation from the mockup
+                          (spec decision 5). Shared ski days and the most-skied-together
+                          resort appear nowhere else in the app, and they only render
+                          when there is something to say, so a friend with no shared
+                          days gets exactly the mockup's two-line row. */}
+                      {hasBadges && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, flexWrap: "wrap" }}>
+                          {friend.daysTogether > 0 && (
+                            <span style={{
+                              fontSize: 10, fontWeight: 700,
+                              color: "var(--color-accent)",
+                              background: "rgba(56,189,248,0.1)",
+                              borderRadius: 6, padding: "2px 6px",
+                            }}>
+                              {friend.daysTogether} shared day{friend.daysTogether !== 1 ? "s" : ""}
+                            </span>
+                          )}
+                          {friend.topResort && (
+                            <span style={{ fontSize: 10, color: "var(--color-text-3)" }}>
+                              {getResortEmoji(friend.topResort)} {formatResortName(friend.topResort)}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
-                  ))
-                )}
-              </div>
-            )}
 
-            {/* Pending outgoing */}
-            {friendsFilter === "pending" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {outgoingRequests.length === 0 ? (
-                  <div style={{ padding: "24px 20px", textAlign: "center", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
-                    No pending requests.
-                  </div>
-                ) : (
-                  outgoingRequests.map((req) => (
-                    <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 12px", borderRadius: 12, background: "rgba(255,255,255,0.04)", minHeight: 64 }}>
-                      <Avatar profile={req.recipient_profile} size={42} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {getDisplayName(req.recipient_profile)}
-                        </div>
-                        <div style={{ fontSize: 12, color: "rgba(250,204,21,0.7)", marginTop: 2, fontWeight: 600 }}>Pending</div>
-                      </div>
-                      <button onClick={() => handleCancelOutgoing(req.id)} disabled={workingId === req.id}
-                        style={{ padding: "10px 14px", borderRadius: 10, border: "none", background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, minHeight: 40 }}>
-                        {workingId === req.id ? "…" : "Cancel"}
+                    {onMessageFriend && (
+                      <button
+                        onClick={() => onMessageFriend(friend)}
+                        aria-label={`Message ${getDisplayName(friend)}`}
+                        style={{
+                          ...iconButtonBase,
+                          background: "rgba(56,189,248,0.1)",
+                          border: "1px solid rgba(56,189,248,0.25)",
+                          color: "var(--color-accent)",
+                        }}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" strokeWidth="2">
+                          <path d="M21 11.5a8.4 8.4 0 0 1-11.7 7.7L3 21l1.8-6.3A8.4 8.4 0 1 1 21 11.5Z" />
+                        </svg>
                       </button>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
+
+        {/* 5 ── Sent requests (secondary) ──
+            A disclosure, not a tab. As a pill-row tab this had the same visual weight
+            as the whole friends list; a request you sent is something you check
+            occasionally. Same chevron pattern the legacy-invites section used. */}
+        {outgoingRequests.length > 0 && (
+          <div>
+            <button
+              onClick={() => setShowPending(v => !v)}
+              aria-expanded={showPending}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "8px 0", minHeight: 40,
+                background: "none", border: "none", cursor: "pointer",
+                color: "var(--color-text-3)", fontWeight: 700, fontSize: 12,
+              }}
+            >
+              <span style={{
+                display: "inline-block",
+                transform: showPending ? "rotate(90deg)" : "none",
+                transition: "transform 0.15s",
+              }}>
+                ›
+              </span>
+              {outgoingRequests.length} sent request{outgoingRequests.length > 1 ? "s" : ""} pending
+            </button>
+
+            {showPending && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6 }}>
+                {outgoingRequests.map((req) => (
+                  <div key={req.id} style={rowStyle}>
+                    <Avatar profile={req.recipient_profile} size={32} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={rowNameStyle}>{getDisplayName(req.recipient_profile)}</div>
+                      <div style={{ ...rowSubStyle, color: "var(--color-warning)" }}>Pending</div>
                     </div>
-                  ))
-                )}
+                    <button
+                      onClick={() => handleCancelOutgoing(req.id)}
+                      disabled={workingId === req.id}
+                      style={{
+                        padding: "8px 12px", borderRadius: 9, minHeight: 36, flexShrink: 0,
+                        background: "transparent",
+                        border: "1px solid rgba(255,255,255,0.14)",
+                        color: "var(--color-text-3)",
+                        fontWeight: 700, fontSize: 12, cursor: "pointer",
+                      }}
+                    >
+                      {workingId === req.id ? "…" : "Cancel"}
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
+        )}
 
-          {/* 6 ── Upcoming Ski Plans ── */}
-          {(upcomingPlans.length > 0 || !loadingPage) && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-                My Ski Plans
-              </div>
-              {upcomingPlans.length === 0 ? (
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", padding: "12px 0" }}>No upcoming plans yet.</div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {upcomingPlans.map((plan) => (
-                    <div key={plan.id} style={{
-                      display: "flex", alignItems: "center", gap: 10, padding: "11px 14px",
-                      borderRadius: 12,
-                      background: "linear-gradient(135deg, rgba(37,99,235,0.12), rgba(8,145,178,0.08))",
-                      border: "1px solid rgba(96,165,250,0.15)",
-                    }}>
-                      <span style={{ fontSize: 22, flexShrink: 0 }}>{getResortEmoji(plan.resort_key)}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 800, fontSize: 14, color: "white" }}>{formatResortName(plan.resort_key)}</div>
-                        <div style={{ fontSize: 12, color: "var(--color-banner-highlight)", marginTop: 1 }}>{formatDate(plan.ski_date)}</div>
-                      </div>
-                      {plan.note && (
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{plan.note}</div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {pastPlans.length > 0 && (
-                <button onClick={() => setShowPastPlans(v => !v)}
-                  style={{ marginTop: 8, padding: "6px 12px", borderRadius: 8, border: "none", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                  {showPastPlans ? "Hide" : `Show ${pastPlans.length} past plan${pastPlans.length > 1 ? "s" : ""}`}
-                </button>
-              )}
-              {showPastPlans && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
-                  {pastPlans.map((plan) => (
-                    <div key={plan.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                      <span style={{ fontSize: 16 }}>{getResortEmoji(plan.resort_key)}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 13, color: "rgba(255,255,255,0.7)" }}>{formatResortName(plan.resort_key)}</div>
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>{formatDate(plan.ski_date)}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+        {/* 6 ── Activity (pings + date polls) ──
+            Kept deliberately. createSkiPing and createDatePoll never call notify(), so
+            no notification is ever written for either -- this section is the only place
+            in the app a recipient can find or answer one. The mockup does not show it
+            because the mockup does not know it exists. */}
+        {hasActivity && (
+          <div>
+            <div style={sectionLabelStyle}>Activity</div>
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+              {pings.received.map(p => (
+                <PingCard key={p.id} ping={p} onRespond={handleRespondToPing} responding={respondingPingId} />
+              ))}
+              {datePolls.received.map(p => (
+                <DatePollCard key={p.id} poll={p} onVote={handleVoteOnDate} voting={votingOptionId} />
+              ))}
+              {pings.sent.map(p => <PingCard key={p.id} ping={p} />)}
+              {datePolls.created.map(p => <DatePollCard key={p.id} poll={p} />)}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* 7 ── Legacy crew invites (collapsed by default) ── */}
-          {hasLegacyInvites && (
-            <div>
-              <button onClick={() => setShowLegacyInvites(v => !v)} style={{
-                display: "flex", alignItems: "center", gap: 6, padding: "8px 0",
-                background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontWeight: 700, fontSize: 12,
-              }}>
-                <span style={{ transform: showLegacyInvites ? "rotate(90deg)" : "none", display: "inline-block", transition: "transform 0.15s" }}>›</span>
-                Ski Invites ({receivedInvites.filter(i => i.status === "pending").length} pending)
-              </button>
-              {showLegacyInvites && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6 }}>
-                  {receivedInvites.map((invite) => (
-                    <CrewInviteCard
-                      key={invite.id}
-                      invite={invite}
-                      onAccept={(id) => handleRespondToCrewInvite(id, "accepted")}
-                      onDecline={(id) => handleRespondToCrewInvite(id, "declined")}
-                      working={workingId}
-                    />
-                  ))}
-                  {sentInvites.map((invite) => (
-                    <div key={invite.id} style={{ padding: "10px 14px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>
-                        Invited {getDisplayName(invite.invitee_profile)} · {formatResortName(invite.resort_key)} · {formatDate(invite.ski_date)}
-                      </div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 3, fontWeight: 600 }}>
-                        Status: {invite.status}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-        </div>
-      )}
+      </div>
 
       {/* ── Modals ── */}
-      {showPingComposer && (
-        <SkiPingComposer
-          friends={acceptedFriends}
-          onClose={() => setShowPingComposer(false)}
-          onSent={async () => setPings(await getMyPings().catch(() => ({ sent: [], received: [] })))}
-        />
-      )}
       {showDateComposer && (
         <DateMatchmakerComposer
           friends={acceptedFriends}
