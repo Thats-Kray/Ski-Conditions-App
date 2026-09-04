@@ -1441,7 +1441,7 @@ single **1,184 KB** chunk with nothing lazy-loaded.
 
 ---
 
-### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab in progress — Crews, Board, and Leaderboard slices shipped, Feed slices A/B/C1 shipped (C2 next), Friends slice after that; Plans/Profile not yet started)**
+### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab in progress — Crews, Board, and Leaderboard slices shipped, all four Feed slices (A/B/C1/C2) shipped, merged to `main` locally, not yet pushed; Friends slice next; Plans/Profile not yet started)**
 
 **Today List View slice: ✅ SHIPPED 2026-08-27, live on `main`** (commit `5062d98`, deploy
 verified by grepping the live bundle for `"Best Bet Today"`/`"Ski here today"` —
@@ -1929,24 +1929,83 @@ tags/photos survive; confirm self-untag works; GPS recap path) is the real verif
 friends-see/non-friends-don't privacy property and the tag-wipe guard — no browser tooling
 exists in this environment, so nothing here has been rendered and observed by an agent.
 
+**Feed sub-tab slice C2 (next-login nudge): ✅ SHIPPED 2026-09-03, merged to `main` locally
+(fast-forward, commits `4b58c6c..f2404a4`), NOT yet pushed** — Kyle's click-through is the
+gating step before push, since `main` auto-deploys live with no staging step. Spec at
+`docs/superpowers/specs/2026-09-03-crew-tab-feed-slice-c2-design.md`, plan at
+`docs/superpowers/plans/2026-09-03-crew-tab-feed-slice-c2.md`, built in worktree
+`crew-tab-feed-slice-c2` via subagent-driven-development: 6 tasks (smaller than C1's 11 —
+no migration, no new RLS, no new tables; reuses C1's `SkiDayDetailsForm`/`saveSkiDayDetails`
+directly) + a whole-branch final-review fix wave.
+This is the fourth and final piece of the Feed decomposition (Feed-A restyle → Feed-B comments
+→ Feed-C1 title/photos/tagging → Feed-C2, this slice). Kyle asked, mid-session, to "start
+planning out the remaining activities" while he click-tested C1 — the resulting ROADMAP update
+plus this slice's full brainstorm → spec → plan → build cycle all happened without further
+live back-and-forth, using decisions Kyle had already made earlier in the same session (banner
+style, check-in-gap-fill) plus sound defaults for the decisions that were still open, presented
+for his review rather than blocking on a live Q&A he wasn't available for.
+Shipped: a dismissible banner on the Today tab (matching `OffseasonBanner`'s pattern and
+visual tier) that offers to finish the single most recent ski day, within a **7-day window**,
+if it has **no title AND no photos AND no tags** (all three, not any one) — a new
+`getRecentIncompleteSession()` query (`socialApi.js`), a thin modal (`NudgeDetailsModal.jsx`)
+wrapping Feed-C1's `SkiDayDetailsForm` seeded empty, and the banner itself
+(`NudgeBanner.jsx`). Completing the prompt for a day that was logged purely via the "Arrived"
+check-in button (which the migration-039 trigger writes straight to `ski_sessions`, never to
+`activity_feed`) also backfills the missing `activity_feed` row via the existing
+`logActivityOnce()` — closing a real, separate gap: those days have been invisible to the Feed
+entirely, probably the single most common way people actually end a ski day.
+**Five spec corrections caught by the plan-writing pass (OpusPlan workflow) before any code was
+written:** date-cutoff math must use local-date-part arithmetic via `localDateKey()`, never
+`toISOString()` or millisecond subtraction (both are timezone/DST-unsafe — the plan's own test
+suite pins the exact Denver spring-forward boundary); the spec's proposed `activity_feed`-exists
+flag was dropped in favor of `logActivityOnce`'s own tighter `(actor_id, type, subject_id)`
+dedupe check, since the looser flag could report "already has a row" and skip a backfill that
+was still needed; the hook point is the component-local `useEffect` pattern (`AddToHomeScreenNudge`'s
+shape), NOT `loadHeaderUser()`, which is the `onAuthStateChange` handler and re-fires roughly
+hourly on token refresh; `initialTitle=""` (not omitted) is load-bearing for `SkiDayDetailsForm`
+to show its title section at all; and the session query needs a `created_at` tiebreak since
+same-day duplicate `ski_sessions` rows are real (documented in migration 039).
+**The whole-branch review found one genuinely serious bug, invisible to every per-task
+review because it spans two tasks' composition:** `NudgeDetailsModal` seeds the form
+completely empty by construction, and `SkiDayDetailsForm`'s Save button has no dirty-check —
+so tapping "Save Details" without touching anything would write nothing meaningful to
+`ski_sessions` but still run the `activity_feed` backfill **unconditionally**, permanently
+publishing a **blank, contentless card to the user's Feed** with no way to ever fix it
+(`logActivityOnce` dedupes forever on that key). Fixed by gating the backfill on the
+already-tested `isSessionUntouched()` helper applied to the actual save diff, while leaving the
+banner-dismissal call ungated (an empty save should still count as "handled," just not
+published). Re-review independently traced all six empty/real-save permutations and found no
+case where a real save gets wrongly suppressed.
+**Two facts independently verified against production, not just source, since `ski_sessions`
+has no migration file (live-schema-only, like `daily_plans`):** all 7 columns the new query
+selects genuinely exist including `created_at` (a missing column here would have 400'd and
+silently made the banner never appear for anyone — the same failure class that broke the
+entire Feed sub-tab once before, pre-Feed-B); and `activity_feed`'s INSERT policy
+(`actor_id = auth.uid()`) genuinely permits the backfill.
+**Two accepted limitations, recorded not fixed:** the modal's empty seed means a day tagged on
+a second device between the banner's fetch and the save, followed by the user touching the tag
+picker on the first device, would wipe those tags (needs two devices in one page view; a
+pre-fetch to close it would cost two extra queries on every open) — documented in the
+component's own header; dismissal is `localStorage`-only, so it's device-local, which is the
+accepted tradeoff for not adding a `notifications` table row.
+**One minor, deferred:** `isWithinNudgeWindow` (one of Task 1's pure helpers) has zero
+production consumers — the query does its own `.gte()` filtering — but 6 of the 16 new tests
+cover it; not removed, to avoid the pinned "+16" test count silently changing.
+Final state: 207 tests passing (was 191, +16), lint 89 problems in a fresh worktree (unchanged
+from baseline), build clean.
+**Not yet click-tested by Kyle** — same standing gap as every slice this session. The
+whole-branch review's 9-item checklist is the actual verification; the highest-value item is
+confirming a purely-check-in-logged day is genuinely invisible on Crew → Feed beforehand and
+genuinely appears after completing the nudge for it — that's the property this slice mainly
+exists to establish, and no source review substitutes for seeing it happen.
+
 **Remaining activities under TASK 22.0, in the order Kyle set for Crew tab (Crews → Board →
 Leaderboard → Feed → Friends), plus the two pages after it:**
 
-1. **Feed-C2 — next-login nudge for incomplete recent activity.** Design groundwork already
-   exists from the original Feed decomposition brainstorm (before the C1/C2 split): Kyle chose a
-   **dismissible banner/card** (not a blocking modal), matching the existing `OffseasonBanner`
-   pattern, and confirmed it should **also cover days logged via the simple "Arrived" check-in
-   button** — which today creates a bare `ski_sessions` row via the migration-039 trigger with
-   **no accompanying `activity_feed` row at all**, so those days are currently invisible to the
-   Feed entirely. Completing the prompt for one of those days would need to create the missing
-   `activity_feed` row as part of the fix — a real, if small, behavior change to that path, not
-   just a new banner. Open decisions still needed: the exact "incomplete" definition (no title
-   AND no photos AND no tags, vs. any one missing), a recency window so old sessions stop being
-   nudged, and per-session dismissal persistence (`localStorage`, matching `OffseasonBanner`).
-2. **Friends sub-tab of Crew** — the last of the original 5-way Crew-tab split. Not yet gap-audited
-   against the mockup's Friends screen.
-3. **Plans page** — not yet started, no gap audit yet.
-4. **Profile page** — not yet started, no gap audit yet.
+1. **Friends sub-tab of Crew** — the last of the original 5-way Crew-tab split. Not yet
+   gap-audited against the mockup's Friends screen.
+2. **Plans page** — not yet started, no gap audit yet.
+3. **Profile page** — not yet started, no gap audit yet.
 
 Group-level Feed activity cards (a whole crew skiing together as one card) remain backlogged,
 not yet scheduled into this sequence.
