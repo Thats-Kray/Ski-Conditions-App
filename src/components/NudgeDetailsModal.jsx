@@ -1,6 +1,7 @@
 import { useState } from "react"
 import SkiDayDetailsForm from "./SkiDayDetailsForm"
 import { saveSkiDayDetails, logActivityOnce } from "../lib/socialApi"
+import { isSessionUntouched } from "../lib/skiDayNudge"
 import { resortName } from "../lib/resorts"
 import { formatDate } from "../lib/format"
 
@@ -30,7 +31,7 @@ import { formatDate } from "../lib/format"
  * then skips — the banner would promise "add a title" and offer no title field, with no
  * error anywhere. The empty string is load-bearing.
  *
- * WHY logActivityOnce IS CALLED UNCONDITIONALLY
+ * WHY logActivityOnce IS CALLED, AND THE ONE THING IT IS GATED ON
  *
  * Migration 039's log_session_on_arrival() trigger inserts a bare ski_sessions row and
  * never touches activity_feed, so a day logged by tapping "Arrived" on a plan is invisible
@@ -39,6 +40,10 @@ import { formatDate } from "../lib/format"
  * itself, on the tighter (actor_id, type, subject_id) key that actually decides, and
  * returns early when a row exists. A looser pre-check would only create the risk of
  * skipping a backfill that was still needed.
+ *
+ * The ONE gate is on the save having written something — see handleSave. That is not a
+ * duplicate of logActivityOnce's dedupe (which asks "was this day already published?");
+ * it asks "is there anything worth publishing?", which nothing else checks.
  *
  * It also cannot throw — its whole body is wrapped in try/catch (socialApi.js:3896-3898) —
  * so it is awaited outside the details save's own error handling only in the sense that a
@@ -61,14 +66,26 @@ export default function NudgeDetailsModal({ session, onClose, onSaved }) {
 
       // Backfill for the check-in-only path. Deliberately AFTER the details save: if the
       // save failed there is nothing worth publishing to the Feed yet.
-      await logActivityOnce("ski_session", {
-        subjectId:   session.id,
-        subjectType: "ski_sessions",
-        metadata:    {
-          resort_name:   session.resort_name,
-          is_powder_day: session.is_powder_day,
-        },
-      })
+      //
+      // Gated on the save having actually written something. SkiDayDetailsForm's Save
+      // button is disabled only while `saving` — there is no "nothing changed" guard — so
+      // opening the nudge and tapping "Save Details" on the untouched form it seeds is a
+      // reachable path that writes NOTHING (title "" becomes null, both arrays empty,
+      // tagUserIds undefined and skipped). Publishing a feed row there would put a
+      // permanent, contentless card in front of the user's friends for a day they
+      // declined to fill in, and it is irreversible: logActivityOnce dedupes forever and
+      // the banner is dismissed on the same path. "Skip" is the intended decline; this
+      // makes an empty Save behave the same way.
+      if (!isSessionUntouched({ title: diff?.title, photos: diff?.addedPhotoFiles, tags: diff?.tagUserIds })) {
+        await logActivityOnce("ski_session", {
+          subjectId:   session.id,
+          subjectType: "ski_sessions",
+          metadata:    {
+            resort_name:   session.resort_name,
+            is_powder_day: session.is_powder_day,
+          },
+        })
+      }
 
       onSaved(session.id)
     } catch (err) {
