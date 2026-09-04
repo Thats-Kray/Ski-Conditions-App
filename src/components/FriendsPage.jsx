@@ -58,6 +58,7 @@ export default function FriendsPage({ onMessageFriend = null }) {
   const [pings, setPings]                     = useState({ sent: [], received: [] })
   const [respondingPingId, setRespondingPingId] = useState(null)
   const [showDateComposer, setShowDateComposer] = useState(false)
+  const [showOverflow, setShowOverflow]       = useState(false)
   const [datePolls, setDatePolls]             = useState({ created: [], received: [] })
   const [votingOptionId, setVotingOptionId]   = useState(null)
   const [viewingUserId, setViewingUserId]         = useState(null)
@@ -208,11 +209,46 @@ export default function FriendsPage({ onMessageFriend = null }) {
   const hasActivity = pings.received.length > 0 || pings.sent.length > 0 || datePolls.received.length > 0 || datePolls.created.length > 0
 
   // ── Styles ────────────────────────────────────────────────────────────────
+  // Values transcribed from the mockup (PowDays Reorg Mockup.dc.html:318-351). The
+  // mockup is drawn in the default Blizzard theme, so its literals ARE this app's
+  // tokens: #38bdf8 is --color-accent, rgba(125,211,252,0.45) is --color-text-3,
+  // #04080f is --color-bg. Tokens are used rather than the hexes because the app ships
+  // five themes (index.css:157-236) and a hardcoded accent breaks four of them.
 
-  const inputStyle = {
-    width: "100%", padding: "12px 14px", borderRadius: 12, fontSize: 16,
-    border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.07)",
-    color: "white", outline: "none", boxSizing: "border-box", minHeight: 48,
+  // Not yet consumed in this task -- Tasks 7-10 (Requests/Friends/pending-disclosure
+  // rows) wire these in as they restyle their own sections. Defined here, once, so
+  // every later task shares the exact same row shape instead of re-deriving it.
+  /* eslint-disable no-unused-vars */
+  const sectionLabelStyle = {
+    fontSize: 11, fontWeight: 800, letterSpacing: 0.8,
+    textTransform: "uppercase", color: "var(--color-text-3)",
+  }
+
+  const rowStyle = {
+    display: "flex", alignItems: "center", gap: 11,
+    background: "rgba(255,255,255,0.03)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 14, padding: "10px 12px",
+  }
+
+  const rowNameStyle = {
+    fontSize: 13, fontWeight: 800, color: "var(--color-text-1)",
+    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+  }
+
+  const rowSubStyle = {
+    fontSize: 11, color: "var(--color-text-3)",
+    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+  }
+  /* eslint-enable no-unused-vars */
+
+  // 32x32 per the mockup. Smaller than the 44px minimum used elsewhere in this file --
+  // a deliberate, spec-confirmed mockup match. Flag at click-through if it is hard to
+  // hit on a real phone; bumping to 36-40 is a one-line change here.
+  const iconButtonBase = {
+    width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+    display: "grid", placeItems: "center",
+    cursor: "pointer", padding: 0,
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -250,7 +286,146 @@ export default function FriendsPage({ onMessageFriend = null }) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-        {/* 1 ── Incoming friend requests (priority surface) ── */}
+        {/* 1 ── Search + overflow ──
+            Mockup order puts search first. The "···" button is the only home for the
+            Date Matchmaker composer now that the quick-action strip is gone --
+            DateMatchmakerComposer is not reachable from anywhere else in the app, and
+            createDatePoll writes no notification, so losing this trigger would make
+            date polls uncreatable. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <form onSubmit={handleSearch} style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 9,
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 12, padding: "10px 12px",
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                   stroke="var(--color-text-3)" strokeWidth="2" style={{ flexShrink: 0 }}>
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+              <input
+                value={searchText}
+                onChange={e => { setSearchText(e.target.value); if (!e.target.value) setSearchResults([]) }}
+                placeholder="Search skiers"
+                aria-label="Search skiers by name or username"
+                style={{
+                  flex: 1, minWidth: 0, background: "transparent", border: "none",
+                  outline: "none", color: "var(--color-text-1)",
+                  fontSize: 16, padding: 0,
+                }}
+              />
+              {searching && (
+                <span style={{ fontSize: 12, color: "var(--color-text-3)", flexShrink: 0 }}>…</span>
+              )}
+            </div>
+            {/* Submit-on-Enter only. The mockup has no Search button, and the form's
+                native submit already covers the Enter key -- so the old explicit
+                onKeyDown handler is gone rather than duplicated. */}
+          </form>
+
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => setShowOverflow(v => !v)}
+              aria-label="More friend actions"
+              aria-expanded={showOverflow}
+              style={{
+                ...iconButtonBase,
+                width: 36, height: 36,
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                color: "var(--color-text-3)",
+                fontSize: 16, fontWeight: 900, lineHeight: 1,
+              }}
+            >
+              ···
+            </button>
+
+            {showOverflow && (
+              <>
+                {/* Full-screen click-catcher: without it the menu can only be closed
+                    by picking an item, which on touch means it sticks. */}
+                <div
+                  onClick={() => setShowOverflow(false)}
+                  style={{ position: "fixed", inset: 0, zIndex: 40 }}
+                />
+                <div style={{
+                  position: "absolute", top: 42, right: 0, zIndex: 41,
+                  minWidth: 172,
+                  background: "var(--color-surface-popover)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 12, padding: 4,
+                  boxShadow: "var(--shadow-card)",
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => { setShowOverflow(false); setShowDateComposer(true) }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8, width: "100%",
+                      padding: "10px 12px", borderRadius: 9, minHeight: 44,
+                      background: "transparent", border: "none",
+                      color: "var(--color-text-1)", fontSize: 13, fontWeight: 700,
+                      cursor: "pointer", textAlign: "left",
+                    }}
+                  >
+                    📅 Pick a Date
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* 2 ── Search results ── */}
+        {searchResults.length > 0 && (
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
+              Search Results
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {decoratedSearch.map((p) => (
+                <div key={p.id} style={{
+                  display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
+                  borderRadius: 12, background: "rgba(255,255,255,0.04)",
+                }}>
+                  <button onClick={() => setViewingUserId(p.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+                    <Avatar profile={p} size={40} />
+                  </button>
+                  <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(p.id)}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {getDisplayName(p)}
+                    </div>
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 1 }}>
+                      @{p.username || "—"}
+                      {p.favorite_mountain ? ` · ${p.favorite_mountain}` : ""}
+                    </div>
+                  </div>
+                  <div style={{ flexShrink: 0 }}>
+                    {p.isFriend ? (
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-success)", background: "rgba(134,239,172,0.12)", borderRadius: 8, padding: "5px 10px" }}>Friends</span>
+                    ) : p.hasIncoming ? (
+                      <button onClick={() => handleRespondToRequest(incomingRequests.find(r => r.requester_id === p.id)?.id, "accepted")}
+                        style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "rgba(250,204,21,0.15)", color: "var(--color-warning)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                        Accept
+                      </button>
+                    ) : p.isPending ? (
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.07)", borderRadius: 8, padding: "5px 10px" }}>Pending</span>
+                    ) : (
+                      <button onClick={() => handleSendRequest(p.id)} disabled={workingId === p.id}
+                        style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                        {workingId === p.id ? "…" : "+ Add"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 3 ── Incoming friend requests (priority surface) ── */}
         {incomingRequests.length > 0 && (
           <div style={{
             borderRadius: 16,
@@ -295,23 +470,6 @@ export default function FriendsPage({ onMessageFriend = null }) {
           </div>
         )}
 
-        {/* 2 ── Quick action strip ── */}
-        <div style={{ display: "flex", gap: 8 }}>
-          {[
-            { icon: "📅", label: "Pick a Date", onClick: () => setShowDateComposer(true), accent: "rgba(139,92,246,0.8)" },
-          ].map(({ icon, label, onClick, accent }) => (
-            <button key={label} onClick={onClick} style={{
-              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-              padding: "13px 14px", borderRadius: 12, minHeight: 48,
-              border: `1px solid ${accent.replace("0.8", "0.3")}`,
-              background: accent.replace("0.8", "0.12"),
-              color: "white", fontWeight: 700, fontSize: 14, cursor: "pointer",
-            }}>
-              {icon} {label}
-            </button>
-          ))}
-        </div>
-
         {/* 4 ── Activity feed (pings + date polls) ── */}
         {hasActivity && (
           <div>
@@ -333,77 +491,6 @@ export default function FriendsPage({ onMessageFriend = null }) {
 
         {/* 5 ── Friends list ── */}
         <div>
-          {/* Search bar */}
-          <form onSubmit={handleSearch} style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-            <div style={{ flex: 1, position: "relative" }}>
-              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, color: "rgba(255,255,255,0.35)", pointerEvents: "none" }}>
-                🔍
-              </span>
-              <input
-                value={searchText}
-                onChange={e => { setSearchText(e.target.value); if (!e.target.value) setSearchResults([]) }}
-                onKeyDown={e => e.key === "Enter" && handleSearch(e)}
-                placeholder="Find skiers by name or username…"
-                style={{ ...inputStyle, paddingLeft: 38 }}
-              />
-            </div>
-            <button type="submit" disabled={searching || !searchText.trim()} style={{
-              padding: "12px 18px", borderRadius: 12, border: "none", flexShrink: 0, minHeight: 48,
-              background: searchText.trim() ? "var(--color-accent-deep)" : "rgba(255,255,255,0.07)",
-              color: searchText.trim() ? "white" : "rgba(255,255,255,0.3)",
-              fontWeight: 700, fontSize: 14, cursor: searchText.trim() ? "pointer" : "default",
-            }}>
-              {searching ? "…" : "Search"}
-            </button>
-          </form>
-
-          {/* Search results */}
-          {searchResults.length > 0 && (
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
-                Search Results
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {decoratedSearch.map((p) => (
-                  <div key={p.id} style={{
-                    display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
-                    borderRadius: 12, background: "rgba(255,255,255,0.04)",
-                  }}>
-                    <button onClick={() => setViewingUserId(p.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
-                      <Avatar profile={p} size={40} />
-                    </button>
-                    <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(p.id)}>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {getDisplayName(p)}
-                      </div>
-                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 1 }}>
-                        @{p.username || "—"}
-                        {p.favorite_mountain ? ` · ${p.favorite_mountain}` : ""}
-                      </div>
-                    </div>
-                    <div style={{ flexShrink: 0 }}>
-                      {p.isFriend ? (
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-success)", background: "rgba(134,239,172,0.12)", borderRadius: 8, padding: "5px 10px" }}>Friends</span>
-                      ) : p.hasIncoming ? (
-                        <button onClick={() => handleRespondToRequest(incomingRequests.find(r => r.requester_id === p.id)?.id, "accepted")}
-                          style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "rgba(250,204,21,0.15)", color: "var(--color-warning)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                          Accept
-                        </button>
-                      ) : p.isPending ? (
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.07)", borderRadius: 8, padding: "5px 10px" }}>Pending</span>
-                      ) : (
-                        <button onClick={() => handleSendRequest(p.id)} disabled={workingId === p.id}
-                          style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                          {workingId === p.id ? "…" : "+ Add"}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Filter tabs */}
           <div style={{ display: "flex", gap: 2, marginBottom: 10, background: "rgba(255,255,255,0.05)", borderRadius: 10, padding: 3 }}>
             {[
