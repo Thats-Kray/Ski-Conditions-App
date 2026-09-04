@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import PlanCalendar from "./PlanCalendar"
-import WeekView from "./calendar/WeekView"
-import DayPlanCard from "./calendar/DayPlanCard"
+import DayAgendaList from "./calendar/DayAgendaList"
 import FilterChipRow from "./calendar/FilterChipRow"
 import CalendarFilterSheet from "./calendar/CalendarFilterSheet"
 import PlanEditorModal from "./PlanEditorModal"
 import FailureNotice from "./ui/FailureNotice"
 import { runLoaders, mergeFailed, selectLoaders } from "../lib/loaderRegistry"
-import { localDateKey, monthBounds, weekBounds } from "../lib/calendarDates"
-import { groupByDayAndMountain, totalAttendees } from "../lib/calendarGrouping"
-import { ringColorFor, NEUTRAL_RING } from "../lib/crewColors"
+import { agendaRange, localDateKey } from "../lib/calendarDates"
+import { groupByDayAndMountain } from "../lib/calendarGrouping"
 import { resortName } from "../lib/resorts"
 import { formatDate } from "../lib/format"
 import { buildPlanUpsert } from "../lib/planUpsert"
@@ -35,19 +32,10 @@ import {
  */
 export default function FriendsCalendar({
   currentUser, onOpenTrip, trips = [], loading = false, onRequireLogin, onPlanADay,
-  resorts = [], focusDate = null, onFocusHandled,
+  resorts = [], focusDate = null, onFocusHandled, addDayTick = 0,
 }) {
-  const [viewMode, setViewMode] = useState("week")   // "week" | "month"
-  const [anchor, setAnchor] = useState(() => new Date())
   const [selected, setSelected] = useState(() => new Set(["me", "friends"]))
   const [sheetOpen, setSheetOpen] = useState(false)
-  // Bumped by month-mode's Today button to force PlanCalendar to remount and
-  // reseed its internal viewDate from the freshly-reset anchor. This is a
-  // deliberate, occasional reset — not the continuous two-navigator desync that
-  // month mode's outer ‹/›/label caused, which is why those stay hidden while
-  // Today does not. Stable between resets, so PlanCalendar's own ‹/› keep
-  // working against the same mounted instance and its state is not lost.
-  const [monthResetKey, setMonthResetKey] = useState(0)
 
   const [plans, setPlans] = useState([])
   const [partyMembers, setPartyMembers] = useState([])
@@ -57,7 +45,9 @@ export default function FriendsCalendar({
 
   const [failed, setFailed] = useState({})
   const [hasLoaded, setHasLoaded] = useState(false)
-  const [selectedDay, setSelectedDay] = useState(null)
+  // The day a notification pointed at, if any: scrolled into view, and kept inside
+  // the window even when it falls past the window's far edge.
+  const [focusedDay, setFocusedDay] = useState(null)
   const [joiningKey, setJoiningKey] = useState(null)
   const [joinError, setJoinError] = useState(null)
   const [askingPartyId, setAskingPartyId] = useState(null)
@@ -82,6 +72,21 @@ export default function FriendsCalendar({
 
   const todayKey = localDateKey()
   const currentUserId = currentUser?.id || null
+
+  // The page header's "+" lives in SkiPlansPage; the ski-day editor and its save path
+  // live here. SkiPlansPage bumps a counter, we open the editor when it changes.
+  //
+  // A counter, not a boolean, so a second tap after cancelling still fires. Adjusted
+  // during render rather than in an effect for the same reason SkiPlansPage adjusts
+  // `lastFocus` that way — an effect would cascade an extra render and trip
+  // react-hooks/set-state-in-effect. Guarded on currentUserId because the signed-out
+  // path calls onRequireLogin, and calling a PARENT's setState during render is
+  // illegal; SkiPlansPage does that guard itself before ever bumping the counter.
+  const [lastAddTick, setLastAddTick] = useState(addDayTick)
+  if (addDayTick !== lastAddTick) {
+    setLastAddTick(addDayTick)
+    if (currentUserId) handleAddSkiDay()
+  }
 
   // ── Static blocks: load once, cached across date navigation ──────────────
   const STATIC_LOADERS = useMemo(() => [
@@ -128,8 +133,13 @@ export default function FriendsCalendar({
     return () => { cancelled = true }
   }, [currentUserId, runStatic])
 
-  // ── Plan range: refetches on every date/view change ──────────────────────
-  const { start, end } = viewMode === "week" ? weekBounds(anchor) : monthBounds(anchor)
+  // ── Plan range: a rolling window, not a navigable one ────────────────────
+  // Keyed on a date STRING so the memo is stable across renders — `new Date()`
+  // would be a new object every time and refetch the calendar forever.
+  const { start, end, keys: dayKeys } = useMemo(
+    () => agendaRange(todayKey, { includeKey: focusedDay }),
+    [todayKey, focusedDay]
+  )
 
   // Guards against out-of-order responses: clicking > twice quickly fires two
   // fetches, and the slower one must not overwrite the newer range's rows.
@@ -165,14 +175,13 @@ export default function FriendsCalendar({
     loadPlans()
   }, [currentUserId, loadPlans])
 
-  // Arrived from a notification about a specific day: jump the calendar to that week and
-  // select the day, then tell the parent it has been consumed. Without clearing it, every
-  // later re-render would drag the calendar back to that date and the user could not navigate
-  // away — a focus prop that never releases is a trap, not a feature.
+  // Arrived from a notification about a specific day. There is no anchor to move any
+  // more, so instead the day is remembered: agendaRange widens the window to include
+  // it, DayAgendaList scrolls to it and opens "Show past days" if it is behind us.
+  // Still released via onFocusHandled — a focus prop that never clears is a trap.
   useEffect(() => {
     if (!focusDate) return
-    setAnchor(new Date(`${focusDate}T12:00:00`))
-    setSelectedDay(focusDate)
+    setFocusedDay(focusDate)
     onFocusHandled?.()
   }, [focusDate, onFocusHandled])
 
@@ -260,13 +269,6 @@ export default function FriendsCalendar({
       if (next.has(key)) next.delete(key); else next.add(key)
       return next
     })
-  }
-
-  function shiftAnchor(delta) {
-    setSelectedDay(null)
-    setAnchor((d) => viewMode === "week"
-      ? new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7 * delta)
-      : new Date(d.getFullYear(), d.getMonth() + delta, 1))
   }
 
   async function handleJoin(dateKey, resortKey) {
@@ -376,13 +378,24 @@ export default function FriendsCalendar({
     }
   }
 
-  function handleAddSkiDay() {
+  /**
+   * Open the ski-day editor.
+   *
+   * Two callers, one code path:
+   *   handleAddSkiDay()            — from the page header's "+". No day chosen yet,
+   *                                  so the modal gets onDateChange and lets you pick.
+   *   handleAddSkiDay("2026-01-19") — from a day card's own "+". The day IS the
+   *                                  question already answered; the modal renders the
+   *                                  date as a plain heading (PlanEditorModal:90).
+   */
+  function handleAddSkiDay(seedDate = null) {
     if (!currentUserId) { onRequireLogin?.(); return }
-    const seed = selectedDay || (todayKey >= start && todayKey <= end ? todayKey : start)
     setEditorError(null)
     setEditorSeedResort(null)
-    setDatePickable(true)
-    setEditorDate(seed < todayKey ? todayKey : seed)
+    setDatePickable(!seedDate)
+    // Clamp: past days are unreachable from the UI (DayAgendaList hides their "+"),
+    // and a past date in a pickable editor would fight its own minDate.
+    setEditorDate(!seedDate || seedDate < todayKey ? todayKey : seedDate)
   }
 
   async function handleEditorSave({ resortKey, eta, visibility }) {
@@ -409,8 +422,6 @@ export default function FriendsCalendar({
       setEditorBusy(false)
     }
   }
-
-  const rangeLabel = anchor.toLocaleDateString(undefined, { month: "long", year: "numeric" })
 
   // "Not known yet" — currentUser starts null and fills in asynchronously, so
   // without this a signed-in user sees the signed-out copy flash before their
@@ -450,56 +461,6 @@ export default function FriendsCalendar({
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-        {/* Month mode's day grid owns its own ‹/›/label nav (PlanCalendar's internal
-            viewDate). Rendering a second continuously-driven set here — advancing
-            `anchor` on every click independent of that internal state — is what
-            caused the grid-goes-blank bug, so ‹/›/label stay hidden in month mode.
-            Today is different: it's a one-shot reset, not incremental, so it can
-            reseed the child safely by remounting it (via monthResetKey) rather than
-            fighting over live navigation state. */}
-        {viewMode === "week" ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <button onClick={() => { setAnchor(new Date()); setSelectedDay(null) }} style={navBtn}>Today</button>
-            <button onClick={() => shiftAnchor(-1)} aria-label="Previous" style={navBtn}>‹</button>
-            <div style={{ fontWeight: 900, fontSize: 15, color: "var(--color-text-1)", minWidth: 130, textAlign: "center" }}>
-              {rangeLabel}
-            </div>
-            <button onClick={() => shiftAnchor(1)} aria-label="Next" style={navBtn}>›</button>
-          </div>
-        ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <button
-              onClick={() => {
-                setAnchor(new Date())
-                setSelectedDay(null)
-                setMonthResetKey((k) => k + 1)
-              }}
-              style={navBtn}
-            >
-              Today
-            </button>
-          </div>
-        )}
-        <div style={{ display: "flex", gap: 4 }}>
-          {["week", "month"].map((m) => (
-            <button
-              key={m}
-              onClick={() => { setViewMode(m); setSelectedDay(null) }}
-              style={{
-                ...navBtn,
-                background: viewMode === m ? "var(--color-accent-dim)" : "transparent",
-                color: viewMode === m ? "var(--color-text-1)" : "var(--color-text-3)",
-                textTransform: "capitalize",
-              }}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <FilterChipRow
         crews={crews}
         selected={selected}
@@ -629,7 +590,7 @@ export default function FriendsCalendar({
         </button>
       )}
 
-      {failed.plans && <FailureNotice label="this week's plans" onRetry={loadPlans} />}
+      {failed.plans && <FailureNotice label="these days' plans" onRetry={loadPlans} />}
       {failed.crews && <FailureNotice label="your crews" onRetry={() => runStatic(["crews"])} />}
       {failed.friends && <FailureNotice label="your friends list" onRetry={() => runStatic(["friends"])} />}
       {failed.partyRequests && (
@@ -664,7 +625,7 @@ export default function FriendsCalendar({
       {nobodyPlanned && (
         <div style={{ padding: "20px 16px", textAlign: "center", display: "grid", gap: 12, justifyItems: "center" }}>
           <div style={{ color: "var(--color-text-3)", fontSize: 13 }}>
-            Nobody's planned a day {viewMode === "week" ? "this week" : "this month"} yet.
+            Nobody&apos;s planned a day yet.
           </div>
           {/* Two different things, so two buttons. This said "+ Plan a day" and created a
               TRIP — the same plan/trip conflation the rest of this feature works to undo. */}
@@ -692,102 +653,27 @@ export default function FriendsCalendar({
         </div>
       )}
 
-      {viewMode === "week" ? (
-        !nobodyPlanned && (
-          <WeekView
-            anchorDate={anchor}
-            groupsByDay={groupsByDay}
-            colorCtx={colorCtx}
-            currentUserId={currentUserId}
-            todayKey={todayKey}
-            joiningKey={joiningKey}
-            onJoin={handleJoin}
-            onOpenTrip={onOpenTrip}
-            myPlanByDate={myPlanByDate}
-            onEditPlan={(dateKey, resortKey) => {
-              setEditorError(null); setEditorDate(dateKey); setEditorSeedResort(resortKey)
-            }}
-            onAskToJoin={handleAskToJoin}
-            askingPartyId={askingPartyId}
-            askedPartyIds={askedPartyIds}
-            onLeave={handleLeavePlan}
-            leavingKey={leavingKey}
-          />
-        )
-      ) : (
-        <PlanCalendar
-          key={monthResetKey}
-          entriesByDate={groupsByDay}
-          dotColorFor={() => NEUTRAL_RING}
-          selectedDate={selectedDay}
-          onSelectDay={setSelectedDay}
-          onMonthChange={(d) => { setSelectedDay(null); setAnchor(d) }}
-          initialMonth={new Date(anchor.getFullYear(), anchor.getMonth(), 1)}
-          renderCellContent={(dateKey, groups) => {
-            if (!groups || groups.length === 0) return null
-            // One dot per CREW present, not per mountain — the dots have to mean
-            // the same thing the chips mean or the legend lies (spec decision #6).
-            const crewsPresent = new Set()
-            let hasUnaffiliated = false
-            for (const g of groups) {
-              for (const a of g.attendees) {
-                const c = ringColorFor(a.userId, colorCtx)
-                if (c === NEUTRAL_RING) hasUnaffiliated = true
-                else crewsPresent.add(c)
-              }
-            }
-            const dots = [...crewsPresent, ...(hasUnaffiliated ? [NEUTRAL_RING] : [])].slice(0, 4)
-            return (
-              <div style={{ display: "grid", gap: 2, justifyItems: "center", width: "100%" }}>
-                <div style={{ display: "flex", gap: 3, justifyContent: "center", flexWrap: "wrap" }}>
-                  {dots.map((c) => (
-                    <div key={c} style={{ width: 6, height: 6, borderRadius: "50%", background: c }} />
-                  ))}
-                </div>
-                <div style={{ fontSize: 10, fontWeight: 800, color: "var(--color-text-2)" }}>
-                  {totalAttendees(groups)}
-                </div>
-                <div style={{
-                  fontSize: 9, color: "var(--color-text-3)", maxWidth: "100%",
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>
-                  {resortName(groups[0].resortKey) || groups[0].resortKey}
-                  {groups.length > 1 ? ` +${groups.length - 1}` : ""}
-                </div>
-              </div>
-            )
+      {!nobodyPlanned && (
+        <DayAgendaList
+          dayKeys={dayKeys}
+          groupsByDay={groupsByDay}
+          colorCtx={colorCtx}
+          currentUserId={currentUserId}
+          todayKey={todayKey}
+          focusedDayKey={focusedDay}
+          joiningKey={joiningKey}
+          onJoin={handleJoin}
+          onOpenTrip={onOpenTrip}
+          myPlanByDate={myPlanByDate}
+          onEditPlan={(dateKey, resortKey) => {
+            setEditorError(null); setEditorDate(dateKey); setEditorSeedResort(resortKey)
           }}
-          renderDayDetail={(dateKey, groups) => (
-            <div style={{ display: "grid", gap: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-text-2)" }}>
-                {formatDate(dateKey)}
-              </div>
-              {(!groups || groups.length === 0) ? (
-                <div style={{ fontSize: 13, color: "var(--color-text-3)" }}>Nobody's planned this day.</div>
-              ) : groups.map((g) => (
-                <DayPlanCard
-                  key={g.resortKey}
-                  group={g}
-                  colorCtx={colorCtx}
-                  currentUserId={currentUserId}
-                  canJoin={dateKey >= todayKey}
-                  joining={joiningKey === `${dateKey}|${g.resortKey}`}
-                  onJoin={(resortKey) => handleJoin(dateKey, resortKey)}
-                  onOpenTrip={onOpenTrip}
-                  myResortKey={myPlanByDate.get(dateKey)?.resort_key ?? null}
-                  myPlanHasEta={Boolean(myPlanByDate.get(dateKey)?.eta)}
-                  onEditPlan={(resortKey) => {
-                    setEditorError(null); setEditorDate(dateKey); setEditorSeedResort(resortKey)
-                  }}
-                  onAskToJoin={(party) => handleAskToJoin(dateKey, g.resortKey, party)}
-                  askingPartyId={askingPartyId}
-                  askedPartyIds={askedPartyIds}
-                  onLeave={() => handleLeavePlan(dateKey)}
-                  leaving={leavingKey === dateKey}
-                />
-              ))}
-            </div>
-          )}
+          onAskToJoin={handleAskToJoin}
+          askingPartyId={askingPartyId}
+          askedPartyIds={askedPartyIds}
+          onLeave={handleLeavePlan}
+          leavingKey={leavingKey}
+          onAddDay={handleAddSkiDay}
         />
       )}
 
@@ -829,10 +715,4 @@ export default function FriendsCalendar({
       )}
     </div>
   )
-}
-
-const navBtn = {
-  background: "var(--color-surface)", border: "1px solid var(--color-border)",
-  borderRadius: 10, padding: "8px 12px", color: "var(--color-text-1)",
-  cursor: "pointer", fontWeight: 700, fontSize: 13, minHeight: 44,
 }
