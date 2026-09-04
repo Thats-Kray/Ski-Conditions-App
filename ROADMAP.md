@@ -1441,7 +1441,7 @@ single **1,184 KB** chunk with nothing lazy-loaded.
 
 ---
 
-### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab in progress — Crews, Board, and Leaderboard slices shipped, all four Feed slices (A/B/C1/C2) shipped, merged to `main` locally, not yet pushed; Friends slice next; Plans/Profile not yet started)**
+### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab in progress — Crews, Board, Leaderboard shipped, all four Feed slices (A/B/C1/C2) shipped and live, C2 click-tested and confirmed by Kyle; Friends slice next; Plans/Profile not yet started)**
 
 **Today List View slice: ✅ SHIPPED 2026-08-27, live on `main`** (commit `5062d98`, deploy
 verified by grepping the live bundle for `"Best Bet Today"`/`"Ski here today"` —
@@ -1993,11 +1993,9 @@ production consumers — the query does its own `.gte()` filtering — but 6 of 
 cover it; not removed, to avoid the pinned "+16" test count silently changing.
 Final state: 207 tests passing (was 191, +16), lint 89 problems in a fresh worktree (unchanged
 from baseline), build clean.
-**Not yet click-tested by Kyle** — same standing gap as every slice this session. The
-whole-branch review's 9-item checklist is the actual verification; the highest-value item is
-confirming a purely-check-in-logged day is genuinely invisible on Crew → Feed beforehand and
-genuinely appears after completing the nudge for it — that's the property this slice mainly
-exists to establish, and no source review substitutes for seeing it happen.
+**Click-tested by Kyle 2026-09-03: passed, no issues reported.** Closes the verification gap —
+this is the first slice in the whole TASK 22.0 Feed sequence where Kyle's own click-through
+confirmed the feature works, not just that it builds/lints/reads correctly.
 
 **Remaining activities under TASK 22.0, in the order Kyle set for Crew tab (Crews → Board →
 Leaderboard → Feed → Friends), plus the two pages after it:**
