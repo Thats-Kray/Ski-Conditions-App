@@ -1,7 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import CrewGroupChat from "./CrewGroupChat";
-import LeaderboardPage from "./LeaderboardPage";
-import SkiBuddyBoard from "./SkiBuddyBoard";
 import UserProfileModal from "./UserProfileModal";
 import {
   searchProfiles,
@@ -45,7 +42,7 @@ function formatResortName(v) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function FriendsPage({ hideCrew = false, onMessageFriend = null, hideTabBar = false, initialSection = "leaderboard" }) {
+export default function FriendsPage({ onMessageFriend = null }) {
   const [searchText, setSearchText]           = useState("")
   const [searchResults, setSearchResults]     = useState([])
   const [incomingRequests, setIncomingRequests] = useState([])
@@ -57,7 +54,6 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
   const [searching, setSearching]             = useState(false)
   const [workingId, setWorkingId]             = useState(null)
   const [toast, setToast]                     = useState(null) // { type: "success"|"error", text }
-  const [activeSection, setActiveSection]     = useState(initialSection)
   const [friendsFilter, setFriendsFilter]     = useState("all") // "all" | "pending"
   const [pings, setPings]                     = useState({ sent: [], received: [] })
   const [respondingPingId, setRespondingPingId] = useState(null)
@@ -224,35 +220,6 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
   return (
     <div style={{ padding: "0 0 80px", color: "var(--color-text-1)" }}>
 
-      {/* ── Top tab bar ── */}
-      {!hideTabBar && (
-        <div style={{ display: "flex", gap: 2, marginBottom: 16, background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 4 }}>
-          {[
-            { key: "leaderboard", label: "🏆 Friend Leaderboard" },
-            ...(hideCrew ? [] : [{ key: "crews", label: "🤙 Crews" }]),
-            { key: "friends",     label: "👥 Friends" },
-            { key: "community",   label: "🎿 Community" },
-          ].map(({ key, label }) => (
-            <button key={key} onClick={() => setActiveSection(key)} style={{
-              flex: 1, padding: "11px 8px", borderRadius: 9, border: "none", cursor: "pointer",
-              fontWeight: 800, fontSize: 14, minHeight: 44,
-              background: activeSection === key ? "rgba(255,255,255,0.14)" : "transparent",
-              color: activeSection === key ? "white" : "rgba(255,255,255,0.4)",
-              position: "relative",
-            }}>
-              {label}
-              {key === "friends" && incomingRequests.length > 0 && (
-                <span style={{
-                  position: "absolute", top: 6, right: 8,
-                  width: 7, height: 7, borderRadius: 999,
-                  background: "var(--color-danger)",
-                }} />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* ── Per-block load failures ──
           One row per block that failed, each with its own Retry. Persistent by
           design: the old 3-second toast disappeared while the empty section it
@@ -281,57 +248,155 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
         </div>
       )}
 
-      {/* ══ LEADERBOARD TAB ══ */}
-      {activeSection === "leaderboard" && <LeaderboardPage />}
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-      {/* ══ CREWS TAB ══ */}
-      {activeSection === "crews" && <CrewGroupChat friends={acceptedFriends} />}
-
-      {/* ══ COMMUNITY TAB (Ski Buddy board) ══ */}
-      {activeSection === "community" && <SkiBuddyBoard />}
-
-      {/* ══ FRIENDS TAB ══ */}
-      {activeSection === "friends" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-          {/* 1 ── Incoming friend requests (priority surface) ── */}
-          {incomingRequests.length > 0 && (
-            <div style={{
-              borderRadius: 16,
-              background: "linear-gradient(135deg, rgba(59,130,246,0.14), rgba(139,92,246,0.1))",
-              border: "1px solid rgba(96,165,250,0.28)",
-              padding: "14px 16px",
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "var(--color-accent-soft)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-                {incomingRequests.length} Friend Request{incomingRequests.length > 1 ? "s" : ""}
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {incomingRequests.map((req) => (
-                  <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <button onClick={() => setViewingUserId(req.requester_profile?.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
-                      <Avatar profile={req.requester_profile} size={38} />
+        {/* 1 ── Incoming friend requests (priority surface) ── */}
+        {incomingRequests.length > 0 && (
+          <div style={{
+            borderRadius: 16,
+            background: "linear-gradient(135deg, rgba(59,130,246,0.14), rgba(139,92,246,0.1))",
+            border: "1px solid rgba(96,165,250,0.28)",
+            padding: "14px 16px",
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "var(--color-accent-soft)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
+              {incomingRequests.length} Friend Request{incomingRequests.length > 1 ? "s" : ""}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {incomingRequests.map((req) => (
+                <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <button onClick={() => setViewingUserId(req.requester_profile?.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+                    <Avatar profile={req.requester_profile} size={38} />
+                  </button>
+                  <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(req.requester_profile?.id)}>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {getDisplayName(req.requester_profile)}
+                    </div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", marginTop: 1 }}>
+                      @{req.requester_profile?.username || "—"}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                    <button
+                      onClick={() => handleRespondToRequest(req.id, "accepted")}
+                      disabled={workingId === req.id}
+                      style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                      Accept
                     </button>
-                    <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(req.requester_profile?.id)}>
-                      <div style={{ fontWeight: 800, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {getDisplayName(req.requester_profile)}
+                    <button
+                      onClick={() => handleRespondToRequest(req.id, "declined")}
+                      disabled={workingId === req.id}
+                      style={{ padding: "7px 10px", borderRadius: 8, border: "none", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 16, cursor: "pointer", lineHeight: 1 }}>
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 2 ── Quick action strip ── */}
+        <div style={{ display: "flex", gap: 8 }}>
+          {[
+            { icon: "📅", label: "Pick a Date", onClick: () => setShowDateComposer(true), accent: "rgba(139,92,246,0.8)" },
+          ].map(({ icon, label, onClick, accent }) => (
+            <button key={label} onClick={onClick} style={{
+              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+              padding: "13px 14px", borderRadius: 12, minHeight: 48,
+              border: `1px solid ${accent.replace("0.8", "0.3")}`,
+              background: accent.replace("0.8", "0.12"),
+              color: "white", fontWeight: 700, fontSize: 14, cursor: "pointer",
+            }}>
+              {icon} {label}
+            </button>
+          ))}
+        </div>
+
+        {/* 4 ── Activity feed (pings + date polls) ── */}
+        {hasActivity && (
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
+              Activity
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {pings.received.map(p => (
+                <PingCard key={p.id} ping={p} onRespond={handleRespondToPing} responding={respondingPingId} />
+              ))}
+              {datePolls.received.map(p => (
+                <DatePollCard key={p.id} poll={p} onVote={handleVoteOnDate} voting={votingOptionId} />
+              ))}
+              {pings.sent.map(p => <PingCard key={p.id} ping={p} />)}
+              {datePolls.created.map(p => <DatePollCard key={p.id} poll={p} />)}
+            </div>
+          </div>
+        )}
+
+        {/* 5 ── Friends list ── */}
+        <div>
+          {/* Search bar */}
+          <form onSubmit={handleSearch} style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <div style={{ flex: 1, position: "relative" }}>
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, color: "rgba(255,255,255,0.35)", pointerEvents: "none" }}>
+                🔍
+              </span>
+              <input
+                value={searchText}
+                onChange={e => { setSearchText(e.target.value); if (!e.target.value) setSearchResults([]) }}
+                onKeyDown={e => e.key === "Enter" && handleSearch(e)}
+                placeholder="Find skiers by name or username…"
+                style={{ ...inputStyle, paddingLeft: 38 }}
+              />
+            </div>
+            <button type="submit" disabled={searching || !searchText.trim()} style={{
+              padding: "12px 18px", borderRadius: 12, border: "none", flexShrink: 0, minHeight: 48,
+              background: searchText.trim() ? "var(--color-accent-deep)" : "rgba(255,255,255,0.07)",
+              color: searchText.trim() ? "white" : "rgba(255,255,255,0.3)",
+              fontWeight: 700, fontSize: 14, cursor: searchText.trim() ? "pointer" : "default",
+            }}>
+              {searching ? "…" : "Search"}
+            </button>
+          </form>
+
+          {/* Search results */}
+          {searchResults.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
+                Search Results
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {decoratedSearch.map((p) => (
+                  <div key={p.id} style={{
+                    display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
+                    borderRadius: 12, background: "rgba(255,255,255,0.04)",
+                  }}>
+                    <button onClick={() => setViewingUserId(p.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+                      <Avatar profile={p} size={40} />
+                    </button>
+                    <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(p.id)}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {getDisplayName(p)}
                       </div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", marginTop: 1 }}>
-                        @{req.requester_profile?.username || "—"}
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 1 }}>
+                        @{p.username || "—"}
+                        {p.favorite_mountain ? ` · ${p.favorite_mountain}` : ""}
                       </div>
                     </div>
-                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                      <button
-                        onClick={() => handleRespondToRequest(req.id, "accepted")}
-                        disabled={workingId === req.id}
-                        style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                        Accept
-                      </button>
-                      <button
-                        onClick={() => handleRespondToRequest(req.id, "declined")}
-                        disabled={workingId === req.id}
-                        style={{ padding: "7px 10px", borderRadius: 8, border: "none", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 16, cursor: "pointer", lineHeight: 1 }}>
-                        ✕
-                      </button>
+                    <div style={{ flexShrink: 0 }}>
+                      {p.isFriend ? (
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-success)", background: "rgba(134,239,172,0.12)", borderRadius: 8, padding: "5px 10px" }}>Friends</span>
+                      ) : p.hasIncoming ? (
+                        <button onClick={() => handleRespondToRequest(incomingRequests.find(r => r.requester_id === p.id)?.id, "accepted")}
+                          style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "rgba(250,204,21,0.15)", color: "var(--color-warning)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                          Accept
+                        </button>
+                      ) : p.isPending ? (
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.07)", borderRadius: 8, padding: "5px 10px" }}>Pending</span>
+                      ) : (
+                        <button onClick={() => handleSendRequest(p.id)} disabled={workingId === p.id}
+                          style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                          {workingId === p.id ? "…" : "+ Add"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -339,230 +404,120 @@ export default function FriendsPage({ hideCrew = false, onMessageFriend = null, 
             </div>
           )}
 
-          {/* 2 ── Quick action strip ── */}
-          <div style={{ display: "flex", gap: 8 }}>
+          {/* Filter tabs */}
+          <div style={{ display: "flex", gap: 2, marginBottom: 10, background: "rgba(255,255,255,0.05)", borderRadius: 10, padding: 3 }}>
             {[
-              { icon: "📅", label: "Pick a Date", onClick: () => setShowDateComposer(true), accent: "rgba(139,92,246,0.8)" },
-            ].map(({ icon, label, onClick, accent }) => (
-              <button key={label} onClick={onClick} style={{
-                flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                padding: "13px 14px", borderRadius: 12, minHeight: 48,
-                border: `1px solid ${accent.replace("0.8", "0.3")}`,
-                background: accent.replace("0.8", "0.12"),
-                color: "white", fontWeight: 700, fontSize: 14, cursor: "pointer",
+              { key: "all", label: "Friends", count: decoratedFriends.length },
+              { key: "pending", label: "Pending", count: outgoingRequests.length },
+            ].map(({ key, label, count }) => (
+              <button key={key} onClick={() => setFriendsFilter(key)} style={{
+                flex: 1, padding: "10px 8px", borderRadius: 8, border: "none", cursor: "pointer",
+                fontWeight: 700, fontSize: 14, minHeight: 44,
+                background: friendsFilter === key ? "rgba(255,255,255,0.13)" : "transparent",
+                color: friendsFilter === key ? "white" : "rgba(255,255,255,0.4)",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
               }}>
-                {icon} {label}
+                {label}
+                {count > 0 && (
+                  <span style={{
+                    background: friendsFilter === key ? "var(--color-accent-deep)" : "rgba(255,255,255,0.12)",
+                    color: friendsFilter === key ? "white" : "rgba(255,255,255,0.45)",
+                    borderRadius: 999, padding: "1px 7px", fontSize: 11, fontWeight: 800,
+                  }}>
+                    {count}
+                  </span>
+                )}
               </button>
             ))}
           </div>
 
-          {/* 4 ── Activity feed (pings + date polls) ── */}
-          {hasActivity && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-                Activity
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {pings.received.map(p => (
-                  <PingCard key={p.id} ping={p} onRespond={handleRespondToPing} responding={respondingPingId} />
-                ))}
-                {datePolls.received.map(p => (
-                  <DatePollCard key={p.id} poll={p} onVote={handleVoteOnDate} voting={votingOptionId} />
-                ))}
-                {pings.sent.map(p => <PingCard key={p.id} ping={p} />)}
-                {datePolls.created.map(p => <DatePollCard key={p.id} poll={p} />)}
-              </div>
+          {/* Friends list */}
+          {friendsFilter === "all" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {loadingPage ? (
+                <div style={{ padding: "20px 0", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>Loading…</div>
+              ) : decoratedFriends.length === 0 ? (
+                <div style={{ padding: "28px 20px", textAlign: "center", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16 }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>🎿</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.5)" }}>No friends yet</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>Search for skiers above to get started</div>
+                </div>
+              ) : (
+                decoratedFriends.map((friend) => (
+                  <div key={friend.id}>
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 12, padding: "12px 12px",
+                      borderRadius: 12, background: "rgba(255,255,255,0.04)",
+                      border: "1px solid transparent", minHeight: 64,
+                    }}>
+                      <button onClick={() => setViewingUserId(friend.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+                        <Avatar profile={friend} size={42} />
+                      </button>
+                      <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(friend.id)}>
+                        <div style={{ fontWeight: 800, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {getDisplayName(friend)}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2, flexWrap: "wrap" }}>
+                          {friend.username && (
+                            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>@{friend.username}</span>
+                          )}
+                          {friend.daysTogether > 0 && (
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-accent-soft)", background: "rgba(96,165,250,0.12)", borderRadius: 6, padding: "2px 7px" }}>
+                              {friend.daysTogether} shared day{friend.daysTogether !== 1 ? "s" : ""}
+                            </span>
+                          )}
+                          {friend.topResort && (
+                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
+                              {getResortEmoji(friend.topResort)} {formatResortName(friend.topResort)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {onMessageFriend && (
+                        <button
+                          onClick={() => onMessageFriend(friend)}
+                          title="Message"
+                          style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(96,165,250,0.25)", background: "rgba(37,99,235,0.12)", color: "var(--color-accent-soft)", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, minHeight: 40 }}
+                        >
+                          💬
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
-          {/* 5 ── Friends list ── */}
-          <div>
-            {/* Search bar */}
-            <form onSubmit={handleSearch} style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-              <div style={{ flex: 1, position: "relative" }}>
-                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, color: "rgba(255,255,255,0.35)", pointerEvents: "none" }}>
-                  🔍
-                </span>
-                <input
-                  value={searchText}
-                  onChange={e => { setSearchText(e.target.value); if (!e.target.value) setSearchResults([]) }}
-                  onKeyDown={e => e.key === "Enter" && handleSearch(e)}
-                  placeholder="Find skiers by name or username…"
-                  style={{ ...inputStyle, paddingLeft: 38 }}
-                />
-              </div>
-              <button type="submit" disabled={searching || !searchText.trim()} style={{
-                padding: "12px 18px", borderRadius: 12, border: "none", flexShrink: 0, minHeight: 48,
-                background: searchText.trim() ? "var(--color-accent-deep)" : "rgba(255,255,255,0.07)",
-                color: searchText.trim() ? "white" : "rgba(255,255,255,0.3)",
-                fontWeight: 700, fontSize: 14, cursor: searchText.trim() ? "pointer" : "default",
-              }}>
-                {searching ? "…" : "Search"}
-              </button>
-            </form>
-
-            {/* Search results */}
-            {searchResults.length > 0 && (
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
-                  Search Results
+          {/* Pending outgoing */}
+          {friendsFilter === "pending" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {outgoingRequests.length === 0 ? (
+                <div style={{ padding: "24px 20px", textAlign: "center", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
+                  No pending requests.
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  {decoratedSearch.map((p) => (
-                    <div key={p.id} style={{
-                      display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
-                      borderRadius: 12, background: "rgba(255,255,255,0.04)",
-                    }}>
-                      <button onClick={() => setViewingUserId(p.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
-                        <Avatar profile={p} size={40} />
-                      </button>
-                      <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(p.id)}>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {getDisplayName(p)}
-                        </div>
-                        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 1 }}>
-                          @{p.username || "—"}
-                          {p.favorite_mountain ? ` · ${p.favorite_mountain}` : ""}
-                        </div>
+              ) : (
+                outgoingRequests.map((req) => (
+                  <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 12px", borderRadius: 12, background: "rgba(255,255,255,0.04)", minHeight: 64 }}>
+                    <Avatar profile={req.recipient_profile} size={42} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {getDisplayName(req.recipient_profile)}
                       </div>
-                      <div style={{ flexShrink: 0 }}>
-                        {p.isFriend ? (
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-success)", background: "rgba(134,239,172,0.12)", borderRadius: 8, padding: "5px 10px" }}>Friends</span>
-                        ) : p.hasIncoming ? (
-                          <button onClick={() => handleRespondToRequest(incomingRequests.find(r => r.requester_id === p.id)?.id, "accepted")}
-                            style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "rgba(250,204,21,0.15)", color: "var(--color-warning)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                            Accept
-                          </button>
-                        ) : p.isPending ? (
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.07)", borderRadius: 8, padding: "5px 10px" }}>Pending</span>
-                        ) : (
-                          <button onClick={() => handleSendRequest(p.id)} disabled={workingId === p.id}
-                            style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                            {workingId === p.id ? "…" : "+ Add"}
-                          </button>
-                        )}
-                      </div>
+                      <div style={{ fontSize: 12, color: "rgba(250,204,21,0.7)", marginTop: 2, fontWeight: 600 }}>Pending</div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Filter tabs */}
-            <div style={{ display: "flex", gap: 2, marginBottom: 10, background: "rgba(255,255,255,0.05)", borderRadius: 10, padding: 3 }}>
-              {[
-                { key: "all", label: "Friends", count: decoratedFriends.length },
-                { key: "pending", label: "Pending", count: outgoingRequests.length },
-              ].map(({ key, label, count }) => (
-                <button key={key} onClick={() => setFriendsFilter(key)} style={{
-                  flex: 1, padding: "10px 8px", borderRadius: 8, border: "none", cursor: "pointer",
-                  fontWeight: 700, fontSize: 14, minHeight: 44,
-                  background: friendsFilter === key ? "rgba(255,255,255,0.13)" : "transparent",
-                  color: friendsFilter === key ? "white" : "rgba(255,255,255,0.4)",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                }}>
-                  {label}
-                  {count > 0 && (
-                    <span style={{
-                      background: friendsFilter === key ? "var(--color-accent-deep)" : "rgba(255,255,255,0.12)",
-                      color: friendsFilter === key ? "white" : "rgba(255,255,255,0.45)",
-                      borderRadius: 999, padding: "1px 7px", fontSize: 11, fontWeight: 800,
-                    }}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              ))}
+                    <button onClick={() => handleCancelOutgoing(req.id)} disabled={workingId === req.id}
+                      style={{ padding: "10px 14px", borderRadius: 10, border: "none", background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, minHeight: 40 }}>
+                      {workingId === req.id ? "…" : "Cancel"}
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
-
-            {/* Friends list */}
-            {friendsFilter === "all" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {loadingPage ? (
-                  <div style={{ padding: "20px 0", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>Loading…</div>
-                ) : decoratedFriends.length === 0 ? (
-                  <div style={{ padding: "28px 20px", textAlign: "center", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16 }}>
-                    <div style={{ fontSize: 32, marginBottom: 8 }}>🎿</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.5)" }}>No friends yet</div>
-                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>Search for skiers above to get started</div>
-                  </div>
-                ) : (
-                  decoratedFriends.map((friend) => (
-                    <div key={friend.id}>
-                      <div style={{
-                        display: "flex", alignItems: "center", gap: 12, padding: "12px 12px",
-                        borderRadius: 12, background: "rgba(255,255,255,0.04)",
-                        border: "1px solid transparent", minHeight: 64,
-                      }}>
-                        <button onClick={() => setViewingUserId(friend.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
-                          <Avatar profile={friend} size={42} />
-                        </button>
-                        <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(friend.id)}>
-                          <div style={{ fontWeight: 800, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {getDisplayName(friend)}
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2, flexWrap: "wrap" }}>
-                            {friend.username && (
-                              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>@{friend.username}</span>
-                            )}
-                            {friend.daysTogether > 0 && (
-                              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-accent-soft)", background: "rgba(96,165,250,0.12)", borderRadius: 6, padding: "2px 7px" }}>
-                                {friend.daysTogether} shared day{friend.daysTogether !== 1 ? "s" : ""}
-                              </span>
-                            )}
-                            {friend.topResort && (
-                              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
-                                {getResortEmoji(friend.topResort)} {formatResortName(friend.topResort)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {onMessageFriend && (
-                          <button
-                            onClick={() => onMessageFriend(friend)}
-                            title="Message"
-                            style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(96,165,250,0.25)", background: "rgba(37,99,235,0.12)", color: "var(--color-accent-soft)", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, minHeight: 40 }}
-                          >
-                            💬
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-
-            {/* Pending outgoing */}
-            {friendsFilter === "pending" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {outgoingRequests.length === 0 ? (
-                  <div style={{ padding: "24px 20px", textAlign: "center", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
-                    No pending requests.
-                  </div>
-                ) : (
-                  outgoingRequests.map((req) => (
-                    <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 12px", borderRadius: 12, background: "rgba(255,255,255,0.04)", minHeight: 64 }}>
-                      <Avatar profile={req.recipient_profile} size={42} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {getDisplayName(req.recipient_profile)}
-                        </div>
-                        <div style={{ fontSize: 12, color: "rgba(250,204,21,0.7)", marginTop: 2, fontWeight: 600 }}>Pending</div>
-                      </div>
-                      <button onClick={() => handleCancelOutgoing(req.id)} disabled={workingId === req.id}
-                        style={{ padding: "10px 14px", borderRadius: 10, border: "none", background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, minHeight: 40 }}>
-                        {workingId === req.id ? "…" : "Cancel"}
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-
+          )}
         </div>
-      )}
+
+      </div>
 
       {/* ── Modals ── */}
       {showDateComposer && (
