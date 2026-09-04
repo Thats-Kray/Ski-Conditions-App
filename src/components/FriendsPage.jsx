@@ -64,6 +64,7 @@ export default function FriendsPage({ onMessageFriend = null }) {
   const [votingOptionId, setVotingOptionId]   = useState(null)
   const [viewingUserId, setViewingUserId]         = useState(null)
   const [mutualCounts, setMutualCounts]       = useState({}) // requester_id -> count
+  const [showPending, setShowPending]         = useState(false)
 
   function showToast(type, text) {
     setToast({ type, text })
@@ -650,29 +651,57 @@ export default function FriendsPage({ onMessageFriend = null }) {
           </div>
         </div>
 
-        {/* Pending outgoing */}
+        {/* 4 ── Sent requests (secondary) ──
+            A disclosure, not a tab. As a pill-row tab this had the same visual weight
+            as the whole friends list; a request you sent is something you check
+            occasionally. Same chevron pattern the legacy-invites section used. */}
         {outgoingRequests.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {outgoingRequests.length === 0 ? (
-              <div style={{ padding: "24px 20px", textAlign: "center", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
-                No pending requests.
-              </div>
-            ) : (
-              outgoingRequests.map((req) => (
-                <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 12px", borderRadius: 12, background: "rgba(255,255,255,0.04)", minHeight: 64 }}>
-                  <Avatar profile={req.recipient_profile} size={42} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {getDisplayName(req.recipient_profile)}
+          <div>
+            <button
+              onClick={() => setShowPending(v => !v)}
+              aria-expanded={showPending}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "8px 0", minHeight: 40,
+                background: "none", border: "none", cursor: "pointer",
+                color: "var(--color-text-3)", fontWeight: 700, fontSize: 12,
+              }}
+            >
+              <span style={{
+                display: "inline-block",
+                transform: showPending ? "rotate(90deg)" : "none",
+                transition: "transform 0.15s",
+              }}>
+                ›
+              </span>
+              {outgoingRequests.length} sent request{outgoingRequests.length > 1 ? "s" : ""} pending
+            </button>
+
+            {showPending && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6 }}>
+                {outgoingRequests.map((req) => (
+                  <div key={req.id} style={rowStyle}>
+                    <Avatar profile={req.recipient_profile} size={32} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={rowNameStyle}>{getDisplayName(req.recipient_profile)}</div>
+                      <div style={{ ...rowSubStyle, color: "var(--color-warning)" }}>Pending</div>
                     </div>
-                    <div style={{ fontSize: 12, color: "rgba(250,204,21,0.7)", marginTop: 2, fontWeight: 600 }}>Pending</div>
+                    <button
+                      onClick={() => handleCancelOutgoing(req.id)}
+                      disabled={workingId === req.id}
+                      style={{
+                        padding: "8px 12px", borderRadius: 9, minHeight: 36, flexShrink: 0,
+                        background: "transparent",
+                        border: "1px solid rgba(255,255,255,0.14)",
+                        color: "var(--color-text-3)",
+                        fontWeight: 700, fontSize: 12, cursor: "pointer",
+                      }}
+                    >
+                      {workingId === req.id ? "…" : "Cancel"}
+                    </button>
                   </div>
-                  <button onClick={() => handleCancelOutgoing(req.id)} disabled={workingId === req.id}
-                    style={{ padding: "10px 14px", borderRadius: 10, border: "none", background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, minHeight: 40 }}>
-                    {workingId === req.id ? "…" : "Cancel"}
-                  </button>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         )}
