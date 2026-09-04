@@ -7,6 +7,7 @@ import ResortListRow from "./ResortListRow"
 import PlanEditorModal from "./PlanEditorModal"
 import TodaysCrew from "./TodaysCrew"
 import ActivityFeed from "./ActivityFeed"
+import NudgeBanner from "./NudgeBanner"
 import { planButtonState } from "../lib/planUpsert"
 import { localDateKey } from "../lib/calendarDates"
 import { useIsStandalone } from "../lib/useMobile"
@@ -541,6 +542,9 @@ export default function TodayScreen({
       {/* Tab-agnostic banners, moved in from HomeDashboard.jsx (Task 6) */}
       <AddToHomeScreenNudge currentUser={currentUser} sessionActive={sessionActive} />
       <OffseasonBanner />
+      {/* Feed slice C2: offer to finish a recent, untouched ski day. Renders null for a
+          logged-out user, for no candidate, and for one already dismissed. */}
+      <NudgeBanner currentUser={currentUser} />
 
       {/* Segmented List | Map control — one outer pill, two halves */}
       <div
