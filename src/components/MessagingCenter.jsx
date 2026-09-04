@@ -11,11 +11,11 @@ import LeaderboardPage from "./LeaderboardPage"
 import DirectMessageView from "./DirectMessageView"
 
 const TABS = [
-  { key: "crews",       label: "Crews" },
+  { key: "crews",       label: "Crew Chat" },
   { key: "friends",     label: "Friends" },
   { key: "feed",        label: "Feed" },
-  { key: "board",       label: "Board" },
   { key: "leaderboard", label: "Leaderboard" },
+  { key: "board",       label: "Board" },
 ]
 
 export default function MessagingCenter() {

@@ -163,6 +163,35 @@ export default function FriendsPage({ onMessageFriend = null }) {
     return () => { cancelled = true }
   }, [incomingRequesterKey])
 
+  /**
+   * Same mutual-friend-count fetch as above, for search results. Search and incoming
+   * requests are the same "people you might add" context (unlike the Friends list, where
+   * you already know them and mountain/skill is the more useful line), so this reuses
+   * mutualCounts rather than a second state bucket -- a person can appear in both lists
+   * and share one cached count. A functional update merges in rather than replaces, so
+   * clearing the search box doesn't wipe counts still shown on the Requests list above.
+   */
+  const searchResultKey = useMemo(
+    () => searchResults.map(p => p.id).filter(Boolean).join(","),
+    [searchResults],
+  )
+
+  useEffect(() => {
+    const ids = searchResultKey ? searchResultKey.split(",") : []
+    if (ids.length === 0) return
+
+    let cancelled = false
+    ;(async () => {
+      const entries = await Promise.all(ids.map(async (id) => {
+        try { return [id, await getMutualFriendCount(id)] }
+        catch { return [id, null] }
+      }))
+      if (!cancelled) setMutualCounts(prev => ({ ...prev, ...Object.fromEntries(entries) }))
+    })()
+
+    return () => { cancelled = true }
+  }, [searchResultKey])
+
   async function handleSearch(e) {
     e?.preventDefault()
     if (!searchText.trim()) return
@@ -424,17 +453,19 @@ export default function FriendsPage({ onMessageFriend = null }) {
               Search Results
             </div>
             <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-              {decoratedSearch.map((p) => (
+              {decoratedSearch.map((p) => {
+                // Same fallback shape as the Requests row: null while loading and after
+                // a failed count, so this never flashes "0 mutual friends".
+                const mutual = formatMutualFriends(mutualCounts[p.id])
+                const subtitle = mutual || `@${p.username || "—"}`
+                return (
                 <div key={p.id} style={rowStyle}>
                   <button onClick={() => setViewingUserId(p.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
                     <Avatar profile={p} size={40} />
                   </button>
                   <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(p.id)}>
                     <div style={rowNameStyle}>{getDisplayName(p)}</div>
-                    <div style={rowSubStyle}>
-                      @{p.username || "—"}
-                      {p.favorite_mountain ? ` · ${p.favorite_mountain}` : ""}
-                    </div>
+                    <div style={rowSubStyle}>{subtitle}</div>
                   </div>
                   <div style={{ flexShrink: 0 }}>
                     {p.isFriend ? (
@@ -454,7 +485,8 @@ export default function FriendsPage({ onMessageFriend = null }) {
                     )}
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
