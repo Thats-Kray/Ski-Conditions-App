@@ -5,6 +5,7 @@ import { formatDate } from "./format";
 import { buildPlanUpsert } from "./planUpsert";
 import { clampTitle, groupPhotosBySession, groupTagsBySession } from "./skiDayDetails";
 import { nudgeCutoffDateKey, isSessionUntouched } from "./skiDayNudge";
+import { normalizeMutualCount } from "./friendSubtitle";
 
 /* -----------------------------
    Constants
@@ -1575,7 +1576,10 @@ export async function getAcceptedFriends() {
 
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, full_name, username, avatar_url")
+    // favorite_mountain + skill_level feed the Friends sub-tab row's subtitle
+    // (formatFriendSubtitle in friendSubtitle.js). Neither is a revoked Strava token
+    // column, and this is a read, so PROFILE_WRITE_COLUMNS does not apply.
+    .select("id, first_name, last_name, full_name, username, avatar_url, favorite_mountain, skill_level")
     .in("id", friendIds)
 
   if (profilesError) throw profilesError
@@ -1585,6 +1589,39 @@ export async function getAcceptedFriends() {
   return friendIds
     .map((id) => profileMap.get(id))
     .filter(Boolean)
+}
+
+/**
+ * How many friends the signed-in user has in common with `otherUserId`.
+ *
+ * Goes through the get_mutual_friend_count RPC (migration 047) rather than intersecting
+ * two friend lists here, because it CANNOT be done here: friend_requests' SELECT policy
+ * is USING (auth.uid() = requester_id OR auth.uid() = recipient_id), so a browser session
+ * can only ever read its own edges. The requester's own friend list is invisible by
+ * design. The RPC is SECURITY DEFINER and returns only an integer -- never a row, an id
+ * or a name -- so the friend graph itself stays unreadable.
+ *
+ * Called once per incoming friend-request row. That is deliberate: request volumes are
+ * inherently tiny, and it matches the N-small-calls shape the rest of this file already
+ * uses rather than introducing this file's first array-argument RPC.
+ *
+ * Throws on a Supabase error. The Friends page catches per row and renders no subtitle,
+ * because a missing decoration must not blank a section -- see FriendsPage.jsx's own
+ * loader comment for why silent swallows are otherwise avoided in this codebase.
+ *
+ * @param {string} otherUserId
+ * @returns {Promise<number>} non-negative integer; 0 when there are none
+ */
+export async function getMutualFriendCount(otherUserId) {
+  if (!otherUserId) return 0
+
+  const { data, error } = await supabase.rpc("get_mutual_friend_count", {
+    other_user_id: otherUserId,
+  })
+
+  if (error) throw error
+
+  return normalizeMutualCount(data)
 }
 
 /* -----------------------------
