@@ -461,7 +461,7 @@ export default function FriendsPage({ onMessageFriend = null }) {
           </div>
         )}
 
-        {/* 2 ── Requests ── */}
+        {/* 3 ── Requests ── */}
         {incomingRequests.length > 0 && (
           <div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -537,26 +537,7 @@ export default function FriendsPage({ onMessageFriend = null }) {
           </div>
         )}
 
-        {/* 4 ── Activity feed (pings + date polls) ── */}
-        {hasActivity && (
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-              Activity
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {pings.received.map(p => (
-                <PingCard key={p.id} ping={p} onRespond={handleRespondToPing} responding={respondingPingId} />
-              ))}
-              {datePolls.received.map(p => (
-                <DatePollCard key={p.id} poll={p} onVote={handleVoteOnDate} voting={votingOptionId} />
-              ))}
-              {pings.sent.map(p => <PingCard key={p.id} ping={p} />)}
-              {datePolls.created.map(p => <DatePollCard key={p.id} poll={p} />)}
-            </div>
-          </div>
-        )}
-
-        {/* 3 ── Friends ── */}
+        {/* 4 ── Friends ── */}
         <div>
           <div style={sectionLabelStyle}>
             Friends{decoratedFriends.length > 0 ? ` · ${decoratedFriends.length}` : ""}
@@ -651,7 +632,7 @@ export default function FriendsPage({ onMessageFriend = null }) {
           </div>
         </div>
 
-        {/* 4 ── Sent requests (secondary) ──
+        {/* 5 ── Sent requests (secondary) ──
             A disclosure, not a tab. As a pill-row tab this had the same visual weight
             as the whole friends list; a request you sent is something you check
             occasionally. Same chevron pattern the legacy-invites section used. */}
@@ -703,6 +684,27 @@ export default function FriendsPage({ onMessageFriend = null }) {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* 6 ── Activity (pings + date polls) ──
+            Kept deliberately. createSkiPing and createDatePoll never call notify(), so
+            no notification is ever written for either -- this section is the only place
+            in the app a recipient can find or answer one. The mockup does not show it
+            because the mockup does not know it exists. */}
+        {hasActivity && (
+          <div>
+            <div style={sectionLabelStyle}>Activity</div>
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+              {pings.received.map(p => (
+                <PingCard key={p.id} ping={p} onRespond={handleRespondToPing} responding={respondingPingId} />
+              ))}
+              {datePolls.received.map(p => (
+                <DatePollCard key={p.id} poll={p} onVote={handleVoteOnDate} voting={votingOptionId} />
+              ))}
+              {pings.sent.map(p => <PingCard key={p.id} ping={p} />)}
+              {datePolls.created.map(p => <DatePollCard key={p.id} poll={p} />)}
+            </div>
           </div>
         )}
 
