@@ -15,7 +15,7 @@ import {
   voteOnDateOption,
   getMutualFriendCount,
 } from "../lib/socialApi";
-import { formatMutualFriends } from "../lib/friendSubtitle";
+import { formatMutualFriends, formatFriendSubtitle } from "../lib/friendSubtitle";
 import { PingCard } from "./SkiPingModal";
 import { DateMatchmakerComposer, DatePollCard } from "./DateMatchmaker";
 import { resortName, resortEmoji as getResortEmoji } from "../lib/resorts";
@@ -56,7 +56,6 @@ export default function FriendsPage({ onMessageFriend = null }) {
   const [searching, setSearching]             = useState(false)
   const [workingId, setWorkingId]             = useState(null)
   const [toast, setToast]                     = useState(null) // { type: "success"|"error", text }
-  const [friendsFilter, setFriendsFilter]     = useState("all") // "all" | "pending"
   const [pings, setPings]                     = useState({ sent: [], received: [] })
   const [respondingPingId, setRespondingPingId] = useState(null)
   const [showDateComposer, setShowDateComposer] = useState(false)
@@ -422,23 +421,18 @@ export default function FriendsPage({ onMessageFriend = null }) {
         {/* 2 ── Search results ── */}
         {searchResults.length > 0 && (
           <div>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
+            <div style={sectionLabelStyle}>
               Search Results
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
               {decoratedSearch.map((p) => (
-                <div key={p.id} style={{
-                  display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
-                  borderRadius: 12, background: "rgba(255,255,255,0.04)",
-                }}>
+                <div key={p.id} style={rowStyle}>
                   <button onClick={() => setViewingUserId(p.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
                     <Avatar profile={p} size={40} />
                   </button>
                   <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(p.id)}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {getDisplayName(p)}
-                    </div>
-                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 1 }}>
+                    <div style={rowNameStyle}>{getDisplayName(p)}</div>
+                    <div style={rowSubStyle}>
                       @{p.username || "—"}
                       {p.favorite_mountain ? ` · ${p.favorite_mountain}` : ""}
                     </div>
@@ -561,120 +555,127 @@ export default function FriendsPage({ onMessageFriend = null }) {
           </div>
         )}
 
-        {/* 5 ── Friends list ── */}
+        {/* 3 ── Friends ── */}
         <div>
-          {/* Filter tabs */}
-          <div style={{ display: "flex", gap: 2, marginBottom: 10, background: "rgba(255,255,255,0.05)", borderRadius: 10, padding: 3 }}>
-            {[
-              { key: "all", label: "Friends", count: decoratedFriends.length },
-              { key: "pending", label: "Pending", count: outgoingRequests.length },
-            ].map(({ key, label, count }) => (
-              <button key={key} onClick={() => setFriendsFilter(key)} style={{
-                flex: 1, padding: "10px 8px", borderRadius: 8, border: "none", cursor: "pointer",
-                fontWeight: 700, fontSize: 14, minHeight: 44,
-                background: friendsFilter === key ? "rgba(255,255,255,0.13)" : "transparent",
-                color: friendsFilter === key ? "white" : "rgba(255,255,255,0.4)",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              }}>
-                {label}
-                {count > 0 && (
-                  <span style={{
-                    background: friendsFilter === key ? "var(--color-accent-deep)" : "rgba(255,255,255,0.12)",
-                    color: friendsFilter === key ? "white" : "rgba(255,255,255,0.45)",
-                    borderRadius: 999, padding: "1px 7px", fontSize: 11, fontWeight: 800,
-                  }}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            ))}
+          <div style={sectionLabelStyle}>
+            Friends{decoratedFriends.length > 0 ? ` · ${decoratedFriends.length}` : ""}
           </div>
 
-          {/* Friends list */}
-          {friendsFilter === "all" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {loadingPage ? (
-                <div style={{ padding: "20px 0", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>Loading…</div>
-              ) : decoratedFriends.length === 0 ? (
-                <div style={{ padding: "28px 20px", textAlign: "center", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16 }}>
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>🎿</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.5)" }}>No friends yet</div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>Search for skiers above to get started</div>
+          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+            {loadingPage ? (
+              <div style={{ padding: "20px 0", textAlign: "center", color: "var(--color-text-3)", fontSize: 13 }}>
+                Loading…
+              </div>
+            ) : decoratedFriends.length === 0 ? (
+              <div style={{
+                padding: "28px 20px", textAlign: "center",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 14,
+              }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>🎿</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-3)" }}>No friends yet</div>
+                <div style={{ fontSize: 12, color: "var(--color-text-3)", marginTop: 4 }}>
+                  Search for skiers above to get started
                 </div>
-              ) : (
-                decoratedFriends.map((friend) => (
-                  <div key={friend.id}>
-                    <div style={{
-                      display: "flex", alignItems: "center", gap: 12, padding: "12px 12px",
-                      borderRadius: 12, background: "rgba(255,255,255,0.04)",
-                      border: "1px solid transparent", minHeight: 64,
-                    }}>
-                      <button onClick={() => setViewingUserId(friend.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
-                        <Avatar profile={friend} size={42} />
-                      </button>
-                      <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setViewingUserId(friend.id)}>
-                        <div style={{ fontWeight: 800, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {getDisplayName(friend)}
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2, flexWrap: "wrap" }}>
-                          {friend.username && (
-                            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>@{friend.username}</span>
-                          )}
+              </div>
+            ) : (
+              decoratedFriends.map((friend) => {
+                const subtitle = formatFriendSubtitle(friend)
+                const hasBadges = friend.daysTogether > 0 || friend.topResort
+                return (
+                  <div key={friend.id} style={rowStyle}>
+                    <button
+                      onClick={() => setViewingUserId(friend.id)}
+                      style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}
+                      aria-label={`View ${getDisplayName(friend)}'s profile`}
+                    >
+                      <Avatar profile={friend} size={38} />
+                    </button>
+
+                    <div
+                      style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
+                      onClick={() => setViewingUserId(friend.id)}
+                    >
+                      <div style={rowNameStyle}>{getDisplayName(friend)}</div>
+                      {subtitle && <div style={rowSubStyle}>{subtitle}</div>}
+
+                      {/* Secondary badges -- a deliberate deviation from the mockup
+                          (spec decision 5). Shared ski days and the most-skied-together
+                          resort appear nowhere else in the app, and they only render
+                          when there is something to say, so a friend with no shared
+                          days gets exactly the mockup's two-line row. */}
+                      {hasBadges && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, flexWrap: "wrap" }}>
                           {friend.daysTogether > 0 && (
-                            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-accent-soft)", background: "rgba(96,165,250,0.12)", borderRadius: 6, padding: "2px 7px" }}>
+                            <span style={{
+                              fontSize: 10, fontWeight: 700,
+                              color: "var(--color-accent)",
+                              background: "rgba(56,189,248,0.1)",
+                              borderRadius: 6, padding: "2px 6px",
+                            }}>
                               {friend.daysTogether} shared day{friend.daysTogether !== 1 ? "s" : ""}
                             </span>
                           )}
                           {friend.topResort && (
-                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
+                            <span style={{ fontSize: 10, color: "var(--color-text-3)" }}>
                               {getResortEmoji(friend.topResort)} {formatResortName(friend.topResort)}
                             </span>
                           )}
                         </div>
-                      </div>
-                      {onMessageFriend && (
-                        <button
-                          onClick={() => onMessageFriend(friend)}
-                          title="Message"
-                          style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(96,165,250,0.25)", background: "rgba(37,99,235,0.12)", color: "var(--color-accent-soft)", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, minHeight: 40 }}
-                        >
-                          💬
-                        </button>
                       )}
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
 
-          {/* Pending outgoing */}
-          {friendsFilter === "pending" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {outgoingRequests.length === 0 ? (
-                <div style={{ padding: "24px 20px", textAlign: "center", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
-                  No pending requests.
-                </div>
-              ) : (
-                outgoingRequests.map((req) => (
-                  <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 12px", borderRadius: 12, background: "rgba(255,255,255,0.04)", minHeight: 64 }}>
-                    <Avatar profile={req.recipient_profile} size={42} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {getDisplayName(req.recipient_profile)}
-                      </div>
-                      <div style={{ fontSize: 12, color: "rgba(250,204,21,0.7)", marginTop: 2, fontWeight: 600 }}>Pending</div>
-                    </div>
-                    <button onClick={() => handleCancelOutgoing(req.id)} disabled={workingId === req.id}
-                      style={{ padding: "10px 14px", borderRadius: 10, border: "none", background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, minHeight: 40 }}>
-                      {workingId === req.id ? "…" : "Cancel"}
-                    </button>
+                    {onMessageFriend && (
+                      <button
+                        onClick={() => onMessageFriend(friend)}
+                        aria-label={`Message ${getDisplayName(friend)}`}
+                        style={{
+                          ...iconButtonBase,
+                          background: "rgba(56,189,248,0.1)",
+                          border: "1px solid rgba(56,189,248,0.25)",
+                          color: "var(--color-accent)",
+                        }}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" strokeWidth="2">
+                          <path d="M21 11.5a8.4 8.4 0 0 1-11.7 7.7L3 21l1.8-6.3A8.4 8.4 0 1 1 21 11.5Z" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
-                ))
-              )}
-            </div>
-          )}
+                )
+              })
+            )}
+          </div>
         </div>
+
+        {/* Pending outgoing */}
+        {outgoingRequests.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {outgoingRequests.length === 0 ? (
+              <div style={{ padding: "24px 20px", textAlign: "center", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
+                No pending requests.
+              </div>
+            ) : (
+              outgoingRequests.map((req) => (
+                <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 12px", borderRadius: 12, background: "rgba(255,255,255,0.04)", minHeight: 64 }}>
+                  <Avatar profile={req.recipient_profile} size={42} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {getDisplayName(req.recipient_profile)}
+                    </div>
+                    <div style={{ fontSize: 12, color: "rgba(250,204,21,0.7)", marginTop: 2, fontWeight: 600 }}>Pending</div>
+                  </div>
+                  <button onClick={() => handleCancelOutgoing(req.id)} disabled={workingId === req.id}
+                    style={{ padding: "10px 14px", borderRadius: 10, border: "none", background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, minHeight: 40 }}>
+                    {workingId === req.id ? "…" : "Cancel"}
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
 
       </div>
 
