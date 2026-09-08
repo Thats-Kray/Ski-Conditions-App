@@ -15,8 +15,8 @@ function formatElapsed(ms) {
 function gpsDotColor(status, gpsAccuracy) {
   // "requesting"/"paused"/unknown gray (#94a3b8) has no exact or family-appropriate
   // catalog match (not danger/success/warning) — same value/role Task 1 already
-  // flagged TODO(theming) on AvatarStatusRail.jsx's unknown-status case; left
-  // literal here for the same reason rather than guessing at a token.
+  // flagged TODO(theming) on the old ui/AvatarStatusRail.jsx unknown-status case
+  // (deleted 2026-09-04); left literal here for the same reason rather than guessing at a token.
   if (status === "requesting" || status === "paused") return "#94a3b8" /* TODO(theming): unclear semantic, ask before tokenizing */
   if (status === "error" || (gpsAccuracy != null && gpsAccuracy > 50)) return "var(--color-danger)" // red
   if (gpsAccuracy != null && gpsAccuracy >= 20) return "var(--color-warning)" // orange

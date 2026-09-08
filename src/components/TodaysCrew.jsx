@@ -20,7 +20,8 @@ function statusColor(status) {
   if (status === "driving") return "var(--color-warning)"
   if (status === "planning") return "var(--color-banner-highlight)"
   // "done": no existing token (exact or near) matches this pale-violet shade — same
-  // unresolved value as AvatarStatusRail.jsx's identical "done" case (Task 1, rule 9).
+  // unresolved value the same way the old ui/AvatarStatusRail.jsx did for "done"
+  // (Task 1, rule 9; that file was deleted with the Plans redesign, 2026-09-04).
   if (status === "done") return "#c4b5fd" // TODO(theming): no catalog token matches this pale-violet shade
   return "var(--color-danger)"
 }

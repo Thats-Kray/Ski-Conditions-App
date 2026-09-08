@@ -702,8 +702,8 @@ export async function getVisiblePlansInRange(startDate, endDate) {
   return data || []
 }
 
-// Kept as a named function because TodaysCrew.jsx, HomeDashboard.jsx and
-// ui/AvatarStatusRail.jsx all call it. Sprint 34 moved visibility enforcement
+// Kept as a named function because TodaysCrew.jsx calls it. Sprint 34 moved
+// visibility enforcement
 // into RLS, so the old client-side friend filter (and its dead
 // visibility === "public" branch — the CHECK only allows friends|groups|private)
 // is gone.
