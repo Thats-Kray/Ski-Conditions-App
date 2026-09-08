@@ -1459,7 +1459,7 @@ single **1,184 KB** chunk with nothing lazy-loaded.
 
 ---
 
-### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab DONE — all 5 sub-tabs shipped: Crews, Board, Leaderboard, Feed (A/B/C1/C2, C2 click-tested and confirmed by Kyle), Friends; Plans/Profile not yet started)**
+### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab DONE — all 5 sub-tabs shipped: Crews, Board, Leaderboard, Feed (A/B/C1/C2, C2 click-tested and confirmed by Kyle), Friends; Plans page DONE and live; Profile not yet started)**
 
 **Today List View slice: ✅ SHIPPED 2026-08-27, live on `main`** (commit `5062d98`, deploy
 verified by grepping the live bundle for `"Best Bet Today"`/`"Ski here today"` —
@@ -2126,7 +2126,83 @@ Leaderboard → Feed → Friends), plus the two pages after it:**
    a deliberate, spec-confirmed mockup match, flagged for a possible bump to 36-40px if it
    proves fiddly in hand — Kyle did not report an issue with these, but didn't explicitly call
    them out either).
-2. **Plans page** — not yet started, no gap audit yet.
+2. **Plans page: ✅ SHIPPED 2026-09-08, merged to `main` and pushed** (fast-forward
+   `d9cb79b..f9537b8`, live). Spec at
+   `docs/superpowers/specs/2026-09-04-plans-page-slice-design.md`, plan (OpusPlan agent, Opus,
+   1760 lines) at `docs/superpowers/plans/2026-09-04-plans-page-slice.md`, built in worktree
+   `plans-page-slice` via subagent-driven-development: 6 tasks + a whole-branch final-review
+   fix wave. **Gap-audited against the mockup's Plans screen** (`PowDays Reorg Mockup.dc.html`'s
+   `isPlans` block) — unlike every prior slice, the underlying data model already matched almost
+   exactly: `groupByDayAndMountain()` already produced day→mountain→party groupings, and
+   `DayPlanCard.jsx` already had the mockup's exact "I'm also going"/"Ask to join"/"You're in"
+   semantics. This was much closer to a restyle than Feed's new-subsystem work.
+   **Four real design decisions, all confirmed with Kyle in brainstorming:**
+   (1) **Replace the week/month calendar toggle entirely with a single scrolling day-agenda
+   list** (21 days forward, 7 days back behind a "Show past days" disclosure, no `‹›Today`
+   navigator) — this also **resolves TASK 22.1** (Friends-calendar flagship placement,
+   previously-unscheduled backlog, now closed/subsumed — see below). (2) **Cut `UpcomingStrip`,
+   `NextTripCard`, and `AvatarStatusRail`** — all three duplicated content one tap away (Trips
+   sub-tab) or on another tab (`TodaysCrew.jsx` on Today, live since TASK 22.5) and don't appear
+   in the mockup; kept `PingCta` restyled to a text link since it's confirmed the *only* trigger
+   for `SkiPingComposer` anywhere in the app. (3) **`TripCard.jsx` untouched** — Kyle's call:
+   it's already richer than the mockup's compact card, shrinking it would be a pure downgrade.
+   (4) **No "open party" direct-join feature built.** The mockup's sample group cards show
+   `mine`/`open`/`gated` states, but the real schema only supports one state for a group you're
+   not in (ask-and-owner-approves, migrations 037/038) — Kyle's call: treat the mockup's "open"
+   state as illustrative sample data, not a requirement; every non-mine group shows locked
+   "Ask to join," no schema/RLS change.
+   **New:** `agendaRange()` in `src/lib/calendarDates.js` (Task 1, 10 tests, 223→233), a new
+   `DayAgendaList.jsx` replacing `WeekView.jsx` (deleted, Task 2), `DayPlanCard.jsx` restructured
+   from one-card-per-mountain-with-nested-parties to **one card per PARTY** under an unbordered
+   mountain heading — party-scoped avatars (previously the whole mountain's avatars sat under
+   one crew's name), left accent bar via `ringColorFor(ownerId, colorCtx)` reusing the existing
+   crew-color system (Task 3). `SkiPlansPage.jsx` rewritten (543→~250 lines): context-sensitive
+   header "+" (opens the date-pickable ski-day editor on Ski days, `CreateTripModal` on Trips,
+   replacing an always-"New Trip" button), full-width gradient segmented "Ski days"/"Trips" pill
+   (Task 4). Dead `ui/AvatarStatusRail.jsx` deleted, 4 comments elsewhere repaired (Task 5).
+   **Task 4's own review caught one plan-mandated gap Kyle adjudicated**: the restyled `PingCta`
+   text link shipped with no `minHeight: 44`, under this app's tap-target floor — Kyle's call:
+   fix it (kept the small text-link visual, widened only the hit area).
+   **The whole-branch final review (opus) caught 3 real Important cross-task issues**, the same
+   "individually-correct code whose SCALE changed once integrated" pattern that's now hit three
+   slices running: (1) `agendaRange`'s `includeKey` widening (built for notification deep-links)
+   was unbounded and fed **unvalidated free text** — a notification's `target_id` column has no
+   schema constraint forcing it to be a real date, so a malformed value could either get silently
+   normalized by `Date`'s month/day rollover into an unrelated day, or (worse) compute a
+   multi-million-day delta and freeze the tab building that many date keys. Fixed: a round-trip
+   validity check (`localDateKey(new Date(...)) === includeKey`) plus a hard
+   `AGENDA_MAX_WIDEN_DAYS = 180` cap. (2) A plan saved via the header "+" more than 21 days out
+   **silently vanished** — the calendar still fetched today±21, and with the week/month navigator
+   gone there was no route to find it, so the page could read "Nobody's planned a day yet."
+   immediately after a successful save. Fixed by reusing the same `focusedDay`/`agendaRange`
+   machinery already built for notification deep-links (`setFocusedDay(editorDate)` after a
+   successful save), now safely bounded by fix (1)'s cap. (3) Empty-day rows used
+   `var(--color-text-muted)` (~1.9:1 contrast, not one of the app's accepted low-contrast
+   exceptions) — harmless in `WeekView`'s old 7-day grid, but this is now most of the page, and
+   in the app's **actual current offseason state** (nothing planned anywhere) it was the entire
+   tab. Fixed: swapped to `--color-text-3`, the app's already-established empty-state/caption
+   exception token. All three independently verified fixed in a scoped re-review, clean.
+   **No privacy/security regression** — join/ask semantics and the `inScope` display lens are
+   byte-identical to `main`; this was a pure UI restructuring with no RLS/query change, so no
+   live-production re-verification was needed (unlike the Friends slice's new RPC).
+   Final state: **235 tests** (was 223, +10 Task 1 +2 fix-wave), lint clean on every touched
+   path (repo-wide 87, at/under the 88 baseline), build clean. Deploy verified live by grepping
+   the served bundle (`assets/index-DUDAb208.js`) for `"Ski days"` and the new hint copy
+   `"Where you and your friends are skiing, by day. Tap + on a day to add yours."`.
+   **NOT yet click-tested by Kyle** — same recurring gap as most TASK 22.0 slices at ship time.
+   Check next time Kyle is in the app: the day-agenda list itself (no week/month buttons
+   anywhere), "Show past days", the per-day `+` (deliberately small at 26×26, Deviation 2 —
+   flag if fiddly), party cards on a mountain with 2+ parties (avatars scoped correctly, accent
+   bar colors legible per theme, a party you own reading sensibly with the near-white self
+   color), a mountain with a MIX of grouped and ungrouped skiers (ungrouped people now show only
+   a "N not in a group" count, no faces — a real, deliberate information trade from spec Decision
+   #8, not a bug, but unconfirmed by click-through), saving a day from the header `+` more than
+   3 weeks out (confirm the just-fixed jump-and-scroll actually works end to end), offseason
+   legibility of the empty-row text across all 5 themes, and — the one item carried over
+   unresolved — Ping a friend to ski still being reachable and working (it's the only route to
+   that feature app-wide).
+   **TASK 22.1 — Friends-calendar as the flagship view: CLOSED, subsumed by this slice** (see
+   that task's own entry below, updated 2026-09-08).
 3. **Profile page** — not yet started, no gap audit yet.
 
 Group-level Feed activity cards (a whole crew skiing together as one card) remain backlogged,
