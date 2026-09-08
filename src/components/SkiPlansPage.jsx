@@ -32,7 +32,8 @@ function PingCta({ currentUser }) {
       <button
         onClick={handleOpen}
         style={{
-          background: "none", border: "none", padding: "6px 0", cursor: "pointer",
+          background: "none", border: "none", padding: "0", cursor: "pointer",
+          minHeight: 44, display: "inline-flex", alignItems: "center",
           color: "var(--color-accent)", fontSize: 12, fontWeight: 700,
           textDecoration: "underline", textUnderlineOffset: 3,
         }}
