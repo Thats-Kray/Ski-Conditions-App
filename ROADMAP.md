@@ -2186,7 +2186,15 @@ from this new location, and signed-out/browse mode showing only `TodaysCrew`'s s
 
 ---
 
-### TASK 22.1 — Friends-calendar as the flagship view — **Size: M**
+### TASK 22.1 — Friends-calendar as the flagship view — **CLOSED, subsumed by TASK 22.0's Plans slice (2026-09-04)**
+
+**Resolved by the Plans mockup-fidelity slice** (`docs/superpowers/specs/2026-09-04-plans-page-slice-design.md`,
+`docs/superpowers/plans/2026-09-04-plans-page-slice.md`). Three of the five open questions
+below are now answered in code: it **stays inside Plans**, as the default "Ski days" sub-tab
+rather than a buried one; the month grid is **replaced by a near-term day agenda** (rolling
+21 days forward, past behind a disclosure); and it **groups by mountain**, with one card per
+party underneath. The two that remain — a nudge to join a friend's day beyond the existing
+"Ask to join", and richer empty-state copy — stay backlog, and are not worth their own task.
 
 **Scheduled Sprint 43** (prioritized by Kyle, 2026-08-27 — after TASK 22.0's redesign work).
 Mechanics already shipped (Sprint 34/35: per-person plan calendars, crew-filterable scope chips
@@ -2246,7 +2254,7 @@ prioritized open ideas, then the throughput → features → security/debt queue
 | Sprint | Contents | Size |
 |---|---|---|
 | **42** | **TASK 22.0 — Mockup fidelity pass**, page-by-page (Today done; Crew tab in progress — Crews slice shipped) | TBD |
-| **43** | TASK 22.1 — Friends-calendar flagship placement (**design session first**) | M |
+| **43** | ~~TASK 22.1 — Friends-calendar flagship placement~~ — closed, subsumed by TASK 22.0's Plans slice | — |
 | **44** | TASK 22.2 — Powder Score algorithm tuning | S-M |
 | **45** | TASK 22.3 — Weather/conditions API quality pass | M |
 | **46** | TASK 22.4 — Map View + friends'-location test-and-fix | S |
