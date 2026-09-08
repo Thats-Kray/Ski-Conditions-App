@@ -24,7 +24,7 @@ function dayNumber(dateKey) {
 const emptyRowStyle = {
   display: "flex", alignItems: "center", gap: 8,
   padding: "7px 12px", minHeight: 36, fontSize: 11,
-  color: "var(--color-text-muted)",
+  color: "var(--color-text-3)",
 }
 
 const addDayButtonStyle = {
@@ -103,7 +103,7 @@ export default function DayAgendaList({
         <>
           <span style={{
             fontWeight: 800,
-            color: day.isToday ? "var(--color-text-2)" : "var(--color-text-muted)",
+            color: day.isToday ? "var(--color-text-2)" : "var(--color-text-3)",
           }}>
             {label} {dayNumber(day.key)}
           </span>

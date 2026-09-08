@@ -74,6 +74,14 @@ export function weekDayKeys(d) {
 export const AGENDA_PAST_DAYS = 7
 export const AGENDA_FORWARD_DAYS = 21
 
+/**
+ * Hard cap on how far agendaRange will widen for `includeKey`. This value can
+ * arrive from untrusted free text (a notification's target_id column has no
+ * schema constraint forcing it to be a real date), so widening must never be
+ * allowed to reach years out — that would freeze the tab building the range.
+ */
+export const AGENDA_MAX_WIDEN_DAYS = 180
+
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/
 
 /**
@@ -107,13 +115,22 @@ export function agendaRange(todayKey, {
 
   if (includeKey && DATE_KEY_RE.test(includeKey) && includeKey !== todayKey) {
     const [iy, im, id] = includeKey.split("-").map(Number)
-    // Date.UTC on both sides: same construction, so the difference is exact whole
-    // days with no DST hour left over to round away.
-    const delta = Math.round(
-      (Date.UTC(iy, im - 1, id) - Date.UTC(y, m - 1, d)) / 86400000
-    )
-    if (delta > 0) ahead = Math.max(ahead, delta)
-    else back = Math.max(back, -delta)
+    // Reject a digit-shaped but calendrically invalid key (e.g. "2026-13-40")
+    // rather than letting Date's month/day rollover silently normalize it into
+    // an unrelated day far from what was actually asked for.
+    if (localDateKey(new Date(iy, im - 1, id)) === includeKey) {
+      // Date.UTC on both sides: same construction, so the difference is exact whole
+      // days with no DST hour left over to round away.
+      const delta = Math.round(
+        (Date.UTC(iy, im - 1, id) - Date.UTC(y, m - 1, d)) / 86400000
+      )
+      // Capped: includeKey can arrive from untrusted notification text, so it
+      // must never be able to blow the window out to years — that would block
+      // the main thread building millions of date keys.
+      const widen = Math.min(Math.abs(delta), AGENDA_MAX_WIDEN_DAYS)
+      if (delta > 0) ahead = Math.max(ahead, widen)
+      else back = Math.max(back, widen)
+    }
   }
 
   const keys = []

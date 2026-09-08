@@ -2253,7 +2253,7 @@ prioritized open ideas, then the throughput → features → security/debt queue
 
 | Sprint | Contents | Size |
 |---|---|---|
-| **42** | **TASK 22.0 — Mockup fidelity pass**, page-by-page (Today done; Crew tab in progress — Crews slice shipped) | TBD |
+| **42** | **TASK 22.0 — Mockup fidelity pass**, page-by-page (Today done; Crew tab done — all 5 sub-tabs shipped; Plans page done; Profile page next) | TBD |
 | **43** | ~~TASK 22.1 — Friends-calendar flagship placement~~ — closed, subsumed by TASK 22.0's Plans slice | — |
 | **44** | TASK 22.2 — Powder Score algorithm tuning | S-M |
 | **45** | TASK 22.3 — Weather/conditions API quality pass | M |

@@ -307,17 +307,6 @@ export default function FriendsCalendar({
   }
 
   /**
-   * Add a ski day straight from the Plans calendar.
-   *
-   * This existed only on Profile > Ski Plans, so setting a day meant leaving the Plans tab,
-   * going to your profile, and coming back. Same editor, same save path — the only difference
-   * is that the date is not yet chosen, so the modal lets you pick it.
-   *
-   * Seeds with the day you have selected, else today when today is in view, else the first day
-   * of the range you are looking at — so the date starts somewhere near what is on screen
-   * rather than always snapping to today while you browse next month.
-   */
-  /**
    * Back out of a day from the calendar itself.
    *
    * Deletes the plan rather than marking it cancelled: daily_plans is UNIQUE (user_id,
@@ -413,6 +402,12 @@ export default function FriendsCalendar({
         eta,                                   // already snapped by the modal
       }))
       await loadPlans()
+      // A date beyond the visible window (picked via the pickable-date editor) would
+      // otherwise vanish after saving -- the fetched range is still today's window,
+      // so a plan saved past it renders nowhere. Reuse the same focusedDay/agendaRange
+      // machinery this branch already built for notification deep-links (bounded by
+      // AGENDA_MAX_WIDEN_DAYS) to widen the window and land on the day just saved.
+      setFocusedDay(editorDate)
       setEditorDate(null)
       setEditorSeedResort(null)
     } catch (err) {

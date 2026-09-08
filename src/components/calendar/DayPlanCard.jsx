@@ -5,6 +5,7 @@ import { formatEtaShort } from "../../lib/format"
 import { useProfileNav } from "../../lib/profileNav"
 import Avatar from "../ui/Avatar"
 
+// Room for 5 overlapped avatars in a party card before the +N overflow badge takes over.
 const MAX_AVATARS = 5
 const MAX_NAMES = 3
 

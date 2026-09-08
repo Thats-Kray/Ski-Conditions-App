@@ -3,7 +3,7 @@ import { createContext, useContext } from "react"
 /**
  * Lets any descendant open a full-page profile without prop drilling.
  *
- * UserProfileModal has five call sites — TodaysCrew, PowderMap, CrewGroupChat
+ * UserProfileModal has four call sites — TodaysCrew, PowderMap, CrewGroupChat
  * (nested inside MessagingCenter inside FriendsPage), FriendsPage, and the
  * shared avatar primitives. Threading a callback to all of them
  * would touch seven files and put a navigation concern into a ui/ primitive's

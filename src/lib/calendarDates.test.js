@@ -2,6 +2,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import {
   weekBounds, weekDayKeys, agendaRange, AGENDA_PAST_DAYS, AGENDA_FORWARD_DAYS,
+  AGENDA_MAX_WIDEN_DAYS,
 } from "./calendarDates.js"
 
 test("weekBounds spans Sunday to Saturday around a midweek date", () => {
@@ -127,4 +128,22 @@ test("agendaRange ignores a null or malformed focused day", () => {
 test("agendaRange never returns fewer keys than requested for negative options", () => {
   const { keys } = agendaRange("2026-01-18", { past: -5, forward: 0 })
   assert.deepEqual(keys, ["2026-01-18"])
+})
+
+test("agendaRange ignores a digit-shaped but calendrically invalid includeKey", () => {
+  // "2026-13-40" passes the shape regex but is not a real date -- month 13, day 40 --
+  // and must not be allowed to silently normalize into some unrelated day via Date's
+  // rollover behavior.
+  const plain = agendaRange("2026-01-18")
+  const withBogusKey = agendaRange("2026-01-18", { includeKey: "2026-13-40" })
+  assert.deepEqual(withBogusKey, plain)
+})
+
+test("agendaRange caps how far includeKey can widen the window", () => {
+  assert.equal(AGENDA_MAX_WIDEN_DAYS, 180)
+  // "2027-06-01" is far more than 180 days past "2026-01-18" -- the window must
+  // widen only up to the cap, not all the way out to the far-future date itself.
+  const { end, keys } = agendaRange("2026-01-18", { includeKey: "2027-06-01" })
+  assert.equal(end, "2026-07-17")   // todayKey + 180 days, not the includeKey itself
+  assert.ok(!keys.includes("2027-06-01"))
 })
