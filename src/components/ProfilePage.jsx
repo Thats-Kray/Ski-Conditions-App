@@ -18,7 +18,7 @@ import {
   RecentSessionsFeed,
 } from "./ProfileStats"
 import ShareStatCard from "./ShareStatCard"
-import StravaConnect from "./StravaConnect"
+import ProfileSettingsList from "./profile/ProfileSettingsList"
 import SeasonCalendar from "./SeasonCalendar"
 import SkiPlansTab from "./SkiPlansTab"
 import Avatar from "./ui/Avatar"
@@ -96,8 +96,6 @@ function EditProfileModal({ profile, onSaved, onClose }) {
   const [skiPasses, setSkiPasses]       = useState(profile?.ski_passes || [])
   const [vehicleLabel, setVehicleLabel] = useState(profile?.vehicle_label || "")
   const [vehicleSeats, setVehicleSeats] = useState(profile?.vehicle_seats || "")
-  const [powderAlertsEnabled, setPowderAlertsEnabled] = useState(profile?.powder_alerts_enabled ?? false)
-  const [alertPhone, setAlertPhone]     = useState(profile?.alert_phone ?? "")
   const [saving, setSaving]             = useState(false)
   const [error, setError]               = useState("")
 
@@ -121,8 +119,6 @@ function EditProfileModal({ profile, onSaved, onClose }) {
         ski_passes: skiPasses,
         vehicle_label: vehicleLabel.trim() || null,
         vehicle_seats: vehicleSeats ? parseInt(vehicleSeats) : null,
-        powder_alerts_enabled: powderAlertsEnabled,
-        alert_phone: alertPhone.trim() || null,
       }))
       onSaved()
     } catch (e) {
@@ -228,28 +224,6 @@ function EditProfileModal({ profile, onSaved, onClose }) {
               <input value={vehicleSeats} onChange={e => setVehicleSeats(e.target.value)} placeholder="Seats" type="number" min="1" max="8" style={fieldStyle} />
             </div>
           </div>
-
-          {/* Powder alerts */}
-          <div style={{ marginTop: 16, display: "grid", gap: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Powder Alerts</div>
-            <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: "white", cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={powderAlertsEnabled}
-                onChange={e => setPowderAlertsEnabled(e.target.checked)}
-              />
-              📧 Weekly powder forecast every Wednesday
-            </label>
-            {powderAlertsEnabled && (
-              <input
-                type="tel"
-                placeholder="Phone number (for future SMS alerts)"
-                value={alertPhone}
-                onChange={e => setAlertPhone(e.target.value)}
-                style={fieldStyle}
-              />
-            )}
-          </div>
         </div>
 
         {/* Sticky footer */}
@@ -318,6 +292,7 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
   const [historyView, setHistoryView] = useState("list")
   const [allTimeStats, setAllTimeStats] = useState(null)
   const [currentUserId, setCurrentUserId] = useState(null)
+  const [currentUserEmail, setCurrentUserEmail] = useState(null)
   const [milestoneQueue, setMilestoneQueue] = useState([])
   const [shareFromMilestone, setShareFromMilestone] = useState(false)
   const [profileTab, setProfileTab]   = useState("stats")   // "stats" | "plans"
@@ -381,6 +356,7 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
       ])
       setProfile(prof)
       setCurrentUserId(user?.id || null)
+      setCurrentUserEmail(user?.email || null)
       setFriends(Array.isArray(friendData) ? friendData : [])
       const { mine = [], rsvpd = [] } = tripData || {}
       const seen = new Set()
@@ -859,17 +835,20 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
         </div>
       )}
 
-      {/* ── Connected Apps ── */}
-      {/* Last section on the page — extra bottom clearance (mobile only)
-          so it isn't covered by the fixed mobile bottom nav bar.
-          Owner-only: StravaConnect issues OAuth connect/disconnect calls for the
-          signed-in user, so it must never render on someone else's profile. */}
+      {/* ── Settings ── owner-only, last section on the page ──
+          The extra bottom clearance (mobile only) keeps the last row clear of the
+          fixed mobile bottom nav. Every row here acts on the signed-in user —
+          Sign Out, the profile write behind Notifications, Strava's OAuth
+          connect/disconnect — so this must never render on someone else's
+          profile. */}
       {isOwnProfile && (
         <div className="mobile-bottom-clearance">
-          <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-            Connected Apps
-          </div>
-          <StravaConnect userId={profile?.id} />
+          <ProfileSettingsList
+            profile={profile}
+            email={currentUserEmail}
+            onLogOut={onLogOut}
+            onProfileSaved={load}
+          />
         </div>
       )}
 
