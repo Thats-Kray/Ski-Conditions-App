@@ -17,11 +17,12 @@ import SeasonCalendar from "./SeasonCalendar"
 import SkiPlansTab from "./SkiPlansTab"
 import Card from "./ui/Card"
 import Button from "./ui/Button"
+import { skillLabel } from "../lib/friendSubtitle"
 
-// SKILL_OPTIONS feeds `${opt.color}18`/`${skillObj.color}44` hex-alpha-suffix template
-// literals below (skill-badge tinting), which requires literal hex — a var(--token)
-// reference would produce invalid CSS. Same documented Task 0.2 exception as
-// ProfileSetup.jsx's SKILL_OPTIONS — do not tokenize.
+// SKILL_OPTIONS feeds `${opt.color}18` hex-alpha-suffix template literals in the
+// Edit Profile skill-level picker below, which requires literal hex — a
+// var(--token) reference would produce invalid CSS. Same documented Task 0.2
+// exception as ProfileSetup.jsx's SKILL_OPTIONS — do not tokenize.
 const SKILL_OPTIONS = [
   { key: "green",        label: "Green",        color: "#22c55e" },
   { key: "blue",         label: "Blue",         color: "#60a5fa" },
@@ -40,10 +41,6 @@ const THEME_OPTIONS = [
   { key: "aurora-peak", label: "Aurora Peak", swatch: "#A855F7" },
   { key: "base-lodge", label: "Base Lodge", swatch: "#F97316" },
 ]
-
-function initials(name) {
-  return (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
-}
 
 // ── Season Milestones ─────────────────────────────────────────────────────────
 
@@ -447,7 +444,14 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
   }
 
   const fullName   = profile?.full_name || [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Unnamed Skier"
-  const skillObj   = SKILL_OPTIONS.find((s) => s.key === profile?.skill_level)
+  // The mockup's single subtitle line: "🏔 Winter Park · Advanced". skillLabel()
+  // is the app's shared key-to-label map (Crew rows and DMs already use it), so
+  // one skill level can never be spelled two ways in two screens. Renders nothing
+  // when the user has set neither field, which is the common case on live data.
+  const heroSubtitle = [
+    typeof profile?.favorite_mountain === "string" ? profile.favorite_mountain.trim() : "",
+    skillLabel(profile?.skill_level),
+  ].filter(Boolean).join(" · ")
   const sportEmoji = SPORT_EMOJI[profile?.sport_type] || "⛷️"
 
   // One toggle governs both strips. All-Time is own-profile-only: the friend view
@@ -482,23 +486,15 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
         />
       )}
 
-      {/* ── Hero ── */}
+      {/* ── Hero ── borderless, with the mockup's radial glow behind the avatar.
+          --color-accent-dim is the token equivalent of the mockup's
+          rgba(56,189,248,0.14), so the glow follows the picked theme. */}
       <div style={{
-        background: "linear-gradient(160deg,rgba(15,23,42,0.98),rgba(10,17,34,0.98))",
-        border: "1px solid rgba(96,165,250,0.15)",
+        background: "radial-gradient(ellipse 80% 60% at 50% 0%, var(--color-accent-dim), transparent 65%)",
         borderRadius: 22,
-        padding: "24px 20px 20px",
+        padding: "18px 16px 20px",
         position: "relative",
       }}>
-
-        {/* Sign out — top right */}
-        {isOwnProfile && (
-          <button
-            onClick={onLogOut}
-            title="Sign Out"
-            style={{ position: "absolute", top: 14, right: 14, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 15 }}
-          >🚪</button>
-        )}
 
         {/* Centered photo + name block */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
@@ -588,14 +584,25 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
           {profile?.username && (
             <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginTop: 3 }}>@{profile.username}</div>
           )}
-          {profile?.favorite_mountain && (
-            <div style={{ color: "var(--color-accent-soft)", fontSize: 12, fontWeight: 700, marginTop: 5 }}>📍 {profile.favorite_mountain}</div>
-          )}
-          {skillObj && (
-            <div style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, background: `${skillObj.color}18`, border: `1px solid ${skillObj.color}44`, borderRadius: 999, padding: "3px 12px" }}>
-              <div style={{ width: 7, height: 7, borderRadius: "50%", background: skillObj.color }} />
-              <span style={{ fontSize: 11, fontWeight: 800, color: skillObj.color }}>{skillObj.label}</span>
+          {heroSubtitle && (
+            <div style={{ color: "var(--color-accent-soft)", fontSize: 12, fontWeight: 700, marginTop: 5 }}>
+              🏔 {heroSubtitle}
             </div>
+          )}
+
+          {/* Edit profile — a pill inside the centred column, matching the mockup.
+              The repo's 44px tap floor wins over the mockup's ~30px height. */}
+          {isOwnProfile && (
+            <button
+              onClick={() => setShowEdit(true)}
+              style={{
+                marginTop: 12, minHeight: 44, padding: "0 20px", borderRadius: 999,
+                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
+                color: "var(--color-text-1)", fontSize: 12, fontWeight: 800, cursor: "pointer",
+              }}
+            >
+              Edit profile
+            </button>
           )}
         </div>
 
@@ -613,25 +620,6 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
           </div>
         </div>
 
-        {/* Edit Profile + Share buttons — like Instagram */}
-        {isOwnProfile && (
-          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-            <button
-              onClick={() => setShowEdit(true)}
-              style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "1px solid rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.08)", color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer" }}
-            >
-              Edit Profile
-            </button>
-            {seasonStats?.days > 0 && (
-              <button
-                onClick={() => setShowShare(true)}
-                style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: "var(--gradient-cta)", color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer" }}
-              >
-                Share Season
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* ── Stats / Ski Plans sub-tabs — FRIEND VIEW ONLY ──
