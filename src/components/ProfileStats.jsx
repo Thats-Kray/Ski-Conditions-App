@@ -36,27 +36,6 @@ export function StatsViewToggle({ viewMode, onChange }) {
   )
 }
 
-export function HistoryViewToggle({ viewMode, onChange }) {
-  return (
-    <div style={{ display: "flex", gap: 4 }}>
-      {["list", "calendar"].map((mode) => (
-        <button
-          key={mode}
-          onClick={() => onChange(mode)}
-          style={{
-            padding: "6px 14px", borderRadius: "var(--radius-pill)", border: "none", cursor: "pointer",
-            background: viewMode === mode ? "var(--color-accent)" : "rgba(255,255,255,0.06)",
-            color: viewMode === mode ? "var(--color-bg)" : "var(--color-text-2)",
-            fontWeight: 700, fontSize: 13,
-          }}
-        >
-          {mode === "list" ? "List" : "Calendar"}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 // ── Recent Sessions Feed ──────────────────────────────────────────────────────
 
 export function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fullName }) {

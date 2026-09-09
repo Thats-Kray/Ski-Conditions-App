@@ -9,11 +9,7 @@ import {
 import { getMySessions, getCurrentSeason, getAllTimeStats, getLeaderboard } from "../lib/leaderboardApi"
 import { computeStats, seasonDeltaLabel, statsFromLeaderboardRow } from "../lib/profileStats"
 import { buildProfileUpdate } from "../lib/profileForm"
-import {
-  StatsViewToggle,
-  HistoryViewToggle,
-  RecentSessionsFeed,
-} from "./ProfileStats"
+import { StatsViewToggle, RecentSessionsFeed } from "./ProfileStats"
 import { ProfileStatStrip, ProfileExtraFacts } from "./profile/ProfileStatStrip"
 import ShareStatCard from "./ShareStatCard"
 import ProfileSettingsList from "./profile/ProfileSettingsList"
@@ -284,7 +280,6 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false)
   const [photoUploading, setPhotoUploading] = useState(false)
   const [viewMode, setViewMode]       = useState("season")
-  const [historyView, setHistoryView] = useState("list")
   const [allTimeStats, setAllTimeStats] = useState(null)
   const [currentUserId, setCurrentUserId] = useState(null)
   const [currentUserEmail, setCurrentUserEmail] = useState(null)
@@ -722,10 +717,30 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
             </>
           )}
 
+          {/* ── Season grid ── own profile only.
+              A friend's profile never fetches session rows (the friend branch of
+              load() sets recentSessions to []), and fetching them would mean a new
+              query plus an RLS check — explicitly out of scope for this slice.
+
+              The grid is always THIS season, even when the toggle says All-Time:
+              getAllTimeStats() has no season boundary, so an all-time grid would
+              grow without limit every year. The caption names the season so the
+              toggle can never read as "the grid lost my days". */}
+          {isOwnProfile && (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div style={{ fontSize: 14, fontWeight: 900, color: "white" }}>Season grid</div>
+                <div style={{ fontSize: 11, color: "var(--color-accent-soft)", opacity: 0.7 }}>
+                  {season.label} · colored by vertical feet
+                </div>
+              </div>
+              <SeasonCalendar sessions={recentSessions} startYear={season.startYear} />
+            </div>
+          )}
+
           {/* The one Share entry point. Same component and same payload as the
               hero's old "Share Season" button, which Task 9 removes; it keeps
-              that button's `seasonStats?.days > 0` gate. Task 8 inserts the
-              Season grid directly above this. */}
+              that button's `seasonStats?.days > 0` gate. */}
           {isOwnProfile && seasonStats?.days > 0 && (
             <button
               onClick={() => setShowShare(true)}
@@ -740,20 +755,21 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
             </button>
           )}
 
-          {/* ── Session History (List / Calendar) ── */}
-          {/* Own profile only: getMySessions is self-scoped, so a friend view has
-              no session rows to render. */}
+          {/* ── Session History ── own profile only: getMySessions is self-scoped,
+              so a friend view has no session rows to render.
+              List only. The Calendar option was removed in TASK 22.0's Profile
+              slice because the Season grid above now covers it — two near-identical
+              day grids on one screen was the duplication this slice exists to end.
+              Per-session edit (photos/tags/stats) and per-session share are
+              unchanged: neither exists anywhere else in the app. */}
           {isOwnProfile && (
-            <>
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <HistoryViewToggle viewMode={historyView} onChange={setHistoryView} />
-              </div>
-              {historyView === "list" ? (
-                <RecentSessionsFeed sessions={recentSessions} limit={Infinity} onRefresh={load} profile={profile} fullName={fullName} />
-              ) : (
-                <SeasonCalendar sessions={recentSessions} startYear={season.startYear} />
-              )}
-            </>
+            <RecentSessionsFeed
+              sessions={recentSessions}
+              limit={Infinity}
+              onRefresh={load}
+              profile={profile}
+              fullName={fullName}
+            />
           )}
         </>
       )}
