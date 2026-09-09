@@ -10,6 +10,7 @@ import {
 } from "../lib/socialApi"
 import { getMySessions, getCurrentSeason, getAllTimeStats, getLeaderboard } from "../lib/leaderboardApi"
 import { computeStats, statsFromLeaderboardRow } from "../lib/profileStats"
+import { buildProfileUpdate } from "../lib/profileForm"
 import {
   SeasonStatsCard,
   StatsViewToggle,
@@ -108,10 +109,13 @@ function EditProfileModal({ profile, onSaved, onClose }) {
     setSaving(true); setError("")
     try {
       const nameParts = displayName.trim().split(" ")
-      await upsertMyProfile({
+      // buildProfileUpdate, never a bare object literal: upsertMyProfile writes
+      // a WHOLE row, so anything omitted here is written as null. See
+      // src/lib/profileForm.js.
+      await upsertMyProfile(buildProfileUpdate(profile, {
         first_name: nameParts[0] || "",
         last_name: nameParts.slice(1).join(" ") || "",
-        avatar_url: profile?.avatar_url || null,
+        full_name: displayName.trim() || null,
         skill_level: skillLevel || null,
         sport_type: sportType || "ski",
         ski_passes: skiPasses,
@@ -119,8 +123,7 @@ function EditProfileModal({ profile, onSaved, onClose }) {
         vehicle_seats: vehicleSeats ? parseInt(vehicleSeats) : null,
         powder_alerts_enabled: powderAlertsEnabled,
         alert_phone: alertPhone.trim() || null,
-        theme: profile?.theme || "blizzard",
-      })
+      }))
       onSaved()
     } catch (e) {
       setError(e.message || "Could not save profile.")
@@ -435,7 +438,7 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
     setPhotoUploading(true)
     try {
       const url = await uploadProfilePhoto(file)
-      await upsertMyProfile({ ...profile, avatar_url: url })
+      await upsertMyProfile(buildProfileUpdate(profile, { avatar_url: url }))
       await load()
     } catch (err) {
       alert(err.message || "Photo upload failed.")
@@ -449,7 +452,7 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
     setPhotoMenuOpen(false)
     setPhotoUploading(true)
     try {
-      await upsertMyProfile({ ...profile, avatar_url: null })
+      await upsertMyProfile(buildProfileUpdate(profile, { avatar_url: null }))
       await load()
     } catch (err) {
       alert(err.message || "Could not remove photo.")
@@ -460,9 +463,14 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
 
   async function handleSelectTheme(themeName) {
     document.documentElement.setAttribute("data-theme", themeName)
-    try { localStorage.setItem("pd_theme", themeName) } catch {}
     try {
-      await upsertMyProfile({ ...profile, theme: themeName })
+      localStorage.setItem("pd_theme", themeName)
+    } catch {
+      // private browsing / storage disabled — the theme still applies for this
+      // session and is persisted server-side just below.
+    }
+    try {
+      await upsertMyProfile(buildProfileUpdate(profile, { theme: themeName }))
       await load()
     } catch (err) {
       document.documentElement.setAttribute("data-theme", profile?.theme || "blizzard")
