@@ -462,6 +462,47 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
     ? seasonDeltaLabel(seasonStats, priorStats)
     : null
 
+  // One label style for every section heading below the stat stack, so Appearance,
+  // Season Passes, Vehicle and Settings read as one list rather than four cards
+  // that each invented their own heading.
+  const sectionLabelStyle = {
+    fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)",
+    textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10,
+  }
+  const activeThemeKey = profile?.theme || "blizzard"
+  const activeThemeLabel = THEME_OPTIONS.find((t) => t.key === activeThemeKey)?.label || "Blizzard"
+
+  /* Render matrix — what each of this component's two modes shows.
+     Both modes come out of ONE component, and the friend mode is the one nobody
+     clicks during review, so keep this table honest when you change the JSX.
+
+       section              own profile   friend profile   why
+       ------------------   -----------   --------------   -------------------------
+       Back button          no            yes              onBack only exists there
+       Hero                 yes           yes              same block
+       Stats / Ski Plans    no            yes              friend view is the only
+         selector                                          per-friend plan filter
+       Stat strip           yes           yes              friend data comes from
+       Extra facts          yes           yes              statsFromLeaderboardRow
+       Season/All-Time      yes           no               needs getAllTimeStats,
+         toggle                                            which is self-scoped
+       Delta line           yes           no               needs last season's rows
+       Season grid          yes           NO               needs per-day sessions,
+                                                           never fetched for friends
+       Create share card    yes           no               owner's card, owner's data
+       History list         yes           no               getMySessions is self-scoped
+       Appearance           yes           no               writes the viewer's profile
+       Season Passes        yes           yes              display only (unchanged)
+       Vehicle              yes           yes              display only (unchanged)
+       Settings list        yes           NO               every row acts on the
+                                                           signed-in user
+       Edit / photo / share yes           no               owner-only modals
+         / milestone modals
+
+     Not-a-friend and stats-error cards stay friend-only and unchanged; a
+     signed-out visitor who lands here through a profile link hits the
+     stats-error card, because getLeaderboard() throws "Not authenticated." */
+
   return (
     <div style={{ display: "grid", gap: 14 }}>
 
@@ -766,42 +807,64 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
         <SkiPlansTab userId={userId} editable={false} resorts={resorts} />
       )}
 
-      {/* ── Theme ── */}
       {isOwnProfile && (
-      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px" }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Theme</div>
-        <div style={{ display: "flex", gap: 12 }}>
-          {THEME_OPTIONS.map((t) => {
-            const active = (profile?.theme || "blizzard") === t.key
-            return (
-              <button
-                key={t.key}
-                onClick={() => handleSelectTheme(t.key)}
-                style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 0 }}
-              >
-                <div style={{
-                  width: 40, height: 40, borderRadius: "50%",
-                  background: t.swatch,
-                  border: active ? "2px solid var(--color-accent)" : "2px solid transparent",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  {active && <span style={{ fontSize: 16, color: "white", textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}>✓</span>}
-                </div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: active ? "white" : "rgba(255,255,255,0.5)" }}>{t.label}</div>
-              </button>
-            )
-          })}
+        <div>
+          <div style={sectionLabelStyle}>Appearance</div>
+          <div style={{
+            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 16, padding: "10px 14px",
+            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+          }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>Theme</div>
+              <div style={{ fontSize: 11, color: "var(--color-accent-soft)", opacity: 0.7, marginTop: 2 }}>
+                {activeThemeLabel}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+              {THEME_OPTIONS.map((t) => {
+                const active = activeThemeKey === t.key
+                return (
+                  <button
+                    key={t.key}
+                    onClick={() => handleSelectTheme(t.key)}
+                    title={t.label}
+                    aria-label={t.label}
+                    aria-pressed={active}
+                    style={{
+                      width: 40, height: 44, padding: 0, background: "none", border: "none",
+                      cursor: "pointer", display: "grid", placeItems: "center",
+                    }}
+                  >
+                    <span style={{
+                      width: 22, height: 22, borderRadius: "50%", display: "block",
+                      background: t.swatch,
+                      border: active ? "2px solid var(--color-text-1)" : "2px solid transparent",
+                    }} />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
-      </div>
       )}
 
-      {/* ── Season Passes ── */}
+      {/* ── Season Passes ── not in the mockup, but real user-entered data with
+          nowhere else in the app to live, so it is restyled rather than cut.
+          Renders on a friend's profile too, exactly as it did before this slice —
+          only editing is owner-only, and editing lives in Edit Profile. */}
       {profile?.ski_passes?.length > 0 && (
-        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px" }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Season Passes</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <div>
+          <div style={sectionLabelStyle}>Season Passes</div>
+          <div style={{
+            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 16, padding: 14, display: "flex", flexWrap: "wrap", gap: 8,
+          }}>
             {profile.ski_passes.map((p) => (
-              <div key={p} style={{ background: "var(--gradient-pass-pill)", color: "var(--color-pass-pill-text)", borderRadius: 999, padding: "7px 14px", fontWeight: 800, fontSize: 13 }}>
+              <div key={p} style={{
+                background: "var(--gradient-pass-pill)", color: "var(--color-pass-pill-text)",
+                borderRadius: 999, padding: "7px 14px", fontWeight: 800, fontSize: 13,
+              }}>
                 {p}
               </div>
             ))}
@@ -809,18 +872,23 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
         </div>
       )}
 
-      {/* ── Vehicle ── */}
+      {/* ── Vehicle ── same reasoning as Season Passes. */}
       {profile?.vehicle_label && (
-        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ fontSize: 24 }}>🚗</div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>{isOwnProfile ? "My Vehicle" : "Vehicle"}</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "white", marginTop: 2 }}>{profile.vehicle_label}</div>
-            {profile.vehicle_seats > 0 && (
-              <div style={{ fontSize: 12, color: "var(--color-accent-soft)", marginTop: 2, fontWeight: 700 }}>
-                {profile.vehicle_seats} open seat{profile.vehicle_seats !== 1 ? "s" : ""} for passengers
-              </div>
-            )}
+        <div>
+          <div style={sectionLabelStyle}>{isOwnProfile ? "My Vehicle" : "Vehicle"}</div>
+          <div style={{
+            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 16, padding: 14, display: "flex", alignItems: "center", gap: 12,
+          }}>
+            <div style={{ fontSize: 24 }}>🚗</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{profile.vehicle_label}</div>
+              {profile.vehicle_seats > 0 && (
+                <div style={{ fontSize: 12, color: "var(--color-accent-soft)", marginTop: 2, fontWeight: 700 }}>
+                  {profile.vehicle_seats} open seat{profile.vehicle_seats !== 1 ? "s" : ""} for passengers
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
