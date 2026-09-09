@@ -1409,7 +1409,6 @@ export default function App() {
           <ProfilePage
             userId={viewingProfileId}
             onBack={() => setViewingProfileId(null)}
-            onTabChange={handleTabChange}
             resorts={RESORTS}
           />
         ) : mountainPageResortKey ? (
@@ -1539,7 +1538,7 @@ export default function App() {
         {activeTab === "me" && (
           <div style={{ marginTop: 8 }}>
             {currentUser ? (
-              <ProfilePage onLogOut={handleLogOut} onTabChange={setActiveTab} resorts={RESORTS} />
+              <ProfilePage onLogOut={handleLogOut} resorts={RESORTS} />
             ) : (
               <div
                 style={{

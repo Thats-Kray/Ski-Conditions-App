@@ -117,6 +117,17 @@
   --color-dev-badge:        #a3e635;
   --color-dev-badge-strong: #65a30d;
 
+  /* Track E — Profile Season-grid intensity scale (TASK 22.0, Profile slice).
+     Theme-invariant for the same reason as the Track C rating tokens above: the
+     grid reads as an ordered heat scale, so its steps must stay ordered and
+     distinguishable no matter which cosmetic theme is picked. Tiers 3 and 4 are
+     the mockup's own two colours, which the rating scale already carries. */
+  --season-grid-tier-0: rgba(255, 255, 255, 0.06);
+  --season-grid-tier-1: rgba(155, 198, 255, 0.28);
+  --season-grid-tier-2: rgba(155, 198, 255, 0.55);
+  --season-grid-tier-3: var(--rating-sky);
+  --season-grid-tier-4: var(--rating-mint);
+
   --radius-card:         18px;
   --radius-button:       12px;
   --radius-pill:         999px;

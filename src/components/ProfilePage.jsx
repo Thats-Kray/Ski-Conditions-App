@@ -3,31 +3,26 @@ import {
   getCurrentUser,
   getMyProfile,
   getProfileById,
-  getAcceptedFriends,
-  getAllVisibleTrips,
   upsertMyProfile,
   uploadProfilePhoto,
 } from "../lib/socialApi"
 import { getMySessions, getCurrentSeason, getAllTimeStats, getLeaderboard } from "../lib/leaderboardApi"
-import { computeStats } from "../lib/profileStats"
-import {
-  SeasonStatsCard,
-  StatsViewToggle,
-  HistoryViewToggle,
-  RecentSessionsFeed,
-} from "./ProfileStats"
+import { computeStats, seasonDeltaLabel, statsFromLeaderboardRow } from "../lib/profileStats"
+import { buildProfileUpdate } from "../lib/profileForm"
+import { StatsViewToggle, RecentSessionsFeed } from "./ProfileStats"
+import { ProfileStatStrip, ProfileExtraFacts } from "./profile/ProfileStatStrip"
 import ShareStatCard from "./ShareStatCard"
-import StravaConnect from "./StravaConnect"
+import ProfileSettingsList from "./profile/ProfileSettingsList"
 import SeasonCalendar from "./SeasonCalendar"
 import SkiPlansTab from "./SkiPlansTab"
-import Avatar from "./ui/Avatar"
 import Card from "./ui/Card"
 import Button from "./ui/Button"
+import { skillLabel } from "../lib/friendSubtitle"
 
-// SKILL_OPTIONS feeds `${opt.color}18`/`${skillObj.color}44` hex-alpha-suffix template
-// literals below (skill-badge tinting), which requires literal hex — a var(--token)
-// reference would produce invalid CSS. Same documented Task 0.2 exception as
-// ProfileSetup.jsx's SKILL_OPTIONS — do not tokenize.
+// SKILL_OPTIONS feeds `${opt.color}18` hex-alpha-suffix template literals in the
+// Edit Profile skill-level picker below, which requires literal hex — a
+// var(--token) reference would produce invalid CSS. Same documented Task 0.2
+// exception as ProfileSetup.jsx's SKILL_OPTIONS — do not tokenize.
 const SKILL_OPTIONS = [
   { key: "green",        label: "Green",        color: "#22c55e" },
   { key: "blue",         label: "Blue",         color: "#60a5fa" },
@@ -46,10 +41,6 @@ const THEME_OPTIONS = [
   { key: "aurora-peak", label: "Aurora Peak", swatch: "#A855F7" },
   { key: "base-lodge", label: "Base Lodge", swatch: "#F97316" },
 ]
-
-function initials(name) {
-  return (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
-}
 
 // ── Season Milestones ─────────────────────────────────────────────────────────
 
@@ -95,8 +86,6 @@ function EditProfileModal({ profile, onSaved, onClose }) {
   const [skiPasses, setSkiPasses]       = useState(profile?.ski_passes || [])
   const [vehicleLabel, setVehicleLabel] = useState(profile?.vehicle_label || "")
   const [vehicleSeats, setVehicleSeats] = useState(profile?.vehicle_seats || "")
-  const [powderAlertsEnabled, setPowderAlertsEnabled] = useState(profile?.powder_alerts_enabled ?? false)
-  const [alertPhone, setAlertPhone]     = useState(profile?.alert_phone ?? "")
   const [saving, setSaving]             = useState(false)
   const [error, setError]               = useState("")
 
@@ -108,19 +97,19 @@ function EditProfileModal({ profile, onSaved, onClose }) {
     setSaving(true); setError("")
     try {
       const nameParts = displayName.trim().split(" ")
-      await upsertMyProfile({
+      // buildProfileUpdate, never a bare object literal: upsertMyProfile writes
+      // a WHOLE row, so anything omitted here is written as null. See
+      // src/lib/profileForm.js.
+      await upsertMyProfile(buildProfileUpdate(profile, {
         first_name: nameParts[0] || "",
         last_name: nameParts.slice(1).join(" ") || "",
-        avatar_url: profile?.avatar_url || null,
+        full_name: displayName.trim() || null,
         skill_level: skillLevel || null,
         sport_type: sportType || "ski",
         ski_passes: skiPasses,
         vehicle_label: vehicleLabel.trim() || null,
         vehicle_seats: vehicleSeats ? parseInt(vehicleSeats) : null,
-        powder_alerts_enabled: powderAlertsEnabled,
-        alert_phone: alertPhone.trim() || null,
-        theme: profile?.theme || "blizzard",
-      })
+      }))
       onSaved()
     } catch (e) {
       setError(e.message || "Could not save profile.")
@@ -225,28 +214,6 @@ function EditProfileModal({ profile, onSaved, onClose }) {
               <input value={vehicleSeats} onChange={e => setVehicleSeats(e.target.value)} placeholder="Seats" type="number" min="1" max="8" style={fieldStyle} />
             </div>
           </div>
-
-          {/* Powder alerts */}
-          <div style={{ marginTop: 16, display: "grid", gap: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Powder Alerts</div>
-            <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: "white", cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={powderAlertsEnabled}
-                onChange={e => setPowderAlertsEnabled(e.target.checked)}
-              />
-              📧 Weekly powder forecast every Wednesday
-            </label>
-            {powderAlertsEnabled && (
-              <input
-                type="tel"
-                placeholder="Phone number (for future SMS alerts)"
-                value={alertPhone}
-                onChange={e => setAlertPhone(e.target.value)}
-                style={fieldStyle}
-              />
-            )}
-          </div>
         </div>
 
         {/* Sticky footer */}
@@ -297,12 +264,10 @@ function MilestoneModal({ milestone, onShare, onClose }) {
  * renamed when the prop arrived, because a shadowed name here would silently
  * break the all-time stats fetch rather than error.
  */
-export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBack, resorts = [] }) {
+export default function ProfilePage({ onLogOut, userId = null, onBack, resorts = [] }) {
   const isOwnProfile = !userId
 
   const [profile, setProfile]         = useState(null)
-  const [friends, setFriends]         = useState([])
-  const [tripCount, setTripCount]     = useState(0)
   const [loading, setLoading]         = useState(true)
   const [showEdit, setShowEdit]       = useState(false)
   const [seasonStats, setSeasonStats] = useState(null)
@@ -312,9 +277,9 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false)
   const [photoUploading, setPhotoUploading] = useState(false)
   const [viewMode, setViewMode]       = useState("season")
-  const [historyView, setHistoryView] = useState("list")
   const [allTimeStats, setAllTimeStats] = useState(null)
   const [currentUserId, setCurrentUserId] = useState(null)
+  const [currentUserEmail, setCurrentUserEmail] = useState(null)
   const [milestoneQueue, setMilestoneQueue] = useState([])
   const [shareFromMilestone, setShareFromMilestone] = useState(false)
   const [profileTab, setProfileTab]   = useState("stats")   // "stats" | "plans"
@@ -357,18 +322,10 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
         } else {
           setStatsError(false)
           setNotFriends(false)
-          // Key names must match computeStats() — SeasonStatsCard reads both.
-          setSeasonStats({
-            days:           row.days,
-            vertical:       row.verticalFt,
-            miles:          row.milesSki,
-            powderDays:     row.powderDays,
-            resorts:        row.resorts,
-            topResort:      row.topResort,
-            totalRuns:      row.totalRuns,
-            topSpeed:       row.topSpeed,
-            timeOnMountain: row.timeOnMountain,
-          })
+          // Key names must match computeStats(): both shapes feed the same strip
+          // components. statsFromLeaderboardRow is the single tested place that
+          // renaming happens — do not inline it back.
+          setSeasonStats(statsFromLeaderboardRow(row))
         }
         setRecentSessions([])
         setPriorStats(null)
@@ -376,24 +333,19 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
         return
       }
 
-      const [user, prof, friendData, tripData, sessions, priorSessions] = await Promise.all([
+      // getAcceptedFriends/getAllVisibleTrips used to be fetched here purely to
+      // print a Friends count and a Trips count in the hero. Both counts were
+      // navigation shortcuts into tabs that are one tap away in the bottom nav,
+      // and both were cut in TASK 22.0's Profile slice — so are their requests.
+      const [user, prof, sessions, priorSessions] = await Promise.all([
         getCurrentUser(),
         getMyProfile(),
-        getAcceptedFriends().catch(() => []),
-        getAllVisibleTrips().catch(() => []),
         getMySessions(startYear).catch(() => []),
         getMySessions(startYear - 1).catch(() => []),
       ])
       setProfile(prof)
       setCurrentUserId(user?.id || null)
-      setFriends(Array.isArray(friendData) ? friendData : [])
-      const { mine = [], rsvpd = [] } = tripData || {}
-      const seen = new Set()
-      let count = 0
-      for (const t of [...mine, ...rsvpd]) {
-        if (!seen.has(t.id)) { seen.add(t.id); count++ }
-      }
-      setTripCount(count)
+      setCurrentUserEmail(user?.email || null)
       if (Array.isArray(sessions)) {
         const currentStats = computeStats(sessions)
         setSeasonStats(currentStats)
@@ -443,7 +395,7 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
     setPhotoUploading(true)
     try {
       const url = await uploadProfilePhoto(file)
-      await upsertMyProfile({ ...profile, avatar_url: url })
+      await upsertMyProfile(buildProfileUpdate(profile, { avatar_url: url }))
       await load()
     } catch (err) {
       alert(err.message || "Photo upload failed.")
@@ -457,7 +409,7 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
     setPhotoMenuOpen(false)
     setPhotoUploading(true)
     try {
-      await upsertMyProfile({ ...profile, avatar_url: null })
+      await upsertMyProfile(buildProfileUpdate(profile, { avatar_url: null }))
       await load()
     } catch (err) {
       alert(err.message || "Could not remove photo.")
@@ -468,9 +420,14 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
 
   async function handleSelectTheme(themeName) {
     document.documentElement.setAttribute("data-theme", themeName)
-    try { localStorage.setItem("pd_theme", themeName) } catch {}
     try {
-      await upsertMyProfile({ ...profile, theme: themeName })
+      localStorage.setItem("pd_theme", themeName)
+    } catch {
+      // private browsing / storage disabled — the theme still applies for this
+      // session and is persisted server-side just below.
+    }
+    try {
+      await upsertMyProfile(buildProfileUpdate(profile, { theme: themeName }))
       await load()
     } catch (err) {
       document.documentElement.setAttribute("data-theme", profile?.theme || "blizzard")
@@ -487,8 +444,64 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
   }
 
   const fullName   = profile?.full_name || [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Unnamed Skier"
-  const skillObj   = SKILL_OPTIONS.find((s) => s.key === profile?.skill_level)
+  // The mockup's single subtitle line: "🏔 Winter Park · Advanced". skillLabel()
+  // is the app's shared key-to-label map (Crew rows and DMs already use it), so
+  // one skill level can never be spelled two ways in two screens. Renders nothing
+  // when the user has set neither field, which is the common case on live data.
+  const heroSubtitle = [
+    typeof profile?.favorite_mountain === "string" ? profile.favorite_mountain.trim() : "",
+    skillLabel(profile?.skill_level),
+  ].filter(Boolean).join(" · ")
   const sportEmoji = SPORT_EMOJI[profile?.sport_type] || "⛷️"
+
+  // One toggle governs both strips. All-Time is own-profile-only: the friend view
+  // has a single aggregate season row and no way to ask for more.
+  const allTimeSelected = isOwnProfile && viewMode === "allTime"
+  const activeStats = allTimeSelected ? allTimeStats : seasonStats
+  const deltaLabel = isOwnProfile && viewMode === "season"
+    ? seasonDeltaLabel(seasonStats, priorStats)
+    : null
+
+  // One label style for every section heading below the stat stack, so Appearance,
+  // Season Passes, Vehicle and Settings read as one list rather than four cards
+  // that each invented their own heading.
+  const sectionLabelStyle = {
+    fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)",
+    textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10,
+  }
+  const activeThemeKey = profile?.theme || "blizzard"
+  const activeThemeLabel = THEME_OPTIONS.find((t) => t.key === activeThemeKey)?.label || "Blizzard"
+
+  /* Render matrix — what each of this component's two modes shows.
+     Both modes come out of ONE component, and the friend mode is the one nobody
+     clicks during review, so keep this table honest when you change the JSX.
+
+       section              own profile   friend profile   why
+       ------------------   -----------   --------------   -------------------------
+       Back button          no            yes              onBack only exists there
+       Hero                 yes           yes              same block
+       Stats / Ski Plans    no            yes              friend view is the only
+         selector                                          per-friend plan filter
+       Stat strip           yes           yes              friend data comes from
+       Extra facts          yes           yes              statsFromLeaderboardRow
+       Season/All-Time      yes           no               needs getAllTimeStats,
+         toggle                                            which is self-scoped
+       Delta line           yes           no               needs last season's rows
+       Season grid          yes           NO               needs per-day sessions,
+                                                           never fetched for friends
+       Create share card    yes           no               owner's card, owner's data
+       History list         yes           no               getMySessions is self-scoped
+       Appearance           yes           no               writes the viewer's profile
+       Season Passes        yes           yes              display only (unchanged)
+       Vehicle              yes           yes              display only (unchanged)
+       Settings list        yes           NO               every row acts on the
+                                                           signed-in user
+       Edit / photo / share yes           no               owner-only modals
+         / milestone modals
+
+     Not-a-friend and stats-error cards stay friend-only and unchanged; a
+     signed-out visitor who lands here through a profile link hits the
+     stats-error card, because getLeaderboard() throws "Not authenticated." */
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
@@ -514,23 +527,15 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
         />
       )}
 
-      {/* ── Hero ── */}
+      {/* ── Hero ── borderless, with the mockup's radial glow behind the avatar.
+          --color-accent-dim is the token equivalent of the mockup's
+          rgba(56,189,248,0.14), so the glow follows the picked theme. */}
       <div style={{
-        background: "linear-gradient(160deg,rgba(15,23,42,0.98),rgba(10,17,34,0.98))",
-        border: "1px solid rgba(96,165,250,0.15)",
+        background: "radial-gradient(ellipse 80% 60% at 50% 0%, var(--color-accent-dim), transparent 65%)",
         borderRadius: 22,
-        padding: "24px 20px 20px",
+        padding: "18px 16px 20px",
         position: "relative",
       }}>
-
-        {/* Sign out — top right */}
-        {isOwnProfile && (
-          <button
-            onClick={onLogOut}
-            title="Sign Out"
-            style={{ position: "absolute", top: 14, right: 14, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 15 }}
-          >🚪</button>
-        )}
 
         {/* Centered photo + name block */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
@@ -620,94 +625,63 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
           {profile?.username && (
             <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginTop: 3 }}>@{profile.username}</div>
           )}
-          {profile?.favorite_mountain && (
-            <div style={{ color: "var(--color-accent-soft)", fontSize: 12, fontWeight: 700, marginTop: 5 }}>📍 {profile.favorite_mountain}</div>
-          )}
-          {skillObj && (
-            <div style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, background: `${skillObj.color}18`, border: `1px solid ${skillObj.color}44`, borderRadius: 999, padding: "3px 12px" }}>
-              <div style={{ width: 7, height: 7, borderRadius: "50%", background: skillObj.color }} />
-              <span style={{ fontSize: 11, fontWeight: 800, color: skillObj.color }}>{skillObj.label}</span>
+          {heroSubtitle && (
+            <div style={{ color: "var(--color-accent-soft)", fontSize: 12, fontWeight: 700, marginTop: 5 }}>
+              🏔 {heroSubtitle}
             </div>
           )}
-        </div>
 
-        {/* Stats row — like Instagram/Strava.
-            Trips and Friends counts come from getAllVisibleTrips/getAcceptedFriends,
-            both of which are scoped to the signed-in user — on someone else's
-            profile they would render a misleading "0", so only Days is shown. */}
-        <div style={{ display: "flex", marginTop: 20, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 16 }}>
+          {/* Edit profile — a pill inside the centred column, matching the mockup.
+              The repo's 44px tap floor wins over the mockup's ~30px height. */}
           {isOwnProfile && (
-            <>
-              <button
-                onClick={() => onTabChange?.("plans")}
-                style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "center", padding: "4px 0" }}
-              >
-                <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1 }}>{tripCount}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Trips</div>
-              </button>
-              <div style={{ width: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
-              <button
-                onClick={() => onTabChange?.("crew")}
-                style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "center", padding: "4px 0" }}
-              >
-                <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1 }}>{friends.length}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Friends</div>
-              </button>
-              <div style={{ width: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
-            </>
-          )}
-          <div style={{ flex: 1, textAlign: "center", padding: "4px 0" }}>
-            <div style={{ fontSize: 22, fontWeight: 900, color: seasonStats?.days > 0 ? "var(--color-accent-soft)" : "white", lineHeight: 1 }}>{seasonStats?.days ?? "—"}</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Days</div>
-          </div>
-        </div>
-
-        {/* Edit Profile + Share buttons — like Instagram */}
-        {isOwnProfile && (
-          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
             <button
               onClick={() => setShowEdit(true)}
-              style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "1px solid rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.08)", color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer" }}
+              style={{
+                marginTop: 12, minHeight: 44, padding: "0 20px", borderRadius: 999,
+                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
+                color: "var(--color-text-1)", fontSize: 12, fontWeight: 800, cursor: "pointer",
+              }}
             >
-              Edit Profile
+              Edit profile
             </button>
-            {seasonStats?.days > 0 && (
-              <button
-                onClick={() => setShowShare(true)}
-                style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: "var(--gradient-cta)", color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer" }}
-              >
-                Share Season
-              </button>
-            )}
-          </div>
-        )}
+          )}
+        </div>
+
       </div>
 
-      {/* ── Stats / Ski Plans sub-tabs ── */}
-      <div style={{
-        display: "flex", gap: 4, background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14,
-        padding: 4, width: "fit-content",
-      }}>
-        {[{ key: "stats", label: "📊 Stats" }, { key: "plans", label: "📅 Ski Plans" }].map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setProfileTab(key)}
-            style={{
-              padding: "8px 16px", borderRadius: 10,
-              background: profileTab === key ? "rgba(255,255,255,0.12)" : "transparent",
-              border: profileTab === key ? "1px solid rgba(255,255,255,0.14)" : "1px solid transparent",
-              color: profileTab === key ? "white" : "rgba(255,255,255,0.5)",
-              fontWeight: profileTab === key ? 800 : 600,
-              fontSize: 13, cursor: "pointer", minHeight: 44,
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* ── Stats / Ski Plans sub-tabs — FRIEND VIEW ONLY ──
+          The own profile lost this selector in TASK 22.0's Profile slice: its Ski
+          Plans tab was a duplicate of the Plans nav tab's own day agenda. A
+          friend's profile is the only place in the app that shows one specific
+          person's upcoming plans, so it keeps the selector — and keeps it lazy,
+          so opening a friend's profile doesn't fetch a month of plans nobody
+          asked to see. */}
+      {!isOwnProfile && (
+        <div style={{
+          display: "flex", gap: 4, background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14,
+          padding: 4, width: "fit-content",
+        }}>
+          {[{ key: "stats", label: "📊 Stats" }, { key: "plans", label: "📅 Ski Plans" }].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setProfileTab(key)}
+              style={{
+                padding: "8px 16px", borderRadius: 10,
+                background: profileTab === key ? "rgba(255,255,255,0.12)" : "transparent",
+                border: profileTab === key ? "1px solid rgba(255,255,255,0.14)" : "1px solid transparent",
+                color: profileTab === key ? "white" : "rgba(255,255,255,0.5)",
+                fontWeight: profileTab === key ? 800 : 600,
+                fontSize: 13, cursor: "pointer", minHeight: 44,
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {profileTab === "stats" && (
+      {(isOwnProfile || profileTab === "stats") && (
         <>
           {/* Not an accepted friend — stats are gated server-side too, this is
               just the honest explanation instead of an empty card. */}
@@ -727,7 +701,10 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
             </div>
           )}
 
-          {/* ── Season Stats ── */}
+          {/* ── Stat stack ── header strip, then the facts the strip doesn't carry.
+              Replaces SeasonStatsCard, whose 2x2 grid showed the same four numbers
+              the strip does. The Season/All-Time toggle governs both strips (and,
+              from Task 8, the grid's caption). */}
           {seasonStats && !notFriends && !statsError && (
             <>
               {isOwnProfile && (
@@ -735,79 +712,145 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
                   <StatsViewToggle viewMode={viewMode} onChange={handleViewModeChange} />
                 </div>
               )}
-              {isOwnProfile && viewMode === "allTime" && allTimeStats == null ? (
-                <div style={{ textAlign: "center", padding: "24px", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
+
+              {allTimeSelected && allTimeStats == null ? (
+                <div style={{ textAlign: "center", padding: 24, color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
                   Loading all-time stats…
                 </div>
               ) : (
-                <SeasonStatsCard
-                  stats={isOwnProfile && viewMode === "allTime" ? allTimeStats : seasonStats}
-                  priorStats={isOwnProfile && viewMode === "season" ? priorStats : null}
-                  season={season}
-                  viewMode={isOwnProfile ? viewMode : "season"}
-                />
+                <>
+                  <ProfileStatStrip stats={activeStats} />
+                  {activeStats.days === 0 ? (
+                    <div style={{ textAlign: "center", padding: 20, color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
+                      No days logged yet — get out there! ⛷️
+                    </div>
+                  ) : (
+                    <ProfileExtraFacts stats={activeStats} deltaLabel={deltaLabel} />
+                  )}
+                </>
               )}
             </>
           )}
 
-          {/* ── Session History (List / Calendar) ── */}
-          {/* Own profile only: getMySessions is self-scoped, so a friend view has
-              no session rows to render. */}
+          {/* ── Season grid ── own profile only.
+              A friend's profile never fetches session rows (the friend branch of
+              load() sets recentSessions to []), and fetching them would mean a new
+              query plus an RLS check — explicitly out of scope for this slice.
+
+              The grid is always THIS season, even when the toggle says All-Time:
+              getAllTimeStats() has no season boundary, so an all-time grid would
+              grow without limit every year. The caption names the season so the
+              toggle can never read as "the grid lost my days". */}
           {isOwnProfile && (
-            <>
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <HistoryViewToggle viewMode={historyView} onChange={setHistoryView} />
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div style={{ fontSize: 14, fontWeight: 900, color: "white" }}>Season grid</div>
+                <div style={{ fontSize: 11, color: "var(--color-accent-soft)", opacity: 0.7 }}>
+                  {season.label} · colored by vertical feet
+                </div>
               </div>
-              {historyView === "list" ? (
-                <RecentSessionsFeed sessions={recentSessions} limit={Infinity} onRefresh={load} profile={profile} fullName={fullName} />
-              ) : (
-                <SeasonCalendar sessions={recentSessions} startYear={season.startYear} />
-              )}
-            </>
+              <SeasonCalendar sessions={recentSessions} startYear={season.startYear} />
+            </div>
+          )}
+
+          {/* The one Share entry point. Same component and same payload as the
+              hero's old "Share Season" button, which Task 9 removes; it keeps
+              that button's `seasonStats?.days > 0` gate. */}
+          {isOwnProfile && seasonStats?.days > 0 && (
+            <button
+              onClick={() => setShowShare(true)}
+              style={{
+                width: "100%", minHeight: 44, padding: 13, borderRadius: 14, border: "none",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                background: "var(--gradient-cta)", color: "white",
+                fontSize: 13, fontWeight: 800, cursor: "pointer",
+              }}
+            >
+              📤 Create share card
+            </button>
+          )}
+
+          {/* ── Session History ── own profile only: getMySessions is self-scoped,
+              so a friend view has no session rows to render.
+              List only. The Calendar option was removed in TASK 22.0's Profile
+              slice because the Season grid above now covers it — two near-identical
+              day grids on one screen was the duplication this slice exists to end.
+              Per-session edit (photos/tags/stats) and per-session share are
+              unchanged: neither exists anywhere else in the app. */}
+          {isOwnProfile && (
+            <RecentSessionsFeed
+              sessions={recentSessions}
+              limit={Infinity}
+              onRefresh={load}
+              profile={profile}
+              fullName={fullName}
+            />
           )}
         </>
       )}
 
-      {profileTab === "plans" && (
-        <SkiPlansTab userId={userId} editable={isOwnProfile} resorts={resorts} />
+      {!isOwnProfile && profileTab === "plans" && (
+        <SkiPlansTab userId={userId} editable={false} resorts={resorts} />
       )}
 
-      {/* ── Theme ── */}
       {isOwnProfile && (
-      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px" }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Theme</div>
-        <div style={{ display: "flex", gap: 12 }}>
-          {THEME_OPTIONS.map((t) => {
-            const active = (profile?.theme || "blizzard") === t.key
-            return (
-              <button
-                key={t.key}
-                onClick={() => handleSelectTheme(t.key)}
-                style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 0 }}
-              >
-                <div style={{
-                  width: 40, height: 40, borderRadius: "50%",
-                  background: t.swatch,
-                  border: active ? "2px solid var(--color-accent)" : "2px solid transparent",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  {active && <span style={{ fontSize: 16, color: "white", textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}>✓</span>}
-                </div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: active ? "white" : "rgba(255,255,255,0.5)" }}>{t.label}</div>
-              </button>
-            )
-          })}
+        <div>
+          <div style={sectionLabelStyle}>Appearance</div>
+          <div style={{
+            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 16, padding: "10px 14px",
+            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+          }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>Theme</div>
+              <div style={{ fontSize: 11, color: "var(--color-accent-soft)", opacity: 0.7, marginTop: 2 }}>
+                {activeThemeLabel}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+              {THEME_OPTIONS.map((t) => {
+                const active = activeThemeKey === t.key
+                return (
+                  <button
+                    key={t.key}
+                    onClick={() => handleSelectTheme(t.key)}
+                    title={t.label}
+                    aria-label={t.label}
+                    aria-pressed={active}
+                    style={{
+                      width: 40, height: 44, padding: 0, background: "none", border: "none",
+                      cursor: "pointer", display: "grid", placeItems: "center",
+                    }}
+                  >
+                    <span style={{
+                      width: 22, height: 22, borderRadius: "50%", display: "block",
+                      background: t.swatch,
+                      border: active ? "2px solid var(--color-text-1)" : "2px solid transparent",
+                    }} />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
-      </div>
       )}
 
-      {/* ── Season Passes ── */}
+      {/* ── Season Passes ── not in the mockup, but real user-entered data with
+          nowhere else in the app to live, so it is restyled rather than cut.
+          Renders on a friend's profile too, exactly as it did before this slice —
+          only editing is owner-only, and editing lives in Edit Profile. */}
       {profile?.ski_passes?.length > 0 && (
-        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px" }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Season Passes</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <div>
+          <div style={sectionLabelStyle}>Season Passes</div>
+          <div style={{
+            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 16, padding: 14, display: "flex", flexWrap: "wrap", gap: 8,
+          }}>
             {profile.ski_passes.map((p) => (
-              <div key={p} style={{ background: "var(--gradient-pass-pill)", color: "var(--color-pass-pill-text)", borderRadius: 999, padding: "7px 14px", fontWeight: 800, fontSize: 13 }}>
+              <div key={p} style={{
+                background: "var(--gradient-pass-pill)", color: "var(--color-pass-pill-text)",
+                borderRadius: 999, padding: "7px 14px", fontWeight: 800, fontSize: 13,
+              }}>
                 {p}
               </div>
             ))}
@@ -815,61 +858,41 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
         </div>
       )}
 
-      {/* ── Vehicle ── */}
+      {/* ── Vehicle ── same reasoning as Season Passes. */}
       {profile?.vehicle_label && (
-        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ fontSize: 24 }}>🚗</div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>{isOwnProfile ? "My Vehicle" : "Vehicle"}</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "white", marginTop: 2 }}>{profile.vehicle_label}</div>
-            {profile.vehicle_seats > 0 && (
-              <div style={{ fontSize: 12, color: "var(--color-accent-soft)", marginTop: 2, fontWeight: 700 }}>
-                {profile.vehicle_seats} open seat{profile.vehicle_seats !== 1 ? "s" : ""} for passengers
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Friends strip ── */}
-      {friends.length > 0 && (
-        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>Your Crew</div>
-            <button
-              onClick={() => onTabChange?.("crew")}
-              style={{ background: "none", border: "none", color: "var(--color-accent-soft)", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: 0 }}
-            >
-              See All →
-            </button>
-          </div>
-          <div style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch" }}>
-            {friends.slice(0, 12).map((f) => {
-              const name = f.full_name || f.username || "?"
-              return (
-                <div key={f.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                  <Avatar profile={f} size={46} />
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: 600, maxWidth: 52, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {name.split(" ")[0]}
-                  </div>
+        <div>
+          <div style={sectionLabelStyle}>{isOwnProfile ? "My Vehicle" : "Vehicle"}</div>
+          <div style={{
+            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 16, padding: 14, display: "flex", alignItems: "center", gap: 12,
+          }}>
+            <div style={{ fontSize: 24 }}>🚗</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{profile.vehicle_label}</div>
+              {profile.vehicle_seats > 0 && (
+                <div style={{ fontSize: 12, color: "var(--color-accent-soft)", marginTop: 2, fontWeight: 700 }}>
+                  {profile.vehicle_seats} open seat{profile.vehicle_seats !== 1 ? "s" : ""} for passengers
                 </div>
-              )
-            })}
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* ── Connected Apps ── */}
-      {/* Last section on the page — extra bottom clearance (mobile only)
-          so it isn't covered by the fixed mobile bottom nav bar.
-          Owner-only: StravaConnect issues OAuth connect/disconnect calls for the
-          signed-in user, so it must never render on someone else's profile. */}
+      {/* ── Settings ── owner-only, last section on the page ──
+          The extra bottom clearance (mobile only) keeps the last row clear of the
+          fixed mobile bottom nav. Every row here acts on the signed-in user —
+          Sign Out, the profile write behind Notifications, Strava's OAuth
+          connect/disconnect — so this must never render on someone else's
+          profile. */}
       {isOwnProfile && (
         <div className="mobile-bottom-clearance">
-          <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-            Connected Apps
-          </div>
-          <StravaConnect userId={profile?.id} />
+          <ProfileSettingsList
+            profile={profile}
+            email={currentUserEmail}
+            onLogOut={onLogOut}
+            onProfileSaved={load}
+          />
         </div>
       )}
 
