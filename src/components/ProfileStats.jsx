@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react"
 import { updateSessionStats } from "../lib/leaderboardApi"
 import { saveSkiDayDetails, getSessionPhotos, getSessionTags } from "../lib/socialApi"
-import { formatMinutes } from "../lib/profileStats"
 import { resortName, resortEmoji } from "../lib/resorts"
 import { fmt } from "../lib/format"
-import SnowStat from "./ui/SnowStat"
 import SessionEditForm from "./SessionEditForm"
 import ShareStatCard from "./ShareStatCard"
 
@@ -16,100 +14,6 @@ import ShareStatCard from "./ShareStatCard"
  *
  * Bodies are unchanged from the originals.
  */
-
-// ── Season Stats Card ─────────────────────────────────────────────────────────
-
-export function SeasonStatsCard({ stats, priorStats, season, viewMode = "season" }) {
-  const statItems = [
-    { label: "Days on Mountain", value: stats.days,                  emoji: "⛷️" },
-    { label: "Vertical Feet",    value: fmt(stats.vertical) + " ft", emoji: "📏" },
-    { label: "Resorts",          value: stats.resorts,               emoji: "🏔️" },
-    { label: "Powder Days",      value: stats.powderDays,            emoji: "❄️" },
-  ]
-
-  return (
-    <div style={{
-      background: "linear-gradient(135deg,rgba(15,118,110,0.35),rgba(37,99,235,0.28))",
-      border: "1px solid rgba(96,165,250,0.2)",
-      borderRadius: 20,
-      overflow: "hidden",
-    }}>
-      {/* Header */}
-      <div style={{ padding: "14px 18px 10px" }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: 0.9 }}>
-          {viewMode === "allTime" ? "All-Time" : `${season.label} Season`}
-        </div>
-      </div>
-
-      {/* 2×2 stats grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "0 14px 14px" }}>
-        {statItems.map(item => (
-          <div key={item.label} style={{
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 14,
-            padding: "16px 16px 14px",
-          }}>
-            <div style={{ fontSize: 32, fontWeight: 900, color: "white", lineHeight: 1, letterSpacing: -1 }}>
-              {item.value}
-            </div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", marginTop: 5, textTransform: "uppercase", letterSpacing: 0.6 }}>
-              {item.emoji} {item.label}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* New stat tiles — Total Runs / Top Speed / Time on Mountain */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, padding: "12px 14px 0" }}>
-        <SnowStat icon="🎿" label="Total Runs" value={stats.totalRuns} />
-        <SnowStat icon="⚡" label="Top Speed" value={stats.topSpeed ?? "—"} unit={stats.topSpeed != null ? "mph" : undefined} />
-        <SnowStat icon="⏱️" label="Time on Mountain" value={formatMinutes(stats.timeOnMountain)} />
-      </div>
-
-      {/* Season-over-season delta row */}
-      {priorStats && (
-        <div style={{ fontSize: 13, color: "var(--color-text-2)", marginTop: 8, padding: "0 14px" }}>
-          {stats.days === priorStats.days
-            ? "Same days on mountain as last season"
-            : stats.days > priorStats.days
-              ? `↑ ${stats.days - priorStats.days} more day${stats.days - priorStats.days === 1 ? "" : "s"} than last season`
-              : `↓ ${priorStats.days - stats.days} fewer day${priorStats.days - stats.days === 1 ? "" : "s"} than last season`}
-        </div>
-      )}
-
-      {/* Bottom: top resort + miles */}
-      {(stats.topResort || stats.miles > 0) && (
-        <div style={{ display: "flex", gap: 8, padding: "12px 14px" }}>
-          {stats.topResort && (
-            <div style={{ flex: 1, background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 10, padding: "9px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 15 }}>🏆</span>
-              <div>
-                <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.5 }}>Top Resort</div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "white", marginTop: 1 }}>{resortName(stats.topResort)}</div>
-              </div>
-            </div>
-          )}
-          {stats.miles > 0 && (
-            <div style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "9px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 15 }}>🛷</span>
-              <div>
-                <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.5 }}>Miles Skied</div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "white", marginTop: 1 }}>{stats.miles} mi</div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {stats.days === 0 && (
-        <div style={{ textAlign: "center", padding: "20px", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
-          No days logged yet — get out there! ⛷️
-        </div>
-      )}
-    </div>
-  )
-}
 
 export function StatsViewToggle({ viewMode, onChange }) {
   return (

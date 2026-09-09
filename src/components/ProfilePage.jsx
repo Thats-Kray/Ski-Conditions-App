@@ -7,14 +7,14 @@ import {
   uploadProfilePhoto,
 } from "../lib/socialApi"
 import { getMySessions, getCurrentSeason, getAllTimeStats, getLeaderboard } from "../lib/leaderboardApi"
-import { computeStats, statsFromLeaderboardRow } from "../lib/profileStats"
+import { computeStats, seasonDeltaLabel, statsFromLeaderboardRow } from "../lib/profileStats"
 import { buildProfileUpdate } from "../lib/profileForm"
 import {
-  SeasonStatsCard,
   StatsViewToggle,
   HistoryViewToggle,
   RecentSessionsFeed,
 } from "./ProfileStats"
+import { ProfileStatStrip, ProfileExtraFacts } from "./profile/ProfileStatStrip"
 import ShareStatCard from "./ShareStatCard"
 import ProfileSettingsList from "./profile/ProfileSettingsList"
 import SeasonCalendar from "./SeasonCalendar"
@@ -455,6 +455,14 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
   const skillObj   = SKILL_OPTIONS.find((s) => s.key === profile?.skill_level)
   const sportEmoji = SPORT_EMOJI[profile?.sport_type] || "⛷️"
 
+  // One toggle governs both strips. All-Time is own-profile-only: the friend view
+  // has a single aggregate season row and no way to ask for more.
+  const allTimeSelected = isOwnProfile && viewMode === "allTime"
+  const activeStats = allTimeSelected ? allTimeStats : seasonStats
+  const deltaLabel = isOwnProfile && viewMode === "season"
+    ? seasonDeltaLabel(seasonStats, priorStats)
+    : null
+
   return (
     <div style={{ display: "grid", gap: 14 }}>
 
@@ -683,7 +691,10 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
             </div>
           )}
 
-          {/* ── Season Stats ── */}
+          {/* ── Stat stack ── header strip, then the facts the strip doesn't carry.
+              Replaces SeasonStatsCard, whose 2x2 grid showed the same four numbers
+              the strip does. The Season/All-Time toggle governs both strips (and,
+              from Task 8, the grid's caption). */}
           {seasonStats && !notFriends && !statsError && (
             <>
               {isOwnProfile && (
@@ -691,19 +702,42 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
                   <StatsViewToggle viewMode={viewMode} onChange={handleViewModeChange} />
                 </div>
               )}
-              {isOwnProfile && viewMode === "allTime" && allTimeStats == null ? (
-                <div style={{ textAlign: "center", padding: "24px", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
+
+              {allTimeSelected && allTimeStats == null ? (
+                <div style={{ textAlign: "center", padding: 24, color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
                   Loading all-time stats…
                 </div>
               ) : (
-                <SeasonStatsCard
-                  stats={isOwnProfile && viewMode === "allTime" ? allTimeStats : seasonStats}
-                  priorStats={isOwnProfile && viewMode === "season" ? priorStats : null}
-                  season={season}
-                  viewMode={isOwnProfile ? viewMode : "season"}
-                />
+                <>
+                  <ProfileStatStrip stats={activeStats} />
+                  {activeStats.days === 0 ? (
+                    <div style={{ textAlign: "center", padding: 20, color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
+                      No days logged yet — get out there! ⛷️
+                    </div>
+                  ) : (
+                    <ProfileExtraFacts stats={activeStats} deltaLabel={deltaLabel} />
+                  )}
+                </>
               )}
             </>
+          )}
+
+          {/* The one Share entry point. Same component and same payload as the
+              hero's old "Share Season" button, which Task 9 removes; it keeps
+              that button's `seasonStats?.days > 0` gate. Task 8 inserts the
+              Season grid directly above this. */}
+          {isOwnProfile && seasonStats?.days > 0 && (
+            <button
+              onClick={() => setShowShare(true)}
+              style={{
+                width: "100%", minHeight: 44, padding: 13, borderRadius: 14, border: "none",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                background: "var(--gradient-cta)", color: "white",
+                fontSize: 13, fontWeight: 800, cursor: "pointer",
+              }}
+            >
+              📤 Create share card
+            </button>
           )}
 
           {/* ── Session History (List / Calendar) ── */}
