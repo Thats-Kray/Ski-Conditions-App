@@ -701,6 +701,54 @@ async function fetchHtmlConditions(url) {
   }
 }
 
+// ── Last-known-good terrain data (in-memory, per field, 24h) ─────────────────
+//
+// The 7 Ikon resorts plus Telluride are HTML-scraped (parseConditionsHtml
+// above), and those pages break periodically — a scrape can return lifts but
+// not runs, or nothing at all. Missing terrain data no longer poisons the
+// Powder Score (powderScore.js drops the component and rescales), but a count
+// from a few hours ago is still better information than no count.
+//
+// PER FIELD, NOT ALL-OR-NOTHING: each of the four values is cached with its own
+// timestamp. A fresh value always wins and refreshes that field's timestamp; a
+// missing value falls back to that field's own cached value only if it is under
+// 24h old. A fresh value is never overwritten by a stale one, and a scrape that
+// parses lifts but not runs keeps the fresh lifts and backfills only runs.
+// Anything still null after this falls through to the formula's
+// exclude-and-rescale as the final fallback.
+//
+// ACCEPTED LIMITATION, stated so it is not mistaken for an oversight: this is
+// in-memory only and resets on every Render restart/deploy. Persistent
+// (Supabase-backed) caching, new data sources, retries and scraper monitoring
+// are TASK 22.3 (Sprint 45), deliberately not this task.
+const TERRAIN_FIELDS = ["liftsOpen", "liftsTotal", "runsOpen", "runsTotal"]
+const TERRAIN_CACHE_TTL = 24 * 60 * 60 * 1000
+const terrainCache = new Map() // resortKey -> { [field]: { value, capturedAt } }
+
+export function terrainWithLastKnownGood(resortKey, conditions, now = Date.now()) {
+  const entry = terrainCache.get(resortKey) || {}
+  const resolved = {}
+
+  for (const field of TERRAIN_FIELDS) {
+    const fresh = conditions?.[field] ?? null
+
+    if (fresh != null) {
+      entry[field] = { value: fresh, capturedAt: now }
+      resolved[field] = fresh
+      continue
+    }
+
+    const cachedField = entry[field]
+    resolved[field] =
+      cachedField && now - cachedField.capturedAt < TERRAIN_CACHE_TTL
+        ? cachedField.value
+        : null
+  }
+
+  terrainCache.set(resortKey, entry)
+  return resolved
+}
+
 export async function getResortConditions(resortParam) {
   const resortKey = normalizeResortKey(resortParam)
 
@@ -712,14 +760,16 @@ export async function getResortConditions(resortParam) {
     conditions = await fetchHtmlConditions(IKON_RESORT_REPORT_URLS[resortKey])
   }
 
+  const terrain = terrainWithLastKnownGood(resortKey, conditions)
+
   return {
     resort: resortKey,
     fetchedAt: new Date().toISOString(),
     isOpen:      conditions?.isOpen      ?? null,
-    liftsOpen:   conditions?.liftsOpen   ?? null,
-    liftsTotal:  conditions?.liftsTotal  ?? null,
-    runsOpen:    conditions?.runsOpen    ?? null,
-    runsTotal:   conditions?.runsTotal   ?? null,
+    liftsOpen:   terrain.liftsOpen,
+    liftsTotal:  terrain.liftsTotal,
+    runsOpen:    terrain.runsOpen,
+    runsTotal:   terrain.runsTotal,
     baseDepth:   conditions?.baseDepth   ?? null,
     summitDepth: conditions?.summitDepth ?? null,
     snowLast24in: conditions?.snowLast24in ?? null,
