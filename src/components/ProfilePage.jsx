@@ -9,7 +9,7 @@ import {
   uploadProfilePhoto,
 } from "../lib/socialApi"
 import { getMySessions, getCurrentSeason, getAllTimeStats, getLeaderboard } from "../lib/leaderboardApi"
-import { computeStats } from "../lib/profileStats"
+import { computeStats, statsFromLeaderboardRow } from "../lib/profileStats"
 import {
   SeasonStatsCard,
   StatsViewToggle,
@@ -357,18 +357,10 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
         } else {
           setStatsError(false)
           setNotFriends(false)
-          // Key names must match computeStats() — SeasonStatsCard reads both.
-          setSeasonStats({
-            days:           row.days,
-            vertical:       row.verticalFt,
-            miles:          row.milesSki,
-            powderDays:     row.powderDays,
-            resorts:        row.resorts,
-            topResort:      row.topResort,
-            totalRuns:      row.totalRuns,
-            topSpeed:       row.topSpeed,
-            timeOnMountain: row.timeOnMountain,
-          })
+          // Key names must match computeStats(): both shapes feed the same strip
+          // components. statsFromLeaderboardRow is the single tested place that
+          // renaming happens — do not inline it back.
+          setSeasonStats(statsFromLeaderboardRow(row))
         }
         setRecentSessions([])
         setPriorStats(null)
