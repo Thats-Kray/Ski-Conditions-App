@@ -167,13 +167,17 @@ The morning ritual app for Colorado skiers. Open it, see where the powder is, se
 
 **Closed resorts receive no score** (`null`) and display a "Closed" badge. They are excluded from all rankings.
 
-**Formula (v2 — absolute 0–100 scale):**
+**Formula (v3 — absolute 0–100 scale):**
+
+*Implemented in `src/lib/powderScore.js` (client) and hand-mirrored in `server/powderScore.js` (Render backend — a separate npm package that cannot import from `src/lib`). Both files and this section must be changed together. v3 (2026-09-09, TASK 22.2): base depth is now `/20`, and terrain is excluded-and-rescaled rather than defaulted when its data is missing.*
+
 ```
 freshSnow     = (snowPrev24in × 5.0, max 32) + (snowPrev48in × 1.5, max 8)   → max 40 pts
 incomingSnow  = (snow24in × 3.5, max 15) + (snow48in × 1.0, max 5)           → max 20 pts
 tempScore     = absolute band (see below)                                      → max 20 pts
 terrainScore  = (runsOpen/runsTotal × 10) + (liftsOpen/liftsTotal × 5)        → max 15 pts
-baseScore     = baseDepth / 14, max 5                                          → max  5 pts
+                see "Missing terrain data" below when either pair is absent
+baseScore     = baseDepth / 20, max 5   (100" base earns full credit)          → max  5 pts
 snowHint      = +2 if "snow/powder/flurry/wintry" in forecast text            → max  2 pts
 windPenalty   = windMph × 0.75, max 15                                         → up to –15 pts
 drivePenalty  = 0 (Low) | 5 (Moderate) | 10 (High) | 10 (Severe, capped)     → up to –10 pts
@@ -183,6 +187,18 @@ rawScore = freshSnow + incomingSnow + tempScore + terrainScore +
 
 powderScore = clamp(rawScore, 0, 100)  ← no normalization
 ```
+
+**Missing terrain data (exclude and rescale):**
+
+Terrain is the one component the app can fail to *fetch* rather than observe — the 7 Ikon resorts plus Telluride are HTML-scraped and those pages break periodically. Scoring an unknown as 0 would structurally cap an otherwise elite resort at 85/100; assuming it is half-open would hand a thin, icy day 7.5 free points. So:
+
+- **Both pairs present** (`runsOpen`/`runsTotal` and `liftsOpen`/`liftsTotal`, each with a non-zero total): score terrain normally, 0–15, as above.
+- **Only one pair present:** use that pair alone, scaled to the full 15 points — lifts-only is `liftsPct × 15`, runs-only is `runsPct × 15`.
+- **Neither pair present:** drop terrain from the formula and rescale the remaining four weighted components (fresh 40 + incoming 20 + temp 20 + base 5 = 85) to fill 0–100:
+  `rescaledPositive = (freshSnow + incomingSnow + tempScore + baseScore) × (100 / 85)`.
+  `snowHint`, `windPenalty` and `drivePenalty` are applied **after** this rescale, unchanged — they are modifiers, not part of the 100-point weighting.
+
+A count is treated as present only when both halves of the pair are non-null and the total is greater than 0; a zero total means "we parsed nothing", not "nothing is open". The server additionally keeps a 24-hour in-memory last-known-good value per field (`server/index.js`), so this path is reached only when a resort has had no successful parse of that field for a full day.
 
 **Temperature bands (calibrated to real skiing feel):**
 
@@ -208,16 +224,21 @@ powderScore = clamp(rawScore, 0, 100)  ← no normalization
 | 0–34 | Poor | Red |
 | — | Closed | Gray |
 
-**Calibration examples:**
-- Epic powder day (12" fresh, incoming, 26°F, 100% terrain): ~90+ → Elite
-- Solid mid-winter day (3" fresh, 28°F, 80% terrain): ~60–70 → Good/Very Good
-- Warm bluebird, no snow (38°F, 100% terrain): ~25–35 → Poor
-- Late-season end-of-day slush (45°F, partial terrain): ~15–20 → Poor
-- Closed resort: no score displayed
+**Calibration examples** — the exact inputs and expected scores below are locked in as regression fixtures in `src/lib/powderScore.test.js`; change one and the other must change with it:
+
+- **Epic powder day** — 12" last 24h / 18" last 48h, 6" + 4" incoming, 26°F, 5 mph, 80" base, 100% terrain, "Snow showers" → **96.3, Elite**
+- **Solid mid-winter day** — 3" last 24h / 5" last 48h, 1" + 1" incoming, 28°F, 6 mph, 50" base, 80% terrain, no snow in the forecast text → **57.0, Good**
+- **Warm bluebird, no snow** — 38°F, 8 mph, 40" base, 100% terrain, "Sunny" → **22.0, Poor**
+- **Late-season end-of-day slush** — 45°F, 4 mph, 30" base, 60% terrain, "Sunny and warm" → **11.5, Poor**
+- **Cold, snowless, no terrain data** — 22°F, 3 mph, 70" base, lift and run counts unavailable → **25.4, Poor** (under the pre-v3 formula this scored 30.3, because the missing terrain was scored as though half the mountain was open)
+- **Closed resort** — no score displayed
+
+The v3 base-depth change moved every example down slightly and crossed no tier boundary: epic 97.3 → 96.3, mid-winter 58.1 → 57.0, warm bluebird 22.9 → 22.0, late-season slush 12.1 → 11.5.
 
 **Requirements:**
 - F-REQ-001: Powder Score must be recalculated every time live data is refreshed
-- F-REQ-002: Missing data for any individual component must default to 0 contribution (not break the score)
+- F-REQ-002: Missing data for an individual component must never break the score. Fresh snow, incoming snow, temperature and base depth default to 0/neutral contribution when absent — they are weather facts, and no evidence of snow reasonably means no snow.
+- F-REQ-002a: **Terrain is the exception.** Missing lift/run counts are an operational fact the app failed to fetch, not an observation, and must be *excluded and rescaled* (see "Missing terrain data" above) — never scored as 0 contribution, and never assumed to be partially open.
 - F-REQ-003: Tier labels must use the absolute thresholds above — no percentile-based normalization
 - F-REQ-004: The score must be displayed alongside a color-coded tier badge on every resort card
 - F-REQ-004a: Closed resorts must display no powder score — a "Closed" badge replaces the score tier
