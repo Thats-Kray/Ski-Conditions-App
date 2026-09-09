@@ -3,8 +3,6 @@ import {
   getCurrentUser,
   getMyProfile,
   getProfileById,
-  getAcceptedFriends,
-  getAllVisibleTrips,
   upsertMyProfile,
   uploadProfilePhoto,
 } from "../lib/socialApi"
@@ -21,7 +19,6 @@ import ShareStatCard from "./ShareStatCard"
 import ProfileSettingsList from "./profile/ProfileSettingsList"
 import SeasonCalendar from "./SeasonCalendar"
 import SkiPlansTab from "./SkiPlansTab"
-import Avatar from "./ui/Avatar"
 import Card from "./ui/Card"
 import Button from "./ui/Button"
 
@@ -274,12 +271,10 @@ function MilestoneModal({ milestone, onShare, onClose }) {
  * renamed when the prop arrived, because a shadowed name here would silently
  * break the all-time stats fetch rather than error.
  */
-export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBack, resorts = [] }) {
+export default function ProfilePage({ onLogOut, userId = null, onBack, resorts = [] }) {
   const isOwnProfile = !userId
 
   const [profile, setProfile]         = useState(null)
-  const [friends, setFriends]         = useState([])
-  const [tripCount, setTripCount]     = useState(0)
   const [loading, setLoading]         = useState(true)
   const [showEdit, setShowEdit]       = useState(false)
   const [seasonStats, setSeasonStats] = useState(null)
@@ -346,25 +341,19 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
         return
       }
 
-      const [user, prof, friendData, tripData, sessions, priorSessions] = await Promise.all([
+      // getAcceptedFriends/getAllVisibleTrips used to be fetched here purely to
+      // print a Friends count and a Trips count in the hero. Both counts were
+      // navigation shortcuts into tabs that are one tap away in the bottom nav,
+      // and both were cut in TASK 22.0's Profile slice — so are their requests.
+      const [user, prof, sessions, priorSessions] = await Promise.all([
         getCurrentUser(),
         getMyProfile(),
-        getAcceptedFriends().catch(() => []),
-        getAllVisibleTrips().catch(() => []),
         getMySessions(startYear).catch(() => []),
         getMySessions(startYear - 1).catch(() => []),
       ])
       setProfile(prof)
       setCurrentUserId(user?.id || null)
       setCurrentUserEmail(user?.email || null)
-      setFriends(Array.isArray(friendData) ? friendData : [])
-      const { mine = [], rsvpd = [] } = tripData || {}
-      const seen = new Set()
-      let count = 0
-      for (const t of [...mine, ...rsvpd]) {
-        if (!seen.has(t.id)) { seen.add(t.id); count++ }
-      }
-      setTripCount(count)
       if (Array.isArray(sessions)) {
         const currentStats = computeStats(sessions)
         setSeasonStats(currentStats)
@@ -607,31 +596,14 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
           )}
         </div>
 
-        {/* Stats row — like Instagram/Strava.
-            Trips and Friends counts come from getAllVisibleTrips/getAcceptedFriends,
-            both of which are scoped to the signed-in user — on someone else's
-            profile they would render a misleading "0", so only Days is shown. */}
+        {/* Days — the one count that means the same thing on your own profile and
+            on a friend's. Trips and Friends were cut in TASK 22.0's Profile
+            slice: they came from getAllVisibleTrips/getAcceptedFriends, which are
+            scoped to the signed-in user (so they rendered a misleading 0 on
+            someone else's profile), and both were shortcuts into tabs already in
+            the bottom nav. Task 7 replaces this row with the mockup's 5-stat
+            strip below the hero. */}
         <div style={{ display: "flex", marginTop: 20, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 16 }}>
-          {isOwnProfile && (
-            <>
-              <button
-                onClick={() => onTabChange?.("plans")}
-                style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "center", padding: "4px 0" }}
-              >
-                <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1 }}>{tripCount}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Trips</div>
-              </button>
-              <div style={{ width: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
-              <button
-                onClick={() => onTabChange?.("crew")}
-                style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "center", padding: "4px 0" }}
-              >
-                <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1 }}>{friends.length}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Friends</div>
-              </button>
-              <div style={{ width: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
-            </>
-          )}
           <div style={{ flex: 1, textAlign: "center", padding: "4px 0" }}>
             <div style={{ fontSize: 22, fontWeight: 900, color: seasonStats?.days > 0 ? "var(--color-accent-soft)" : "white", lineHeight: 1 }}>{seasonStats?.days ?? "—"}</div>
             <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Days</div>
@@ -659,31 +631,39 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
         )}
       </div>
 
-      {/* ── Stats / Ski Plans sub-tabs ── */}
-      <div style={{
-        display: "flex", gap: 4, background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14,
-        padding: 4, width: "fit-content",
-      }}>
-        {[{ key: "stats", label: "📊 Stats" }, { key: "plans", label: "📅 Ski Plans" }].map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setProfileTab(key)}
-            style={{
-              padding: "8px 16px", borderRadius: 10,
-              background: profileTab === key ? "rgba(255,255,255,0.12)" : "transparent",
-              border: profileTab === key ? "1px solid rgba(255,255,255,0.14)" : "1px solid transparent",
-              color: profileTab === key ? "white" : "rgba(255,255,255,0.5)",
-              fontWeight: profileTab === key ? 800 : 600,
-              fontSize: 13, cursor: "pointer", minHeight: 44,
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* ── Stats / Ski Plans sub-tabs — FRIEND VIEW ONLY ──
+          The own profile lost this selector in TASK 22.0's Profile slice: its Ski
+          Plans tab was a duplicate of the Plans nav tab's own day agenda. A
+          friend's profile is the only place in the app that shows one specific
+          person's upcoming plans, so it keeps the selector — and keeps it lazy,
+          so opening a friend's profile doesn't fetch a month of plans nobody
+          asked to see. */}
+      {!isOwnProfile && (
+        <div style={{
+          display: "flex", gap: 4, background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14,
+          padding: 4, width: "fit-content",
+        }}>
+          {[{ key: "stats", label: "📊 Stats" }, { key: "plans", label: "📅 Ski Plans" }].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setProfileTab(key)}
+              style={{
+                padding: "8px 16px", borderRadius: 10,
+                background: profileTab === key ? "rgba(255,255,255,0.12)" : "transparent",
+                border: profileTab === key ? "1px solid rgba(255,255,255,0.14)" : "1px solid transparent",
+                color: profileTab === key ? "white" : "rgba(255,255,255,0.5)",
+                fontWeight: profileTab === key ? 800 : 600,
+                fontSize: 13, cursor: "pointer", minHeight: 44,
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {profileTab === "stats" && (
+      {(isOwnProfile || profileTab === "stats") && (
         <>
           {/* Not an accepted friend — stats are gated server-side too, this is
               just the honest explanation instead of an empty card. */}
@@ -744,8 +724,8 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
         </>
       )}
 
-      {profileTab === "plans" && (
-        <SkiPlansTab userId={userId} editable={isOwnProfile} resorts={resorts} />
+      {!isOwnProfile && profileTab === "plans" && (
+        <SkiPlansTab userId={userId} editable={false} resorts={resorts} />
       )}
 
       {/* ── Theme ── */}
@@ -803,34 +783,6 @@ export default function ProfilePage({ onLogOut, onTabChange, userId = null, onBa
                 {profile.vehicle_seats} open seat{profile.vehicle_seats !== 1 ? "s" : ""} for passengers
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Friends strip ── */}
-      {friends.length > 0 && (
-        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>Your Crew</div>
-            <button
-              onClick={() => onTabChange?.("crew")}
-              style={{ background: "none", border: "none", color: "var(--color-accent-soft)", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: 0 }}
-            >
-              See All →
-            </button>
-          </div>
-          <div style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch" }}>
-            {friends.slice(0, 12).map((f) => {
-              const name = f.full_name || f.username || "?"
-              return (
-                <div key={f.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                  <Avatar profile={f} size={46} />
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: 600, maxWidth: 52, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {name.split(" ")[0]}
-                  </div>
-                </div>
-              )
-            })}
           </div>
         </div>
       )}
