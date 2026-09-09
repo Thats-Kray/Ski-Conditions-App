@@ -1459,7 +1459,7 @@ single **1,184 KB** chunk with nothing lazy-loaded.
 
 ---
 
-### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab DONE — all 5 sub-tabs shipped: Crews, Board, Leaderboard, Feed (A/B/C1/C2, C2 click-tested and confirmed by Kyle), Friends; Plans page DONE and live; Profile page DONE)**
+### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, ✅ COMPLETE 2026-09-09 (Today done; Crew tab DONE — all 5 sub-tabs shipped: Crews, Board, Leaderboard, Feed (A/B/C1/C2, C2 click-tested and confirmed by Kyle), Friends; Plans page DONE and live; Profile page DONE and live — the whole page-by-page sequence is now shipped)**
 
 **Today List View slice: ✅ SHIPPED 2026-08-27, live on `main`** (commit `5062d98`, deploy
 verified by grepping the live bundle for `"Best Bet Today"`/`"Ski here today"` —
@@ -2231,11 +2231,34 @@ Leaderboard → Feed → Friends), plus the two pages after it:**
    (`ProfileSetup.jsx`, `OnboardingFlow.jsx`, both account-creation-time only) still build their
    own object literals rather than going through `buildProfileUpdate()` — low risk since there's
    nothing populated yet to null, but worth migrating in a future pass for consistency.
+   **The whole-branch final review (opus) found one real cross-task bug**, the same
+   "individually-correct code whose SCALE changed once integrated" pattern seen on Board, Feed,
+   and Plans: the hero's old stat row (reduced to Days-only by the cuts above) was never
+   actually deleted — Task 7's own docstring claimed it replaced that row, but Task 7's real
+   diff only touched the separate `SeasonStatsCard` block, and no later task had a step for the
+   hero row either. Result: both the own-profile AND friend-profile views briefly shipped
+   "Days" twice on one screen — once in the hero, once in the new 5-stat strip ~80px below it.
+   Caught by reading the full accumulated diff at once, not by any individual task's own
+   (correctly-scoped, correctly-approved) review. Fixed in one consolidated fix-wave commit,
+   re-reviewed clean. Also fixed in the same wave: two doc-only corrections (ROADMAP said
+   "four" profile writers, corrected to five above; a stale "266 pass" verification gate in the
+   plan file corrected to 265) and two minor code polish items (Season grid's ~243 empty-day
+   cells no longer clutter the keyboard tab order; a comment flagging that Escape inside the
+   Connected-apps sheet closes the whole sheet even with Strava's sync-review modal stacked on
+   top, a known desktop-only rough edge, not fixed).
    Final state: **265 tests** (was 235: +11 profileStats, +10 seasonGrid, +9 profileForm), lint
    clean on every touched path (repo-wide at or under the 87 baseline), build clean.
+   **Merged to `main` and pushed same session** (fast-forward-free merge `826cb87..64f7935`,
+   16 commits including the Plans-page-slice work from the prior session that hadn't been
+   pushed yet), **deploy verified live** by grepping the served bundle
+   (`assets/index-gONHaY6m.js`) for `"Create share card"`, `"Connected apps"`,
+   `"Help & feedback"`, and `"colored by vertical feet"`.
    **NOT yet click-tested by Kyle** — same recurring gap as most TASK 22.0 slices at ship time.
-   See "What Kyle must click through" in the plan; the friend-profile view and the
-   Notifications-then-Edit-Profile round trip are the two that matter most.
+   See "What Kyle must click through" in the plan; the friend-profile view, the
+   Notifications-then-Edit-Profile round trip, and the Season grid's real mobile width (added to
+   the click-through list during the fix wave) are the ones that matter most.
+   **This closes the entire TASK 22.0 mockup-fidelity sequence — Today, the whole Crew tab,
+   Plans, and now Profile are all shipped and live.**
 
 Group-level Feed activity cards (a whole crew skiing together as one card) remain backlogged,
 not yet scheduled into this sequence.
