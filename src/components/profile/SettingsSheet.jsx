@@ -12,6 +12,9 @@ import { useDismissableLayer } from "../../lib/useDismissableLayer"
  * App.jsx (max 210) and below Strava's 400.
  */
 export default function SettingsSheet({ title, onClose, children }) {
+  // Escape closes this whole sheet, including any modal stacked on top of it (e.g.
+  // StravaConnect's sync-review) — that inner modal has no Escape handler of its own.
+  // Known rough edge, not fixed here.
   const panelRef = useDismissableLayer({ onClose })
 
   return (

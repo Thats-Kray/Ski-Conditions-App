@@ -647,20 +647,6 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
           )}
         </div>
 
-        {/* Days — the one count that means the same thing on your own profile and
-            on a friend's. Trips and Friends were cut in TASK 22.0's Profile
-            slice: they came from getAllVisibleTrips/getAcceptedFriends, which are
-            scoped to the signed-in user (so they rendered a misleading 0 on
-            someone else's profile), and both were shortcuts into tabs already in
-            the bottom nav. Task 7 replaces this row with the mockup's 5-stat
-            strip below the hero. */}
-        <div style={{ display: "flex", marginTop: 20, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 16 }}>
-          <div style={{ flex: 1, textAlign: "center", padding: "4px 0" }}>
-            <div style={{ fontSize: 22, fontWeight: 900, color: seasonStats?.days > 0 ? "var(--color-accent-soft)" : "white", lineHeight: 1 }}>{seasonStats?.days ?? "—"}</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginTop: 4 }}>Days</div>
-          </div>
-        </div>
-
       </div>
 
       {/* ── Stats / Ski Plans sub-tabs — FRIEND VIEW ONLY ──

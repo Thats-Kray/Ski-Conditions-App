@@ -60,6 +60,7 @@ export default function SeasonCalendar({ sessions, startYear }) {
               title={key}
               aria-label={session ? `${key} — session logged` : `${key} — no session`}
               aria-pressed={selected}
+              tabIndex={session ? 0 : -1}
               style={{
                 width: "100%", aspectRatio: "1", padding: 0,
                 border: "none", borderRadius: 3,

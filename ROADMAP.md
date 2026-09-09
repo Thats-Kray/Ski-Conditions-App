@@ -2224,9 +2224,13 @@ Leaderboard → Feed → Friends), plus the two pages after it:**
    (static FAQ plus a **placeholder** support address, `support@powdays.app` — replace it).
    **Bug found and fixed on the way:** `upsertMyProfile` writes a whole row, and Edit Profile's
    Save passed an object with no `username` and no `favorite_mountain`, so **every profile save
-   was silently clearing both.** All four profile writes now go through the tested
-   `buildProfileUpdate()` in `src/lib/profileForm.js`, which is also what makes moving the
-   powder-alert fields to their own screen safe.
+   was silently clearing both.** All five profile writes now go through the tested
+   `buildProfileUpdate()` in `src/lib/profileForm.js` (4 in `ProfilePage.jsx`, 1 in the new
+   `ProfileSettingsList.jsx` Notifications sheet), which is also what makes moving the
+   powder-alert fields to their own screen safe. Two other profile-write call sites
+   (`ProfileSetup.jsx`, `OnboardingFlow.jsx`, both account-creation-time only) still build their
+   own object literals rather than going through `buildProfileUpdate()` — low risk since there's
+   nothing populated yet to null, but worth migrating in a future pass for consistency.
    Final state: **265 tests** (was 235: +11 profileStats, +10 seasonGrid, +9 profileForm), lint
    clean on every touched path (repo-wide at or under the 87 baseline), build clean.
    **NOT yet click-tested by Kyle** — same recurring gap as most TASK 22.0 slices at ship time.

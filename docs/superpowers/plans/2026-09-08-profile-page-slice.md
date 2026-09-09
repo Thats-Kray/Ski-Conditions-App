@@ -2302,7 +2302,7 @@ Closes TASK 22.0's last remaining page.
 - [ ] **Step 1: Run the whole test suite**
 
 Run: `npm test`
-Expected: **266 pass, 0 fail** — 235 on the branch point, plus 12 (Task 1), 10 (Task 2) and 9 (Task 4). A higher number means someone else's tests landed; re-baseline against the merge-base rather than "fixing" it.
+Expected: **265 pass, 0 fail** — 235 on the branch point, plus 11 (Task 1), 10 (Task 2) and 9 (Task 4). A higher number means someone else's tests landed; re-baseline against the merge-base rather than "fixing" it.
 
 - [ ] **Step 2: Lint the touched paths, then the repo**
 
@@ -2417,6 +2417,8 @@ No subagent in this environment has a browser, and `npm test` covers `src/lib` o
 10. **History** — no List/Calendar toggle; editing a session (photos, tags, stats) and sharing a session both still work.
 11. **A friend's profile** — Back button, hero, the Stats/Ski Plans selector, both stat strips, their passes and vehicle if set. **No Season grid, no Settings, no Appearance, no share button, no history.** Ski Plans still shows only that friend's days.
 12. **A non-friend's profile** — still the friends-only lock card.
+13. **Confirm the hero no longer shows any stat row at all** — just the 5-stat strip and extra-facts strip below it, not a duplicated "Days" count in the hero itself.
+14. **Check the Season grid's cell size on an actual phone screen (~390px wide)** — it's a dense 18-column grid and hasn't been visually confirmed to look right at real mobile widths, only reasoned about on paper.
 13. **Theme check** — switch through all five themes from the Appearance card and confirm the stat strip labels, the grid tiers and the settings chevrons stay legible in each. The grid's tiers are theme-invariant by design; the rest are tokens.
 14. **The hero's skill label** — it reads "Black Diamond" where the Edit Profile chip says "Black" (Deviation 4). Confirm that is fine, or say which spelling wins.
 
