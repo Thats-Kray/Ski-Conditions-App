@@ -198,7 +198,7 @@ Terrain is the one component the app can fail to *fetch* rather than observe —
   `rescaledPositive = (freshSnow + incomingSnow + tempScore + baseScore) × (100 / 85)`.
   `snowHint`, `windPenalty` and `drivePenalty` are applied **after** this rescale, unchanged — they are modifiers, not part of the 100-point weighting.
 
-A count is treated as present only when both halves of the pair are non-null and the total is greater than 0; a zero total means "we parsed nothing", not "nothing is open". The server additionally keeps a 24-hour in-memory last-known-good value per field (`server/index.js`), so this path is reached only when a resort has had no successful parse of that field for a full day.
+A count is treated as present only when both halves of the pair are non-null and the total is greater than 0; a zero or negative total means "we parsed nothing", not "nothing is open". The server additionally keeps an in-memory last-known-good value per field for up to 24 hours (`server/index.js`), so under normal operation this path is reached only when a resort has had no successful parse of that field for a full day — but that cache is per-instance and resets on every Render restart/deploy, so immediately after a deploy this path can be reached sooner, until each field is scraped fresh again.
 
 **Temperature bands (calibrated to real skiing feel):**
 

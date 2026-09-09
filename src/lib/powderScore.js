@@ -14,7 +14,7 @@ export function clamp(n, min, max) {
 
 // null means "we don't have this data", which is different from 0% open.
 export function safePercent(open, total) {
-  if (open == null || total == null || total === 0) return null
+  if (open == null || total == null || total <= 0) return null
   return open / total
 }
 

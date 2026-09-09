@@ -745,7 +745,7 @@ export function terrainWithLastKnownGood(resortKey, conditions, now = Date.now()
         : null
   }
 
-  terrainCache.set(resortKey, entry)
+  if (Object.keys(entry).length > 0) terrainCache.set(resortKey, entry)
   return resolved
 }
 

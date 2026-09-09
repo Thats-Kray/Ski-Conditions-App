@@ -64,9 +64,9 @@ export function computePowderScore({
   const liftsPct = terrainPercent(liftsOpen, liftsTotal)
   const hasTerrainData = runsPct != null || liftsPct != null
   const terrainScore =
-    runsPct != null && liftsPct != null ? runsPct * 10 + liftsPct * 5 :
-    runsPct != null                     ? runsPct * 15 :
-    liftsPct != null                    ? liftsPct * 15 :
+    runsPct != null && liftsPct != null ? Math.max(0, Math.min(15, runsPct * 10 + liftsPct * 5)) :
+    runsPct != null                     ? Math.max(0, Math.min(15, runsPct * 15)) :
+    liftsPct != null                    ? Math.max(0, Math.min(15, liftsPct * 15)) :
                                           0
 
   const baseScore = Math.min(baseDepth / 20, 5)

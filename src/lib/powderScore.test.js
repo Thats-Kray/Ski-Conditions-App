@@ -108,6 +108,18 @@ test("an open count without its total counts as a missing pair", () => {
   )
 })
 
+test("a mismatched open/total pair (open > total) clamps terrain instead of inflating it", () => {
+  // Two different scrape observations can disagree on runs open vs. total
+  // (parseConditionsHtml resolves each field independently across three
+  // sources), producing an "impossible" open > total pair. Without the
+  // clamp, runsPct 3.0 x 15 = 45 would blow past the 15-point terrain cap.
+  // temp 25F -> 20 | runs 30/10 -> pct 3.0, clamped to 15 (NOT 45) | lifts unknown
+  assert.equal(
+    computeRawPowderScore({ tempF: 25, runsOpen: 30, runsTotal: 10, liftsOpen: null, liftsTotal: null }),
+    35
+  )
+})
+
 // ── Base depth: 100 inches for full credit, not 70 ──────────────────────────
 
 test("a 70-inch base no longer maxes the base component", () => {
@@ -175,30 +187,34 @@ test("calibration: an epic powder day is Elite", () => {
   // fresh min(60,32) + min(27,8) = 40 | incoming min(21,15) + 4 = 19 | temp 20
   // terrain 10 + 5 = 15 | base 80 / 20 = 4 | hint +2 | wind 5 x 0.75 = -3.75
   // = 96.25 -> 96.3   (was 97.3 when base was /14)
-  assert.equal(computeRawPowderScore(EPIC_POWDER_DAY), 96.3)
-  assert.equal(powderTierForScore(Math.round(96.3)), "Elite")
+  const score = computeRawPowderScore(EPIC_POWDER_DAY)
+  assert.equal(score, 96.3)
+  assert.equal(powderTierForScore(Math.round(score)), "Elite")
 })
 
 test("calibration: a solid mid-winter day is Good", () => {
   // fresh 15 + 7.5 = 22.5 | incoming 3.5 + 1 = 4.5 | temp 20
   // terrain 8 + 4 = 12 | base 50 / 20 = 2.5 | no hint | wind -4.5
   // = 57   (was 58.1 when base was /14)
-  assert.equal(computeRawPowderScore(SOLID_MIDWINTER_DAY), 57)
-  assert.equal(powderTierForScore(Math.round(57)), "Good")
+  const score = computeRawPowderScore(SOLID_MIDWINTER_DAY)
+  assert.equal(score, 57)
+  assert.equal(powderTierForScore(Math.round(score)), "Good")
 })
 
 test("calibration: a warm bluebird day with no snow is Poor", () => {
   // fresh 0 | incoming 0 | temp 38F -> 11 | terrain 15 | base 40 / 20 = 2
   // no hint | wind 8 x 0.75 = -6  => 22   (was 22.9 when base was /14)
-  assert.equal(computeRawPowderScore(WARM_BLUEBIRD_NO_SNOW), 22)
-  assert.equal(powderTierForScore(Math.round(22)), "Poor")
+  const score = computeRawPowderScore(WARM_BLUEBIRD_NO_SNOW)
+  assert.equal(score, 22)
+  assert.equal(powderTierForScore(Math.round(score)), "Poor")
 })
 
 test("calibration: late-season slush is Poor", () => {
   // temp 45F -> 4 | terrain 6 + 3 = 9 | base 30 / 20 = 1.5 | wind -3
   // = 11.5   (was 12.1 when base was /14)
-  assert.equal(computeRawPowderScore(LATE_SEASON_SLUSH), 11.5)
-  assert.equal(powderTierForScore(Math.round(11.5)), "Poor")
+  const score = computeRawPowderScore(LATE_SEASON_SLUSH)
+  assert.equal(score, 11.5)
+  assert.equal(powderTierForScore(Math.round(score)), "Poor")
 })
 
 // ── Unchanged behaviour this extraction must not regress ────────────────────
