@@ -1459,7 +1459,7 @@ single **1,184 KB** chunk with nothing lazy-loaded.
 
 ---
 
-### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab DONE — all 5 sub-tabs shipped: Crews, Board, Leaderboard, Feed (A/B/C1/C2, C2 click-tested and confirmed by Kyle), Friends; Plans page DONE and live; Profile not yet started)**
+### TASK 22.0 — Mockup fidelity pass (page-by-page redesign) — **Size: TBD, IN PROGRESS (Today done; Crew tab DONE — all 5 sub-tabs shipped: Crews, Board, Leaderboard, Feed (A/B/C1/C2, C2 click-tested and confirmed by Kyle), Friends; Plans page DONE and live; Profile page DONE)**
 
 **Today List View slice: ✅ SHIPPED 2026-08-27, live on `main`** (commit `5062d98`, deploy
 verified by grepping the live bundle for `"Best Bet Today"`/`"Ski here today"` —
@@ -2203,7 +2203,35 @@ Leaderboard → Feed → Friends), plus the two pages after it:**
    that feature app-wide).
    **TASK 22.1 — Friends-calendar as the flagship view: CLOSED, subsumed by this slice** (see
    that task's own entry below, updated 2026-09-08).
-3. **Profile page** — not yet started, no gap audit yet.
+3. **Profile page: ✅ SHIPPED 2026-09-08** — the last page in the TASK 22.0 sequence. Spec at
+   `docs/superpowers/specs/2026-09-08-profile-page-slice-design.md`, plan at
+   `docs/superpowers/plans/2026-09-08-profile-page-slice.md`, built in worktree
+   `profile-page-slice`: 11 tasks. **Cut as duplicates:** the Ski Plans sub-tab on your OWN
+   profile (the Plans nav tab's own agenda; kept on a friend's profile, which is the only
+   per-friend plan filter in the app), the Trips and Friends header counts (shortcuts into
+   tabs already in the bottom nav), the "Your Crew" avatar strip (a preview of the Crew tab's
+   Friends list), and History's Calendar toggle (the new Season grid above it covers it).
+   **Consolidated:** the hero's stat row and `SeasonStatsCard` both showed the same four
+   numbers, so both were replaced by the mockup's 5-stat strip plus an extra-facts strip that
+   preserves the non-duplicate facts (total runs, top speed, time on mountain, top resort,
+   season-over-season delta). **Restyled:** `SeasonCalendar` became the mockup's fixed
+   18-column grid graded by that day's vertical feet, with powder days pinned to the top tier;
+   the theme picker became the mockup's Appearance card. **New:** an owner-only 5-row Settings
+   list — Account (email plus Sign Out, relocated from the hero's door icon), Notifications
+   (the powder-alert toggle and phone, relocated out of Edit Profile), Privacy & visibility
+   ("Coming soon" only — the schema has no account-wide privacy concept and designing one is a
+   separate task), Connected apps (wrapping `StravaConnect` unchanged) and Help & feedback
+   (static FAQ plus a **placeholder** support address, `support@powdays.app` — replace it).
+   **Bug found and fixed on the way:** `upsertMyProfile` writes a whole row, and Edit Profile's
+   Save passed an object with no `username` and no `favorite_mountain`, so **every profile save
+   was silently clearing both.** All four profile writes now go through the tested
+   `buildProfileUpdate()` in `src/lib/profileForm.js`, which is also what makes moving the
+   powder-alert fields to their own screen safe.
+   Final state: **265 tests** (was 235: +11 profileStats, +10 seasonGrid, +9 profileForm), lint
+   clean on every touched path (repo-wide at or under the 87 baseline), build clean.
+   **NOT yet click-tested by Kyle** — same recurring gap as most TASK 22.0 slices at ship time.
+   See "What Kyle must click through" in the plan; the friend-profile view and the
+   Notifications-then-Edit-Profile round trip are the two that matter most.
 
 Group-level Feed activity cards (a whole crew skiing together as one card) remain backlogged,
 not yet scheduled into this sequence.
@@ -2329,7 +2357,7 @@ prioritized open ideas, then the throughput → features → security/debt queue
 
 | Sprint | Contents | Size |
 |---|---|---|
-| **42** | **TASK 22.0 — Mockup fidelity pass**, page-by-page (Today done; Crew tab done — all 5 sub-tabs shipped; Plans page done; Profile page next) | TBD |
+| **42** | **TASK 22.0 — Mockup fidelity pass**, page-by-page (Today done; Crew tab done — all 5 sub-tabs shipped; Plans page done; Profile page done — sequence complete) | TBD |
 | **43** | ~~TASK 22.1 — Friends-calendar flagship placement~~ — closed, subsumed by TASK 22.0's Plans slice | — |
 | **44** | TASK 22.2 — Powder Score algorithm tuning | S-M |
 | **45** | TASK 22.3 — Weather/conditions API quality pass | M |
