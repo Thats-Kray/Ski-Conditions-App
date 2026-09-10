@@ -13,6 +13,7 @@ const LOADED = {
   vehicle_label: "Blue Subaru", vehicle_seats: 3,
   powder_alerts_enabled: true, alert_phone: "555-0100",
   theme: "storm-chaser",
+  theme_mode: "light",
   is_admin: false, strava_athlete_id: 12345,
 }
 
@@ -77,4 +78,20 @@ test("buildProfileUpdate tolerates a null profile", () => {
   const out = buildProfileUpdate(null, { theme: "aurora-peak" })
   assert.equal(out.theme, "aurora-peak")
   assert.deepEqual(Object.keys(out).sort(), [...PROFILE_WRITE_FIELDS].sort())
+})
+
+test("buildProfileUpdate carries theme_mode through when another screen saves", () => {
+  // theme_mode is written by exactly one control (the Appearance card's light/dark
+  // toggle). Every other save on the Profile page must preserve it, or flipping to
+  // light mode and then editing your name would silently put you back in dark.
+  const out = buildProfileUpdate(LOADED, { first_name: "Kyle", last_name: "Rayburn" })
+  assert.equal(out.theme_mode, "light")
+  assert.equal(PROFILE_WRITE_FIELDS.includes("theme_mode"), true)
+})
+
+test("buildProfileUpdate lets the Appearance toggle set theme_mode without disturbing theme", () => {
+  const out = buildProfileUpdate(LOADED, { theme_mode: "dark" })
+  assert.equal(out.theme_mode, "dark")
+  assert.equal(out.theme, "storm-chaser")
+  assert.equal(out.username, "kray")
 })

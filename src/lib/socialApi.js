@@ -20,7 +20,7 @@ import { normalizeMutualCount } from "./friendSubtitle";
 // migration is live. Keep this list as the single source of truth for
 // `profiles` write-returning columns; never add the token columns to it.
 const PROFILE_SELECT_COLUMNS =
-  "id, first_name, last_name, full_name, username, avatar_url, skill_level, sport_type, ski_passes, favorite_mountain, vehicle_label, vehicle_seats, powder_alerts_enabled, alert_phone, theme, is_admin, strava_athlete_id";
+  "id, first_name, last_name, full_name, username, avatar_url, skill_level, sport_type, ski_passes, favorite_mountain, vehicle_label, vehicle_seats, powder_alerts_enabled, alert_phone, theme, theme_mode, is_admin, strava_athlete_id";
 
 /* -----------------------------
    Helpers
@@ -462,6 +462,7 @@ export async function upsertMyProfile(profile) {
     powder_alerts_enabled: profile.powder_alerts_enabled ?? false,
     alert_phone: profile.alert_phone || null,
     theme: profile.theme || "blizzard",
+    theme_mode: profile.theme_mode === "light" ? "light" : "dark",
     updated_at: new Date().toISOString(),
   };
 

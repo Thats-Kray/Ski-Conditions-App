@@ -37,6 +37,7 @@ export const PROFILE_WRITE_FIELDS = [
   "powder_alerts_enabled",
   "alert_phone",
   "theme",
+  "theme_mode",
 ]
 
 /**
