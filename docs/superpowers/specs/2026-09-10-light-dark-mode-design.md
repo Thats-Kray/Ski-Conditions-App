@@ -92,16 +92,29 @@ in every dark theme; the equivalent light-mode failure mode is the opposite (dar
 accent, or the same white-text buttons now sitting on a light page background elsewhere) and
 needs its own pass, not an assumption that the dark fixes carry over.
 
-## Scope
+## Scope — REVISED during planning (2026-09-10, same day)
 
-**Touches:** `src/index.css` (5 new blocks), `ProfilePage.jsx` (toggle UI + write path),
-`src/lib/shareCardTokens.js` (5 new theme objects), one new migration (`profiles.theme_mode`
-column + default).
+**The original scope claim below was wrong and is kept only as a record of the mistake.** The
+"62 of 68 components already consume the token system" fact from the earlier theme-system work
+was true for *accent/cosmetic* colors (blue vs. amber vs. purple), but a live grep during
+planning found **1,023 hardcoded `rgba(255,255,255,...)` occurrences across 52 component files**,
+plus **250 literal `color: white` / `#fff` usages** — a second, much larger hardcoding pattern
+(white text, white-alpha "glass card" surfaces) that assumes the page behind it is always dark.
+Kyle's own prior ruling on this app explicitly called that pattern "deliberate, not a defect" —
+under a dark-only assumption that light mode invalidates. Flipping the CSS variables alone, as
+originally scoped, would ship white text on a white page across most of the app.
 
-**Does not touch:** any other component. Confirmed during the earlier theme-system work that
-62 of 68 components already consume the CSS token variables rather than hardcoded colors —
-`ShareStatCard.jsx` is the only exception (handled above). No component-level changes expected
-beyond the toggle control itself.
+**Kyle's call (2026-09-10): full app-wide retrofit, one plan, not decomposed into page-by-page
+slices** (the TASK 22.0 pattern was offered as an alternative and declined).
+
+**Actually touches:** `src/index.css` (10 new theme blocks — light AND dark variants confirmed
+per-theme — plus a new adaptive "overlay" token scale to replace the hardcoded white-alpha
+pattern), `ProfilePage.jsx` (toggle UI + write path), `src/lib/shareCardTokens.js` (5 new theme
+objects), one new migration (`profiles.theme_mode` column + default), and **all 52 files
+currently hardcoding white text/surfaces** — mechanical substitution onto the new tokens, not a
+visual redesign of any of them.
+
+~~**Does not touch:** any other component...~~ superseded above.
 
 **Explicitly out of scope:** `prefers-color-scheme` auto-detection; a light variant of only the
 default theme (rejected — all 5 get both); `ProfileSetup.jsx`/`OnboardingFlow.jsx` profile-write
