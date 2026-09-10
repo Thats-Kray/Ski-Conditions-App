@@ -2343,11 +2343,21 @@ session, not straight to code):
 - Empty state matters a lot here — with nobody planned yet, the page still needs to give a
   reason to come back.
 
-### TASK 22.2 — Powder Score algorithm tuning — **Size: S-M**
+### TASK 22.2 — Powder Score algorithm tuning — **Size: S-M** — ✅ **SHIPPED 2026-09-10**
 
-**Scheduled Sprint 44.** Tuning the existing formula, not building a new one. Needs a working
-definition of "better" from Kyle before it can be scoped precisely — bring 1-2 concrete cases
-where the current score felt wrong to the kickoff.
+Kyle's case: a cold, icy day with zero fresh/incoming snow scored 80s (Elite) during the
+Feb/March 2026 low-snow winter — should have been ≤50. Found two real bugs, not just a
+weighting question: the client formula defaulted missing lift/run data to an optimistic
+~50%-open guess (inflating scores); the server formula (cron email digest) defaulted it to a
+hard 0% (deflating scores, capping an elite resort at 85/100). Fixed by excluding terrain from
+the formula and rescaling the remaining components when data is missing, instead of guessing
+either direction; raised the base-depth bar from `/14` to `/20`; added a 24h in-memory
+last-known-good cache for the 7 HTML-scraped Ikon resorts' terrain data. The final whole-branch
+review caught two more real bugs (unbounded cache growth from an unvalidated public endpoint,
+and a missing clamp that let a corrupt scrape inflate a score 30 points across two tiers) —
+both fixed. 294 tests (was 265). Full detail in `/Users/kyleray/.claude/context/memory.md`
+under Colorado Ski Dashboard. Not yet visually confirmed on real conditions (off-season,
+no live snow data) — will need a real ski day once the season opens.
 
 ### TASK 22.3 — Weather/conditions API quality pass — **Size: M**
 
@@ -2386,7 +2396,7 @@ prioritized open ideas, then the throughput → features → security/debt queue
 |---|---|---|
 | **42** | **TASK 22.0 — Mockup fidelity pass**, page-by-page (Today done; Crew tab done — all 5 sub-tabs shipped; Plans page done; Profile page done — sequence complete) | TBD |
 | **43** | ~~TASK 22.1 — Friends-calendar flagship placement~~ — closed, subsumed by TASK 22.0's Plans slice | — |
-| **44** | TASK 22.2 — Powder Score algorithm tuning | S-M |
+| **44** | ~~TASK 22.2 — Powder Score algorithm tuning~~ — **shipped 2026-09-10** | S-M |
 | **45** | TASK 22.3 — Weather/conditions API quality pass | M |
 | **46** | TASK 22.4 — Map View + friends'-location test-and-fix | S |
 | **47** | **TASK 20.6 routing + code splitting** (Tasks 1-5; 6 cuttable) | M |
