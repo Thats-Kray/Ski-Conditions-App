@@ -337,7 +337,7 @@ function BottomNav({ activeTab, onTabChange, currentProfile, notifCount }) {
               <span style={{ position: "relative", lineHeight: 1, display: "flex" }}>
                 <ProfileAvatar profile={currentProfile} size={26} isActive={isActive} />
                 {notifCount > 0 && (
-                  <span style={{ position: "absolute", top: -3, right: -5, minWidth: 16, height: 16, borderRadius: 999, background: "var(--gradient-danger)", color: "var(--color-text-1)", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "1.5px solid var(--color-badge-border)", lineHeight: 1 }}>
+                  <span style={{ position: "absolute", top: -3, right: -5, minWidth: 16, height: 16, borderRadius: 999, background: "var(--gradient-danger)", color: "var(--color-on-accent)", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "1.5px solid var(--color-badge-border)", lineHeight: 1 }}>
                     {notifCount > 9 ? "9+" : notifCount}
                   </span>
                 )}
@@ -346,7 +346,7 @@ function BottomNav({ activeTab, onTabChange, currentProfile, notifCount }) {
               <span style={{ position: "relative", lineHeight: 1, display: "flex", filter: isActive ? "drop-shadow(0 0 6px rgba(96,165,250,0.6))" : "none", transition: "filter 0.15s ease" }}>
                 <Icon size={22} />
                 {isSocial && notifCount > 0 && (
-                  <span style={{ position: "absolute", top: -4, right: -6, minWidth: 16, height: 16, borderRadius: 999, background: "var(--gradient-danger)", color: "var(--color-text-1)", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "1.5px solid var(--color-badge-border)", lineHeight: 1 }}>
+                  <span style={{ position: "absolute", top: -4, right: -6, minWidth: 16, height: 16, borderRadius: 999, background: "var(--gradient-danger)", color: "var(--color-on-accent)", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "1.5px solid var(--color-badge-border)", lineHeight: 1 }}>
                     {notifCount > 9 ? "9+" : notifCount}
                   </span>
                 )}
@@ -416,7 +416,7 @@ function TopNav({ activeTab, onTabChange, currentProfile, notifCount, currentUse
                   <span style={{ position: "relative", display: "flex", lineHeight: 1 }}>
                     <Icon size={16} />
                     {isSocial && notifCount > 0 && (
-                      <span style={{ position: "absolute", top: -4, right: -6, minWidth: 14, height: 14, borderRadius: 999, background: "var(--gradient-danger)", color: "var(--color-text-1)", fontSize: 8, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 2px", border: "1.5px solid var(--color-badge-border)", lineHeight: 1 }}>
+                      <span style={{ position: "absolute", top: -4, right: -6, minWidth: 14, height: 14, borderRadius: 999, background: "var(--gradient-danger)", color: "var(--color-on-accent)", fontSize: 8, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 2px", border: "1.5px solid var(--color-badge-border)", lineHeight: 1 }}>
                         {notifCount > 9 ? "9+" : notifCount}
                       </span>
                     )}
