@@ -8,8 +8,8 @@ import { PICKER_RESORT_LABELS } from "../../lib/resorts"
 const RESORT_NAMES = PICKER_RESORT_LABELS
 
 const inputStyle = {
-  width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 10, padding: "10px 12px", color: "white", fontSize: 14, boxSizing: "border-box",
+  width: "100%", background: "var(--overlay-06)", border: "1px solid var(--overlay-12)",
+  borderRadius: 10, padding: "10px 12px", color: "var(--color-text-1)", fontSize: 14, boxSizing: "border-box",
   outline: "none",
 }
 
@@ -32,13 +32,13 @@ export default function ResortPicker({ value, onChange, placeholder = "Search re
         onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
       />
       {showDropdown && filtered.length > 0 && (
-        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--color-surface-popover)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, zIndex: 10, overflow: "hidden", marginTop: 4 }}>
+        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--color-surface-popover)", border: "1px solid var(--overlay-12)", borderRadius: 10, zIndex: 10, overflow: "hidden", marginTop: 4 }}>
           {filtered.map((r) => (
             <div
               key={r}
               onMouseDown={() => { onChange(r); setSearch(r); setShowDropdown(false) }}
-              style={{ padding: "10px 12px", cursor: "pointer", fontSize: 14, color: "white", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}
+              style={{ padding: "10px 12px", cursor: "pointer", fontSize: 14, color: "var(--color-text-1)", borderBottom: "1px solid var(--overlay-06)" }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "var(--overlay-06)"}
               onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
             >
               {r}

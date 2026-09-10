@@ -139,8 +139,8 @@ export default function MediaMessageInput({ placeholder = "Message…", onSend, 
               style={{
                 position: "absolute", top: -6, right: -6,
                 width: 18, height: 18, borderRadius: "50%",
-                background: "var(--color-surface-popover)", border: "1px solid rgba(255,255,255,0.2)",
-                color: "rgba(255,255,255,0.7)", fontSize: 12, lineHeight: 1,
+                background: "var(--color-surface-popover)", border: "1px solid var(--overlay-20)",
+                color: "var(--ink-70)", fontSize: 12, lineHeight: 1,
                 cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                 padding: 0,
               }}
@@ -154,7 +154,7 @@ export default function MediaMessageInput({ placeholder = "Message…", onSend, 
         onSubmit={handleSubmit}
         style={{
           display: "flex", gap: 6, padding: "10px 12px",
-          borderTop: "1px solid rgba(255,255,255,0.08)",
+          borderTop: "1px solid var(--overlay-08)",
           alignItems: "flex-end",
         }}
       >
@@ -172,8 +172,8 @@ export default function MediaMessageInput({ placeholder = "Message…", onSend, 
           title="Attach photo or video"
           style={{
             flexShrink: 0, width: 36, height: 36, borderRadius: "50%",
-            background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)",
-            color: "rgba(255,255,255,0.55)", fontSize: 16, cursor: "pointer",
+            background: "var(--overlay-07)", border: "1px solid var(--overlay-10)",
+            color: "var(--ink-55)", fontSize: 16, cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >📎</button>
@@ -185,9 +185,9 @@ export default function MediaMessageInput({ placeholder = "Message…", onSend, 
           title="Search GIFs"
           style={{
             flexShrink: 0, borderRadius: 8, height: 36, padding: "0 10px",
-            background: showGifs ? "rgba(96,165,250,0.15)" : "rgba(255,255,255,0.07)",
-            border: showGifs ? "1px solid rgba(96,165,250,0.3)" : "1px solid rgba(255,255,255,0.1)",
-            color: showGifs ? "var(--color-accent-soft)" : "rgba(255,255,255,0.55)",
+            background: showGifs ? "rgba(96,165,250,0.15)" : "var(--overlay-07)",
+            border: showGifs ? "1px solid rgba(96,165,250,0.3)" : "1px solid var(--overlay-10)",
+            color: showGifs ? "var(--color-accent-soft)" : "var(--ink-55)",
             fontSize: 11, fontWeight: 800, cursor: "pointer", letterSpacing: 0.3,
           }}
         >GIF</button>
@@ -201,8 +201,8 @@ export default function MediaMessageInput({ placeholder = "Message…", onSend, 
           placeholder={placeholder}
           disabled={busy}
           style={{
-            flex: 1, minWidth: 0, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 999, padding: "10px 16px", color: "white", fontSize: 16, outline: "none",
+            flex: 1, minWidth: 0, background: "var(--overlay-07)", border: "1px solid var(--overlay-12)",
+            borderRadius: 999, padding: "10px 16px", color: "var(--color-text-1)", fontSize: 16, outline: "none",
           }}
         />
 
@@ -212,8 +212,8 @@ export default function MediaMessageInput({ placeholder = "Message…", onSend, 
           disabled={!canSend}
           style={{
             flexShrink: 0, width: 40, height: 40, borderRadius: "50%",
-            background: canSend ? "var(--gradient-cta)" : "rgba(255,255,255,0.08)",
-            border: "none", color: "white", fontSize: 16, cursor: canSend ? "pointer" : "default",
+            background: canSend ? "var(--gradient-cta)" : "var(--overlay-08)",
+            border: "none", color: canSend ? "var(--color-on-accent)" : "var(--ink-50)", fontSize: 16, cursor: canSend ? "pointer" : "default",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >

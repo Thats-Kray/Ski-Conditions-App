@@ -16,11 +16,11 @@ export default function GifPicker({ onSelect, onClose }) {
   return (
     <div style={{
       position: "absolute", bottom: "100%", left: 0, right: 0, zIndex: 100,
-      background: "var(--color-modal-bg)", border: "1px solid rgba(255,255,255,0.12)",
+      background: "var(--color-modal-bg)", border: "1px solid var(--overlay-12)",
       borderRadius: 16, padding: "14px 14px 12px", marginBottom: 8,
       boxShadow: "0 -4px 24px rgba(0,0,0,0.6)",
     }}>
-      <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
+      <div style={{ fontSize: 11, fontWeight: 800, color: "var(--ink-40)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
         Paste a GIF URL
       </div>
 
@@ -31,16 +31,16 @@ export default function GifPicker({ onSelect, onClose }) {
           onChange={e => setUrl(e.target.value)}
           placeholder="https://media.giphy.com/..."
           style={{
-            flex: 1, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 999, padding: "8px 14px", color: "white", fontSize: 13, outline: "none",
+            flex: 1, background: "var(--overlay-07)", border: "1px solid var(--overlay-10)",
+            borderRadius: 999, padding: "8px 14px", color: "var(--color-text-1)", fontSize: 13, outline: "none",
           }}
         />
         <button
           type="submit"
           disabled={!url.trim()}
           style={{
-            background: url.trim() ? "var(--gradient-cta)" : "rgba(255,255,255,0.08)",
-            border: "none", color: "white", borderRadius: 999, padding: "8px 16px",
+            background: url.trim() ? "var(--gradient-cta)" : "var(--overlay-08)",
+            border: "none", color: url.trim() ? "var(--color-on-accent)" : "var(--ink-50)", borderRadius: 999, padding: "8px 16px",
             fontWeight: 800, fontSize: 13, cursor: url.trim() ? "pointer" : "default", flexShrink: 0,
           }}
         >
@@ -49,7 +49,7 @@ export default function GifPicker({ onSelect, onClose }) {
         <button
           type="button"
           onClick={onClose}
-          style={{ background: "none", border: "none", color: "rgba(255,255,255,0.35)", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px", flexShrink: 0 }}
+          style={{ background: "none", border: "none", color: "var(--ink-35)", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px", flexShrink: 0 }}
         >×</button>
       </form>
 
@@ -63,7 +63,7 @@ export default function GifPicker({ onSelect, onClose }) {
         />
       )}
 
-      <div style={{ marginTop: 10, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+      <div style={{ marginTop: 10, fontSize: 11, color: "var(--ink-30)" }}>
         Find a GIF at{" "}
         <a href="https://giphy.com" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-accent-soft)", textDecoration: "none", fontWeight: 700 }}>Giphy →</a>
         {" "}then copy and paste the link above.

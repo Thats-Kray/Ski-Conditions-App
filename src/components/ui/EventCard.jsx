@@ -10,7 +10,7 @@ export default function EventCard({ event, accentColor }) {
         gap: 14,
         padding: 14,
         borderRadius: 14,
-        background: "rgba(255,255,255,0.04)",
+        background: "var(--overlay-04)",
         border: `1px solid ${accentColor}33`,
       }}
     >
@@ -28,13 +28,13 @@ export default function EventCard({ event, accentColor }) {
       >
         <div>
           <div style={{ fontSize: 10, fontWeight: 800, color: accentColor }}>{month}</div>
-          <div style={{ fontSize: 18, fontWeight: 900, color: "white", lineHeight: 1 }}>{day}</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: "var(--color-text-1)", lineHeight: 1 }}>{day}</div>
         </div>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 900, color: "white" }}>{event.title}</div>
+        <div style={{ fontSize: 14, fontWeight: 900, color: "var(--color-text-1)" }}>{event.title}</div>
         {event.description && (
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 3, lineHeight: 1.4 }}>
+          <div style={{ fontSize: 12, color: "var(--ink-55)", marginTop: 3, lineHeight: 1.4 }}>
             {event.description}
           </div>
         )}

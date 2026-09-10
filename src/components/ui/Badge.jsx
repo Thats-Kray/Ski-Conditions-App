@@ -37,7 +37,7 @@ const BORDER_COLORS = {
 export default function Badge({ label, color, size = "md" }) {
   const pad = size === "sm" ? "4px 8px" : "5px 10px"
   const fontSize = size === "sm" ? 11 : 12
-  const borderColor = BORDER_COLORS[color] ?? "rgba(255,255,255,0.2)"
+  const borderColor = BORDER_COLORS[color] ?? "var(--overlay-20)"
   return (
     <span
       style={{

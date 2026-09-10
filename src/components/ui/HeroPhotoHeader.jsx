@@ -9,7 +9,7 @@ export default function HeroPhotoHeader({ photoPath, title, badges, scoreSlot, c
         background: photoPath
           ? `linear-gradient(to top, rgba(4,8,15,0.88), rgba(2,6,23,0.3)), url(${photoPath}) center/cover`
           : "linear-gradient(135deg, var(--color-surface-popover), var(--color-text-muted))",
-        border: "1px solid rgba(255,255,255,0.1)",
+        border: "1px solid var(--overlay-10)",
       }}
     >
       {title && (
@@ -18,7 +18,8 @@ export default function HeroPhotoHeader({ photoPath, title, badges, scoreSlot, c
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
               {badges}
             </div>
-            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, color: "white" }}>{title}</h1>
+            {/* Rule 2 / --color-on-accent: title sits on darkened photo overlay, stays white in both modes */}
+            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, color: "var(--color-on-accent)" }}>{title}</h1>
           </div>
           {scoreSlot}
         </div>

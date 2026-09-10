@@ -16,7 +16,7 @@ const VARIANTS = {
   },
   danger: {
     background: "var(--gradient-danger)",
-    color: "#fff",
+    color: "var(--color-on-accent)",
     border: "none",
   },
 }

@@ -21,8 +21,8 @@ export default function Card({
           border: "1px solid var(--color-border)",
         }
       : {
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.08)",
+          background: "var(--overlay-04)",
+          border: "1px solid var(--overlay-08)",
           backdropFilter: "blur(12px)",
         }
 

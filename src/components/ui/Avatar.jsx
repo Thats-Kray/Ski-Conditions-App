@@ -27,7 +27,7 @@ export default function Avatar({ profile, size = 32 }) {
       justifyContent: "center",
       fontSize: Math.round(size * 0.42),
       fontWeight: 800,
-      color: "white",
+      color: "var(--color-on-accent)",
     }}>
       {name.charAt(0).toUpperCase()}
     </div>

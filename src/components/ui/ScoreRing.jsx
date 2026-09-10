@@ -22,7 +22,7 @@ export default function ScoreRing({ score, tier, size = 96, strokeWidth = 8, lab
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke="rgba(255,255,255,0.08)"
+        stroke="var(--overlay-08)"
         strokeWidth={strokeWidth}
       />
       <circle

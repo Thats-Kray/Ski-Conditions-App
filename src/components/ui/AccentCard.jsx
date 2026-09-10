@@ -4,8 +4,8 @@ export default function AccentCard({ accentColor = "var(--color-accent)", childr
       style={{
         padding: 12,
         borderRadius: 14,
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.08)",
+        background: "var(--overlay-03)",
+        border: "1px solid var(--overlay-08)",
         borderLeft: `3px solid ${accentColor}`,
       }}
     >
