@@ -643,7 +643,7 @@ export default function TodayScreen({
                 onClick={() => setPassFilters(new Set())}
                 style={{
                   background: passFilters.size === 0 ? "var(--gradient-pass-pill)" : "var(--overlay-06)",
-                  color: passFilters.size === 0 ? "var(--color-pass-pill-text)" : "var(--ink-60)",
+                  color: passFilters.size === 0 ? "var(--color-pass-pill-text)" : "var(--color-text-1)",
                   border: "1px solid var(--overlay-10)",
                   padding: "7px 12px",
                   borderRadius: 999,
@@ -665,7 +665,7 @@ export default function TodayScreen({
                   })}
                   style={{
                     background: passFilters.has(p) ? "var(--gradient-pass-pill)" : "var(--overlay-06)",
-                    color: passFilters.has(p) ? "var(--color-pass-pill-text)" : "var(--ink-60)",
+                    color: passFilters.has(p) ? "var(--color-pass-pill-text)" : "var(--color-text-1)",
                     border: "1px solid var(--overlay-10)",
                     padding: "7px 12px",
                     borderRadius: 999,
