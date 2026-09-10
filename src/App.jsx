@@ -749,6 +749,13 @@ export default function App() {
       document.documentElement.setAttribute("data-theme", profile?.theme || "blizzard")
       try { localStorage.setItem("pd_theme", profile?.theme || "blizzard") } catch {}
 
+      const mode = profile?.theme_mode === "light" ? "light" : "dark"
+      if (mode === "light") document.documentElement.setAttribute("data-mode", "light")
+      else document.documentElement.removeAttribute("data-mode")
+      const metaTheme = document.querySelector('meta[name="theme-color"]')
+      if (metaTheme) metaTheme.setAttribute("content", mode === "light" ? "#F2F7FC" : "#020617")
+      try { localStorage.setItem("pd_theme_mode", mode) } catch {}
+
       // Show onboarding for new users who haven't completed it and have no profile
       if (!profile && !localStorage.getItem("skicrew_onboarded") && !localStorage.getItem("powderdays_onboarded")) {
         setShowOnboarding(true)
