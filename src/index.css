@@ -128,6 +128,73 @@
   --season-grid-tier-3: var(--rating-sky);
   --season-grid-tier-4: var(--rating-mint);
 
+  /* ── Track F: adaptive overlay + ink scales (light/dark mode) ────────
+     Two mode-scoped alpha ramps that replace the ~1,090 hardcoded
+     rgba(255,255,255,a) literals this app used for glass surfaces and
+     muted text. They are mode-scoped, NOT theme-scoped: a 6%-white card
+     lift reads the same in every cosmetic theme, and always did.
+
+     --overlay-XX  surfaces, borders, shadows, gradient stops. Never text.
+     --ink-XX      color / fill / stroke. Never a surface.
+
+     XX is the DARK alpha times 100. Dark values below are byte-identical
+     to the literals they replace, so dark mode does not shift by one bit.
+     The light values are NOT the same alpha: dark ink loses contrast far
+     faster against a bright background than light ink does against a dark
+     one, so every --ink light alpha is solved for equal contrast (see the
+     plan's Appendix A.2) and the --overlay steps above 0.10 are raised for
+     equal perceived weight (A.3). Do not "simplify" them back to a mirror. */
+  --overlay-02:  rgba(255, 255, 255, 0.02);
+  --overlay-03:  rgba(255, 255, 255, 0.03);
+  --overlay-035: rgba(255, 255, 255, 0.035);
+  --overlay-04:  rgba(255, 255, 255, 0.04);
+  --overlay-05:  rgba(255, 255, 255, 0.05);
+  --overlay-06:  rgba(255, 255, 255, 0.06);
+  --overlay-065: rgba(255, 255, 255, 0.065);
+  --overlay-07:  rgba(255, 255, 255, 0.07);
+  --overlay-08:  rgba(255, 255, 255, 0.08);
+  --overlay-09:  rgba(255, 255, 255, 0.09);
+  --overlay-10:  rgba(255, 255, 255, 0.1);
+  --overlay-11:  rgba(255, 255, 255, 0.11);
+  --overlay-12:  rgba(255, 255, 255, 0.12);
+  --overlay-13:  rgba(255, 255, 255, 0.13);
+  --overlay-14:  rgba(255, 255, 255, 0.14);
+  --overlay-15:  rgba(255, 255, 255, 0.15);
+  --overlay-16:  rgba(255, 255, 255, 0.16);
+  --overlay-18:  rgba(255, 255, 255, 0.18);
+  --overlay-20:  rgba(255, 255, 255, 0.2);
+  --overlay-22:  rgba(255, 255, 255, 0.22);
+  --overlay-25:  rgba(255, 255, 255, 0.25);
+  --ink-20: rgba(255, 255, 255, 0.2);
+  --ink-25: rgba(255, 255, 255, 0.25);
+  --ink-28: rgba(255, 255, 255, 0.28);
+  --ink-30: rgba(255, 255, 255, 0.3);
+  --ink-32: rgba(255, 255, 255, 0.32);
+  --ink-35: rgba(255, 255, 255, 0.35);
+  --ink-38: rgba(255, 255, 255, 0.38);
+  --ink-40: rgba(255, 255, 255, 0.4);
+  --ink-42: rgba(255, 255, 255, 0.42);
+  --ink-45: rgba(255, 255, 255, 0.45);
+  --ink-48: rgba(255, 255, 255, 0.48);
+  --ink-50: rgba(255, 255, 255, 0.5);
+  --ink-52: rgba(255, 255, 255, 0.52);
+  --ink-55: rgba(255, 255, 255, 0.55);
+  --ink-58: rgba(255, 255, 255, 0.58);
+  --ink-60: rgba(255, 255, 255, 0.6);
+  --ink-62: rgba(255, 255, 255, 0.62);
+  --ink-65: rgba(255, 255, 255, 0.65);
+  --ink-68: rgba(255, 255, 255, 0.68);
+  --ink-70: rgba(255, 255, 255, 0.7);
+  --ink-72: rgba(255, 255, 255, 0.72);
+  --ink-74: rgba(255, 255, 255, 0.74);
+  --ink-75: rgba(255, 255, 255, 0.75);
+  --ink-78: rgba(255, 255, 255, 0.78);
+  --ink-80: rgba(255, 255, 255, 0.8);
+  --ink-82: rgba(255, 255, 255, 0.82);
+  --ink-85: rgba(255, 255, 255, 0.85);
+  --ink-88: rgba(255, 255, 255, 0.88);
+  --ink-90: rgba(255, 255, 255, 0.9);
+
   --radius-card:         18px;
   --radius-button:       12px;
   --radius-pill:         999px;
@@ -245,6 +312,77 @@
   --color-modal-bg: #241407; --color-bg-deep: #130A03; --color-surface-popover: #33210E;
   --color-banner-heading: #FFF7ED; --color-banner-highlight: #FB923C;
   --gradient-cta: linear-gradient(135deg, var(--color-accent-deep), var(--color-accent-teal));
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   LIGHT MODE. Selected by data-mode="light" on <html>, set by the
+   pre-mount script in index.html and by loadHeaderUser() in App.jsx.
+
+   This bare [data-mode="light"] block is Blizzard-light AND the light
+   baseline every other light theme overrides — the exact mirror of
+   :root being Blizzard-dark AND the dark baseline. It is deliberately
+   NOT [data-theme="blizzard"][data-mode="light"]: <html> often carries
+   no data-theme at all (signed-out visitors, and the first paint of a
+   signed-in one), and a two-attribute selector would not match them.
+   ══════════════════════════════════════════════════════════════════ */
+[data-mode="light"] {
+  color-scheme: light;
+  color: var(--color-text-1);
+  background-color: var(--color-bg);
+
+  /* Track F light ramp — see the plan's Appendix A.2 / A.3 for the
+     contrast solve behind every alpha here. #0F172A is slate-900, the
+     one neutral ink shared by all five light palettes. */
+  --overlay-02:  rgba(15, 23, 42, 0.02);
+  --overlay-03:  rgba(15, 23, 42, 0.03);
+  --overlay-035: rgba(15, 23, 42, 0.035);
+  --overlay-04:  rgba(15, 23, 42, 0.04);
+  --overlay-05:  rgba(15, 23, 42, 0.05);
+  --overlay-06:  rgba(15, 23, 42, 0.06);
+  --overlay-065: rgba(15, 23, 42, 0.065);
+  --overlay-07:  rgba(15, 23, 42, 0.07);
+  --overlay-08:  rgba(15, 23, 42, 0.08);
+  --overlay-09:  rgba(15, 23, 42, 0.09);
+  --overlay-10:  rgba(15, 23, 42, 0.1);
+  --overlay-11:  rgba(15, 23, 42, 0.12);
+  --overlay-12:  rgba(15, 23, 42, 0.14);
+  --overlay-13:  rgba(15, 23, 42, 0.15);
+  --overlay-14:  rgba(15, 23, 42, 0.16);
+  --overlay-15:  rgba(15, 23, 42, 0.18);
+  --overlay-16:  rgba(15, 23, 42, 0.2);
+  --overlay-18:  rgba(15, 23, 42, 0.22);
+  --overlay-20:  rgba(15, 23, 42, 0.26);
+  --overlay-22:  rgba(15, 23, 42, 0.28);
+  --overlay-25:  rgba(15, 23, 42, 0.34);
+  --ink-20: rgba(15, 23, 42, 0.25);
+  --ink-25: rgba(15, 23, 42, 0.32);
+  --ink-28: rgba(15, 23, 42, 0.37);
+  --ink-30: rgba(15, 23, 42, 0.4);
+  --ink-32: rgba(15, 23, 42, 0.43);
+  --ink-35: rgba(15, 23, 42, 0.47);
+  --ink-38: rgba(15, 23, 42, 0.52);
+  --ink-40: rgba(15, 23, 42, 0.54);
+  --ink-42: rgba(15, 23, 42, 0.57);
+  --ink-45: rgba(15, 23, 42, 0.6);
+  --ink-48: rgba(15, 23, 42, 0.63);
+  --ink-50: rgba(15, 23, 42, 0.65);
+  --ink-52: rgba(15, 23, 42, 0.67);
+  --ink-55: rgba(15, 23, 42, 0.7);
+  --ink-58: rgba(15, 23, 42, 0.72);
+  --ink-60: rgba(15, 23, 42, 0.74);
+  --ink-62: rgba(15, 23, 42, 0.76);
+  --ink-65: rgba(15, 23, 42, 0.78);
+  --ink-68: rgba(15, 23, 42, 0.81);
+  --ink-70: rgba(15, 23, 42, 0.82);
+  --ink-72: rgba(15, 23, 42, 0.84);
+  --ink-74: rgba(15, 23, 42, 0.85);
+  --ink-75: rgba(15, 23, 42, 0.86);
+  --ink-78: rgba(15, 23, 42, 0.88);
+  --ink-80: rgba(15, 23, 42, 0.9);
+  --ink-82: rgba(15, 23, 42, 0.92);
+  --ink-85: rgba(15, 23, 42, 0.94);
+  --ink-88: rgba(15, 23, 42, 0.96);
+  --ink-90: rgba(15, 23, 42, 0.98);
 }
 
 html {
