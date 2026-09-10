@@ -43,8 +43,8 @@ export default function EventsWidget({ resortKey }) {
   }
 
   const inputStyle = {
-    background: "rgba(255,255,255,0.07)", border: "1.5px solid rgba(255,255,255,0.11)",
-    borderRadius: 10, padding: "10px 12px", color: "white", fontSize: 14, outline: "none",
+    background: "var(--overlay-07)", border: "1.5px solid var(--overlay-11)",
+    borderRadius: 10, padding: "10px 12px", color: "var(--color-text-1)", fontSize: 14, outline: "none",
     width: "100%", boxSizing: "border-box", fontFamily: "inherit",
   }
 
@@ -58,15 +58,15 @@ export default function EventsWidget({ resortKey }) {
           + Add Event
         </button>
       ) : (
-        <div style={{ display: "grid", gap: 8, padding: 14, borderRadius: 14, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }}>
+        <div style={{ display: "grid", gap: 8, padding: 14, borderRadius: 14, border: "1px solid var(--overlay-10)", background: "var(--overlay-03)" }}>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Event title" maxLength={120} style={inputStyle} />
           <input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} style={{ ...inputStyle, colorScheme: "dark" }} />
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" rows={2} maxLength={500} style={{ ...inputStyle, resize: "vertical" }} />
           <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="Link (optional)" style={inputStyle} />
           {saveError && <div style={{ fontSize: 12, color: "var(--color-danger)" }}>{saveError}</div>}
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => setComposerOpen(false)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.6)", cursor: "pointer" }}>Cancel</button>
-            <button onClick={handleCreate} disabled={saving || !title.trim() || !eventDate} style={{ flex: 2, padding: "10px", borderRadius: 10, border: "none", background: "var(--gradient-primary)", color: "white", fontWeight: 800, cursor: saving ? "wait" : "pointer", opacity: saving || !title.trim() || !eventDate ? 0.6 : 1 }}>
+            <button onClick={() => setComposerOpen(false)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "1px solid var(--overlay-10)", background: "transparent", color: "var(--ink-60)", cursor: "pointer" }}>Cancel</button>
+            <button onClick={handleCreate} disabled={saving || !title.trim() || !eventDate} style={{ flex: 2, padding: "10px", borderRadius: 10, border: "none", background: "var(--gradient-primary)", color: "var(--color-on-accent)", fontWeight: 800, cursor: saving ? "wait" : "pointer", opacity: saving || !title.trim() || !eventDate ? 0.6 : 1 }}>
               {saving ? "Saving…" : "Create Event"}
             </button>
           </div>
@@ -74,11 +74,11 @@ export default function EventsWidget({ resortKey }) {
       )}
 
       {loading ? (
-        <div style={{ padding: 20, fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Loading…</div>
+        <div style={{ padding: 20, fontSize: 13, color: "var(--ink-40)" }}>Loading…</div>
       ) : loadError ? (
         <div style={{ padding: 20, fontSize: 13, color: "var(--color-danger)" }}>Couldn't load events. Try again in a bit.</div>
       ) : !events.length ? (
-        <div style={{ padding: 20, fontSize: 13, color: "rgba(255,255,255,0.4)" }}>No upcoming events yet.</div>
+        <div style={{ padding: 20, fontSize: 13, color: "var(--ink-40)" }}>No upcoming events yet.</div>
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
           {events.map((event, i) => (

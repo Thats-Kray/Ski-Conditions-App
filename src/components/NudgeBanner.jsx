@@ -115,10 +115,10 @@ export default function NudgeBanner({ currentUser }) {
         <div style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🎿</div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "white", marginBottom: 2 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "var(--color-text-1)", marginBottom: 2 }}>
             Forgot to finish {resortName(session.resort_name)}, {formatDate(session.session_date)}?
           </div>
-          <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}>
+          <div style={{ fontSize: 12.5, color: "var(--ink-55)", lineHeight: 1.5 }}>
             Add a title, photos, or tag who you skied with.
           </div>
         </div>
@@ -130,7 +130,7 @@ export default function NudgeBanner({ currentUser }) {
             border: "none",
             borderRadius: 999,
             padding: "9px 18px",
-            color: "white",
+            color: "var(--color-on-accent)",
             fontSize: 13,
             fontWeight: 800,
             cursor: "pointer",
@@ -150,7 +150,7 @@ export default function NudgeBanner({ currentUser }) {
             background: "none",
             border: "none",
             cursor: "pointer",
-            color: "rgba(255,255,255,0.35)",
+            color: "var(--ink-35)",
             fontSize: 18,
             lineHeight: 1,
             padding: 4,

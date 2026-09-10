@@ -31,7 +31,7 @@ function Row({ label, value }) {
         fontSize: 13,
       }}
     >
-      <div style={{ color: "rgba(255,255,255,0.62)" }}>{label}</div>
+      <div style={{ color: "var(--ink-62)" }}>{label}</div>
       <div style={{ textAlign: "right", fontWeight: 700 }}>{value}</div>
     </div>
   )
@@ -39,7 +39,7 @@ function Row({ label, value }) {
 
 function SevenDayForecastPanel({ dailySnow }) {
   if (!dailySnow?.length) {
-    return <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Forecast unavailable.</div>
+    return <div style={{ fontSize: 12, color: "var(--ink-40)" }}>Forecast unavailable.</div>
   }
   const max = Math.max(...dailySnow.map((d) => d.inches), 1)
   const best = dailySnow.reduce((a, b) => (b.inches > a.inches ? b : a), dailySnow[0])
@@ -53,17 +53,17 @@ function SevenDayForecastPanel({ dailySnow }) {
               style={{
                 width: "100%",
                 height: Math.max(4, (d.inches / max) * 44),
-                background: d.date === best.date && best.inches > 0 ? "var(--color-success)" : "rgba(255,255,255,0.15)",
+                background: d.date === best.date && best.inches > 0 ? "var(--color-success)" : "var(--overlay-15)",
                 borderRadius: 3,
               }}
               title={`${d.inches.toFixed(1)}"`}
             />
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)" }}>{d.day}</div>
+            <div style={{ fontSize: 10, color: "var(--ink-45)" }}>{d.day}</div>
           </div>
         ))}
       </div>
       {best.inches > 0 && (
-        <div style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
+        <div style={{ marginTop: 8, fontSize: 12, color: "var(--ink-65)" }}>
           Best day: {best.day} ❄️ {best.inches.toFixed(0)}"
         </div>
       )}
@@ -111,8 +111,8 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
     <div
       className="resort-card"
       style={{
-        background: "rgba(255,255,255,0.05)",
-        border: r.isOpen ? "1px solid rgba(34,197,94,0.25)" : "1px solid rgba(255,255,255,0.08)",
+        background: "var(--overlay-05)",
+        border: r.isOpen ? "1px solid rgba(34,197,94,0.25)" : "1px solid var(--overlay-08)",
         borderRadius: 24,
         overflow: "hidden",
         transition: "transform .2s ease, box-shadow .2s ease",
@@ -139,8 +139,8 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
           {r.isOpen === true && (
             <div style={{ background: "rgba(10,30,10,0.75)", border: "1px solid rgba(34,197,94,0.5)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, color: "var(--color-success)", backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>Open</div>
           )}
-          <div style={{ background: "rgba(4,8,15,0.65)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>{r.pass}</div>
-          <div style={{ background: "rgba(4,8,15,0.65)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, color: riskColor(r.driveRisk), backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>{r.driveRisk || "Unknown"}</div>
+          <div style={{ background: "rgba(4,8,15,0.65)", border: "1px solid var(--overlay-12)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>{r.pass}</div>
+          <div style={{ background: "rgba(4,8,15,0.65)", border: "1px solid var(--overlay-12)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, color: riskColor(r.driveRisk), backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>{r.driveRisk || "Unknown"}</div>
         </div>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 12, paddingTop: 44 }}>
           <ResortLogo resort={r} />
@@ -170,8 +170,8 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
             { label: "Base",     value: r.baseDepth  != null ? `${r.baseDepth}"` : "—" },
             { label: "Skiers",   value: skierCounts?.[r.resortKey] ?? 0 },
           ].map(({ label, value }) => (
-            <div key={label} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 16, padding: "12px 12px" }}>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
+            <div key={label} style={{ background: "var(--overlay-05)", border: "1px solid var(--overlay-09)", borderRadius: 16, padding: "12px 12px" }}>
+              <div style={{ fontSize: 10, color: "var(--ink-50)", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
               <div style={{ marginTop: 4, fontSize: 22, fontWeight: 900 }}>{value}</div>
             </div>
           ))}
@@ -187,13 +187,13 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
         <FriendsGoingBadge friends={friendsGoing} />
 
         {/* Forecast */}
-        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "10px 12px", fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.5 }}>
+        <div style={{ background: "var(--overlay-03)", border: "1px solid var(--overlay-07)", borderRadius: 12, padding: "10px 12px", fontSize: 13, color: "var(--ink-75)", lineHeight: 1.5 }}>
           {r.shortForecast || "—"}
         </div>
 
         {/* Travel alerts */}
         {r.driveAlerts && r.driveAlerts.length > 0 && (
-          <div style={{ background: "rgba(255,195,0,0.04)", border: "1px solid rgba(255,195,0,0.14)", borderRadius: 12, padding: "10px 12px", fontSize: 12, color: "rgba(255,255,255,0.65)", display: "grid", gap: 4 }}>
+          <div style={{ background: "rgba(255,195,0,0.04)", border: "1px solid rgba(255,195,0,0.14)", borderRadius: 12, padding: "10px 12px", fontSize: 12, color: "var(--ink-65)", display: "grid", gap: 4 }}>
             <div style={{ fontWeight: 800, color: "rgba(255,195,0,0.75)", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 }}>Travel Alerts</div>
             {r.driveAlerts.slice(0, 2).map((alert, idx) => <div key={idx}>• {alert}</div>)}
           </div>
@@ -202,7 +202,7 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
         {/* Details toggle */}
         <button
           onClick={() => setExpanded((v) => !v)}
-          style={{ background: "none", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "7px 12px", color: "rgba(255,255,255,0.45)", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "color 0.15s" }}
+          style={{ background: "none", border: "1px solid var(--overlay-08)", borderRadius: 10, padding: "7px 12px", color: "var(--ink-45)", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "color 0.15s" }}
         >
           {expanded ? "▲ Hide Details" : "▼ Show Details"}
         </button>
@@ -220,7 +220,7 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
             <Row label="Runs"             value={r.runsOpen  != null && r.runsTotal  != null ? `${r.runsOpen}/${r.runsTotal} (${formatPercent(r.runsOpen, r.runsTotal)})` : "—"} />
             <Row label="Drive Risk"       value={<span style={{ color: riskColor(r.driveRisk), fontWeight: 900 }}>{r.driveRisk || "Unknown"}</span>} />
             {(r.observedUpdated || r.forecastUpdated) && (
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 11, color: "var(--ink-30)", marginTop: 4, lineHeight: 1.5 }}>
                 Resort report: {r.observedUpdated || "—"}{r.conditionsSource ? ` (${r.conditionsSource})` : ""}<br />
                 Forecast: {r.forecastUpdated ? new Date(r.forecastUpdated).toLocaleString() : "—"}
               </div>
@@ -231,7 +231,7 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
         {/* This Week toggle */}
         <button
           onClick={() => setWeekExpanded((v) => !v)}
-          style={{ background: "none", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "7px 12px", color: "rgba(255,255,255,0.45)", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "color 0.15s" }}
+          style={{ background: "none", border: "1px solid var(--overlay-08)", borderRadius: 10, padding: "7px 12px", color: "var(--ink-45)", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "color 0.15s" }}
         >
           {weekExpanded ? "▲ This Week" : "▼ This Week"}
         </button>
@@ -300,13 +300,13 @@ function ResortLogo({ resort }) {
         height: 46,
         borderRadius: 14,
         background: "linear-gradient(135deg, var(--color-surface-popover), var(--color-text-muted))",
-        border: "1px solid rgba(255,255,255,0.14)",
+        border: "1px solid var(--overlay-14)",
         display: "grid",
         placeItems: "center",
         flexShrink: 0,
         fontSize: 12,
         fontWeight: 900,
-        color: "white",
+        color: "var(--color-text-1)",
       }}
     >
       {initials}
@@ -381,13 +381,13 @@ function AddToHomeScreenNudge({ currentUser, sessionActive }) {
       gap: 12,
       fontSize: 13,
     }}>
-      <span style={{ color: "rgba(255,255,255,0.8)" }}>
+      <span style={{ color: "var(--ink-80)" }}>
         📲 Add to Home Screen for better GPS tracking
       </span>
       <button
         onClick={dismissNudge}
         style={{
-          background: "none", border: "none", color: "rgba(255,255,255,0.4)",
+          background: "none", border: "none", color: "var(--ink-40)",
           fontSize: 12, cursor: "pointer", fontWeight: 700, flexShrink: 0,
         }}
       >
@@ -432,7 +432,7 @@ function OffseasonBanner() {
         <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-banner-heading)", marginBottom: 6, lineHeight: 1.4 }}>
           The mountains are closing for the summer. See you on the slopes this fall! ⛷️
         </div>
-        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}>
+        <div style={{ fontSize: 13, color: "var(--ink-55)", lineHeight: 1.6 }}>
           PowderDays is officially launching for the <span style={{ color: "var(--color-banner-highlight)", fontWeight: 700 }}>2026/27 season</span>.
           Invite your crew now — resort conditions, trip planning, and leaderboards
           will be live when the lifts spin up in <span style={{ color: "var(--color-banner-highlight)", fontWeight: 700 }}>November 2026</span>.
@@ -467,7 +467,7 @@ function OffseasonBanner() {
         style={{
           position: "absolute", top: 12, right: 12,
           background: "none", border: "none", cursor: "pointer",
-          color: "rgba(255,255,255,0.35)", fontSize: 18, lineHeight: 1,
+          color: "var(--ink-35)", fontSize: 18, lineHeight: 1,
           padding: 4, borderRadius: 6,
         }}
         aria-label="Dismiss"
@@ -553,8 +553,8 @@ export default function TodayScreen({
           gap: 2,
           padding: 3,
           marginBottom: 20,
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.1)",
+          background: "var(--overlay-06)",
+          border: "1px solid var(--overlay-10)",
           borderRadius: 999,
         }}
       >
@@ -567,7 +567,7 @@ export default function TodayScreen({
             onClick={() => setConditionsSubTab(key)}
             style={{
               background: conditionsSubTab === key ? "var(--gradient-primary)" : "transparent",
-              color: conditionsSubTab === key ? "white" : "rgba(255,255,255,0.6)",
+              color: conditionsSubTab === key ? "var(--color-on-accent)" : "var(--ink-60)",
               border: "none",
               padding: "8px 20px",
               borderRadius: 999,
@@ -642,9 +642,9 @@ export default function TodayScreen({
               <button
                 onClick={() => setPassFilters(new Set())}
                 style={{
-                  background: passFilters.size === 0 ? "var(--gradient-pass-pill)" : "rgba(255,255,255,0.06)",
-                  color: passFilters.size === 0 ? "var(--color-pass-pill-text)" : "white",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: passFilters.size === 0 ? "var(--gradient-pass-pill)" : "var(--overlay-06)",
+                  color: passFilters.size === 0 ? "var(--color-pass-pill-text)" : "var(--ink-60)",
+                  border: "1px solid var(--overlay-10)",
                   padding: "7px 12px",
                   borderRadius: 999,
                   fontWeight: 800,
@@ -664,9 +664,9 @@ export default function TodayScreen({
                     return next
                   })}
                   style={{
-                    background: passFilters.has(p) ? "var(--gradient-pass-pill)" : "rgba(255,255,255,0.06)",
-                    color: passFilters.has(p) ? "var(--color-pass-pill-text)" : "white",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: passFilters.has(p) ? "var(--gradient-pass-pill)" : "var(--overlay-06)",
+                    color: passFilters.has(p) ? "var(--color-pass-pill-text)" : "var(--ink-60)",
+                    border: "1px solid var(--overlay-10)",
                     padding: "7px 12px",
                     borderRadius: 999,
                     fontWeight: 800,
@@ -686,9 +686,9 @@ export default function TodayScreen({
               style={{
                 flex: 1,
                 minWidth: 220,
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: "white",
+                background: "var(--overlay-06)",
+                border: "1px solid var(--overlay-10)",
+                color: "var(--color-text-1)",
                 padding: "9px 12px",
                 borderRadius: 14,
                 fontSize: 13,
@@ -700,9 +700,9 @@ export default function TodayScreen({
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: "white",
+                background: "var(--overlay-06)",
+                border: "1px solid var(--overlay-10)",
+                color: "var(--color-text-1)",
                 padding: "9px 12px",
                 borderRadius: 14,
                 fontSize: 13,
@@ -723,10 +723,10 @@ export default function TodayScreen({
             return (
               <>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.8, color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.8, color: "var(--ink-50)", textTransform: "uppercase" }}>
                     {moreResorts.length} {excludeHero ? "More " : ""}Resort{moreResorts.length === 1 ? "" : "s"}
                   </div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+                  <div style={{ fontSize: 12, color: "var(--ink-40)" }}>
                     sorted by {sortBy}
                   </div>
                 </div>
@@ -767,7 +767,7 @@ export default function TodayScreen({
             fontSize: 11,
             fontWeight: 800,
             letterSpacing: 0.8,
-            color: "rgba(255,255,255,0.5)",
+            color: "var(--ink-50)",
             textTransform: "uppercase",
             marginBottom: 10,
           }}
@@ -783,7 +783,7 @@ export default function TodayScreen({
                 fontSize: 11,
                 fontWeight: 800,
                 letterSpacing: 0.8,
-                color: "rgba(255,255,255,0.5)",
+                color: "var(--ink-50)",
                 textTransform: "uppercase",
                 marginTop: 20,
                 marginBottom: 10,

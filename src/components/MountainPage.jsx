@@ -38,7 +38,7 @@ export default function MountainPage({ resortKey, resort, currentUserEmail, onBa
     <div style={{ display: "grid", gap: 16 }}>
       <button
         onClick={onBack}
-        style={{ justifySelf: "start", background: "none", border: "none", color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0 }}
+        style={{ justifySelf: "start", background: "none", border: "none", color: "var(--ink-60)", fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0 }}
       >
         ← Back
       </button>
@@ -83,7 +83,7 @@ export default function MountainPage({ resortKey, resort, currentUserEmail, onBa
         />
       )}
 
-      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, borderBottom: "1px solid var(--overlay-08)" }}>
         {widgets.map((w) => (
           <button
             key={w.key}
@@ -93,7 +93,7 @@ export default function MountainPage({ resortKey, resort, currentUserEmail, onBa
               border: "none", borderBottom: activeWidgetKey === w.key ? "2px solid var(--color-accent)" : "2px solid transparent",
               cursor: "pointer",
               background: activeWidgetKey === w.key ? "rgba(56,189,248,0.1)" : "transparent",
-              color: activeWidgetKey === w.key ? "var(--color-accent)" : "rgba(255,255,255,0.6)",
+              color: activeWidgetKey === w.key ? "var(--color-accent)" : "var(--ink-60)",
             }}
           >
             {w.label}

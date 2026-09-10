@@ -55,7 +55,7 @@ function resortBubbleIcon(resort, people) {
   const name = escapeHtml(resort.name)
 
   const badge = people.length > 0
-    ? `<div style="position:absolute;top:-4px;right:-4px;width:20px;height:20px;border-radius:999px;background:#f97316;color:#fff;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;border:2px solid #0A1628;">${escapeHtml(avatarFallback(displayName(people[0])))}</div>`
+    ? `<div style="position:absolute;top:-4px;right:-4px;width:20px;height:20px;border-radius:999px;background:#f97316;color:var(--color-on-accent);font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;border:2px solid #0A1628;">${escapeHtml(avatarFallback(displayName(people[0])))}</div>`
     : ""
 
   const html = `
@@ -66,7 +66,7 @@ function resortBubbleIcon(resort, people) {
         </div>
         ${badge}
       </div>
-      <div style="margin-top:6px;font-weight:800;font-size:12px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.8);white-space:nowrap;">
+      <div style="margin-top:6px;font-weight:800;font-size:12px;color:var(--color-on-accent);text-shadow:0 1px 3px rgba(0,0,0,0.8);white-space:nowrap;">
         ${name}
       </div>
     </div>
@@ -244,7 +244,7 @@ export default function PowderMap({
           minHeight: 280,
           borderRadius: 20,
           overflow: "hidden",
-          border: "1px solid rgba(255,255,255,0.1)",
+          border: "1px solid var(--overlay-10)",
         }}
       >
         <MapContainer

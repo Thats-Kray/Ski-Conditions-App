@@ -203,8 +203,8 @@ export default function TodaysCrew() {
   return (
     <div
       style={{
-        background: "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,255,255,0.1)",
+        background: "var(--overlay-06)",
+        border: "1px solid var(--overlay-10)",
         borderRadius: 18,
         padding: 16,
         display: "grid",
@@ -228,9 +228,9 @@ export default function TodaysCrew() {
           <button
             onClick={loadPlans}
             style={{
-              background: "rgba(255,255,255,0.08)",
-              color: "white",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--overlay-08)",
+              color: "var(--color-text-1)",
+              border: "1px solid var(--overlay-12)",
               padding: "8px 10px",
               borderRadius: 10,
               cursor: "pointer",
@@ -248,7 +248,7 @@ export default function TodaysCrew() {
                 disabled={driving}
                 style={{
                   background: driving
-                    ? "rgba(255,255,255,0.12)"
+                    ? "var(--overlay-12)"
                     : "linear-gradient(135deg,var(--color-warning),var(--color-warning))",
                   color: "var(--color-bg)",
                   border: "none",
@@ -267,7 +267,7 @@ export default function TodaysCrew() {
                 disabled={arriving}
                 style={{
                   background: arriving
-                    ? "rgba(255,255,255,0.12)"
+                    ? "var(--overlay-12)"
                     : "linear-gradient(135deg,var(--color-success),var(--color-success-strong))",
                   color: "var(--color-pass-pill-text)",
                   border: "none",
@@ -286,15 +286,15 @@ export default function TodaysCrew() {
       </div>
 
       {!user ? (
-        <div style={{ color: "rgba(255,255,255,0.7)" }}>
+        <div style={{ color: "var(--ink-70)" }}>
           Sign in to see who’s skiing today.
         </div>
       ) : loading ? (
-        <div style={{ color: "rgba(255,255,255,0.7)" }}>
-          Loading today's crew...
+        <div style={{ color: "var(--ink-70)" }}>
+          Loading today’s crew...
         </div>
       ) : plans.length === 0 ? (
-        <div style={{ color: "rgba(255,255,255,0.7)" }}>
+        <div style={{ color: "var(--ink-70)" }}>
           Nobody has posted a plan yet.
         </div>
       ) : (
@@ -303,8 +303,8 @@ export default function TodaysCrew() {
             <div
               key={plan.id}
               style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
+                background: "var(--overlay-04)",
+                border: "1px solid var(--overlay-08)",
                 borderRadius: 14,
                 padding: 12,
                 display: "grid",
@@ -333,7 +333,7 @@ export default function TodaysCrew() {
                   <div style={{ fontWeight: 800 }}>
                     {displayNameForPlan(plan, user)}
                   </div>
-                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.72)" }}>
+                  <div style={{ fontSize: 13, color: "var(--ink-72)" }}>
                     {resortName(plan.resort_key) || "Unknown resort"}
                   </div>
                 </div>
@@ -351,7 +351,7 @@ export default function TodaysCrew() {
                 </div>
               </div>
 
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.62)" }}>
+              <div style={{ fontSize: 12, color: "var(--ink-62)" }}>
                 ETA: {formatEtaShort(plan.eta) ?? "No ETA"}
                 {plan.arrived_at
                   ? ` · Arrived ${formatEtaShort(plan.arrived_at) ?? "No ETA"}`
