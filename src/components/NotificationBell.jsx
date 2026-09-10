@@ -232,7 +232,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
           border: "none",
           cursor: "pointer",
           padding: "4px 2px",
-          color: unread > 0 ? "var(--color-accent-soft)" : "rgba(255,255,255,0.42)",
+          color: unread > 0 ? "var(--color-accent-soft)" : "var(--ink-42)",
           transition: "color 0.15s ease",
           minWidth: 0,
           position: "relative",
@@ -240,9 +240,9 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
           width: 46,
           height: 46,
           borderRadius: 999,
-          border: "1px solid rgba(255,255,255,0.12)",
-          background: open ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.06)",
-          color: "white",
+          border: "1px solid var(--overlay-12)",
+          background: open ? "var(--overlay-10)" : "var(--overlay-06)",
+          color: "var(--color-text-1)",
           cursor: "pointer",
           display: "grid",
           placeItems: "center",
@@ -262,9 +262,9 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
                   position: "absolute", top: -4, right: -6,
                   minWidth: 16, height: 16, borderRadius: 999,
                   background: "var(--gradient-danger)",
-                  color: "white", fontSize: 9, fontWeight: 900,
+                  color: "var(--color-text-1)", fontSize: 9, fontWeight: 900,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  padding: "0 3px", border: "1.5px solid rgba(8,17,30,1)", lineHeight: 1,
+                  padding: "0 3px", border: "1.5px solid var(--color-badge-border)", lineHeight: 1,
                 }}>
                   {unread > 9 ? "9+" : unread}
                 </span>
@@ -282,9 +282,9 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
                 position: "absolute", top: -2, right: -2,
                 minWidth: 18, height: 18, borderRadius: 999,
                 background: "var(--gradient-danger)",
-                color: "white", fontSize: 11, fontWeight: 900,
+                color: "var(--color-text-1)", fontSize: 11, fontWeight: 900,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                padding: "0 4px", border: "2px solid rgba(2,6,23,1)", lineHeight: 1,
+                padding: "0 4px", border: "2px solid var(--color-badge-border)", lineHeight: 1,
               }}>
                 {unread > 9 ? "9+" : unread}
               </span>
@@ -304,8 +304,8 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
             maxWidth: 480,
             margin: "0 auto",
             maxHeight: "60vh",
-            background: "rgba(10,14,30,0.98)",
-            border: "1px solid rgba(255,255,255,0.1)",
+            background: "var(--color-modal-bg)",
+            border: "1px solid var(--overlay-10)",
             borderRadius: 20,
             boxShadow: "0 -12px 48px rgba(0,0,0,0.5)",
             zIndex: 200,
@@ -323,8 +323,8 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
             width: POPUP_WIDTH,
             maxWidth: "calc(100vw - 32px)",
             maxHeight: 480,
-            background: "rgba(10,14,30,0.98)",
-            border: "1px solid rgba(255,255,255,0.1)",
+            background: "var(--color-modal-bg)",
+            border: "1px solid var(--overlay-10)",
             borderRadius: 20,
             boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
             zIndex: 200,
@@ -339,9 +339,9 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
             alignItems: "center",
             justifyContent: "space-between",
             padding: "14px 16px 10px",
-            borderBottom: "1px solid rgba(255,255,255,0.07)",
+            borderBottom: "1px solid var(--overlay-07)",
           }}>
-            <div style={{ fontWeight: 900, fontSize: 15, color: "white" }}>Notifications</div>
+            <div style={{ fontWeight: 900, fontSize: 15, color: "var(--color-text-1)" }}>Notifications</div>
             {unread > 0 && (
               <button
                 onClick={handleMarkAll}
@@ -367,7 +367,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
               <div style={{
                 padding: "32px 20px",
                 textAlign: "center",
-                color: "rgba(255,255,255,0.35)",
+                color: "var(--ink-35)",
                 fontSize: 14,
               }}>
                 <div style={{ fontSize: 28, marginBottom: 10 }}>🔔</div>
@@ -387,7 +387,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
                     cursor: (notif.trip_id || notif.type === "friend_request") ? "pointer" : "default",
 
                     background: notif.read ? "transparent" : "rgba(96,165,250,0.06)",
-                    borderBottom: "1px solid rgba(255,255,255,0.05)",
+                    borderBottom: "1px solid var(--overlay-05)",
                     transition: "background 0.15s",
                     position: "relative",
                   }}
@@ -428,7 +428,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
                     <div style={{
                       fontSize: 13,
                       fontWeight: notif.read ? 500 : 700,
-                      color: notif.read ? "rgba(255,255,255,0.75)" : "white",
+                      color: notif.read ? "var(--ink-75)" : "var(--color-text-1)",
                       lineHeight: 1.4,
                     }}>
                       {notif.title}
@@ -442,7 +442,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
                       return (
                       <div style={{
                         fontSize: 12,
-                        color: "rgba(255,255,255,0.45)",
+                        color: "var(--ink-45)",
                         marginTop: 2,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -452,20 +452,20 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
                       </div>
                       )
                     })()}
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 3 }}>
+                    <div style={{ fontSize: 11, color: "var(--ink-30)", marginTop: 3 }}>
                       {timeAgo(notif.created_at)}
                     </div>
                     {notif.type === "crew_invite" && getNotifCrewId(notif) && (
                       <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                         <button
                           onClick={(e) => handleCrewAccept(e, notif)}
-                          style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: "none", background: "var(--gradient-cta)", color: "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                          style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: "none", background: "var(--gradient-cta)", color: "var(--color-on-accent)", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
                         >
                           Accept
                         </button>
                         <button
                           onClick={(e) => handleCrewDecline(e, notif)}
-                          style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                          style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: "1px solid var(--overlay-12)", background: "var(--overlay-06)", color: "var(--ink-60)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
                         >
                           Decline
                         </button>
@@ -480,7 +480,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
                       display: notif.type === "crew_invite" ? "none" : undefined,
                       background: "none",
                       border: "none",
-                      color: "rgba(255,255,255,0.25)",
+                      color: "var(--ink-25)",
                       cursor: "pointer",
                       fontSize: 16,
                       padding: "0 2px",

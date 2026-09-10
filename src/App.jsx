@@ -262,13 +262,13 @@ function AuthGate({ icon, title, desc, onSignIn, onSignUp }) {
     <div style={{ display: "grid", placeItems: "center", minHeight: 360, padding: "40px 20px" }}>
       <div style={{ textAlign: "center", maxWidth: 320, display: "grid", gap: 16, justifyItems: "center" }}>
         <div style={{ fontSize: 48 }}>{icon}</div>
-        <div style={{ fontSize: 22, fontWeight: 900, color: "white", letterSpacing: -0.4 }}>{title}</div>
-        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.48)", lineHeight: 1.6 }}>{desc}</div>
+        <div style={{ fontSize: 22, fontWeight: 900, color: "var(--color-text-1)", letterSpacing: -0.4 }}>{title}</div>
+        <div style={{ fontSize: 14, color: "var(--ink-48)", lineHeight: 1.6 }}>{desc}</div>
         <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-          <button onClick={onSignUp} style={{ background: "var(--gradient-primary)", color: "white", border: "none", borderRadius: 12, padding: "12px 22px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>
+          <button onClick={onSignUp} style={{ background: "var(--gradient-primary)", color: "var(--color-on-accent)", border: "none", borderRadius: 12, padding: "12px 22px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>
             Create Free Account
           </button>
-          <button onClick={onSignIn} style={{ background: "rgba(255,255,255,0.07)", color: "white", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "12px 22px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+          <button onClick={onSignIn} style={{ background: "var(--overlay-07)", color: "var(--color-text-1)", border: "1px solid var(--overlay-12)", borderRadius: 12, padding: "12px 22px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
             Sign In
           </button>
         </div>
@@ -290,12 +290,12 @@ const TOP_TABS = BOTTOM_TABS
 function ProfileAvatar({ profile, size, isActive }) {
   const name = profile?.full_name || profile?.username || "U"
   const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
-  const border = `2px solid ${isActive ? "var(--color-accent)" : "rgba(255,255,255,0.22)"}`
+  const border = `2px solid ${isActive ? "var(--color-accent)" : "var(--overlay-22)"}`
   const shadow = isActive ? "0 0 8px rgba(56,189,248,0.4)" : "none"
   return profile?.avatar_url ? (
     <img src={profile.avatar_url} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", border, boxShadow: shadow, flexShrink: 0 }} />
   ) : (
-    <div style={{ width: size, height: size, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,rgba(2,132,199,0.8),rgba(56,189,248,0.7))", border, boxShadow: shadow, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: size * 0.38, color: "white" }}>
+    <div style={{ width: size, height: size, borderRadius: "50%", flexShrink: 0, background: "var(--gradient-primary)", border, boxShadow: shadow, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: size * 0.38, color: "var(--color-on-accent)" }}>
       {initials}
     </div>
   )
@@ -324,7 +324,7 @@ function BottomNav({ activeTab, onTabChange, currentProfile, notifCount }) {
               border: "none",
               cursor: "pointer",
               padding: "4px 2px",
-              color: isActive ? "var(--color-accent)" : "rgba(255,255,255,0.42)",
+              color: isActive ? "var(--color-accent)" : "var(--ink-42)",
               transition: "color 0.15s ease",
               minWidth: 0,
               position: "relative",
@@ -337,7 +337,7 @@ function BottomNav({ activeTab, onTabChange, currentProfile, notifCount }) {
               <span style={{ position: "relative", lineHeight: 1, display: "flex" }}>
                 <ProfileAvatar profile={currentProfile} size={26} isActive={isActive} />
                 {notifCount > 0 && (
-                  <span style={{ position: "absolute", top: -3, right: -5, minWidth: 16, height: 16, borderRadius: 999, background: "var(--gradient-danger)", color: "white", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "1.5px solid rgba(4,8,15,1)", lineHeight: 1 }}>
+                  <span style={{ position: "absolute", top: -3, right: -5, minWidth: 16, height: 16, borderRadius: 999, background: "var(--gradient-danger)", color: "var(--color-text-1)", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "1.5px solid var(--color-badge-border)", lineHeight: 1 }}>
                     {notifCount > 9 ? "9+" : notifCount}
                   </span>
                 )}
@@ -346,7 +346,7 @@ function BottomNav({ activeTab, onTabChange, currentProfile, notifCount }) {
               <span style={{ position: "relative", lineHeight: 1, display: "flex", filter: isActive ? "drop-shadow(0 0 6px rgba(96,165,250,0.6))" : "none", transition: "filter 0.15s ease" }}>
                 <Icon size={22} />
                 {isSocial && notifCount > 0 && (
-                  <span style={{ position: "absolute", top: -4, right: -6, minWidth: 16, height: 16, borderRadius: 999, background: "var(--gradient-danger)", color: "white", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "1.5px solid rgba(4,8,15,1)", lineHeight: 1 }}>
+                  <span style={{ position: "absolute", top: -4, right: -6, minWidth: 16, height: 16, borderRadius: 999, background: "var(--gradient-danger)", color: "var(--color-text-1)", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "1.5px solid var(--color-badge-border)", lineHeight: 1 }}>
                     {notifCount > 9 ? "9+" : notifCount}
                   </span>
                 )}
@@ -403,7 +403,7 @@ function TopNav({ activeTab, onTabChange, currentProfile, notifCount, currentUse
                   display: "flex", alignItems: "center", gap: 6,
                   padding: "8px 14px", borderRadius: 10, border: "none",
                   background: isActive ? "rgba(56,189,248,0.15)" : "transparent",
-                  color: isActive ? "var(--color-accent)" : "rgba(255,255,255,0.55)",
+                  color: isActive ? "var(--color-accent)" : "var(--ink-55)",
                   fontWeight: isActive ? 800 : 500,
                   fontSize: 13, cursor: "pointer",
                   transition: "all 0.15s",
@@ -416,7 +416,7 @@ function TopNav({ activeTab, onTabChange, currentProfile, notifCount, currentUse
                   <span style={{ position: "relative", display: "flex", lineHeight: 1 }}>
                     <Icon size={16} />
                     {isSocial && notifCount > 0 && (
-                      <span style={{ position: "absolute", top: -4, right: -6, minWidth: 14, height: 14, borderRadius: 999, background: "var(--gradient-danger)", color: "white", fontSize: 8, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 2px", border: "1.5px solid rgba(4,8,15,1)", lineHeight: 1 }}>
+                      <span style={{ position: "absolute", top: -4, right: -6, minWidth: 14, height: 14, borderRadius: 999, background: "var(--gradient-danger)", color: "var(--color-text-1)", fontSize: 8, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 2px", border: "1.5px solid var(--color-badge-border)", lineHeight: 1 }}>
                         {notifCount > 9 ? "9+" : notifCount}
                       </span>
                     )}
@@ -476,9 +476,9 @@ function TabButton({ active, onClick, children }) {
       style={{
         background: active
           ? "var(--gradient-primary)"
-          : "rgba(255,255,255,0.06)",
-        color: "white",
-        border: "1px solid rgba(255,255,255,0.12)",
+          : "var(--overlay-06)",
+        color: "var(--color-text-1)",
+        border: "1px solid var(--overlay-12)",
         padding: "10px 14px",
         borderRadius: 14,
         fontWeight: 800,
@@ -1056,7 +1056,7 @@ export default function App() {
           <div
             onClick={closeAuthModal}
             style={{
-              position: "fixed", inset: 0, background: "rgba(4,8,15,0.72)",
+              position: "fixed", inset: 0, background: "var(--scrim-soft)",
               display: "flex", flexDirection: "column", alignItems: "center",
               justifyContent: "flex-start", overflowY: "auto",
               padding: "20px 16px max(20px, env(safe-area-inset-bottom)) 16px",
@@ -1091,7 +1091,7 @@ export default function App() {
       style={{
         minHeight: "100vh",
         background: "var(--gradient-bg)",
-        color: "white",
+        color: "var(--color-text-1)",
       }}
     >
       <SnowfallBackground />
@@ -1107,7 +1107,7 @@ export default function App() {
           100% { transform: translateX(-50%); }
         }
         .ticker-track { will-change: transform; }
-        .conv-row:hover { background: rgba(255,255,255,0.04) !important; }
+        .conv-row:hover { background: var(--overlay-04) !important; }
       `}</style>
 
 {isRecoveryMode ? (
@@ -1115,7 +1115,7 @@ export default function App() {
     style={{
       position: "fixed",
       inset: 0,
-      background: "rgba(4,8,15,0.88)",
+      background: "var(--scrim)",
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
@@ -1138,18 +1138,18 @@ export default function App() {
         style={{
           width: "100%",
           maxWidth: 560,
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.08)",
+          background: "var(--overlay-05)",
+          border: "1px solid var(--overlay-08)",
           borderRadius: 20,
           padding: 18,
-          color: "white",
+          color: "var(--color-text-1)",
           boxShadow: "0 18px 50px rgba(0,0,0,0.35)",
         }}
       >
         <div style={{ fontWeight: 900, fontSize: "1.05rem", marginBottom: 8 }}>
           Finish resetting your password
         </div>
-        <div style={{ color: "rgba(255,255,255,0.74)", lineHeight: 1.5, fontSize: 14 }}>
+        <div style={{ color: "var(--ink-74)", lineHeight: 1.5, fontSize: 14 }}>
           You’re temporarily signed in through a recovery link. Set your new password below to unlock the app.
         </div>
       </div>
@@ -1166,7 +1166,7 @@ export default function App() {
     style={{
       position: "fixed",
       inset: 0,
-      background: "rgba(4,8,15,0.72)",
+      background: "var(--scrim-soft)",
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
@@ -1208,7 +1208,7 @@ export default function App() {
           position: "fixed",
           inset: 0,
           zIndex: 190,
-          background: "linear-gradient(170deg,rgba(4,8,15,0.98) 0%,rgba(4,8,15,1) 100%)",
+          background: "var(--color-modal-bg)",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -1217,35 +1217,35 @@ export default function App() {
         }}>
           <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
             <div style={{ fontSize: 64, marginBottom: 18 }}>🎿</div>
-            <div style={{ fontSize: 26, fontWeight: 900, color: "white", lineHeight: 1.15, marginBottom: 12 }}>
+            <div style={{ fontSize: 26, fontWeight: 900, color: "var(--color-text-1)", lineHeight: 1.15, marginBottom: 12 }}>
               You're invited to a ski trip!
             </div>
-            <div style={{ fontSize: 15, color: "rgba(255,255,255,0.58)", marginBottom: 36, lineHeight: 1.6 }}>
+            <div style={{ fontSize: 15, color: "var(--ink-58)", marginBottom: 36, lineHeight: 1.6 }}>
               Sign in or create a free account to view the details, RSVP, and join the crew.
             </div>
 
             <div style={{ display: "grid", gap: 12 }}>
               <button
                 onClick={() => openAuthModal("login")}
-                style={{ padding: "14px 20px", borderRadius: 14, background: "var(--gradient-primary)", border: "none", color: "white", fontWeight: 800, fontSize: 16, cursor: "pointer", boxShadow: "0 4px 20px rgba(56,189,248,0.3)" }}
+                style={{ padding: "14px 20px", borderRadius: 14, background: "var(--gradient-primary)", border: "none", color: "var(--color-on-accent)", fontWeight: 800, fontSize: 16, cursor: "pointer", boxShadow: "0 4px 20px rgba(56,189,248,0.3)" }}
               >
                 Sign In
               </button>
               <button
                 onClick={() => openAuthModal("signup")}
-                style={{ padding: "14px 20px", borderRadius: 14, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", color: "white", fontWeight: 700, fontSize: 16, cursor: "pointer" }}
+                style={{ padding: "14px 20px", borderRadius: 14, background: "var(--overlay-07)", border: "1px solid var(--overlay-15)", color: "var(--color-text-1)", fontWeight: 700, fontSize: 16, cursor: "pointer" }}
               >
                 Create Free Account
               </button>
               <button
                 onClick={() => { setPendingInviteId(null); sessionStorage.removeItem("pending_invite_trip") }}
-                style={{ marginTop: 6, background: "none", border: "none", color: "rgba(255,255,255,0.32)", fontSize: 13, cursor: "pointer", fontWeight: 600 }}
+                style={{ marginTop: 6, background: "none", border: "none", color: "var(--ink-32)", fontSize: 13, cursor: "pointer", fontWeight: 600 }}
               >
                 Browse without an account
               </button>
             </div>
 
-            <div style={{ marginTop: 40, fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 600, letterSpacing: 0.4 }}>
+            <div style={{ marginTop: 40, fontSize: 12, color: "var(--ink-20)", fontWeight: 600, letterSpacing: 0.4 }}>
               ❄️ PowDays — Plan your ski season with your crew
             </div>
           </div>
@@ -1345,13 +1345,13 @@ export default function App() {
                 <h1 style={{ margin: 0, fontSize: isMobile ? 24 : 30, fontWeight: 900, letterSpacing: -0.5 }}>
                   Today
                 </h1>
-                <div style={{ marginTop: 4, fontSize: 14, color: "rgba(255,255,255,0.55)" }}>
+                <div style={{ marginTop: 4, fontSize: 14, color: "var(--ink-55)" }}>
                   {formatDate(localDateKey())}
                   {todayConditionLabel(topResort) ? ` · ${todayConditionLabel(topResort)}` : ""}
                 </div>
               </div>
             ) : (
-              <div style={{ fontSize: 18, fontWeight: 900, color: "white", letterSpacing: -0.3 }}>❄️ PowDays</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "var(--color-text-1)", letterSpacing: -0.3 }}>❄️ PowDays</div>
             )}
           </div>
 
@@ -1378,8 +1378,8 @@ export default function App() {
                 onClick={refresh}
                 disabled={loading}
                 style={{
-                  background: loading ? "rgba(255,255,255,0.12)" : "var(--gradient-primary)",
-                  color: "white", border: "none", padding: isMobile ? "10px 12px" : "10px 16px",
+                  background: loading ? "var(--overlay-12)" : "var(--gradient-primary)",
+                  color: "var(--color-on-accent)", border: "none", padding: isMobile ? "10px 12px" : "10px 16px",
                   borderRadius: 12, fontWeight: 800, cursor: loading ? "not-allowed" : "pointer",
                   fontSize: 13, boxShadow: "0 6px 20px rgba(56,189,248,0.22)",
                 }}
@@ -1391,7 +1391,7 @@ export default function App() {
         </header>
 
         {error && (
-          <div style={{ background: "rgba(255,0,0,0.12)", border: "1px solid rgba(255,0,0,0.25)", padding: 12, borderRadius: 14, color: "var(--color-danger)", marginBottom: 16 }}>
+          <div style={{ background: "var(--color-danger-bg)", border: "1px solid var(--color-danger)", padding: 12, borderRadius: 14, color: "var(--color-danger)", marginBottom: 16 }}>
             <strong>Error:</strong> {error}
           </div>
         )}
