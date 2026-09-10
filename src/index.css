@@ -383,6 +383,177 @@
   --ink-85: rgba(15, 23, 42, 0.94);
   --ink-88: rgba(15, 23, 42, 0.96);
   --ink-90: rgba(15, 23, 42, 0.98);
+
+  /* ── Blizzard Light — cool sky-white. Accent is sky-700, not the dark
+     theme's sky-400 (#38bdf8 scores 1.9:1 on this background). ──────── */
+  --color-bg:            #F2F7FC;
+  --color-bg-elevated:   #FFFFFF;
+  --color-surface:       rgba(15, 23, 42, 0.04);
+  --color-surface-hover: rgba(15, 23, 42, 0.07);
+  --color-border:        rgba(3, 105, 161, 0.22);
+  --color-border-subtle: rgba(3, 105, 161, 0.12);
+
+  --color-accent:        #0369A1;
+  --color-accent-dim:    rgba(3, 105, 161, 0.12);
+  --color-accent-glow:   rgba(3, 105, 161, 0.22);
+  --color-accent-2:      #4338CA;
+
+  --color-text-1:        #0B1B2B;
+  --color-text-2:        #075985;
+  --color-text-3:        rgba(7, 89, 133, 0.72);
+  --color-text-muted:    #94A3B8;
+
+  --color-nav-bg:        rgba(242, 247, 252, 0.95);
+  --color-badge-border:  rgba(242, 247, 252, 1);
+
+  --gradient-primary:    linear-gradient(135deg, #075985, #0369a1);
+  --gradient-elite:      linear-gradient(135deg, #0e7490, #0369a1);
+  --gradient-bg:         radial-gradient(ellipse 80% 35% at 50% 0%, rgba(3,105,161,0.08) 0%, transparent 100%),
+                         linear-gradient(180deg, #F2F7FC 0%, #FFFFFF 100%);
+
+  --shadow-card:         0 4px 24px rgba(15, 23, 42, 0.1);
+  --shadow-accent:       0 0 20px rgba(3, 105, 161, 0.18);
+  --shadow-button:       0 6px 20px rgba(3, 105, 161, 0.22);
+
+  --color-accent-soft:   #0369A1;
+  --color-accent-strong: #075985;
+  --color-accent-deep:   #0C4A6E;
+  --color-accent-teal:   #0E7490;
+
+  --color-modal-bg:        #FFFFFF;
+  --color-bg-deep:         #E3EDF7;
+  --color-surface-popover: #FFFFFF;
+
+  --color-banner-heading:   #0B1B2B;
+  --color-banner-highlight: #1D4ED8;
+
+  --gradient-cta: linear-gradient(135deg, var(--color-accent-deep), var(--color-accent-teal));
+
+  /* ── Track C/D/E tokens, light values. Still THEME-invariant (one set
+     for all five light palettes, never redefined per data-theme) but
+     necessarily MODE-variant: #f87171 danger text scores 2.2:1 on a
+     near-white page and is used as a text colour at 64 call sites.
+     Worst-case ratios are measured on #F0F6F6, the darkest of the five
+     light backgrounds — see the plan's Appendix A.6. ─────────────────── */
+  --color-success:        #15803D;
+  --color-success-strong: #166534;
+  --color-warning:        #B45309;
+  --color-danger:         #B91C1C;
+  --color-danger-strong:  #991B1B;
+  --gradient-danger:      linear-gradient(135deg, #dc2626, #991b1b);
+  --color-success-bg:     rgba(21, 128, 61, 0.12);
+  --color-danger-bg:      rgba(185, 28, 28, 0.12);
+  --color-warning-bg:     rgba(180, 83, 9, 0.12);
+
+  --color-trail-green:        #15803D;
+  --color-trail-blue:         #2563EB;
+  --color-trail-black:        #1E293B;
+  --color-trail-double-black: #BE123C;
+  --color-trail-expert:       #7E22CE;
+
+  --color-dev-badge:        #4D7C0F;
+  --color-dev-badge-strong: #3F6212;
+
+  --color-banner-badge-mint:   #0F766E;
+  --gradient-banner-offseason: linear-gradient(135deg, #E3EDF7 0%, #C7DDF2 50%, #DCE9F7 100%);
+  --gradient-pass-pill:        linear-gradient(135deg, #15803d, #0f766e);
+  --color-pass-pill-text:      #FFFFFF;
+
+  --rating-mint:         #0F766E;
+  --rating-mint-border:  rgba(15, 118, 110, 0.28);
+  --rating-sky:          #1D4ED8;
+  --rating-sky-border:   rgba(29, 78, 216, 0.28);
+  --rating-gold:         #854D0E;
+  --rating-gold-border:  rgba(133, 77, 14, 0.28);
+  --rating-peach:        #C2410C;
+  --rating-peach-border: rgba(194, 65, 12, 0.28);
+  --rating-coral:        #BE123C;
+  --rating-coral-border: rgba(190, 18, 60, 0.28);
+  --rating-slate:        #475569;
+  --rating-slate-border: rgba(71, 85, 105, 0.28);
+
+  --season-grid-tier-0: var(--overlay-06);
+  --season-grid-tier-1: rgba(29, 78, 216, 0.22);
+  --season-grid-tier-2: rgba(29, 78, 216, 0.5);
+}
+
+/* Alpine Dawn Light — warm cream paper, deep amber accent, cobalt secondary.
+   The one light theme whose neutrals are warm, mirroring how its dark
+   counterpart keeps a cool navy bg under a warm accent (inverted here:
+   warm paper reads as "dawn light" where cool paper would read as snow). */
+[data-theme="alpine-dawn"][data-mode="light"] {
+  --color-bg: #FDF8F0; --color-bg-elevated: #FFFFFF;
+  --color-surface: rgba(15,23,42,0.04); --color-surface-hover: rgba(15,23,42,0.07);
+  --color-border: rgba(180,83,9,0.22); --color-border-subtle: rgba(180,83,9,0.12);
+  --color-accent: #B45309; --color-accent-dim: rgba(180,83,9,0.14); --color-accent-glow: rgba(180,83,9,0.24); --color-accent-2: #1D4ED8;
+  --color-text-1: #26190B; --color-text-2: #92400E; --color-text-3: rgba(146,64,14,0.72); --color-text-muted: #A8A29E;
+  --color-nav-bg: rgba(253,248,240,0.95); --color-badge-border: rgba(253,248,240,1);
+  --gradient-primary: linear-gradient(135deg, #92400e, #b45309);
+  --gradient-elite: linear-gradient(135deg, #b45309, #92400e);
+  --gradient-bg: radial-gradient(ellipse 80% 35% at 50% 0%, rgba(180,83,9,0.08) 0%, transparent 100%), linear-gradient(180deg, #FDF8F0 0%, #FFFFFF 100%);
+  --shadow-card: 0 4px 24px rgba(41,26,10,0.1); --shadow-accent: 0 0 20px rgba(180,83,9,0.18); --shadow-button: 0 6px 20px rgba(180,83,9,0.22);
+  --color-accent-soft: #B45309; --color-accent-strong: #92400E; --color-accent-deep: #78350F; --color-accent-teal: #1D4ED8;
+  --color-modal-bg: #FFFFFF; --color-bg-deep: #F6EBDA; --color-surface-popover: #FFFFFF;
+  --color-banner-heading: #26190B; --color-banner-highlight: #1D4ED8;
+  --gradient-cta: linear-gradient(135deg, var(--color-accent-deep), var(--color-accent-teal));
+}
+
+/* Storm Chaser Light — cold mineral grey-teal paper, deep teal accent,
+   cobalt secondary. Same hue family as its dark counterpart, two steps
+   darker so it reads on white instead of on blue-black. */
+[data-theme="storm-chaser"][data-mode="light"] {
+  --color-bg: #F0F6F6; --color-bg-elevated: #FFFFFF;
+  --color-surface: rgba(15,23,42,0.04); --color-surface-hover: rgba(15,23,42,0.07);
+  --color-border: rgba(15,118,110,0.22); --color-border-subtle: rgba(15,118,110,0.12);
+  --color-accent: #0F766E; --color-accent-dim: rgba(15,118,110,0.13); --color-accent-glow: rgba(15,118,110,0.24); --color-accent-2: #1D4ED8;
+  --color-text-1: #0B1F1D; --color-text-2: #115E59; --color-text-3: rgba(17,94,89,0.72); --color-text-muted: #94A3B8;
+  --color-nav-bg: rgba(240,246,246,0.95); --color-badge-border: rgba(240,246,246,1);
+  --gradient-primary: linear-gradient(135deg, #115e59, #0f766e);
+  --gradient-elite: linear-gradient(135deg, #0f766e, #115e59);
+  --gradient-bg: radial-gradient(ellipse 80% 35% at 50% 0%, rgba(15,118,110,0.08) 0%, transparent 100%), linear-gradient(180deg, #F0F6F6 0%, #FFFFFF 100%);
+  --shadow-card: 0 4px 24px rgba(11,31,29,0.1); --shadow-accent: 0 0 20px rgba(15,118,110,0.18); --shadow-button: 0 6px 20px rgba(15,118,110,0.22);
+  --color-accent-soft: #0F766E; --color-accent-strong: #115E59; --color-accent-deep: #134E4A; --color-accent-teal: #1E40AF;
+  --color-modal-bg: #FFFFFF; --color-bg-deep: #DFEDEC; --color-surface-popover: #FFFFFF;
+  --color-banner-heading: #0B1F1D; --color-banner-highlight: #115E59;
+  --gradient-cta: linear-gradient(135deg, var(--color-accent-deep), var(--color-accent-teal));
+}
+
+/* Aurora Peak Light — pale lilac paper, deep violet accent, emerald
+   secondary. Keeps the dark theme's violet/green pairing, both darkened. */
+[data-theme="aurora-peak"][data-mode="light"] {
+  --color-bg: #F8F5FE; --color-bg-elevated: #FFFFFF;
+  --color-surface: rgba(15,23,42,0.04); --color-surface-hover: rgba(15,23,42,0.07);
+  --color-border: rgba(126,34,206,0.22); --color-border-subtle: rgba(126,34,206,0.12);
+  --color-accent: #7E22CE; --color-accent-dim: rgba(126,34,206,0.13); --color-accent-glow: rgba(126,34,206,0.24); --color-accent-2: #0F766E;
+  --color-text-1: #1C1030; --color-text-2: #6B21A8; --color-text-3: rgba(107,33,168,0.72); --color-text-muted: #A1A1AA;
+  --color-nav-bg: rgba(248,245,254,0.95); --color-badge-border: rgba(248,245,254,1);
+  --gradient-primary: linear-gradient(135deg, #7e22ce, #0f766e);
+  --gradient-elite: linear-gradient(135deg, #115e59, #7e22ce);
+  --gradient-bg: radial-gradient(ellipse 80% 35% at 50% 0%, rgba(126,34,206,0.08) 0%, transparent 100%), linear-gradient(180deg, #F8F5FE 0%, #FFFFFF 100%);
+  --shadow-card: 0 4px 24px rgba(28,16,48,0.1); --shadow-accent: 0 0 20px rgba(126,34,206,0.18); --shadow-button: 0 6px 20px rgba(126,34,206,0.22);
+  --color-accent-soft: #7E22CE; --color-accent-strong: #6B21A8; --color-accent-deep: #581C87; --color-accent-teal: #0F766E;
+  --color-modal-bg: #FFFFFF; --color-bg-deep: #EDE6FB; --color-surface-popover: #FFFFFF;
+  --color-banner-heading: #1C1030; --color-banner-highlight: #6B21A8;
+  --gradient-cta: linear-gradient(135deg, var(--color-accent-deep), var(--color-accent-teal));
+}
+
+/* Base Lodge Light — warm sand paper, burnt-ember accent, amber secondary.
+   The warmest of the five, mirroring the one dark theme whose bg is warm. */
+[data-theme="base-lodge"][data-mode="light"] {
+  --color-bg: #FDF6EF; --color-bg-elevated: #FFFFFF;
+  --color-surface: rgba(15,23,42,0.04); --color-surface-hover: rgba(15,23,42,0.07);
+  --color-border: rgba(194,65,12,0.22); --color-border-subtle: rgba(194,65,12,0.12);
+  --color-accent: #C2410C; --color-accent-dim: rgba(194,65,12,0.13); --color-accent-glow: rgba(194,65,12,0.24); --color-accent-2: #B45309;
+  --color-text-1: #2B1509; --color-text-2: #9A3412; --color-text-3: rgba(154,52,18,0.72); --color-text-muted: #A8A29E;
+  --color-nav-bg: rgba(253,246,239,0.95); --color-badge-border: rgba(253,246,239,1);
+  --gradient-primary: linear-gradient(135deg, #9a3412, #c2410c);
+  --gradient-elite: linear-gradient(135deg, #b45309, #c2410c);
+  --gradient-bg: radial-gradient(ellipse 80% 35% at 50% 0%, rgba(194,65,12,0.08) 0%, transparent 100%), linear-gradient(180deg, #FDF6EF 0%, #FFFFFF 100%);
+  --shadow-card: 0 4px 24px rgba(43,21,9,0.1); --shadow-accent: 0 0 20px rgba(194,65,12,0.18); --shadow-button: 0 6px 20px rgba(194,65,12,0.22);
+  --color-accent-soft: #C2410C; --color-accent-strong: #9A3412; --color-accent-deep: #7C2D12; --color-accent-teal: #B45309;
+  --color-modal-bg: #FFFFFF; --color-bg-deep: #F5E7D8; --color-surface-popover: #FFFFFF;
+  --color-banner-heading: #2B1509; --color-banner-highlight: #9A3412;
+  --gradient-cta: linear-gradient(135deg, var(--color-accent-deep), var(--color-accent-teal));
 }
 
 html {
