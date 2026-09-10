@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { fmt, formatDateFull } from "../lib/format"
 import { RESORT_PHOTOS, resortName, normalizeResortKey } from "../lib/resorts"
-import { getShareCardTheme, rgba } from "../lib/shareCardTokens"
+import { getShareCardTheme, rgba, inkAlpha, overlayAlpha } from "../lib/shareCardTokens"
 
 const SKILL_COLORS = {
   green:        "#22c55e",
@@ -25,10 +25,10 @@ function drawRoundedRect(ctx, x, y, w, h, r) {
   ctx.closePath()
 }
 
-function drawMountains(ctx, W, H) {
+function drawMountains(ctx, W, H, theme) {
   // Layered mountain silhouettes at the bottom
   // Back range
-  ctx.fillStyle = "rgba(37,99,235,0.09)"
+  ctx.fillStyle = rgba(theme.accentDeep, 0.09)
   ctx.beginPath()
   ctx.moveTo(0, H)
   ctx.lineTo(0, H * 0.72)
@@ -46,7 +46,7 @@ function drawMountains(ctx, W, H) {
   ctx.fill()
 
   // Front range
-  ctx.fillStyle = "rgba(8,145,178,0.08)"
+  ctx.fillStyle = rgba(theme.accentTeal, 0.08)
   ctx.beginPath()
   ctx.moveTo(0, H)
   ctx.lineTo(0, H * 0.84)
@@ -64,9 +64,9 @@ function drawMountains(ctx, W, H) {
   ctx.fill()
 }
 
-function drawSnowflakes(ctx, W, H, seed) {
+function drawSnowflakes(ctx, W, H, seed, theme, themeMode) {
   const rng = (i) => ((seed * 9301 + i * 49297) % 233280) / 233280
-  ctx.fillStyle = "rgba(255,255,255,0.18)"
+  ctx.fillStyle = rgba(theme.ink, overlayAlpha(0.18, themeMode))
   for (let i = 0; i < 28; i++) {
     const x = rng(i * 3) * W
     const y = rng(i * 3 + 1) * H * 0.75
@@ -112,7 +112,9 @@ function drawAvatar(ctx, name, x, y, size, skillLevel, theme) {
 
   // Initials
   ctx.font = `900 ${size * 0.38}px -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`
-  ctx.fillStyle = "white"
+  // Rule 2 / --color-on-accent: this text sits on the accent gradient filled
+  // just above, which is a deep saturated shade in light mode too. Stays white.
+  ctx.fillStyle = "#ffffff"
   ctx.textAlign = "center"
   ctx.textBaseline = "middle"
   ctx.fillText(initials, cx, cy)
@@ -152,7 +154,8 @@ function drawImageCover(ctx, img, x, y, w, h) {
 
 async function renderCard(canvas, { profile, stats, season, session }) {
   const mode = session ? "session" : "season"
-  const theme = getShareCardTheme(profile?.theme)
+  const themeMode = profile?.theme_mode === "light" ? "light" : "dark"
+  const theme = getShareCardTheme(profile?.theme, themeMode)
   const W = 1080
   const H = 1080
   canvas.width = W
@@ -201,10 +204,10 @@ async function renderCard(canvas, { profile, stats, season, session }) {
   }
 
   // Snowflakes
-  drawSnowflakes(ctx, W, H, 42)
+  drawSnowflakes(ctx, W, H, 42, theme, themeMode)
 
   // Mountain silhouettes
-  drawMountains(ctx, W, H)
+  drawMountains(ctx, W, H, theme)
 
   // Top bar: branding
   ctx.font = `800 44px -apple-system, BlinkMacSystemFont, system-ui, sans-serif`
@@ -216,7 +219,7 @@ async function renderCard(canvas, { profile, stats, season, session }) {
   // Season label (top right) — season mode only, `season` isn't passed in session mode.
   if (mode === "season" && season) {
     ctx.font = `600 36px -apple-system, system-ui, sans-serif`
-    ctx.fillStyle = "rgba(255,255,255,0.38)"
+    ctx.fillStyle = rgba(theme.ink, inkAlpha(0.38, themeMode))
     ctx.textAlign = "right"
     ctx.fillText(`${season.label} Season`, W - 76, 108)
   }
@@ -238,14 +241,14 @@ async function renderCard(canvas, { profile, stats, season, session }) {
   // Name + handle
   const name = profile?.full_name || profile?.username || "Skier"
   ctx.font = `900 72px -apple-system, system-ui, sans-serif`
-  ctx.fillStyle = "white"
+  ctx.fillStyle = theme.ink
   ctx.textAlign = "left"
   ctx.textBaseline = "alphabetic"
   ctx.fillText(name, avatarX + avatarSize + 36, avatarY + 88)
 
   if (profile?.username) {
     ctx.font = `500 36px -apple-system, system-ui, sans-serif`
-    ctx.fillStyle = "rgba(255,255,255,0.38)"
+    ctx.fillStyle = rgba(theme.ink, inkAlpha(0.38, themeMode))
     ctx.fillText(`@${profile.username}`, avatarX + avatarSize + 36, avatarY + 132)
   }
 
@@ -273,14 +276,14 @@ async function renderCard(canvas, { profile, stats, season, session }) {
       // Card background
       drawRoundedRect(ctx, bx, by, bw, bh, 24)
       const cardBg = ctx.createLinearGradient(bx, by, bx + bw, by + bh)
-      cardBg.addColorStop(0, "rgba(255,255,255,0.065)")
-      cardBg.addColorStop(1, "rgba(255,255,255,0.03)")
+      cardBg.addColorStop(0, rgba(theme.ink, overlayAlpha(0.065, themeMode)))
+      cardBg.addColorStop(1, rgba(theme.ink, overlayAlpha(0.03, themeMode)))
       ctx.fillStyle = cardBg
       ctx.fill()
 
       // Card border
       drawRoundedRect(ctx, bx, by, bw, bh, 24)
-      ctx.strokeStyle = "rgba(255,255,255,0.1)"
+      ctx.strokeStyle = rgba(theme.ink, overlayAlpha(0.1, themeMode))
       ctx.lineWidth = 1.5
       ctx.stroke()
 
@@ -292,14 +295,14 @@ async function renderCard(canvas, { profile, stats, season, session }) {
 
       // Big number
       ctx.font = `900 88px -apple-system, system-ui, sans-serif`
-      ctx.fillStyle = "white"
+      ctx.fillStyle = theme.ink
       ctx.textAlign = "left"
       ctx.textBaseline = "alphabetic"
       ctx.fillText(item.value, bx + 28, by + bh - 46)
 
       // Label
       ctx.font = `600 28px -apple-system, system-ui, sans-serif`
-      ctx.fillStyle = "rgba(255,255,255,0.42)"
+      ctx.fillStyle = rgba(theme.ink, inkAlpha(0.42, themeMode))
       ctx.fillText(item.label, bx + 28, by + bh - 14)
     })
 
@@ -323,11 +326,11 @@ async function renderCard(canvas, { profile, stats, season, session }) {
       ctx.fillText("🏔️", 108, trY + 44)
 
       ctx.font = `700 34px -apple-system, system-ui, sans-serif`
-      ctx.fillStyle = "rgba(255,255,255,0.5)"
+      ctx.fillStyle = rgba(theme.ink, inkAlpha(0.5, themeMode))
       ctx.fillText("Top Resort", 168, trY + 36)
 
       ctx.font = `800 38px -apple-system, system-ui, sans-serif`
-      ctx.fillStyle = "white"
+      ctx.fillStyle = theme.ink
       ctx.fillText(stats.topResort, 168, trY + 70)
     }
   } else {
@@ -335,13 +338,13 @@ async function renderCard(canvas, { profile, stats, season, session }) {
     const headlineY = 430
 
     ctx.font = `900 76px -apple-system, system-ui, sans-serif`
-    ctx.fillStyle = "white"
+    ctx.fillStyle = theme.ink
     ctx.textAlign = "left"
     ctx.textBaseline = "alphabetic"
     ctx.fillText(resortName(session.resort_name), 76, headlineY)
 
     ctx.font = `600 36px -apple-system, system-ui, sans-serif`
-    ctx.fillStyle = "rgba(255,255,255,0.55)"
+    ctx.fillStyle = rgba(theme.ink, inkAlpha(0.55, themeMode))
     ctx.fillText(formatDateFull(session.session_date), 76, headlineY + 50)
 
     // Stat row (Vertical / Runs / Top Speed)
@@ -364,13 +367,13 @@ async function renderCard(canvas, { profile, stats, season, session }) {
 
       drawRoundedRect(ctx, bx, by, bw, bh, 24)
       const cardBg = ctx.createLinearGradient(bx, by, bx + bw, by + bh)
-      cardBg.addColorStop(0, "rgba(255,255,255,0.10)")
-      cardBg.addColorStop(1, "rgba(255,255,255,0.04)")
+      cardBg.addColorStop(0, rgba(theme.ink, overlayAlpha(0.1, themeMode)))
+      cardBg.addColorStop(1, rgba(theme.ink, overlayAlpha(0.04, themeMode)))
       ctx.fillStyle = cardBg
       ctx.fill()
 
       drawRoundedRect(ctx, bx, by, bw, bh, 24)
-      ctx.strokeStyle = "rgba(255,255,255,0.14)"
+      ctx.strokeStyle = rgba(theme.ink, overlayAlpha(0.14, themeMode))
       ctx.lineWidth = 1.5
       ctx.stroke()
 
@@ -382,14 +385,14 @@ async function renderCard(canvas, { profile, stats, season, session }) {
 
       // Value
       ctx.font = `900 56px -apple-system, system-ui, sans-serif`
-      ctx.fillStyle = "white"
+      ctx.fillStyle = theme.ink
       ctx.textAlign = "left"
       ctx.textBaseline = "alphabetic"
       ctx.fillText(item.value, bx + 24, by + bh - 46)
 
       // Label
       ctx.font = `600 24px -apple-system, system-ui, sans-serif`
-      ctx.fillStyle = "rgba(255,255,255,0.5)"
+      ctx.fillStyle = rgba(theme.ink, inkAlpha(0.5, themeMode))
       ctx.fillText(item.label, bx + 24, by + bh - 16)
     })
 
@@ -413,14 +416,14 @@ async function renderCard(canvas, { profile, stats, season, session }) {
       ctx.fillText("❄️", 108, pbY + 44)
 
       ctx.font = `800 38px -apple-system, system-ui, sans-serif`
-      ctx.fillStyle = "white"
+      ctx.fillStyle = theme.ink
       ctx.fillText("Powder Day", 168, pbY + 52)
     }
   }
 
   // ── Watermark ──────────────────────────────────────────────────────────────
   ctx.font = `500 28px -apple-system, system-ui, sans-serif`
-  ctx.fillStyle = "rgba(255,255,255,0.2)"
+  ctx.fillStyle = rgba(theme.ink, inkAlpha(0.2, themeMode))
   ctx.textAlign = "center"
   ctx.textBaseline = "alphabetic"
   ctx.fillText("powdays.app", W / 2, H - 44)
@@ -476,25 +479,25 @@ export default function ShareStatCard({ profile, stats, season, session, onClose
       style={{ position: "fixed", inset: 0, zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", padding: "16px" }}
       onClick={e => e.target === e.currentTarget && onClose()}
     >
-      <div style={{ width: "100%", maxWidth: 440, background: "rgba(8,14,28,0.98)", borderRadius: 24, padding: "20px", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}>
+      <div style={{ width: "100%", maxWidth: 440, background: "var(--color-modal-bg)", borderRadius: 24, padding: "20px", border: "1px solid var(--overlay-10)", boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}>
 
         {/* Hidden canvas for rendering */}
         <canvas ref={canvasRef} style={{ display: "none" }} />
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <div style={{ fontWeight: 900, fontSize: 16, color: "white" }}>{mode === "session" ? "Session Card" : "Season Card"}</div>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 18, cursor: "pointer", padding: "4px 8px", borderRadius: 8, lineHeight: 1 }}>✕</button>
+          <div style={{ fontWeight: 900, fontSize: 16, color: "var(--color-text-1)" }}>{mode === "session" ? "Session Card" : "Season Card"}</div>
+          <button onClick={onClose} style={{ background: "var(--overlay-08)", border: "none", color: "var(--ink-50)", fontSize: 18, cursor: "pointer", padding: "4px 8px", borderRadius: 8, lineHeight: 1 }}>✕</button>
         </div>
 
         {/* Preview */}
-        <div style={{ borderRadius: 16, overflow: "hidden", background: "rgba(255,255,255,0.04)", minHeight: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ borderRadius: 16, overflow: "hidden", background: "var(--overlay-04)", minHeight: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
           {rendering ? (
-            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>Rendering…</div>
+            <div style={{ color: "var(--ink-30)", fontSize: 13 }}>Rendering…</div>
           ) : imgUrl ? (
             <img src={imgUrl} alt={mode === "session" ? "Session stat card" : "Season stat card"} style={{ width: "100%", display: "block", borderRadius: 12 }} />
           ) : (
-            <div style={{ color: "#f87171", fontSize: 13 }}>Failed to render card.</div>
+            <div style={{ color: "var(--color-danger)", fontSize: 13 }}>Failed to render card.</div>
           )}
         </div>
 
@@ -505,8 +508,8 @@ export default function ShareStatCard({ profile, stats, season, session, onClose
             disabled={rendering || sharing || !imgUrl}
             style={{
               flex: 1, padding: "13px", borderRadius: 14, border: "none",
-              background: (rendering || !imgUrl) ? "rgba(255,255,255,0.08)" : "linear-gradient(135deg,#2563eb,#0891b2)",
-              color: "white", fontWeight: 800, fontSize: 14,
+              background: (rendering || !imgUrl) ? "var(--overlay-08)" : "var(--gradient-cta)",
+              color: (rendering || !imgUrl) ? "var(--ink-45)" : "var(--color-on-accent)", fontWeight: 800, fontSize: 14,
               cursor: (rendering || !imgUrl) ? "default" : "pointer",
             }}
           >
@@ -514,7 +517,7 @@ export default function ShareStatCard({ profile, stats, season, session, onClose
           </button>
           <button
             onClick={onClose}
-            style={{ padding: "13px 18px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 14, cursor: "pointer" }}
+            style={{ padding: "13px 18px", borderRadius: 14, border: "1px solid var(--overlay-10)", background: "var(--overlay-05)", color: "var(--ink-50)", fontWeight: 700, fontSize: 14, cursor: "pointer" }}
           >
             Close
           </button>
