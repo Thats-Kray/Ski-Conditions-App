@@ -41,6 +41,7 @@ const buttonStyle = {
 const secondaryButtonStyle = {
   ...buttonStyle,
   background: "var(--overlay-10)",
+  color: "var(--color-text-1)",
 }
 
 const passOptions = ["Epic", "Ikon", "A-Basin", "Loveland", "Cooper", "Indy", "None"]
