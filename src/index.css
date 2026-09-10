@@ -8,8 +8,8 @@
   font-weight: 400;
 
   color-scheme: dark;
-  color: #e0f2fe;
-  background-color: #04080f;
+  color: var(--color-text-1);
+  background-color: var(--color-bg);
 
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
@@ -25,8 +25,8 @@
   /* ── Blizzard Theme Tokens ─────────────────────────────────── */
   --color-bg:            #04080f;
   --color-bg-elevated:   #060d1a;
-  --color-surface:       rgba(255, 255, 255, 0.035);
-  --color-surface-hover: rgba(255, 255, 255, 0.06);
+  --color-surface:       var(--overlay-035);
+  --color-surface-hover: var(--overlay-06);
   --color-border:        rgba(56, 189, 248, 0.12);
   --color-border-subtle: rgba(56, 189, 248, 0.07);
 
@@ -122,7 +122,7 @@
      grid reads as an ordered heat scale, so its steps must stay ordered and
      distinguishable no matter which cosmetic theme is picked. Tiers 3 and 4 are
      the mockup's own two colours, which the rating scale already carries. */
-  --season-grid-tier-0: rgba(255, 255, 255, 0.06);
+  --season-grid-tier-0: var(--overlay-06);
   --season-grid-tier-1: rgba(155, 198, 255, 0.28);
   --season-grid-tier-2: rgba(155, 198, 255, 0.55);
   --season-grid-tier-3: var(--rating-sky);
@@ -195,6 +195,26 @@
   --ink-88: rgba(255, 255, 255, 0.88);
   --ink-90: rgba(255, 255, 255, 0.9);
 
+  /* ── Track G: shell tokens introduced by light mode ──────────────────
+     --color-on-accent is #ffffff in BOTH modes: every light palette's
+     accent is a deep saturated shade that clears 4.5:1 against white
+     (plan Appendix A.5, lowest value 4.83). It exists so that "white text
+     on a coloured button" and "white text on a dark page" stop being the
+     same literal, because only the second one has to flip in light mode. */
+  --color-on-accent:      #ffffff;
+  --color-button-reset-bg: #1a1a1a;
+  --color-snowflake:      rgba(186, 230, 253, 0.55);
+  --shadow-card-hover:    0 20px 60px rgba(0, 0, 0, 0.45);
+  --color-scrollbar-thumb:       rgba(56, 189, 248, 0.18);
+  --color-scrollbar-thumb-hover: rgba(56, 189, 248, 0.32);
+
+  /* Modal/sheet backdrops. Dark in both modes — a scrim's job is to push
+     the page back, and a pale scrim does not do that — but lighter in
+     light mode so the dimmed page still reads as a page. */
+  --scrim-soft:   rgba(4, 8, 15, 0.72);
+  --scrim:        rgba(4, 8, 15, 0.85);
+  --scrim-strong: rgba(4, 8, 15, 0.94);
+
   --radius-card:         18px;
   --radius-button:       12px;
   --radius-pill:         999px;
@@ -243,7 +263,7 @@
    neutrals track bg's navy hue, not the accent's amber hue. */
 [data-theme="alpine-dawn"] {
   --color-bg: #020510; --color-bg-elevated: #0A1628;
-  --color-surface: rgba(255,255,255,0.035); --color-surface-hover: rgba(255,255,255,0.06);
+  --color-surface: var(--overlay-035); --color-surface-hover: var(--overlay-06);
   --color-border: rgba(245,158,11,0.12); --color-border-subtle: rgba(245,158,11,0.07);
   --color-accent: #F59E0B; --color-accent-dim: rgba(245,158,11,0.15); --color-accent-glow: rgba(245,158,11,0.28); --color-accent-2: #3B82F6;
   --color-text-1: #F8FAFC; --color-text-2: #FCD34D; --color-text-3: rgba(252,211,77,0.45); --color-text-muted: #64748B;
@@ -261,7 +281,7 @@
 /* Storm Chaser — deep blue-black, cool teal accent, cobalt secondary. */
 [data-theme="storm-chaser"] {
   --color-bg: #080E18; --color-bg-elevated: #0F1C30;
-  --color-surface: rgba(255,255,255,0.035); --color-surface-hover: rgba(255,255,255,0.06);
+  --color-surface: var(--overlay-035); --color-surface-hover: var(--overlay-06);
   --color-border: rgba(20,184,166,0.12); --color-border-subtle: rgba(20,184,166,0.07);
   --color-accent: #14B8A6; --color-accent-dim: rgba(20,184,166,0.15); --color-accent-glow: rgba(20,184,166,0.28); --color-accent-2: #2563EB;
   --color-text-1: #E2E8F0; --color-text-2: #5EEAD4; --color-text-3: rgba(94,234,212,0.45); --color-text-muted: #475569;
@@ -279,7 +299,7 @@
 /* Aurora Peak — violet-black, violet accent, aurora-teal secondary. */
 [data-theme="aurora-peak"] {
   --color-bg: #050310; --color-bg-elevated: #0D0A23;
-  --color-surface: rgba(255,255,255,0.035); --color-surface-hover: rgba(255,255,255,0.06);
+  --color-surface: var(--overlay-035); --color-surface-hover: var(--overlay-06);
   --color-border: rgba(168,85,247,0.12); --color-border-subtle: rgba(168,85,247,0.07);
   --color-accent: #A855F7; --color-accent-dim: rgba(168,85,247,0.15); --color-accent-glow: rgba(168,85,247,0.28); --color-accent-2: #06D6A0;
   --color-text-1: #FAF5FF; --color-text-2: #C084FC; --color-text-3: rgba(192,132,252,0.45); --color-text-muted: #4A3F6B;
@@ -299,7 +319,7 @@
    warm brown-black too, not Blizzard's blue-leaning slate. */
 [data-theme="base-lodge"] {
   --color-bg: #0C0704; --color-bg-elevated: #1C1208;
-  --color-surface: rgba(255,255,255,0.035); --color-surface-hover: rgba(255,255,255,0.06);
+  --color-surface: var(--overlay-035); --color-surface-hover: var(--overlay-06);
   --color-border: rgba(249,115,22,0.12); --color-border-subtle: rgba(249,115,22,0.07);
   --color-accent: #F97316; --color-accent-dim: rgba(249,115,22,0.15); --color-accent-glow: rgba(249,115,22,0.28); --color-accent-2: #F59E0B;
   --color-text-1: #FFF7ED; --color-text-2: #FB923C; --color-text-3: rgba(251,146,60,0.45); --color-text-muted: #44260A;
@@ -475,6 +495,17 @@
   --season-grid-tier-0: var(--overlay-06);
   --season-grid-tier-1: rgba(29, 78, 216, 0.22);
   --season-grid-tier-2: rgba(29, 78, 216, 0.5);
+
+  /* Track G, light. --color-on-accent is deliberately absent: it is
+     #ffffff in both modes and inherits from :root. */
+  --color-button-reset-bg: #E9EEF4;
+  --color-snowflake:      rgba(7, 89, 133, 0.3);
+  --shadow-card-hover:    0 20px 60px rgba(15, 23, 42, 0.16);
+  --color-scrollbar-thumb:       rgba(15, 23, 42, 0.22);
+  --color-scrollbar-thumb-hover: rgba(15, 23, 42, 0.35);
+  --scrim-soft:   rgba(15, 23, 42, 0.35);
+  --scrim:        rgba(15, 23, 42, 0.45);
+  --scrim-strong: rgba(15, 23, 42, 0.58);
 }
 
 /* Alpine Dawn Light — warm cream paper, deep amber accent, cobalt secondary.
@@ -581,7 +612,7 @@ body {
   position: absolute;
   top: -20px;
   border-radius: 50%;
-  background: rgba(186, 230, 253, 0.55);
+  background: var(--color-snowflake);
   animation: snowfall linear infinite;
   pointer-events: none;
 }
@@ -599,10 +630,10 @@ h2 { font-size: var(--font-size-h2); }
 /* ── Links ─────────────────────────────────────────────────────── */
 a {
   font-weight: 500;
-  color: #38bdf8;
+  color: var(--color-accent);
   text-decoration: none;
 }
-a:hover { color: #7dd3fc; }
+a:hover { color: var(--color-text-2); }
 
 /* ── Buttons (global reset — app uses inline styles) ─────────── */
 button {
@@ -612,7 +643,7 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: var(--color-button-reset-bg);
   cursor: pointer;
   transition: border-color 0.25s, opacity 0.15s;
   -webkit-tap-highlight-color: transparent;
@@ -629,8 +660,8 @@ input, textarea, select {
 /* ── Scrollbar (desktop) ────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.18); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(56,189,248,0.32); }
+::-webkit-scrollbar-thumb { background: var(--color-scrollbar-thumb); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-scrollbar-thumb-hover); }
 
 /* ── Bottom nav safe area ───────────────────────────────────────── */
 .bottom-nav-safe {
@@ -649,10 +680,10 @@ input, textarea, select {
     left: 0;
     right: 0;
     z-index: 100;
-    background: rgba(4, 8, 15, 0.92);
+    background: var(--color-nav-bg);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border-bottom: 1px solid rgba(56, 189, 248, 0.1);
+    border-bottom: 1px solid var(--color-border);
   }
   .top-nav-inner {
     max-width: 1320px;
@@ -682,10 +713,10 @@ input, textarea, select {
     z-index: 100;
     height: 44px;
     padding: var(--safe-top) 14px 0;
-    background: rgba(4, 8, 15, 0.92);
+    background: var(--color-nav-bg);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border-bottom: 1px solid rgba(56, 189, 248, 0.1);
+    border-bottom: 1px solid var(--color-border);
   }
 }
 
@@ -795,10 +826,10 @@ input, textarea, select {
     bottom: 0;
     left: 0;
     right: 0;
-    background: rgba(4, 8, 15, 0.97);
+    background: var(--color-nav-bg);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border-top: 1px solid rgba(56, 189, 248, 0.1);
+    border-top: 1px solid var(--color-border);
     padding: 6px 0 max(8px, var(--safe-bottom));
     z-index: 100;
   }
@@ -874,7 +905,7 @@ input, textarea, select {
 @media (hover: hover) {
   .resort-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    box-shadow: var(--shadow-card-hover);
   }
 }
 
@@ -887,7 +918,7 @@ input, textarea, select {
     display: block;
     width: 36px;
     height: 4px;
-    background: rgba(255, 255, 255, 0.22);
+    background: var(--overlay-22);
     border-radius: 2px;
     margin: 10px auto 0;
     flex-shrink: 0;
@@ -896,7 +927,7 @@ input, textarea, select {
 
 /* ── Notifications ──────────────────────────────────────────────── */
 .notif-item:hover {
-  background: rgba(255, 255, 255, 0.04) !important;
+  background: var(--overlay-04) !important;
 }
 .notif-delete {
   opacity: 0;
@@ -911,7 +942,7 @@ input, textarea, select {
 
 /* Card background textures */
 .texture-snow-noise {
-  background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-image: radial-gradient(var(--overlay-04) 1px, transparent 1px);
   background-size: 14px 14px;
 }
 
@@ -920,8 +951,8 @@ input, textarea, select {
     170deg,
     transparent 0%,
     transparent 60%,
-    rgba(255,255,255,0.03) 60%,
-    rgba(255,255,255,0.03) 62%,
+    var(--overlay-03) 60%,
+    var(--overlay-03) 62%,
     transparent 62%
   );
   background-repeat: no-repeat;
