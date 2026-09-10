@@ -46,8 +46,8 @@ export default function AuthPanel() {
   return (
     <div
       style={{
-        background: "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,255,255,0.1)",
+        background: "var(--overlay-06)",
+        border: "1px solid var(--overlay-10)",
         borderRadius: 18,
         padding: 16,
         display: "grid",
@@ -58,15 +58,15 @@ export default function AuthPanel() {
 
       {user ? (
         <>
-          <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 14 }}>
+          <div style={{ color: "var(--ink-75)", fontSize: 14 }}>
             Signed in as <strong>{user.email}</strong>
           </div>
           <button
             onClick={handleSignOut}
             style={{
-              background: "rgba(255,255,255,0.08)",
-              color: "white",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--overlay-08)",
+              color: "var(--color-text-1)",
+              border: "1px solid var(--overlay-12)",
               padding: "10px 12px",
               borderRadius: 12,
               cursor: "pointer",
@@ -84,9 +84,9 @@ export default function AuthPanel() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              color: "white",
+              background: "var(--overlay-08)",
+              border: "1px solid var(--overlay-12)",
+              color: "var(--color-text-1)",
               padding: "10px 12px",
               borderRadius: 12,
               outline: "none",
@@ -97,7 +97,7 @@ export default function AuthPanel() {
             type="submit"
             style={{
               background: "var(--gradient-cta)",
-              color: "white",
+              color: "var(--color-on-accent)",
               border: "none",
               padding: "10px 12px",
               borderRadius: 12,
@@ -111,7 +111,7 @@ export default function AuthPanel() {
       )}
 
       {message && (
-        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.72)" }}>
+        <div style={{ fontSize: 13, color: "var(--ink-72)" }}>
           {message}
         </div>
       )}

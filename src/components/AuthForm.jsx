@@ -13,8 +13,8 @@ const fieldStyle = {
   width: "100%",
   padding: "10px 12px",
   borderRadius: 10,
-  border: "1px solid rgba(255,255,255,0.14)",
-  background: "rgba(255,255,255,0.06)",
+  border: "1px solid var(--overlay-14)",
+  background: "var(--overlay-06)",
   color: "var(--color-text-1)",
   outline: "none",
   boxSizing: "border-box",
@@ -25,7 +25,7 @@ const labelStyle = {
   display: "block",
   marginBottom: 6,
   fontSize: "0.9rem",
-  color: "rgba(255,255,255,0.82)",
+  color: "var(--ink-82)",
 }
 
 const buttonStyle = {
@@ -33,14 +33,14 @@ const buttonStyle = {
   borderRadius: 10,
   padding: "10px 14px",
   background: "var(--color-accent-strong)",
-  color: "var(--color-text-1)",
+  color: "var(--color-on-accent)",
   fontWeight: 700,
   cursor: "pointer",
 }
 
 const secondaryButtonStyle = {
   ...buttonStyle,
-  background: "rgba(255,255,255,0.1)",
+  background: "var(--overlay-10)",
 }
 
 const passOptions = ["Epic", "Ikon", "A-Basin", "Loveland", "Cooper", "Indy", "None"]
@@ -210,8 +210,8 @@ export default function AuthForm({
   return (
     <div
       style={{
-        background: "rgba(20,24,34,0.96)",
-        border: "1px solid rgba(255,255,255,0.08)",
+        background: "var(--color-modal-bg)",
+        border: "1px solid var(--overlay-08)",
         borderRadius: 18,
         padding: 20,
         width: "100%",
@@ -221,7 +221,7 @@ export default function AuthForm({
     >
       <div style={{ marginBottom: 16 }}>
         <h2 style={{ margin: 0, fontSize: "1.25rem" }}>{titles[formMode]}</h2>
-        <p style={{ margin: "8px 0 0", color: "rgba(255,255,255,0.68)" }}>
+        <p style={{ margin: "8px 0 0", color: "var(--ink-68)" }}>
           {subtitles[formMode]}
         </p>
       </div>
@@ -285,7 +285,7 @@ export default function AuthForm({
                 required
                 autoComplete="tel"
               />
-              <p style={{ margin: "6px 0 0", fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+              <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--ink-40)" }}>
                 US numbers: enter 10 digits. International: include + and country code.
               </p>
             </div>
@@ -382,11 +382,11 @@ export default function AuthForm({
                         type="button"
                         onClick={() => togglePass(pass)}
                         style={{
-                          border: "1px solid rgba(255,255,255,0.14)",
+                          border: "1px solid var(--overlay-14)",
                           borderRadius: 999,
                           padding: "8px 12px",
-                          background: selected ? "var(--color-accent-strong)" : "rgba(255,255,255,0.06)",
-                          color: "var(--color-text-1)",
+                          background: selected ? "var(--color-accent-strong)" : "var(--overlay-06)",
+                          color: selected ? "var(--color-on-accent)" : "var(--color-text-1)",
                           cursor: "pointer",
                         }}
                       >
