@@ -42,6 +42,11 @@ const THEME_OPTIONS = [
   { key: "base-lodge", label: "Base Lodge", swatch: "#F97316" },
 ]
 
+const MODE_OPTIONS = [
+  { key: "dark",  label: "Dark",  icon: "🌙" },
+  { key: "light", label: "Light", icon: "☀️" },
+]
+
 // ── Season Milestones ─────────────────────────────────────────────────────────
 
 const MILESTONES = [
@@ -435,6 +440,33 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
     }
   }
 
+  // Same optimistic shape as handleSelectTheme above: paint first, persist
+  // second, roll the attribute back if the write fails. The DOM attribute is
+  // REMOVED rather than set to "dark", because index.css has no
+  // [data-mode="dark"] block — absence of the attribute is dark mode.
+  async function handleSelectMode(modeKey) {
+    if (modeKey === "light") document.documentElement.setAttribute("data-mode", "light")
+    else document.documentElement.removeAttribute("data-mode")
+    const metaTheme = document.querySelector('meta[name="theme-color"]')
+    if (metaTheme) metaTheme.setAttribute("content", modeKey === "light" ? "#F2F7FC" : "#020617")
+    try {
+      localStorage.setItem("pd_theme_mode", modeKey)
+    } catch {
+      // private browsing / storage disabled — the mode still applies for this
+      // session and is persisted server-side just below.
+    }
+    try {
+      await upsertMyProfile(buildProfileUpdate(profile, { theme_mode: modeKey }))
+      await load()
+    } catch (err) {
+      const previous = profile?.theme_mode === "light" ? "light" : "dark"
+      if (previous === "light") document.documentElement.setAttribute("data-mode", "light")
+      else document.documentElement.removeAttribute("data-mode")
+      if (metaTheme) metaTheme.setAttribute("content", previous === "light" ? "#F2F7FC" : "#020617")
+      alert(err.message || "Could not save appearance mode.")
+    }
+  }
+
   if (loading) {
     return (
       <div style={{ padding: 32, textAlign: "center", color: "rgba(255,255,255,0.35)", fontSize: 14 }}>
@@ -471,6 +503,7 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
   }
   const activeThemeKey = profile?.theme || "blizzard"
   const activeThemeLabel = THEME_OPTIONS.find((t) => t.key === activeThemeKey)?.label || "Blizzard"
+  const activeMode = profile?.theme_mode === "light" ? "light" : "dark"
 
   /* Render matrix — what each of this component's two modes shows.
      Both modes come out of ONE component, and the friend mode is the one nobody
@@ -798,38 +831,82 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
           <div style={sectionLabelStyle}>Appearance</div>
           <div style={{
             background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 16, padding: "10px 14px",
-            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+            borderRadius: 16, padding: "4px 14px",
           }}>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>Theme</div>
-              <div style={{ fontSize: 11, color: "var(--color-accent-soft)", opacity: 0.7, marginTop: 2 }}>
-                {activeThemeLabel}
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+              padding: "10px 0",
+            }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>Theme</div>
+                <div style={{ fontSize: 11, color: "var(--color-accent-soft)", opacity: 0.7, marginTop: 2 }}>
+                  {activeThemeLabel}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                {THEME_OPTIONS.map((t) => {
+                  const active = activeThemeKey === t.key
+                  return (
+                    <button
+                      key={t.key}
+                      onClick={() => handleSelectTheme(t.key)}
+                      title={t.label}
+                      aria-label={t.label}
+                      aria-pressed={active}
+                      style={{
+                        width: 40, height: 44, padding: 0, background: "none", border: "none",
+                        cursor: "pointer", display: "grid", placeItems: "center",
+                      }}
+                    >
+                      <span style={{
+                        width: 22, height: 22, borderRadius: "50%", display: "block",
+                        background: t.swatch,
+                        border: active ? "2px solid var(--color-text-1)" : "2px solid transparent",
+                      }} />
+                    </button>
+                  )
+                })}
               </div>
             </div>
-            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-              {THEME_OPTIONS.map((t) => {
-                const active = activeThemeKey === t.key
-                return (
-                  <button
-                    key={t.key}
-                    onClick={() => handleSelectTheme(t.key)}
-                    title={t.label}
-                    aria-label={t.label}
-                    aria-pressed={active}
-                    style={{
-                      width: 40, height: 44, padding: 0, background: "none", border: "none",
-                      cursor: "pointer", display: "grid", placeItems: "center",
-                    }}
-                  >
-                    <span style={{
-                      width: 22, height: 22, borderRadius: "50%", display: "block",
-                      background: t.swatch,
-                      border: active ? "2px solid var(--color-text-1)" : "2px solid transparent",
-                    }} />
-                  </button>
-                )
-              })}
+
+            <div style={{ height: 1, background: "rgba(255,255,255,0.08)" }} />
+
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+              padding: "10px 0",
+            }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>Appearance</div>
+                <div style={{ fontSize: 11, color: "var(--color-accent-soft)", opacity: 0.7, marginTop: 2 }}>
+                  {activeMode === "light" ? "Light" : "Dark"}
+                </div>
+              </div>
+              <div style={{
+                display: "flex", gap: 2, flexShrink: 0, padding: 2, borderRadius: 999,
+                background: "rgba(255,255,255,0.06)",
+              }}>
+                {MODE_OPTIONS.map((m) => {
+                  const active = activeMode === m.key
+                  return (
+                    <button
+                      key={m.key}
+                      onClick={() => handleSelectMode(m.key)}
+                      title={m.label}
+                      aria-label={`${m.label} mode`}
+                      aria-pressed={active}
+                      style={{
+                        minHeight: 36, padding: "0 14px", borderRadius: 999, border: "none",
+                        cursor: "pointer", fontSize: 12, fontWeight: 800,
+                        background: active ? "var(--color-accent)" : "transparent",
+                        color: active ? "var(--color-bg)" : "rgba(255,255,255,0.5)",
+                        display: "flex", alignItems: "center", gap: 5,
+                      }}
+                    >
+                      <span aria-hidden="true">{m.icon}</span>{m.label}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
         </div>
