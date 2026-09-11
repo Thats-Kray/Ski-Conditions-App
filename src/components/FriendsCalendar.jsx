@@ -432,14 +432,14 @@ export default function FriendsCalendar({
   if (!currentUserId) {
     return (
       <div style={{
-        borderRadius: 24, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+        borderRadius: 24, background: "var(--overlay-03)", border: "1px solid var(--overlay-08)",
         padding: "48px 28px", textAlign: "center", display: "grid", gap: 16, justifyItems: "center",
       }}>
         <div style={{ fontSize: 38 }}>📅</div>
-        <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>Sign in to see where your friends are skiing</div>
+        <div style={{ fontSize: 20, fontWeight: 900, color: "var(--color-text-1)" }}>Sign in to see where your friends are skiing</div>
         <button
           onClick={() => onRequireLogin?.()}
-          style={{ background: "var(--gradient-cta)", color: "white", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}
+          style={{ background: "var(--gradient-cta)", color: "var(--color-on-accent)", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}
         >
           Sign In
         </button>
@@ -498,7 +498,7 @@ export default function FriendsCalendar({
                     onClick={() => handlePartyRequest(req.id, "accepted")}
                     disabled={busy}
                     style={{
-                      background: "var(--gradient-cta)", color: "white", border: "none",
+                      background: "var(--gradient-cta)", color: "var(--color-on-accent)", border: "none",
                       borderRadius: 10, padding: "8px 14px", minHeight: 40,
                       fontSize: 12, fontWeight: 900, cursor: busy ? "wait" : "pointer",
                     }}
@@ -611,7 +611,7 @@ export default function FriendsCalendar({
             <button
               onClick={handleAddSkiDay}
               style={{
-                background: "var(--gradient-cta)", color: "white", border: "none", borderRadius: 12,
+                background: "var(--gradient-cta)", color: "var(--color-on-accent)", border: "none", borderRadius: 12,
                 padding: "10px 20px", fontSize: 13, fontWeight: 900, cursor: "pointer", minHeight: 44,
               }}
             >

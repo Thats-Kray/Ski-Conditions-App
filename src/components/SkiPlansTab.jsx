@@ -135,7 +135,7 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
   // change would unmount PlanCalendar, and it would remount with its viewDate
   // re-initialised to the current month — making it impossible to page forward.
   if (!hasLoaded) {
-    return <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(255,255,255,0.3)", fontSize: 14 }}>Loading plans…</div>
+    return <div style={{ textAlign: "center", padding: "40px 0", color: "var(--ink-30)", fontSize: 14 }}>Loading plans…</div>
   }
 
   return (
@@ -150,7 +150,7 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
       )}
 
       {editable && (
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: "var(--ink-40)", marginBottom: 12 }}>
           Tap a day to set where and when you&apos;re skiing. Friends and crewmates can see it;
           mark a day Private to hide it.
         </div>
@@ -164,8 +164,8 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
         onSelectDay={handleSelectDay}
         onMonthChange={(d) => { setMonth(d); setSelectedDate(null) }}
         renderDayDetail={(dateKey) => (
-          <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px", display: "grid", gap: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.7)" }}>{formatDate(dateKey)}</div>
+          <div style={{ background: "var(--overlay-04)", border: "1px solid var(--overlay-08)", borderRadius: 16, padding: "14px 16px", display: "grid", gap: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "var(--ink-70)" }}>{formatDate(dateKey)}</div>
 
             {selectedPlan && (
               <div style={{
@@ -175,7 +175,7 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
               }}>
                 <span style={{ fontSize: 18 }}>{resortEmoji(selectedPlan.resort_key)}</span>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-text-1)" }}>
                     {resortName(selectedPlan.resort_key) || selectedPlan.resort_key}
                   </div>
                   <div style={{ fontSize: 11, color: PLAN_COLOR, fontWeight: 700, marginTop: 2 }}>
@@ -186,11 +186,11 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
             )}
 
             {!selectedPlan && !canEdit && (
-              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.3)" }}>No plans this day.</div>
+              <div style={{ fontSize: 13, color: "var(--ink-30)" }}>No plans this day.</div>
             )}
 
             {editable && isPast && (
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
+              <div style={{ fontSize: 12, color: "var(--ink-30)" }}>
                 Past days can&apos;t be edited here — log a session from the Leaderboard instead.
               </div>
             )}
@@ -201,9 +201,9 @@ export default function SkiPlansTab({ userId = null, editable = false, resorts =
                 onClick={() => setEditorOpen(true)}
                 style={{
                   justifySelf: "start", background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.16)", borderRadius: 10,
+                  border: "1px solid var(--overlay-16)", borderRadius: 10,
                   padding: "8px 14px", minHeight: 44, fontSize: 12, fontWeight: 700,
-                  color: "rgba(255,255,255,0.8)", cursor: "pointer",
+                  color: "var(--ink-80)", cursor: "pointer",
                 }}
               >
                 Edit plan

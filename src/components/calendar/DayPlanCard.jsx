@@ -313,7 +313,7 @@ export default function DayPlanCard({
           onClick={() => onJoin?.(resortKey)}
           disabled={joining}
           style={{
-            justifySelf: "end", background: "var(--gradient-cta)", color: "white",
+            justifySelf: "end", background: "var(--gradient-cta)", color: "var(--color-on-accent)",
             border: "none", borderRadius: 10, padding: "8px 14px",
             fontSize: 12, fontWeight: 800, minHeight: 44,
             cursor: joining ? "wait" : "pointer", opacity: joining ? 0.6 : 1,

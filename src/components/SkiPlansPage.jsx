@@ -162,7 +162,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts, focusDate = null
 
       {/* ── Page header ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, letterSpacing: -0.5, color: "white" }}>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, letterSpacing: -0.5, color: "var(--color-text-1)" }}>
           Plans
         </h2>
         <button
@@ -171,7 +171,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts, focusDate = null
           title={subTab === "trips" ? "New trip" : "Add a ski day"}
           style={{
             width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
-            background: "var(--gradient-cta)", border: "none", color: "white",
+            background: "var(--gradient-cta)", border: "none", color: "var(--color-on-accent)",
             fontSize: 24, fontWeight: 400, lineHeight: 1, cursor: "pointer",
             display: "grid", placeItems: "center",
             boxShadow: "0 6px 20px var(--color-accent-glow)",
@@ -197,7 +197,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts, focusDate = null
               flex: 1, borderRadius: 9, border: "none", minHeight: 44,
               padding: "10px 0", fontSize: 13, fontWeight: 800, cursor: "pointer",
               background: subTab === key ? "var(--gradient-cta)" : "transparent",
-              color: subTab === key ? "white" : "var(--color-text-3)",
+              color: subTab === key ? "var(--color-on-accent)" : "var(--color-text-3)",
               transition: "all 0.15s",
             }}
           >
@@ -217,19 +217,19 @@ export default function SkiPlansPage({ onRequireLogin, resorts, focusDate = null
       {subTab === "trips" && (
         <>
           {loading ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(255,255,255,0.3)", fontSize: 14 }}>Loading trips…</div>
+            <div style={{ textAlign: "center", padding: "60px 0", color: "var(--ink-30)", fontSize: 14 }}>Loading trips…</div>
           ) : !currentUser ? (
-            <div style={{ borderRadius: 24, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", padding: "48px 28px", textAlign: "center", display: "grid", gap: 16, justifyItems: "center" }}>
+            <div style={{ borderRadius: 24, background: "var(--overlay-03)", border: "1px solid var(--overlay-08)", padding: "48px 28px", textAlign: "center", display: "grid", gap: 16, justifyItems: "center" }}>
               <div style={{ fontSize: 38 }}>🎿</div>
-              <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>Sign in to see your trips</div>
-              <button onClick={() => onRequireLogin?.()} style={{ background: "var(--gradient-cta)", color: "white", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>Sign In</button>
+              <div style={{ fontSize: 20, fontWeight: 900, color: "var(--color-text-1)" }}>Sign in to see your trips</div>
+              <button onClick={() => onRequireLogin?.()} style={{ background: "var(--gradient-cta)", color: "var(--color-on-accent)", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>Sign In</button>
             </div>
           ) : flatTrips.length === 0 ? (
-            <div style={{ borderRadius: 24, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", padding: "52px 28px", textAlign: "center", display: "grid", gap: 18, justifyItems: "center" }}>
+            <div style={{ borderRadius: 24, background: "var(--overlay-03)", border: "1px solid var(--overlay-08)", padding: "52px 28px", textAlign: "center", display: "grid", gap: 18, justifyItems: "center" }}>
               <div style={{ fontSize: 38 }}>🏔️</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: "white" }}>No ski trips yet</div>
-              <div style={{ fontSize: 14, color: "rgba(255,255,255,0.48)", maxWidth: 340, lineHeight: 1.6 }}>Create a trip, pick a mountain, then let your crew RSVP in one tap.</div>
-              <button onClick={handleCreateTrip} style={{ background: "var(--gradient-cta)", color: "white", border: "none", borderRadius: 14, padding: "13px 28px", fontSize: 14, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 28px rgba(37,99,235,0.4)" }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: "var(--color-text-1)" }}>No ski trips yet</div>
+              <div style={{ fontSize: 14, color: "var(--ink-48)", maxWidth: 340, lineHeight: 1.6 }}>Create a trip, pick a mountain, then let your crew RSVP in one tap.</div>
+              <button onClick={handleCreateTrip} style={{ background: "var(--gradient-cta)", color: "var(--color-on-accent)", border: "none", borderRadius: 14, padding: "13px 28px", fontSize: 14, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 28px rgba(37,99,235,0.4)" }}>
                 Plan a Trip 🎿
               </button>
             </div>
@@ -250,7 +250,7 @@ export default function SkiPlansPage({ onRequireLogin, resorts, focusDate = null
                   <span style={{ fontSize: 14, fontWeight: 700, color: "var(--color-banner-highlight)" }}>
                     ✉️ You have {invitedTrips.length} trip invite{invitedTrips.length > 1 ? "s" : ""}
                   </span>
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>Respond below ↓</span>
+                  <span style={{ fontSize: 12, color: "var(--ink-45)" }}>Respond below ↓</span>
                 </div>
               )}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>

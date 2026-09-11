@@ -240,7 +240,7 @@ export default function PlanEditorModal({
           style={{
             flex: 1, padding: "12px 0", borderRadius: 12, border: "none",
             background: resortKey ? "var(--gradient-cta)" : "var(--color-surface)",
-            color: "white", fontWeight: 800, fontSize: 14,
+            color: resortKey ? "var(--color-on-accent)" : "var(--color-text-1)", fontWeight: 800, fontSize: 14,
             cursor: busy || !resortKey ? "default" : "pointer",
             opacity: busy ? 0.6 : 1, minHeight: 44,
           }}

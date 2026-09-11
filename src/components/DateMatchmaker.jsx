@@ -83,31 +83,31 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
       <div style={{
         width: "100%", maxWidth: 480,
         background: "linear-gradient(160deg, var(--color-modal-bg) 0%, var(--color-bg-deep) 100%)",
-        border: "1px solid rgba(255,255,255,0.1)",
+        border: "1px solid var(--overlay-10)",
         borderRadius: "24px 24px 0 0",
         padding: "24px 20px 36px",
         maxHeight: "88vh", overflowY: "auto",
       }}>
-        <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.2)", margin: "0 auto 20px" }} />
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: "var(--overlay-20)", margin: "0 auto 20px" }} />
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: "var(--color-text-1)" }}>📅 Date Matchmaker</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 3 }}>Find dates that work for everyone</div>
+            <div style={{ fontSize: 13, color: "var(--ink-50)", marginTop: 3 }}>Find dates that work for everyone</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--ink-50)", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
         </div>
 
         {/* Title */}
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Title</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-50)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Title</div>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Breckenridge weekend?"
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 11,
-              border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
+              border: "1px solid var(--overlay-12)", background: "var(--overlay-06)",
               color: "var(--color-text-1)", fontSize: 16, outline: "none", boxSizing: "border-box",
             }}
           />
@@ -115,13 +115,13 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
 
         {/* Resort */}
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Resort (optional)</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-50)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Resort (optional)</div>
           <select
             value={resort}
             onChange={(e) => setResort(e.target.value)}
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 11,
-              border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
+              border: "1px solid var(--overlay-12)", background: "var(--overlay-06)",
               color: "var(--color-text-1)", fontSize: 16, outline: "none",
             }}
           >
@@ -132,7 +132,7 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
 
         {/* Dates */}
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Date options</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-50)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Date options</div>
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
             <input
               type="date"
@@ -141,13 +141,13 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
               onKeyDown={(e) => e.key === "Enter" && addDate()}
               style={{
                 flex: 1, padding: "9px 12px", borderRadius: 11,
-                border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
+                border: "1px solid var(--overlay-12)", background: "var(--overlay-06)",
                 color: "var(--color-text-1)", fontSize: 16, outline: "none",
               }}
             />
             <button onClick={addDate} style={{
               padding: "9px 16px", borderRadius: 11, border: "none",
-              background: "var(--color-accent-strong)", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer",
+              background: "var(--color-accent-strong)", color: "var(--color-on-accent)", fontWeight: 700, fontSize: 13, cursor: "pointer",
             }}>
               + Add
             </button>
@@ -162,7 +162,7 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
                 }}>
                   {formatDate(d)}
                   <button onClick={() => removeDate(d)} style={{
-                    background: "none", border: "none", color: "rgba(255,255,255,0.4)",
+                    background: "none", border: "none", color: "var(--ink-40)",
                     cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0,
                   }}>×</button>
                 </div>
@@ -173,9 +173,9 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
 
         {/* Friends */}
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Who to ask</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-50)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Who to ask</div>
           {friends.length === 0 ? (
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Add friends first!</div>
+            <div style={{ fontSize: 13, color: "var(--ink-40)" }}>Add friends first!</div>
           ) : (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {friends.map((f) => {
@@ -185,8 +185,8 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
                   <button key={f.id} onClick={() => toggleFriend(f.id)} style={{
                     display: "flex", alignItems: "center", gap: 6,
                     padding: "5px 12px 5px 6px", borderRadius: 999,
-                    border: isOn ? "1.5px solid var(--color-accent-strong)" : "1.5px solid rgba(255,255,255,0.12)",
-                    background: isOn ? "rgba(59,130,246,0.18)" : "rgba(255,255,255,0.05)",
+                    border: isOn ? "1.5px solid var(--color-accent-strong)" : "1.5px solid var(--overlay-12)",
+                    background: isOn ? "rgba(59,130,246,0.18)" : "var(--overlay-05)",
                     color: "var(--color-text-1)", cursor: "pointer", fontSize: 13, fontWeight: 600,
                   }}>
                     <Avatar profile={f} size={22} />
@@ -201,14 +201,14 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
 
         {/* Optional message */}
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Note (optional)</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-50)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Note (optional)</div>
           <textarea
             value={message} onChange={(e) => setMessage(e.target.value)}
             placeholder="When are you free? Trying to lock in a powder day 🏔️"
             rows={2} maxLength={200}
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 12,
-              border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
+              border: "1px solid var(--overlay-12)", background: "var(--overlay-06)",
               color: "var(--color-text-1)", fontSize: 16, outline: "none", resize: "none", boxSizing: "border-box",
             }}
           />
@@ -221,7 +221,7 @@ export function DateMatchmakerComposer({ friends, onClose, onCreated }) {
           disabled={saving}
           style={{
             width: "100%", padding: 14, borderRadius: 14, border: "none",
-            background: "var(--color-accent-strong)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer",
+            background: "var(--color-accent-strong)", color: "var(--color-on-accent)", fontWeight: 800, fontSize: 15, cursor: "pointer",
           }}
         >
           {saving ? "Creating..." : "Create Date Poll 📅"}
@@ -257,7 +257,7 @@ export function DatePollCard({ poll, onVote, voting }) {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
         <div>
           <div style={{ fontWeight: 800, fontSize: 14, color: "var(--color-text-1)", marginBottom: 3 }}>{poll.title}</div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+          <div style={{ fontSize: 12, color: "var(--ink-50)" }}>
             {poll.isMine ? "You" : creatorName} asked
             {resortLabel ? ` · 🏔️ ${resortLabel}` : ""}
             {" · "}{poll.participantCount} people
@@ -274,8 +274,8 @@ export function DatePollCard({ poll, onVote, voting }) {
 
       {poll.message && (
         <div style={{
-          fontSize: 13, color: "rgba(255,255,255,0.72)",
-          background: "rgba(255,255,255,0.05)", borderRadius: 10, padding: "8px 12px",
+          fontSize: 13, color: "var(--ink-72)",
+          background: "var(--overlay-05)", borderRadius: 10, padding: "8px 12px",
           marginBottom: 12, fontStyle: "italic",
         }}>
           "{poll.message}"
@@ -292,8 +292,8 @@ export function DatePollCard({ poll, onVote, voting }) {
 
           return (
             <div key={opt.id} style={{
-              background: isBest ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.04)",
-              border: isBest ? "1px solid rgba(34,197,94,0.3)" : "1px solid rgba(255,255,255,0.08)",
+              background: isBest ? "rgba(34,197,94,0.08)" : "var(--overlay-04)",
+              border: isBest ? "1px solid rgba(34,197,94,0.3)" : "1px solid var(--overlay-08)",
               borderRadius: 12, padding: "10px 12px",
             }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
@@ -303,13 +303,13 @@ export function DatePollCard({ poll, onVote, voting }) {
                     {formatDate(opt.ski_date)}
                   </span>
                 </div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", fontWeight: 600 }}>
+                <div style={{ fontSize: 12, color: "var(--ink-55)", fontWeight: 600 }}>
                   {opt.yesCount}/{opt.yesCount + opt.noCount} available
                 </div>
               </div>
 
               {/* Progress bar */}
-              <div style={{ height: 5, borderRadius: 3, background: "rgba(255,255,255,0.08)", marginBottom: 8, overflow: "hidden" }}>
+              <div style={{ height: 5, borderRadius: 3, background: "var(--overlay-08)", marginBottom: 8, overflow: "hidden" }}>
                 <div style={{
                   height: "100%", borderRadius: 3,
                   width: `${pct}%`,
@@ -331,9 +331,9 @@ export function DatePollCard({ poll, onVote, voting }) {
                         disabled={voting === opt.id}
                         style={{
                           flex: 1, padding: "6px", borderRadius: 9, fontSize: 12, fontWeight: 700,
-                          border: `1.5px solid ${active ? border : "rgba(255,255,255,0.1)"}`,
-                          background: active ? bg : "rgba(255,255,255,0.04)",
-                          color: active ? color : "rgba(255,255,255,0.55)", cursor: "pointer",
+                          border: `1.5px solid ${active ? border : "var(--overlay-10)"}`,
+                          background: active ? bg : "var(--overlay-04)",
+                          color: active ? color : "var(--ink-55)", cursor: "pointer",
                           transition: "all 0.15s",
                         }}
                       >
@@ -357,7 +357,7 @@ export function DatePollCard({ poll, onVote, voting }) {
             </div>
           ))}
         </div>
-        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+        <div style={{ fontSize: 11, color: "var(--ink-40)" }}>
           {poll.recipientProfiles.length} invited
         </div>
         {bestOption && bestOption.yesCount > 0 && (

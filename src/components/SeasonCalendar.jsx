@@ -43,8 +43,8 @@ export default function SeasonCalendar({ sessions, startYear }) {
 
   return (
     <div style={{
-      background: "rgba(255,255,255,0.03)",
-      border: "1px solid rgba(255,255,255,0.08)",
+      background: "var(--overlay-03)",
+      border: "1px solid var(--overlay-08)",
       borderRadius: 16,
       padding: 14,
     }}>
@@ -91,7 +91,7 @@ export default function SeasonCalendar({ sessions, startYear }) {
       {selectedDate && (
         <div style={{
           marginTop: 12, padding: 14, borderRadius: "var(--radius-card)",
-          background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+          background: "var(--overlay-04)", border: "1px solid var(--overlay-08)",
         }}>
           {selectedSession ? (
             <>

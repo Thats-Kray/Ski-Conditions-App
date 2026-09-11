@@ -51,15 +51,15 @@ export default function PlanCalendar({
         <button
           onClick={() => goToMonth(new Date(yr, mo - 1, 1))}
           aria-label="Previous month"
-          style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "6px 12px", color: "white", cursor: "pointer", fontWeight: 700 }}
+          style={{ background: "var(--overlay-07)", border: "1px solid var(--overlay-10)", borderRadius: 10, padding: "6px 12px", color: "var(--color-text-1)", cursor: "pointer", fontWeight: 700 }}
         >
           ‹
         </button>
-        <div style={{ fontWeight: 900, fontSize: 16, color: "white" }}>{monthLabel}</div>
+        <div style={{ fontWeight: 900, fontSize: 16, color: "var(--color-text-1)" }}>{monthLabel}</div>
         <button
           onClick={() => goToMonth(new Date(yr, mo + 1, 1))}
           aria-label="Next month"
-          style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "6px 12px", color: "white", cursor: "pointer", fontWeight: 700 }}
+          style={{ background: "var(--overlay-07)", border: "1px solid var(--overlay-10)", borderRadius: 10, padding: "6px 12px", color: "var(--color-text-1)", cursor: "pointer", fontWeight: 700 }}
         >
           ›
         </button>
@@ -68,7 +68,7 @@ export default function PlanCalendar({
       {/* Day-of-week headers */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
         {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
-          <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.35)", padding: "4px 0" }}>{d}</div>
+          <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 800, color: "var(--ink-35)", padding: "4px 0" }}>{d}</div>
         ))}
       </div>
 
@@ -100,14 +100,14 @@ export default function PlanCalendar({
                 border: isSelected
                   ? "1.5px solid var(--color-accent-soft)"
                   : isToday
-                  ? "1.5px solid rgba(255,255,255,0.25)"
+                  ? "1.5px solid var(--overlay-25)"
                   : "1.5px solid transparent",
                 background: isSelected
                   ? "rgba(96,165,250,0.15)"
                   : has && isWeekend
-                  ? "rgba(255,255,255,0.07)"
+                  ? "var(--overlay-07)"
                   : has
-                  ? "rgba(255,255,255,0.04)"
+                  ? "var(--overlay-04)"
                   : "transparent",
                 cursor: "pointer",
                 display: "flex",
@@ -120,7 +120,7 @@ export default function PlanCalendar({
               <span style={{
                 fontSize: 13,
                 fontWeight: isToday ? 900 : isWeekend ? 700 : 400,
-                color: isToday ? "white" : isWeekend ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.6)",
+                color: isToday ? "var(--color-on-accent)" : isWeekend ? "var(--ink-90)" : "var(--ink-60)",
                 background: isToday ? "var(--color-accent-soft)" : "transparent",
                 borderRadius: "50%",
                 width: 24, height: 24,
@@ -144,9 +144,9 @@ export default function PlanCalendar({
 
       {/* Legend */}
       {legend.length > 0 && (
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 14, padding: "10px 0 0", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 14, padding: "10px 0 0", borderTop: "1px solid var(--overlay-06)" }}>
           {legend.map(({ color, label }) => (
-            <div key={label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "rgba(255,255,255,0.45)" }}>
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--ink-45)" }}>
               <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
               {label}
             </div>
