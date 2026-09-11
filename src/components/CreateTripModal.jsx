@@ -150,7 +150,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(2,6,23,0.82)",
+        background: "var(--scrim)",
         backdropFilter: "blur(10px)",
         display: "flex",
         flexDirection: "column",
@@ -213,7 +213,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                     width: 7,
                     height: 7,
                     borderRadius: "50%",
-                    background: step >= s ? accent : "rgba(255,255,255,0.18)",
+                    background: step >= s ? accent : "var(--overlay-18)",
                     transition: "background 0.25s ease",
                     boxShadow: step === s ? `0 0 8px ${accent}99` : "none",
                   }}
@@ -264,7 +264,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                   position: "relative",
                   height: 106,
                   borderRadius: 18,
-                  border: `2px solid ${resortKey === resort.key ? resort.accent : "rgba(255,255,255,0.08)"}`,
+                  border: `2px solid ${resortKey === resort.key ? resort.accent : "var(--ink-08)"}`,
                   background: resort.photo
                     ? `linear-gradient(to bottom, rgba(2,6,23,0.25) 0%, rgba(2,6,23,0.84) 100%), url(${resort.photo}) center/cover`
                     : "rgba(255,255,255,0.05)",
@@ -362,7 +362,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                 onChange={(e) => setSkiDate(e.target.value)}
                 style={{
                   ...inputStyle,
-                  border: `1.5px solid ${skiDate ? accent + "88" : "rgba(255,255,255,0.11)"}`,
+                  border: `1.5px solid ${skiDate ? accent + "88" : "var(--ink-11)"}`,
                   colorScheme: "dark",
                 }}
               />
@@ -504,7 +504,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                     onClick={() => setTheme(t.key)}
                     style={{
                       background: t.bg,
-                      border: `2px solid ${theme === t.key ? t.accent : "rgba(255,255,255,0.1)"}`,
+                      border: `2px solid ${theme === t.key ? t.accent : "var(--ink-10)"}`,
                       borderRadius: 14,
                       padding: "12px 6px 10px",
                       cursor: "pointer",
@@ -581,7 +581,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                   border: "none",
                   borderRadius: 14,
                   padding: "12px 28px",
-                  color: !loading && skiDate ? "var(--color-bg)" : "rgba(255,255,255,0.35)",
+                  color: !loading && skiDate ? "var(--color-bg)" : "var(--ink-35)",
                   fontWeight: 900,
                   cursor: !loading && skiDate ? "pointer" : "default",
                   fontSize: 14,
@@ -658,7 +658,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                   type="button"
                   onClick={handleAddCar}
                   disabled={carSaving}
-                  style={{ background: carSaving ? "rgba(255,255,255,0.07)" : `linear-gradient(135deg,${accent}ee,${accent}99)`, border: "none", borderRadius: 12, padding: "11px", color: carSaving ? "rgba(255,255,255,0.35)" : "var(--color-bg)", fontWeight: 900, cursor: carSaving ? "wait" : "pointer", fontSize: 13, boxShadow: carSaving ? "none" : `0 6px 20px ${accent}44` }}
+                  style={{ background: carSaving ? "rgba(255,255,255,0.07)" : `linear-gradient(135deg,${accent}ee,${accent}99)`, border: "none", borderRadius: 12, padding: "11px", color: carSaving ? "var(--ink-35)" : "var(--color-bg)", fontWeight: 900, cursor: carSaving ? "wait" : "pointer", fontSize: 13, boxShadow: carSaving ? "none" : `0 6px 20px ${accent}44` }}
                 >
                   {carSaving ? "Adding…" : "Add Car 🚗"}
                 </button>

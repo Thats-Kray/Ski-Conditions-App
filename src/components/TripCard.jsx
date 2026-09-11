@@ -42,7 +42,7 @@ function CardAvatar({ profile, size = 32 }) {
           height: size,
           borderRadius: "50%",
           objectFit: "cover",
-          border: "2px solid rgba(8,17,31,0.85)",
+          border: "2px solid var(--color-badge-border)",
           flexShrink: 0,
         }}
       />
@@ -56,7 +56,7 @@ function CardAvatar({ profile, size = 32 }) {
         height: size,
         borderRadius: "50%",
         background: "rgba(255,255,255,0.14)",
-        border: "2px solid rgba(8,17,31,0.85)",
+        border: "2px solid var(--color-badge-border)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -93,7 +93,7 @@ function AvatarStack({ profiles, max = 6 }) {
             height: 26,
             borderRadius: "50%",
             background: "rgba(255,255,255,0.12)",
-            border: "2px solid rgba(8,17,31,0.85)",
+            border: "2px solid var(--color-badge-border)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -358,7 +358,8 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
               fontSize: 22,
               fontWeight: 900,
               lineHeight: 1.1,
-              color: "white",
+              // E3: on frozen photo overlay, use accent-contrast text
+              color: "var(--color-on-accent)",
               letterSpacing: -0.4,
             }}
           >

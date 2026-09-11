@@ -38,7 +38,7 @@ export default function FriendsGoingBadge({ friends, variant = "subtle" }) {
         {isSolid ? (
           <span style={{
             display: "grid", placeItems: "center", width: 24, height: 24, borderRadius: "50%",
-            background: "rgba(4,8,15,0.35)", color: "white", fontSize: 12, fontWeight: 900,
+            background: "rgba(4,8,15,0.35)", color: "var(--color-on-accent)", fontSize: 12, fontWeight: 900,
           }}>
             {friends.length}
           </span>
@@ -53,7 +53,7 @@ export default function FriendsGoingBadge({ friends, variant = "subtle" }) {
         )}
         <span style={{
           fontSize: isSolid ? 14 : 12, fontWeight: isSolid ? 800 : 700,
-          color: isSolid ? "white" : "rgba(255,255,255,0.75)",
+          color: isSolid ? "var(--color-on-accent)" : "var(--ink-75)",
         }}>
           {isSolid ? "Who's going" : `${friends.length} friend${friends.length === 1 ? "" : "s"} going this weekend`}
         </span>
