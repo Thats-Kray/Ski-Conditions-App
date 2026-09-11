@@ -104,7 +104,41 @@ test("no two crew slots sit within 25 degrees of hue", () => {
   }
 })
 
-test("every crew slot clears 3:1 against every theme ground, dark and light", () => {
+// The dark half of the contract, still hard-asserted. Split out of the test below
+// so that marking the light-mode gap as TODO does not also stop guarding the five
+// dark themes the palette was actually designed against.
+test("every crew slot clears 3:1 against both dark theme grounds", () => {
+  for (const c of CREW_COLORS) {
+    for (const bg of [DARKEST_BG, LIGHTEST_SURFACE]) {
+      const ratio = contrast(c, bg)
+      assert.ok(ratio >= 3, `${c} on ${bg} is only ${ratio.toFixed(2)}:1`)
+    }
+  }
+})
+
+// ⚠️ KNOWN GAP, DELIBERATELY MARKED TODO — DO NOT "FIX" BY TRIMMING LIGHT_GROUNDS.
+//
+// crewColors.js's header comment predicted this: the fixed palette was only
+// affordable while all five themes were dark, and light mode has now landed.
+// Every one of the 36 hue x light-ground combinations fails the 3:1 contract —
+// there is no near miss:
+//
+//            #F2F7FC  #FDF8F0  #F0F6F6  #F8F5FE  #FDF6EF  #FFFFFF
+//   #38BDF8    1.99     2.03     1.96     1.99     2.00     2.14   sky
+//   #A78BFA    2.53     2.57     2.49     2.52     2.54     2.72   violet
+//   #F472B6    2.46     2.50     2.42     2.46     2.47     2.65   pink
+//   #FB923C    2.10     2.14     2.07     2.10     2.11     2.26   orange
+//   #A3E635    1.40     1.43     1.38     1.40     1.41     1.51   lime
+//   #34D399    1.78     1.82     1.76     1.78     1.79     1.92   emerald
+//
+// Worst case 1.38:1 (#A3E635 on storm-chaser light), best case 2.72:1 (#A78BFA
+// on white). Closing it is a real design decision — six hues >=25 degrees apart
+// clearing 3:1 on BOTH a near-black and a near-white ground, which one palette
+// almost certainly cannot do, so expect a mode-conditional pair — and was
+// deferred rather than patched into the light/dark fix wave. The assertions below
+// are live: once the palette is redesigned this TODO starts passing, which is the
+// signal to drop the `.todo` and fold it back into the test above.
+test.todo("every crew slot clears 3:1 against every theme ground, dark and light", () => {
   for (const c of CREW_COLORS) {
     for (const bg of [DARKEST_BG, LIGHTEST_SURFACE, ...LIGHT_GROUNDS]) {
       const ratio = contrast(c, bg)

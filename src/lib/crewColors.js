@@ -19,21 +19,20 @@
  *
  * ⚠️ LIGHT MODE HAS NOW LANDED, AND IT BREAKS THAT ASSUMPTION.
  * The light palettes' grounds run #F0F6F6 to #FFFFFF, and ALL SIX hues fail the
- * 3:1 contract against every one of them — 1.38:1 (#A3E635) to 2.72:1 (#A78BFA).
- * The contrast test in crewColors.test.js now lists the light grounds and FAILS
- * on purpose, exactly as this comment promised it would. Redesigning the palette
- * is a real design decision (six hues, ≥25° apart, ≥3:1 on BOTH a near-black and
- * a near-white ground — likely a mode-conditional pair of palettes) and is
- * deliberately deferred rather than patched in a fix wave. The failing test is
- * the tracker.
+ * 3:1 contract against every one of them — worst 1.38:1 (#A3E635), best 2.72:1
+ * (#A78BFA), full 6×6 matrix in crewColors.test.js. Redesigning the palette is a
+ * real design decision (six hues, ≥25° apart, ≥3:1 on BOTH a near-black and a
+ * near-white ground — almost certainly a mode-conditional pair) and is
+ * deliberately deferred rather than patched into the light/dark fix wave. It is
+ * tracked as the `test.todo` in crewColors.test.js, which carries the numbers.
  *
  * Do not "restore" the theme tokens. That is the bug, not the feature.
  *
  * The constraints, all asserted in crewColors.test.js with real color math:
  *   - six distinct literal hex values
  *   - no two within 25° of hue (actual minimum: ~40°)
- *   - every one ≥3:1 against every theme ground — dark (passing) and light
- *     (currently failing, see above)
+ *   - every one ≥3:1 against both dark theme grounds (hard-asserted, passing)
+ *   - every one ≥3:1 against the light grounds too (test.todo, see above)
  */
 
 export const CREW_COLORS = [
