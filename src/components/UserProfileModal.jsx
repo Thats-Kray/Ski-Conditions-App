@@ -56,7 +56,7 @@ export default function UserProfileModal({ userId, onClose }) {
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%", maxWidth: 520,
-          background: "rgba(10,17,30,0.98)",
+          background: "var(--color-modal-bg)",
           border: "1px solid rgba(96,165,250,0.18)",
           borderRadius: "22px 22px 0 0",
           padding: "20px 20px calc(20px + env(safe-area-inset-bottom))",
@@ -66,30 +66,30 @@ export default function UserProfileModal({ userId, onClose }) {
       >
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 0.8 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "var(--ink-35)", textTransform: "uppercase", letterSpacing: 0.8 }}>
             Skier Profile
           </div>
           <button
             onClick={onClose}
-            style={{ background: "rgba(255,255,255,0.07)", border: "none", color: "rgba(255,255,255,0.55)", fontSize: 18, cursor: "pointer", padding: "6px 10px", borderRadius: 10, lineHeight: 1 }}
+            style={{ background: "var(--overlay-07)", border: "none", color: "var(--ink-55)", fontSize: 18, cursor: "pointer", padding: "6px 10px", borderRadius: 10, lineHeight: 1 }}
           >
             ✕
           </button>
         </div>
 
         {loading ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 14 }}>
+          <div style={{ padding: "40px 0", textAlign: "center", color: "var(--ink-30)", fontSize: 14 }}>
             Loading…
           </div>
         ) : !profile ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 14 }}>
+          <div style={{ padding: "40px 0", textAlign: "center", color: "var(--ink-30)", fontSize: 14 }}>
             Profile not found.
           </div>
         ) : (
           <>
             {/* Hero card */}
             <div style={{
-              background: "linear-gradient(135deg,rgba(30,58,95,0.75),rgba(8,17,30,0.95))",
+              background: "var(--gradient-bg)",
               border: "1px solid rgba(96,165,250,0.18)",
               borderRadius: 18, padding: "18px 16px",
               position: "relative", overflow: "hidden",
@@ -103,7 +103,7 @@ export default function UserProfileModal({ userId, onClose }) {
                   background: "linear-gradient(135deg,rgba(37,99,235,0.6),rgba(8,145,178,0.6))",
                   border: "1.5px solid rgba(96,165,250,0.3)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontWeight: 900, fontSize: 24, color: "white", overflow: "hidden",
+                  fontWeight: 900, fontSize: 24, color: "var(--color-text-1)", overflow: "hidden",
                 }}>
                   {profile.avatar_url
                     ? <img src={profile.avatar_url} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -112,12 +112,12 @@ export default function UserProfileModal({ userId, onClose }) {
 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <div style={{ fontSize: 20, fontWeight: 900, color: "white", lineHeight: 1.1 }}>{fullName}</div>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: "var(--color-text-1)", lineHeight: 1.1 }}>{fullName}</div>
                     <span style={{ fontSize: 18 }}>{sportEmoji}</span>
                   </div>
 
                   {profile.username && (
-                    <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, marginTop: 3 }}>
+                    <div style={{ color: "var(--ink-45)", fontSize: 13, marginTop: 3 }}>
                       @{profile.username}
                     </div>
                   )}
@@ -140,8 +140,8 @@ export default function UserProfileModal({ userId, onClose }) {
 
             {/* Season passes */}
             {profile.ski_passes?.length > 0 && (
-              <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "12px 14px" }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
+              <div style={{ background: "var(--overlay-03)", border: "1px solid var(--overlay-08)", borderRadius: 14, padding: "12px 14px" }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "var(--ink-40)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
                   Season Passes
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -156,11 +156,11 @@ export default function UserProfileModal({ userId, onClose }) {
 
             {/* Vehicle */}
             {profile.vehicle_label && (
-              <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ background: "var(--overlay-03)", border: "1px solid var(--overlay-08)", borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ fontSize: 22 }}>🚗</div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>Vehicle</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "white", marginTop: 2 }}>{profile.vehicle_label}</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "var(--ink-40)", textTransform: "uppercase", letterSpacing: 0.8 }}>Vehicle</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-1)", marginTop: 2 }}>{profile.vehicle_label}</div>
                   {profile.vehicle_seats > 0 && (
                     <div style={{ fontSize: 12, color: "var(--color-accent-soft)", marginTop: 2, fontWeight: 700 }}>
                       {profile.vehicle_seats} open seat{profile.vehicle_seats !== 1 ? "s" : ""}
@@ -176,7 +176,7 @@ export default function UserProfileModal({ userId, onClose }) {
               onClick={() => { onClose?.(); openFullProfile(userId) }}
               style={{
                 width: "100%", padding: "12px 0", borderRadius: 12, border: "none",
-                background: "var(--gradient-cta)", color: "white",
+                background: "var(--gradient-cta)", color: "var(--color-on-accent)",
                 fontWeight: 800, fontSize: 14, cursor: "pointer", minHeight: 44,
               }}
             >

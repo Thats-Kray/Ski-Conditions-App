@@ -61,17 +61,17 @@ export default function DirectMessageView({ partner, partnerId, currentUser, onB
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid var(--overlay-07)", flexShrink: 0 }}>
         {onBack && (
-          <button onClick={onBack} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: 22, padding: 0, lineHeight: 1, marginRight: 2 }}>←</button>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: "var(--ink-50)", cursor: "pointer", fontSize: 22, padding: 0, lineHeight: 1, marginRight: 2 }}>←</button>
         )}
         <Avatar profile={partner} size={40} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 15, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div style={{ fontWeight: 800, fontSize: 15, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {partnerName}
           </div>
           {partner?.username && (
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>@{partner.username}</div>
+            <div style={{ fontSize: 11, color: "var(--ink-35)", marginTop: 1 }}>@{partner.username}</div>
           )}
         </div>
         {skillColor && (
@@ -85,7 +85,7 @@ export default function DirectMessageView({ partner, partnerId, currentUser, onB
       {/* Messages */}
       <div style={{ flex: 1, overflowY: "auto", padding: "14px 14px 6px", display: "flex", flexDirection: "column", gap: 10 }}>
         {messages.length === 0 && (
-          <div style={{ textAlign: "center", padding: "48px 20px", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
+          <div style={{ textAlign: "center", padding: "48px 20px", color: "var(--ink-30)", fontSize: 13 }}>
             <div style={{ fontSize: 36, marginBottom: 10 }}>💬</div>
             Start a conversation with {partnerName}!
           </div>
@@ -96,11 +96,11 @@ export default function DirectMessageView({ partner, partnerId, currentUser, onB
             <div key={msg.id || i} style={{ display: "flex", flexDirection: isMe ? "row-reverse" : "row", alignItems: "flex-end", gap: 8 }}>
               {!isMe && <Avatar profile={partner} size={26} />}
               <div style={{ maxWidth: "72%", minWidth: 0 }}>
-                <div style={{ background: isMe ? "var(--gradient-cta)" : "rgba(255,255,255,0.09)", color: "white", borderRadius: isMe ? "14px 14px 0 14px" : "0 14px 14px 14px", padding: msg.media_url && !msg.content ? "6px" : "9px 13px", fontSize: 14, lineHeight: 1.45, wordBreak: "break-word", overflow: "hidden" }}>
+                <div style={{ background: isMe ? "var(--gradient-cta)" : "var(--overlay-09)", color: isMe ? "var(--color-on-accent)" : "var(--color-text-1)", borderRadius: isMe ? "14px 14px 0 14px" : "0 14px 14px 14px", padding: msg.media_url && !msg.content ? "6px" : "9px 13px", fontSize: 14, lineHeight: 1.45, wordBreak: "break-word", overflow: "hidden" }}>
                   {msg.media_url && <MessageMedia mediaUrl={msg.media_url} mediaType={msg.media_type} />}
                   {msg.content && <div style={{ marginTop: msg.media_url ? 6 : 0 }}>{msg.content}</div>}
                 </div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 3, textAlign: isMe ? "right" : "left", paddingLeft: isMe ? 0 : 8, paddingRight: isMe ? 8 : 0 }}>
+                <div style={{ fontSize: 10, color: "var(--ink-25)", marginTop: 3, textAlign: isMe ? "right" : "left", paddingLeft: isMe ? 0 : 8, paddingRight: isMe ? 8 : 0 }}>
                   {timeAgo(msg.created_at)}{isMe && msg.read_at ? " · Read" : ""}
                 </div>
               </div>

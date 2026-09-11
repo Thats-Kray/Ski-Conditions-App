@@ -295,8 +295,8 @@ export default function FriendsPage({ onMessageFriend = null }) {
 
   const rowStyle = {
     display: "flex", alignItems: "center", gap: 11,
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.08)",
+    background: "var(--overlay-03)",
+    border: "1px solid var(--overlay-08)",
     borderRadius: 14, padding: "10px 12px",
   }
 
@@ -345,7 +345,7 @@ export default function FriendsPage({ onMessageFriend = null }) {
           position: "fixed", top: "max(20px, env(safe-area-inset-top) + 12px)", left: "50%", transform: "translateX(-50%)",
           zIndex: 9999, padding: "10px 20px", borderRadius: 12, fontWeight: 700, fontSize: 14,
           background: toast.type === "error" ? "rgba(239,68,68,0.95)" : "rgba(16,185,129,0.95)",
-          color: "white", boxShadow: "0 4px 24px rgba(0,0,0,0.4)", pointerEvents: "none",
+          color: "var(--color-on-accent)", boxShadow: "0 4px 24px rgba(0,0,0,0.4)", pointerEvents: "none",
           whiteSpace: "nowrap",
         }}>
           {toast.text}
@@ -364,8 +364,8 @@ export default function FriendsPage({ onMessageFriend = null }) {
           <form onSubmit={handleSearch} style={{ flex: 1, minWidth: 0 }}>
             <div style={{
               display: "flex", alignItems: "center", gap: 9,
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "var(--overlay-05)",
+              border: "1px solid var(--overlay-10)",
               borderRadius: 12, padding: "10px 12px",
             }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -402,8 +402,8 @@ export default function FriendsPage({ onMessageFriend = null }) {
               style={{
                 ...iconButtonBase,
                 width: 36, height: 36,
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.1)",
+                background: "var(--overlay-05)",
+                border: "1px solid var(--overlay-10)",
                 color: "var(--color-text-3)",
                 fontSize: 16, fontWeight: 900, lineHeight: 1,
               }}
@@ -423,7 +423,7 @@ export default function FriendsPage({ onMessageFriend = null }) {
                   position: "absolute", top: 42, right: 0, zIndex: 41,
                   minWidth: 172,
                   background: "var(--color-surface-popover)",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  border: "1px solid var(--overlay-10)",
                   borderRadius: 12, padding: 4,
                   boxShadow: "var(--shadow-card)",
                 }}>
@@ -476,10 +476,10 @@ export default function FriendsPage({ onMessageFriend = null }) {
                         Accept
                       </button>
                     ) : p.isPending ? (
-                      <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.07)", borderRadius: 8, padding: "5px 10px" }}>Pending</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-40)", background: "var(--overlay-07)", borderRadius: 8, padding: "5px 10px" }}>Pending</span>
                     ) : (
                       <button onClick={() => handleSendRequest(p.id)} disabled={workingId === p.id}
-                        style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                        style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "var(--color-on-accent)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                         {workingId === p.id ? "…" : "+ Add"}
                       </button>
                     )}
@@ -552,7 +552,7 @@ export default function FriendsPage({ onMessageFriend = null }) {
                       style={{
                         ...iconButtonBase,
                         background: "transparent",
-                        border: "1px solid rgba(255,255,255,0.14)",
+                        border: "1px solid var(--overlay-14)",
                         color: "var(--color-text-3)",
                         fontSize: 15,
                         opacity: workingId === req.id ? 0.5 : 1,
@@ -581,8 +581,8 @@ export default function FriendsPage({ onMessageFriend = null }) {
             ) : decoratedFriends.length === 0 ? (
               <div style={{
                 padding: "28px 20px", textAlign: "center",
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.08)",
+                background: "var(--overlay-03)",
+                border: "1px solid var(--overlay-08)",
                 borderRadius: 14,
               }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>🎿</div>
@@ -703,7 +703,7 @@ export default function FriendsPage({ onMessageFriend = null }) {
                       style={{
                         padding: "8px 12px", borderRadius: 9, minHeight: 36, flexShrink: 0,
                         background: "transparent",
-                        border: "1px solid rgba(255,255,255,0.14)",
+                        border: "1px solid var(--overlay-14)",
                         color: "var(--color-text-3)",
                         fontWeight: 700, fontSize: 12, cursor: "pointer",
                       }}

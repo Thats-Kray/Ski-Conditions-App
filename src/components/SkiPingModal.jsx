@@ -75,27 +75,27 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
       <div style={{
         width: "100%", maxWidth: 480,
         background: "linear-gradient(160deg, var(--color-modal-bg) 0%, var(--color-bg-deep) 100%)",
-        border: "1px solid rgba(255,255,255,0.1)",
+        border: "1px solid var(--overlay-10)",
         borderRadius: "24px 24px 0 0",
         padding: "24px 20px 36px",
         maxHeight: "88vh", overflowY: "auto",
       }}>
         {/* Handle */}
-        <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.2)", margin: "0 auto 20px" }} />
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: "var(--overlay-20)", margin: "0 auto 20px" }} />
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: "var(--color-text-1)" }}>👋 Down to ski?</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 3 }}>Send a quick pulse to your crew</div>
+            <div style={{ fontSize: 13, color: "var(--ink-50)", marginTop: 3 }}>Send a quick pulse to your crew</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--ink-50)", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
         </div>
 
         {/* Friend picker */}
         <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Who?</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-50)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Who?</div>
           {friends.length === 0 ? (
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", padding: "12px 0" }}>No friends yet — add some first!</div>
+            <div style={{ fontSize: 13, color: "var(--ink-40)", padding: "12px 0" }}>No friends yet — add some first!</div>
           ) : (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {friends.map((f) => {
@@ -108,8 +108,8 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
                     style={{
                       display: "flex", alignItems: "center", gap: 7,
                       padding: "6px 12px 6px 6px", borderRadius: 999,
-                      border: isOn ? "1.5px solid var(--color-accent-strong)" : "1.5px solid rgba(255,255,255,0.12)",
-                      background: isOn ? "rgba(59,130,246,0.18)" : "rgba(255,255,255,0.05)",
+                      border: isOn ? "1.5px solid var(--color-accent-strong)" : "1.5px solid var(--overlay-12)",
+                      background: isOn ? "rgba(59,130,246,0.18)" : "var(--overlay-05)",
                       color: "var(--color-text-1)", cursor: "pointer", fontSize: 13, fontWeight: 600,
                       transition: "all 0.15s",
                     }}
@@ -127,13 +127,13 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
         {/* Optional: resort + date */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Resort (optional)</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-50)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Resort (optional)</div>
             <select
               value={resort}
               onChange={(e) => setResort(e.target.value)}
               style={{
                 width: "100%", padding: "9px 10px", borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
+                border: "1px solid var(--overlay-12)", background: "var(--overlay-06)",
                 color: "var(--color-text-1)", fontSize: 16, outline: "none",
               }}
             >
@@ -144,14 +144,14 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
             </select>
           </div>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Date (optional)</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-50)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Date (optional)</div>
             <input
               type="date"
               value={skiDate}
               onChange={(e) => setSkiDate(e.target.value)}
               style={{
                 width: "100%", padding: "9px 10px", borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
+                border: "1px solid var(--overlay-12)", background: "var(--overlay-06)",
                 color: "var(--color-text-1)", fontSize: 16, outline: "none", boxSizing: "border-box",
               }}
             />
@@ -160,7 +160,7 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
 
         {/* Message */}
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Message (optional)</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-50)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Message (optional)</div>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -169,7 +169,7 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
             maxLength={200}
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 12,
-              border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
+              border: "1px solid var(--overlay-12)", background: "var(--overlay-06)",
               color: "var(--color-text-1)", fontSize: 16, outline: "none", resize: "none", boxSizing: "border-box",
             }}
           />
@@ -182,8 +182,8 @@ export function SkiPingComposer({ friends, onClose, onSent }) {
           disabled={saving || selected.size === 0}
           style={{
             width: "100%", padding: "14px", borderRadius: 14, border: "none",
-            background: selected.size > 0 ? "var(--color-accent-strong)" : "rgba(255,255,255,0.08)",
-            color: selected.size > 0 ? "#fff" : "rgba(255,255,255,0.35)",
+            background: selected.size > 0 ? "var(--color-accent-strong)" : "var(--overlay-08)",
+            color: selected.size > 0 ? "var(--color-on-accent)" : "var(--ink-35)",
             fontWeight: 800, fontSize: 15, cursor: selected.size > 0 ? "pointer" : "default",
           }}
         >
@@ -212,7 +212,7 @@ export function PingCard({ ping, onRespond, responding }) {
         <Avatar profile={ping.senderProfile} size={36} />
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: 14, color: "var(--color-text-1)" }}>{senderName}</div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+          <div style={{ fontSize: 12, color: "var(--ink-50)" }}>
             {resortLabel && <span style={{ marginRight: 8 }}>🏔️ {resortLabel}</span>}
             {ping.ski_date && <span>📅 {formatDate(ping.ski_date)}</span>}
             {!resortLabel && !ping.ski_date && "is asking who's down to ski"}
@@ -229,8 +229,8 @@ export function PingCard({ ping, onRespond, responding }) {
 
       {ping.message && (
         <div style={{
-          fontSize: 13, color: "rgba(255,255,255,0.78)",
-          background: "rgba(255,255,255,0.05)", borderRadius: 10, padding: "8px 12px",
+          fontSize: 13, color: "var(--ink-78)",
+          background: "var(--overlay-05)", borderRadius: 10, padding: "8px 12px",
           marginBottom: 12, fontStyle: "italic",
         }}>
           "{ping.message}"
@@ -276,9 +276,9 @@ export function PingCard({ ping, onRespond, responding }) {
                 onClick={() => onRespond(ping.id, opt.value)}
                 disabled={responding === ping.id}
                 style={{
-                  padding: "9px 6px", borderRadius: 11, border: `1.5px solid ${isActive ? opt.border : "rgba(255,255,255,0.1)"}`,
-                  background: isActive ? opt.bg : "rgba(255,255,255,0.04)",
-                  color: isActive ? opt.color : "rgba(255,255,255,0.65)",
+                  padding: "9px 6px", borderRadius: 11, border: `1.5px solid ${isActive ? opt.border : "var(--overlay-10)"}`,
+                  background: isActive ? opt.bg : "var(--overlay-04)",
+                  color: isActive ? opt.color : "var(--ink-65)",
                   fontWeight: isActive ? 800 : 600, fontSize: 12, cursor: "pointer",
                   transition: "all 0.15s",
                 }}
@@ -291,7 +291,7 @@ export function PingCard({ ping, onRespond, responding }) {
       )}
 
       {ping.isMine && ping.responses.length === 0 && (
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 4 }}>Waiting for responses...</div>
+        <div style={{ fontSize: 12, color: "var(--ink-35)", marginTop: 4 }}>Waiting for responses...</div>
       )}
     </div>
   )

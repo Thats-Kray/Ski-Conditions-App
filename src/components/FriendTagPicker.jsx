@@ -56,14 +56,14 @@ export default function FriendTagPicker({ selectedIds, onChange }) {
   }
 
   if (loading) {
-    return <div style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Loading friends…</div>
+    return <div style={{ fontSize: 13, color: "var(--ink-35)" }}>Loading friends…</div>
   }
   if (error) {
     return <div style={{ fontSize: 13, color: "var(--color-danger)" }}>{error}</div>
   }
   if (friends.length === 0) {
     return (
-      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>
+      <div style={{ fontSize: 13, color: "var(--ink-35)" }}>
         No friends yet — add friends to tag them on a ski day.
       </div>
     )
@@ -95,7 +95,7 @@ export default function FriendTagPicker({ selectedIds, onChange }) {
                 flex: 1,
                 minWidth: 0,
                 fontSize: 13,
-                color: "rgba(255,255,255,0.82)",
+                color: "var(--ink-82)",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",

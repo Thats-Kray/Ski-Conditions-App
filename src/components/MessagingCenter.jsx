@@ -138,10 +138,10 @@ export default function MessagingCenter() {
     return (
       <div style={{
         height: containerHeight,
-        background: "rgba(4,8,20,0.85)",
+        background: "var(--color-modal-bg)",
         borderRadius: isMobile ? 0 : 18,
         overflow: "hidden",
-        border: isMobile ? "none" : "1px solid rgba(255,255,255,0.07)",
+        border: isMobile ? "none" : "1px solid var(--overlay-07)",
       }}>
         <DirectMessageView
           partner={selectedDM.partner}
@@ -157,7 +157,7 @@ export default function MessagingCenter() {
     <div style={{ padding: crewChatOpen ? 0 : "0 0 80px", color: "var(--color-text-1)" }}>
       {!crewChatOpen && (
         <>
-          <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: -0.5, color: "white", marginBottom: 14 }}>
+          <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: -0.5, color: "var(--color-text-1)", marginBottom: 14 }}>
             Crew
           </div>
 
@@ -172,15 +172,15 @@ export default function MessagingCenter() {
                   style={{
                     position: "relative", flexShrink: 0,
                     padding: "8px 16px", borderRadius: 999, fontSize: 13, fontWeight: 800, cursor: "pointer",
-                    background: active ? "var(--color-accent)" : "rgba(255,255,255,0.05)",
-                    color: active ? "var(--color-bg)" : "rgba(255,255,255,0.6)",
-                    border: active ? "1px solid var(--color-accent)" : "1px solid rgba(255,255,255,0.1)",
+                    background: active ? "var(--color-accent)" : "var(--overlay-05)",
+                    color: active ? "var(--color-bg)" : "var(--ink-60)",
+                    border: active ? "1px solid var(--color-accent)" : "1px solid var(--overlay-10)",
                     whiteSpace: "nowrap",
                   }}
                 >
                   {label}
                   {showDot && (
-                    <span style={{ position: "absolute", top: -2, right: -2, width: 9, height: 9, borderRadius: "50%", background: "var(--color-accent-strong)", border: "2px solid rgba(6,10,22,1)" }} />
+                    <span style={{ position: "absolute", top: -2, right: -2, width: 9, height: 9, borderRadius: "50%", background: "var(--color-accent-strong)", border: "2px solid var(--color-badge-border)" }} />
                   )}
                 </button>
               )

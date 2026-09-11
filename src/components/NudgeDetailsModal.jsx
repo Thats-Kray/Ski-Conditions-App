@@ -106,7 +106,7 @@ export default function NudgeDetailsModal({ session, onClose, onSaved }) {
         position: "fixed",
         inset: 0,
         zIndex: 400,
-        background: "rgba(4,8,15,0.85)",
+        background: "var(--scrim)",
         backdropFilter: "blur(10px)",
         display: "flex",
         alignItems: "center",
@@ -123,7 +123,7 @@ export default function NudgeDetailsModal({ session, onClose, onSaved }) {
           maxHeight: "90vh",
           overflowY: "auto",
           background: "var(--color-bg-deep)",
-          border: "1px solid rgba(255,255,255,0.1)",
+          border: "1px solid var(--overlay-10)",
           borderRadius: 24,
           boxShadow: "0 40px 120px rgba(0,0,0,0.85)",
           padding: 22,
@@ -131,8 +131,8 @@ export default function NudgeDetailsModal({ session, onClose, onSaved }) {
       >
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 4 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>🎿 Finish your ski day</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", marginTop: 2 }}>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "var(--color-text-1)" }}>🎿 Finish your ski day</div>
+            <div style={{ fontSize: 13, color: "var(--ink-55)", marginTop: 2 }}>
               {resortName(session.resort_name)} · {formatDate(session.session_date)}
             </div>
           </div>
@@ -140,13 +140,13 @@ export default function NudgeDetailsModal({ session, onClose, onSaved }) {
             onClick={onClose}
             aria-label="Close"
             style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--overlay-08)",
+              border: "1px solid var(--overlay-12)",
               borderRadius: "50%",
               width: 32,
               height: 32,
               flexShrink: 0,
-              color: "rgba(255,255,255,0.6)",
+              color: "var(--ink-60)",
               fontSize: 16,
               lineHeight: 1,
               cursor: "pointer",
@@ -161,7 +161,7 @@ export default function NudgeDetailsModal({ session, onClose, onSaved }) {
           <div
             style={{
               background: "var(--color-danger-bg)",
-              border: "1px solid rgba(248,113,113,0.3)",
+              border: "1px solid var(--color-danger)",
               borderRadius: 10,
               padding: "8px 12px",
               fontSize: 13,
