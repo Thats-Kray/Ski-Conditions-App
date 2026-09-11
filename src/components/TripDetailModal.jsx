@@ -104,9 +104,18 @@ function GifPreview({ url }) {
 }
 
 // SnowEffect and WindEffect render only inside the Hero, layered on top of the THEME table's
-// overlay gradient (an E3 photo overlay, permanently dark in both modes). Their white literals
-// are deliberately left untokenised: --ink-* and --overlay-* flip to a dark navy tint in light
-// mode, which would make these effects vanish against a background that never lightens.
+// overlay gradient (an E3 photo overlay) — but only when the Hero actually has a photo. The
+// Hero's own background (below) falls back to `linear-gradient(135deg, var(--color-surface-
+// popover), var(--color-modal-bg))` when `photo` is falsy, and both of those tokens resolve to
+// #FFFFFF in every light palette. Today every resort_key ever written (CreateTripModal.jsx's
+// RESORTS array, the only trip-creation writer) has a matching RESORT_PHOTOS entry, so `photo`
+// is always truthy in practice and the overlay is effectively dark in both modes — that's why
+// these white literals are deliberately left untokenised (--ink-*/--overlay-* flip to a dark
+// navy tint in light mode and would vanish against a genuinely dark background). But this is a
+// real, currently-inactive edge case, not an unconditional guarantee: if RESORT_PHOTOS and
+// RESORTS/resort_key ever drift out of 1:1 (a resort added to one list but not the other, or a
+// legacy/malformed resort_key), the fallback would render on a white-to-white gradient in light
+// mode and these effects would need re-examination.
 function SnowEffect() {
   const flakes = [
     { l: "8%", d: "0s", dur: "5s" }, { l: "22%", d: "1.2s", dur: "4s" },
@@ -849,13 +858,19 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
             <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: `${accent}22`, border: `1px solid ${accent}44`, borderRadius: 999, padding: "4px 10px", fontSize: 11, fontWeight: 900, color: accent, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
               🏔️ {resortName}
             </div>
-            {/* Rule 2 / --color-on-accent: this title sits on the hero's permanently-dark
-                theme.overlay (E3 photo overlay), which never adapts to light mode, so the
-                title must stay a constant white rather than following --color-text-1. */}
+            {/* Rule 2 / --color-on-accent: this title relies on the Hero's theme.overlay (E3
+                photo overlay) being dark, which holds only while `photo` is truthy — see the
+                longer note above SnowEffect for the exact invariant (every current resort_key
+                has a matching RESORT_PHOTOS entry) and what breaks it. Not an unconditional
+                guarantee: the Hero's no-photo fallback resolves to #FFFFFF in light mode, and
+                --color-on-accent would need re-examination if that fallback ever became live. */}
             <div style={{ fontSize: 26, fontWeight: 900, color: "var(--color-on-accent)", lineHeight: 1.1, letterSpacing: -0.5 }}>{tripTitle}</div>
-            {/* Same reasoning as the title above: this caption sits on the same frozen dark
-                overlay, so it keeps its literal translucent white rather than --ink-45, which
-                would flip to a dark navy tint in light mode and vanish against that overlay. */}
+            {/* Same reasoning as the title above: this caption relies on the same currently-
+                always-true photo/overlay invariant, not an unconditional dark background — it
+                keeps its literal translucent white rather than --ink-45, which would flip to a
+                dark navy tint in light mode and vanish against a dark overlay if one is present,
+                but would need re-examination alongside the title if the no-photo fallback ever
+                becomes reachable. */}
             {isHost && <div style={{ marginTop: 4, fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)" }}>You're hosting</div>}
           </div>
         </div>
