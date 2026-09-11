@@ -110,24 +110,24 @@ function LogDayModal({ onClose, onLogged }) {
   }
 
   const inputStyle = {
-    width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: 10, padding: "10px 12px", color: "white", fontSize: 14, boxSizing: "border-box",
+    width: "100%", background: "var(--overlay-06)", border: "1px solid var(--overlay-12)",
+    borderRadius: 10, padding: "10px 12px", color: "var(--color-text-1)", fontSize: 14, boxSizing: "border-box",
     outline: "none",
   }
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
-      <div style={{ background: "var(--color-modal-bg)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: "var(--color-modal-bg)", border: "1px solid var(--overlay-10)", borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: "white" }}>
+          <div style={{ fontSize: 18, fontWeight: 900, color: "var(--color-text-1)" }}>
             {step === "basic" ? "🎿 Log a Ski Day" : step === "stats" ? "📊 Add Your Stats" : "📸 Add Details"}
           </div>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}>✕</button>
+          <button onClick={onClose} style={{ background: "var(--overlay-08)", border: "none", color: "var(--ink-60)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}>✕</button>
         </div>
 
         {step === "details" ? (
           <div style={{ display: "grid", gap: 14 }}>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginTop: -10 }}>
+            <div style={{ fontSize: 13, color: "var(--ink-45)", marginTop: -10 }}>
               Add a title, a few photos, and tag who you skied with.
             </div>
             {detailsError && <div style={{ fontSize: 13, color: "var(--color-danger)", padding: "8px 12px", background: "rgba(248,113,113,0.1)", borderRadius: 8 }}>{detailsError}</div>}
@@ -146,7 +146,7 @@ function LogDayModal({ onClose, onLogged }) {
           </div>
         ) : step === "stats" ? (
           <div style={{ display: "grid", gap: 14 }}>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginTop: -10 }}>
+            <div style={{ fontSize: 13, color: "var(--ink-45)", marginTop: -10 }}>
               Nice — {resortName(savedSession?.resort_name) || "your day"} is logged. Want to add stats now?
             </div>
             {statsError && <div style={{ fontSize: 13, color: "var(--color-danger)", padding: "8px 12px", background: "rgba(248,113,113,0.1)", borderRadius: 8 }}>{statsError}</div>}
@@ -160,36 +160,36 @@ function LogDayModal({ onClose, onLogged }) {
         <form onSubmit={handleSubmit} style={{ display: "grid", gap: 14 }}>
           {/* Resort */}
           <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Resort</label>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "var(--ink-50)", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Resort</label>
             <ResortPicker value={resort} onChange={setResort} />
           </div>
 
           {/* Date */}
           <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Date</label>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "var(--ink-50)", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Date</label>
             <input type="date" style={inputStyle} value={date} max={today} onChange={(e) => setDate(e.target.value)} />
           </div>
 
           {/* Powder toggle */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "12px 14px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--overlay-04)", border: "1px solid var(--overlay-08)", borderRadius: 10, padding: "12px 14px" }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "white" }}>❄️ Powder Day</div>
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>Fresh snow on the ground</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-1)" }}>❄️ Powder Day</div>
+              <div style={{ fontSize: 12, color: "var(--ink-40)", marginTop: 2 }}>Fresh snow on the ground</div>
             </div>
-            <div onClick={() => setIsPowder(!isPowder)} style={{ width: 44, height: 24, borderRadius: 12, background: isPowder ? "var(--color-accent-deep)" : "rgba(255,255,255,0.15)", cursor: "pointer", position: "relative", transition: "background 0.2s" }}>
-              <div style={{ position: "absolute", top: 2, left: isPowder ? 22 : 2, width: 20, height: 20, borderRadius: "50%", background: "white", transition: "left 0.2s" }} />
+            <div onClick={() => setIsPowder(!isPowder)} style={{ width: 44, height: 24, borderRadius: 12, background: isPowder ? "var(--color-accent-deep)" : "var(--overlay-15)", cursor: "pointer", position: "relative", transition: "background 0.2s" }}>
+              <div style={{ position: "absolute", top: 2, left: isPowder ? 22 : 2, width: 20, height: 20, borderRadius: "50%", background: "var(--color-on-accent)", transition: "left 0.2s" }} />
             </div>
           </div>
 
           {/* Notes */}
           <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Notes <span style={{ opacity: 0.5 }}>(optional)</span></label>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "var(--ink-50)", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Notes <span style={{ opacity: 0.5 }}>(optional)</span></label>
             <input style={inputStyle} placeholder="Best run, who you went with..." value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
 
           {error && <div style={{ fontSize: 13, color: "var(--color-danger)", padding: "8px 12px", background: "rgba(248,113,113,0.1)", borderRadius: 8 }}>{error}</div>}
 
-          <button type="submit" disabled={saving} style={{ background: "var(--gradient-cta)", color: "white", border: "none", borderRadius: 12, padding: "14px", fontSize: 15, fontWeight: 900, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, marginTop: 4 }}>
+          <button type="submit" disabled={saving} style={{ background: "var(--gradient-cta)", color: "var(--color-on-accent)", border: "none", borderRadius: 12, padding: "14px", fontSize: 15, fontWeight: 900, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, marginTop: 4 }}>
             {saving ? "Logging…" : "Log This Day"}
           </button>
         </form>
@@ -208,8 +208,8 @@ function LeaderboardRow({ entry, rank, category, reactions, onReact, currentUser
   return (
     <div style={{
       padding: "12px 14px",
-      background: entry.isMe ? "rgba(37,99,235,0.12)" : "rgba(255,255,255,0.03)",
-      border: `1px solid ${entry.isMe ? "rgba(37,99,235,0.3)" : "rgba(255,255,255,0.07)"}`,
+      background: entry.isMe ? "rgba(37,99,235,0.12)" : "var(--overlay-03)",
+      border: `1px solid ${entry.isMe ? "rgba(37,99,235,0.3)" : "var(--overlay-07)"}`,
       borderRadius: 14,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -218,7 +218,7 @@ function LeaderboardRow({ entry, rank, category, reactions, onReact, currentUser
           {medal ? (
             <span style={{ fontSize: 20 }}>{medal}</span>
           ) : (
-            <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.35)" }}>{rank}</span>
+            <span style={{ fontSize: 13, fontWeight: 800, color: "var(--ink-35)" }}>{rank}</span>
           )}
         </div>
 
@@ -226,7 +226,7 @@ function LeaderboardRow({ entry, rank, category, reactions, onReact, currentUser
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontWeight: 800, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ fontWeight: 800, fontSize: 14, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {entry.full_name || entry.username || "Skier"}
             </span>
             {entry.isMe && (
@@ -234,7 +234,7 @@ function LeaderboardRow({ entry, rank, category, reactions, onReact, currentUser
             )}
           </div>
           {entry.topResort && (
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div style={{ fontSize: 12, color: "var(--ink-40)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               ⛷️ {entry.topResort}
             </div>
           )}
@@ -242,7 +242,7 @@ function LeaderboardRow({ entry, rank, category, reactions, onReact, currentUser
 
         {/* Stat */}
         <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <div style={{ fontSize: 16, fontWeight: 900, color: isTop ? "var(--color-accent-soft)" : "white", whiteSpace: "nowrap" }}>
+          <div style={{ fontSize: 16, fontWeight: 900, color: isTop ? "var(--color-accent-soft)" : "var(--color-text-1)", whiteSpace: "nowrap" }}>
             {value == null ? "—" : `${typeof value === "number" ? value.toLocaleString("en-US") : value} ${cat.unit}`}
           </div>
         </div>
@@ -261,8 +261,8 @@ function LeaderboardRow({ entry, rank, category, reactions, onReact, currentUser
                 style={{
                   display: "flex", alignItems: "center", gap: 3, padding: "3px 7px",
                   borderRadius: 999, border: "none", cursor: "pointer",
-                  background: mine ? "var(--color-accent-deep)" : "rgba(255,255,255,0.06)",
-                  color: mine ? "white" : "rgba(255,255,255,0.55)",
+                  background: mine ? "var(--color-accent-deep)" : "var(--overlay-06)",
+                  color: mine ? "var(--color-on-accent)" : "var(--ink-55)",
                   fontSize: 13,
                 }}
               >
@@ -381,18 +381,18 @@ export default function LeaderboardPage() {
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 999, padding: "4px 11px", fontSize: 11, fontWeight: 700, color: "var(--color-warning)", marginBottom: 8 }}>
             🏆 {season.label} Season
           </div>
-          <h2 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: -0.5, color: "white" }}>Leaderboard</h2>
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: "rgba(255,255,255,0.45)" }}>
+          <h2 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: -0.5, color: "var(--color-text-1)" }}>Leaderboard</h2>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--ink-45)" }}>
             {boardMode === "friends" ? "You + your friends, ranked" : "All PowderDays skiers"}
           </p>
         </div>
-        <button onClick={() => setShowLog(true)} style={{ background: "var(--gradient-cta)", color: "white", border: "none", borderRadius: 12, padding: "10px 16px", fontSize: 13, fontWeight: 900, cursor: "pointer", boxShadow: "0 6px 20px rgba(37,99,235,0.4)", whiteSpace: "nowrap" }}>
+        <button onClick={() => setShowLog(true)} style={{ background: "var(--gradient-cta)", color: "var(--color-on-accent)", border: "none", borderRadius: 12, padding: "10px 16px", fontSize: 13, fontWeight: 900, cursor: "pointer", boxShadow: "0 6px 20px rgba(37,99,235,0.4)", whiteSpace: "nowrap" }}>
           + Log Day
         </button>
       </div>
 
       {/* Friends / Public toggle */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 20, background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 4 }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 20, background: "var(--overlay-05)", borderRadius: 12, padding: 4 }}>
         {[
           { key: "friends", label: "👥 Friends" },
           { key: "public",  label: "🌐 Global" },
@@ -402,9 +402,9 @@ export default function LeaderboardPage() {
             onClick={() => setBoardMode(mode.key)}
             style={{
               flex: 1, padding: "8px 0", borderRadius: 9,
-              background: boardMode === mode.key ? "rgba(255,255,255,0.12)" : "transparent",
-              border: boardMode === mode.key ? "1px solid rgba(255,255,255,0.18)" : "1px solid transparent",
-              color: boardMode === mode.key ? "white" : "rgba(255,255,255,0.4)",
+              background: boardMode === mode.key ? "var(--overlay-12)" : "transparent",
+              border: boardMode === mode.key ? "1px solid var(--overlay-18)" : "1px solid transparent",
+              color: boardMode === mode.key ? "var(--color-text-1)" : "var(--ink-40)",
               fontSize: 13, fontWeight: boardMode === mode.key ? 800 : 600, cursor: "pointer",
               transition: "all 0.15s",
             }}
@@ -424,8 +424,8 @@ export default function LeaderboardPage() {
             { label: "Rank",        val: myRank ? `#${myRank}` : "—" },
           ].map(({ label, val }) => (
             <div key={label} style={{ textAlign: "center", flex: 1 }}>
-              <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>{val}</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>{label}</div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: "var(--color-text-1)" }}>{val}</div>
+              <div style={{ fontSize: 11, color: "var(--ink-40)", marginTop: 2 }}>{label}</div>
             </div>
           ))}
         </div>
@@ -433,16 +433,16 @@ export default function LeaderboardPage() {
 
       {/* My sessions list */}
       {showMySessions && mySessions.length > 0 && (
-        <div style={{ marginBottom: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, overflow: "hidden" }}>
-          <div style={{ padding: "12px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)", fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.6)" }}>Your logged days</div>
+        <div style={{ marginBottom: 20, background: "var(--overlay-03)", border: "1px solid var(--overlay-08)", borderRadius: 16, overflow: "hidden" }}>
+          <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--overlay-07)", fontSize: 13, fontWeight: 800, color: "var(--ink-60)" }}>Your logged days</div>
           {mySessions.map((s) => (
-            <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+            <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid var(--overlay-05)" }}>
               <div style={{ flex: 1 }}>
                 {/* resort_name is a normalised key as of migration 039 ('vail'), so it has to
                     go through resortName(). Trip-derived rows were already keys and had been
                     rendering as "arapahoebasin" here long before that. */}
-                <div style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{resortName(s.resort_name)}</div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-1)" }}>{resortName(s.resort_name)}</div>
+                <div style={{ fontSize: 12, color: "var(--ink-40)", marginTop: 2 }}>
                   {new Date(s.session_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   {s.is_powder_day && " · ❄️ Powder"}
                 </div>
@@ -460,9 +460,9 @@ export default function LeaderboardPage() {
             key={cat.key}
             onClick={() => setCategory(cat.key)}
             style={{
-              background: category === cat.key ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)",
-              border: category === cat.key ? "1px solid rgba(255,255,255,0.2)" : "1px solid rgba(255,255,255,0.07)",
-              color: category === cat.key ? "white" : "rgba(255,255,255,0.55)",
+              background: category === cat.key ? "var(--overlay-12)" : "var(--overlay-04)",
+              border: category === cat.key ? "1px solid var(--overlay-20)" : "1px solid var(--overlay-07)",
+              color: category === cat.key ? "var(--color-text-1)" : "var(--ink-55)",
               borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 700,
               cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
               position: "relative",
@@ -475,17 +475,17 @@ export default function LeaderboardPage() {
 
       {/* Leaderboard */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(255,255,255,0.3)", fontSize: 14 }}>Loading leaderboard…</div>
+        <div style={{ textAlign: "center", padding: "40px 0", color: "var(--ink-30)", fontSize: 14 }}>Loading leaderboard…</div>
       ) : entries.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "48px 24px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16 }}>
+        <div style={{ textAlign: "center", padding: "48px 24px", background: "var(--overlay-03)", border: "1px solid var(--overlay-07)", borderRadius: 16 }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>🏔️</div>
-          <div style={{ fontSize: 17, fontWeight: 900, color: "white", marginBottom: 8 }}>
+          <div style={{ fontSize: 17, fontWeight: 900, color: "var(--color-text-1)", marginBottom: 8 }}>
             {boardMode === "friends" ? "No friends on the board yet" : "No days logged yet"}
           </div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 20 }}>
+          <div style={{ fontSize: 13, color: "var(--ink-40)", marginBottom: 20 }}>
             {boardMode === "friends" ? "Add friends to see how you stack up." : "Be the first to log a ski day and top the board."}
           </div>
-          <button onClick={() => setShowLog(true)} style={{ background: "var(--gradient-cta)", color: "white", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>
+          <button onClick={() => setShowLog(true)} style={{ background: "var(--gradient-cta)", color: "var(--color-on-accent)", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>
             Log Your First Day
           </button>
         </div>

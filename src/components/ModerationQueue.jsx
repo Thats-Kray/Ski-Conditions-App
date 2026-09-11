@@ -127,7 +127,7 @@ export default function ModerationQueue() {
                     fontSize: 11,
                     fontWeight: 800,
                     border: "1px solid var(--color-success-strong)",
-                    background: isReleasing ? "rgba(255,255,255,0.05)" : "var(--color-success-bg)",
+                    background: isReleasing ? "var(--overlay-05)" : "var(--color-success-bg)",
                     color: "var(--color-success)",
                     cursor: isReleasing ? "wait" : "pointer",
                   }}

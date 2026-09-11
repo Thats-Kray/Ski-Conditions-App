@@ -5,22 +5,22 @@ import { RESORT_NAMES, RESORT_EMOJI } from "../lib/resorts"
 import { localDateKey } from "../lib/calendarDates"
 
 const fieldLabelStyle = {
-  fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)",
+  fontSize: 11, fontWeight: 800, color: "var(--ink-45)",
   textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7,
 }
 
 const fieldStyle = {
   width: "100%", padding: "11px 13px", borderRadius: 12,
-  border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.07)",
-  color: "white", fontSize: 15, outline: "none", boxSizing: "border-box", colorScheme: "dark",
+  border: "1px solid var(--overlay-12)", background: "var(--overlay-07)",
+  color: "var(--color-text-1)", fontSize: 15, outline: "none", boxSizing: "border-box", colorScheme: "dark",
 }
 
 function chipStyle(active) {
   return {
     padding: "7px 14px", borderRadius: 10, cursor: "pointer",
-    border: `1.5px solid ${active ? "var(--color-accent)" : "rgba(255,255,255,0.1)"}`,
-    background: active ? "rgba(56,189,248,0.2)" : "rgba(255,255,255,0.04)",
-    color: active ? "var(--color-accent)" : "rgba(255,255,255,0.6)",
+    border: `1.5px solid ${active ? "var(--color-accent)" : "var(--overlay-10)"}`,
+    background: active ? "var(--color-accent-dim)" : "var(--overlay-04)",
+    color: active ? "var(--color-accent)" : "var(--ink-60)",
     fontWeight: active ? 800 : 500, fontSize: 12,
   }
 }
@@ -78,7 +78,7 @@ export default function PostSkiBuddyForm({ onClose, onCreated }) {
 
   return (
     <div onClick={busy ? undefined : onClose} style={{
-      position: "fixed", inset: 0, zIndex: 600, background: "rgba(4,8,15,0.85)", backdropFilter: "blur(10px)",
+      position: "fixed", inset: 0, zIndex: 600, background: "var(--scrim)", backdropFilter: "blur(10px)",
       display: "flex", alignItems: "center", justifyContent: "center", padding: "20px 16px", overflowY: "auto",
     }}>
       <form
@@ -86,21 +86,21 @@ export default function PostSkiBuddyForm({ onClose, onCreated }) {
         onSubmit={handleSubmit}
         style={{
           width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto",
-          background: "var(--color-bg-deep)", border: "1px solid rgba(255,255,255,0.1)",
+          background: "var(--color-bg-deep)", border: "1px solid var(--overlay-10)",
           borderRadius: 24, boxShadow: "0 40px 120px rgba(0,0,0,0.85)", padding: 22, display: "grid", gap: 16,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>Post a Ski Buddy Listing</div>
+          <div style={{ fontSize: 20, fontWeight: 900, color: "var(--color-text-1)" }}>Post a Ski Buddy Listing</div>
           <button type="button" onClick={busy ? undefined : onClose} disabled={busy} style={{
-            background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "50%",
+            background: "var(--overlay-08)", border: "1px solid var(--overlay-12)", borderRadius: "50%",
             width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center",
-            color: "white", fontSize: 18, cursor: busy ? "default" : "pointer", flexShrink: 0,
+            color: "var(--color-text-1)", fontSize: 18, cursor: busy ? "default" : "pointer", flexShrink: 0,
           }}>×</button>
         </div>
 
         {error && (
-          <div style={{ fontSize: 13, color: "var(--color-danger)", background: "var(--color-danger-bg)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 12, padding: "10px 13px" }}>
+          <div style={{ fontSize: 13, color: "var(--color-danger)", background: "var(--color-danger-bg)", border: "1px solid var(--color-danger)", borderRadius: 12, padding: "10px 13px" }}>
             {error}
           </div>
         )}
@@ -170,12 +170,12 @@ export default function PostSkiBuddyForm({ onClose, onCreated }) {
             rows={3}
             style={{ ...fieldStyle, resize: "none" }}
           />
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", textAlign: "right", marginTop: 4 }}>{description.length}/500</div>
+          <div style={{ fontSize: 11, color: "var(--ink-40)", textAlign: "right", marginTop: 4 }}>{description.length}/500</div>
         </div>
 
         <button type="submit" disabled={busy} style={{
           padding: "14px", borderRadius: 14, border: "none",
-          background: busy ? "rgba(255,255,255,0.1)" : "var(--gradient-cta)", color: "white",
+          background: busy ? "var(--overlay-10)" : "var(--gradient-cta)", color: busy ? "var(--ink-45)" : "var(--color-on-accent)",
           fontWeight: 900, fontSize: 15, cursor: busy ? "default" : "pointer",
         }}>
           {busy ? "Posting…" : "Post Listing"}

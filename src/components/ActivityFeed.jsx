@@ -278,7 +278,7 @@ export default function ActivityFeed() {
               </div>
             )}
 
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--overlay-06)" }}>
               {EMOJIS.map((emoji) => {
                 const count = itemReactions.filter((r) => r.emoji === emoji).length
                 const mine = itemReactions.some((r) => r.user_id === currentUserId && r.emoji === emoji)
@@ -289,7 +289,7 @@ export default function ActivityFeed() {
                     style={{
                       display: "flex", alignItems: "center", gap: 4, padding: "4px 10px",
                       borderRadius: "var(--radius-pill)", border: "none", cursor: "pointer", fontSize: 13,
-                      background: mine ? "var(--color-accent)" : "rgba(255,255,255,0.06)",
+                      background: mine ? "var(--color-accent)" : "var(--overlay-06)",
                       color: mine ? "var(--color-bg)" : "var(--color-text-2)",
                     }}
                   >
@@ -305,7 +305,7 @@ export default function ActivityFeed() {
                   display: "flex", alignItems: "center", gap: 4, padding: "4px 10px",
                   borderRadius: "var(--radius-pill)", border: "none", cursor: "pointer", fontSize: 13,
                   marginLeft: "auto",
-                  background: threadOpen ? "var(--color-accent)" : "rgba(255,255,255,0.06)",
+                  background: threadOpen ? "var(--color-accent)" : "var(--overlay-06)",
                   color: threadOpen ? "var(--color-bg)" : "var(--color-text-2)",
                 }}
               >
@@ -317,7 +317,7 @@ export default function ActivityFeed() {
             </div>
 
             {threadOpen && (
-              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)", display: "grid", gap: 6 }}>
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--overlay-06)", display: "grid", gap: 6 }}>
                 {itemComments.length === 0 && (
                   <div style={{ fontSize: 12, color: "var(--color-text-3)" }}>No comments yet.</div>
                 )}
@@ -326,7 +326,7 @@ export default function ActivityFeed() {
                   const commenterName = c.profiles?.full_name || c.profiles?.username || "Someone"
                   const isMine = c.user_id === currentUserId
                   return (
-                    <div key={c.id} style={{ padding: 8, borderRadius: 10, background: "rgba(255,255,255,0.04)", fontSize: 12 }}>
+                    <div key={c.id} style={{ padding: 8, borderRadius: 10, background: "var(--overlay-04)", fontSize: 12 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <Avatar profile={c.profiles} size={20} />
                         <span style={{ flex: 1, minWidth: 0, fontWeight: 700, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -366,19 +366,19 @@ export default function ActivityFeed() {
                             onChange={(e) => setReportReason(e.target.value.slice(0, 300))}
                             placeholder="Why are you reporting this?"
                             rows={2}
-                            style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: 8, color: "var(--color-text-1)", fontSize: 12, resize: "none", fontFamily: "inherit" }}
+                            style={{ background: "rgba(0,0,0,0.3)", border: "1px solid var(--overlay-10)", borderRadius: 10, padding: 8, color: "var(--color-text-1)", fontSize: 12, resize: "none", fontFamily: "inherit" }}
                           />
                           <div style={{ display: "flex", gap: 6 }}>
                             <button
                               onClick={() => { setReportingId(null); setReportReason("") }}
-                              style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "var(--color-text-2)", cursor: "pointer", fontSize: 12 }}
+                              style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid var(--overlay-10)", background: "transparent", color: "var(--color-text-2)", cursor: "pointer", fontSize: 12 }}
                             >
                               Cancel
                             </button>
                             <button
                               onClick={() => handleReportComment(c.id)}
                               disabled={!reportReason.trim()}
-                              style={{ flex: 2, padding: 8, borderRadius: 8, border: "none", background: "var(--color-danger)", color: "white", fontWeight: 700, cursor: "pointer", fontSize: 12, opacity: reportReason.trim() ? 1 : 0.5 }}
+                              style={{ flex: 2, padding: 8, borderRadius: 8, border: "none", background: "var(--color-danger)", color: "var(--color-on-accent)", fontWeight: 700, cursor: "pointer", fontSize: 12, opacity: reportReason.trim() ? 1 : 0.5 }}
                             >
                               Submit Report
                             </button>
@@ -395,12 +395,12 @@ export default function ActivityFeed() {
                     onChange={(e) => setDraft(e.target.value.slice(0, 500))}
                     placeholder="Add a comment…"
                     rows={2}
-                    style={{ flex: 1, minWidth: 0, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: 8, color: "var(--color-text-1)", fontSize: 12, resize: "none", fontFamily: "inherit" }}
+                    style={{ flex: 1, minWidth: 0, background: "rgba(0,0,0,0.3)", border: "1px solid var(--overlay-10)", borderRadius: 10, padding: 8, color: "var(--color-text-1)", fontSize: 12, resize: "none", fontFamily: "inherit" }}
                   />
                   <button
                     onClick={() => handlePostComment(item.id)}
                     disabled={!draft.trim() || posting}
-                    style={{ flexShrink: 0, padding: "8px 14px", borderRadius: 10, border: "none", background: "var(--gradient-primary)", color: "white", fontWeight: 700, cursor: "pointer", fontSize: 12, opacity: !draft.trim() || posting ? 0.5 : 1 }}
+                    style={{ flexShrink: 0, padding: "8px 14px", borderRadius: 10, border: "none", background: "var(--gradient-primary)", color: "var(--color-on-accent)", fontWeight: 700, cursor: "pointer", fontSize: 12, opacity: !draft.trim() || posting ? 0.5 : 1 }}
                   >
                     {posting ? "Sending…" : "Send"}
                   </button>

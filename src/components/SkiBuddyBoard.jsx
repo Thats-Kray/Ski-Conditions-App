@@ -64,8 +64,8 @@ function ResponseThread({ post, currentUserId, onStatusChange }) {
     }
   }
 
-  if (loading) return <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", padding: "8px 0" }}>Loading responses…</div>
-  if (!responses?.length) return <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", padding: "8px 0" }}>No responses yet.</div>
+  if (loading) return <div style={{ fontSize: 12, color: "var(--ink-40)", padding: "8px 0" }}>Loading responses…</div>
+  if (!responses?.length) return <div style={{ fontSize: 12, color: "var(--ink-40)", padding: "8px 0" }}>No responses yet.</div>
 
   return (
     <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
@@ -73,20 +73,20 @@ function ResponseThread({ post, currentUserId, onStatusChange }) {
         const name = r.profiles?.full_name || r.profiles?.username || "Someone"
         const isOwner = post.user_id === currentUserId
         return (
-          <div key={r.id} style={{ padding: 8, borderRadius: 10, background: "rgba(255,255,255,0.04)", fontSize: 12 }}>
+          <div key={r.id} style={{ padding: 8, borderRadius: 10, background: "var(--overlay-04)", fontSize: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontWeight: 700, color: "white" }}>{name}</span>
-              <span style={{ color: "rgba(255,255,255,0.4)" }}>{timeAgo(r.created_at)}</span>
+              <span style={{ fontWeight: 700, color: "var(--color-text-1)" }}>{name}</span>
+              <span style={{ color: "var(--ink-40)" }}>{timeAgo(r.created_at)}</span>
             </div>
-            {r.message && <div style={{ color: "rgba(255,255,255,0.7)", marginTop: 3 }}>{r.message}</div>}
+            {r.message && <div style={{ color: "var(--ink-70)", marginTop: 3 }}>{r.message}</div>}
             {isOwner && r.status === "pending" && (
               <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                <button onClick={() => handleDecision(r.id, "accepted")} style={{ padding: "4px 10px", borderRadius: 8, border: "none", background: "var(--color-success-strong)", color: "white", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>Accept</button>
-                <button onClick={() => handleDecision(r.id, "declined")} style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "rgba(255,255,255,0.6)", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>Decline</button>
+                <button onClick={() => handleDecision(r.id, "accepted")} style={{ padding: "4px 10px", borderRadius: 8, border: "none", background: "var(--color-success-strong)", color: "var(--color-on-accent)", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>Accept</button>
+                <button onClick={() => handleDecision(r.id, "declined")} style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid var(--overlay-15)", background: "transparent", color: "var(--ink-60)", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>Decline</button>
               </div>
             )}
             {r.status !== "pending" && (
-              <div style={{ marginTop: 4, fontWeight: 700, color: r.status === "accepted" ? "var(--color-success-strong)" : "rgba(255,255,255,0.4)" }}>
+              <div style={{ marginTop: 4, fontWeight: 700, color: r.status === "accepted" ? "var(--color-success-strong)" : "var(--ink-40)" }}>
                 {r.status === "accepted" ? "✅ Accepted" : "Declined"}
               </div>
             )}
@@ -265,9 +265,9 @@ export default function SkiBuddyBoard() {
               style={{
                 flexShrink: 0,
                 padding: "8px 16px", borderRadius: 999, fontSize: 13, fontWeight: 800, cursor: "pointer",
-                background: active ? "var(--color-accent)" : "rgba(255,255,255,0.05)",
-                color: active ? "var(--color-bg)" : "rgba(255,255,255,0.6)",
-                border: active ? "1px solid var(--color-accent)" : "1px solid rgba(255,255,255,0.1)",
+                background: active ? "var(--color-accent)" : "var(--overlay-05)",
+                color: active ? "var(--color-bg)" : "var(--ink-60)",
+                border: active ? "1px solid var(--color-accent)" : "1px solid var(--overlay-10)",
                 whiteSpace: "nowrap",
               }}
             >
@@ -278,11 +278,11 @@ export default function SkiBuddyBoard() {
       </div>
 
       {loading ? (
-        <div style={{ padding: 20, fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Loading…</div>
+        <div style={{ padding: 20, fontSize: 13, color: "var(--ink-40)" }}>Loading…</div>
       ) : loadError ? (
         <div style={{ padding: 20, fontSize: 13, color: "var(--color-danger)" }}>Couldn't load the board. Try again in a bit.</div>
       ) : !visiblePosts.length ? (
-        <div style={{ padding: 20, fontSize: 13, color: "rgba(255,255,255,0.4)" }}>No listings match your filters yet.</div>
+        <div style={{ padding: 20, fontSize: 13, color: "var(--ink-40)" }}>No listings match your filters yet.</div>
       ) : (
         <div style={{ display: "grid", gap: 8 }}>
           {visiblePosts.map((post) => {
@@ -294,8 +294,8 @@ export default function SkiBuddyBoard() {
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <Avatar profile={post.profiles} size={38} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{author}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-text-1)" }}>{author}</div>
+                    <div style={{ fontSize: 11, color: "var(--ink-50)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {RESORT_EMOJI[post.resort_key]} {RESORT_NAMES[post.resort_key] || post.resort_key} · {formatDate(post.ski_date)} · posted {timeAgo(post.created_at)}
                     </div>
                   </div>
@@ -308,14 +308,14 @@ export default function SkiBuddyBoard() {
                   </div>
                 )}
 
-                {post.description && <div style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", marginTop: 10 }}>{post.description}</div>}
+                {post.description && <div style={{ fontSize: 13, color: "var(--ink-80)", marginTop: 10 }}>{post.description}</div>}
 
                 <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 10 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "var(--overlay-06)", color: "var(--ink-60)" }}>
                     {passLabel(post.pass_type)}
                   </span>
                   {styles.map((s) => (
-                    <span key={s.key} style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>
+                    <span key={s.key} style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "var(--overlay-06)", color: "var(--ink-60)" }}>
                       {s.emoji} {s.label}
                     </span>
                   ))}
@@ -330,7 +330,7 @@ export default function SkiBuddyBoard() {
                   )}
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--overlay-06)" }}>
                   {isOwner ? (
                     <button onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)} style={{ background: "none", border: "none", color: "var(--color-accent)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
                       {expandedPostId === post.id ? "Hide responses" : "View responses"}
@@ -341,7 +341,7 @@ export default function SkiBuddyBoard() {
                       disabled={post.status !== "open" || respondedPostIds.has(post.id)}
                       style={{
                         background: "none", border: "none",
-                        color: post.status === "open" && !respondedPostIds.has(post.id) ? "var(--color-accent)" : "rgba(255,255,255,0.3)",
+                        color: post.status === "open" && !respondedPostIds.has(post.id) ? "var(--color-accent)" : "var(--ink-30)",
                         fontSize: 11, fontWeight: 700,
                         cursor: post.status === "open" && !respondedPostIds.has(post.id) ? "pointer" : "default",
                       }}
@@ -350,7 +350,7 @@ export default function SkiBuddyBoard() {
                     </button>
                   )}
                   {!isOwner && (
-                    <button onClick={() => setReportingId(reportingId === post.id ? null : post.id)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", fontSize: 11, cursor: "pointer" }}>
+                    <button onClick={() => setReportingId(reportingId === post.id ? null : post.id)} style={{ background: "none", border: "none", color: "var(--ink-30)", fontSize: 11, cursor: "pointer" }}>
                       🚩 Report
                     </button>
                   )}
@@ -363,12 +363,12 @@ export default function SkiBuddyBoard() {
                       onChange={(e) => setResponseMessage(e.target.value.slice(0, 300))}
                       placeholder="Say hi, mention your plan…"
                       rows={2}
-                      style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: 8, color: "white", fontSize: 12, resize: "none" }}
+                      style={{ background: "rgba(0,0,0,0.3)", border: "1px solid var(--overlay-10)", borderRadius: 10, padding: 8, color: "var(--color-text-1)", fontSize: 12, resize: "none" }}
                     />
                     {responseError && <div style={{ fontSize: 11, color: "var(--color-danger)" }}>{responseError}</div>}
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={() => setRespondingPostId(null)} style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: 12 }}>Cancel</button>
-                      <button onClick={() => handleSubmitResponse(post.id)} disabled={responding} style={{ flex: 2, padding: 8, borderRadius: 8, border: "none", background: "var(--gradient-primary)", color: "white", fontWeight: 700, cursor: "pointer", fontSize: 12, opacity: responding ? 0.6 : 1 }}>
+                      <button onClick={() => setRespondingPostId(null)} style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid var(--overlay-10)", background: "transparent", color: "var(--ink-60)", cursor: "pointer", fontSize: 12 }}>Cancel</button>
+                      <button onClick={() => handleSubmitResponse(post.id)} disabled={responding} style={{ flex: 2, padding: 8, borderRadius: 8, border: "none", background: "var(--gradient-primary)", color: "var(--color-on-accent)", fontWeight: 700, cursor: "pointer", fontSize: 12, opacity: responding ? 0.6 : 1 }}>
                         {responding ? "Sending…" : "Send"}
                       </button>
                     </div>
@@ -382,11 +382,11 @@ export default function SkiBuddyBoard() {
                       onChange={(e) => setReportReason(e.target.value.slice(0, 300))}
                       placeholder="Why are you reporting this?"
                       rows={2}
-                      style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: 8, color: "white", fontSize: 12, resize: "none" }}
+                      style={{ background: "rgba(0,0,0,0.3)", border: "1px solid var(--overlay-10)", borderRadius: 10, padding: 8, color: "var(--color-text-1)", fontSize: 12, resize: "none" }}
                     />
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={() => { setReportingId(null); setReportReason("") }} style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: 12 }}>Cancel</button>
-                      <button onClick={() => handleReportSubmit(post.id)} disabled={!reportReason.trim()} style={{ flex: 2, padding: 8, borderRadius: 8, border: "none", background: "var(--color-danger)", color: "white", fontWeight: 700, cursor: "pointer", fontSize: 12, opacity: reportReason.trim() ? 1 : 0.5 }}>
+                      <button onClick={() => { setReportingId(null); setReportReason("") }} style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid var(--overlay-10)", background: "transparent", color: "var(--ink-60)", cursor: "pointer", fontSize: 12 }}>Cancel</button>
+                      <button onClick={() => handleReportSubmit(post.id)} disabled={!reportReason.trim()} style={{ flex: 2, padding: 8, borderRadius: 8, border: "none", background: "var(--color-danger)", color: "var(--color-on-accent)", fontWeight: 700, cursor: "pointer", fontSize: 12, opacity: reportReason.trim() ? 1 : 0.5 }}>
                         Submit Report
                       </button>
                     </div>
