@@ -9,13 +9,13 @@ import {
 } from "../lib/skiDayDetails"
 
 const labelStyle = {
-  display: "block", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)",
+  display: "block", fontSize: 12, fontWeight: 700, color: "var(--ink-50)",
   marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5,
 }
 
 const inputStyle = {
-  width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 10, padding: "10px 12px", color: "white", fontSize: 14, boxSizing: "border-box",
+  width: "100%", background: "var(--overlay-06)", border: "1px solid var(--overlay-12)",
+  borderRadius: 10, padding: "10px 12px", color: "var(--color-text-1)", fontSize: 14, boxSizing: "border-box",
   outline: "none",
 }
 
@@ -185,7 +185,7 @@ export default function SkiDayDetailsForm({
               setTitle(Array.from(e.target.value).slice(0, TITLE_MAX_LENGTH).join(""))
             }
           />
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 4, textAlign: "right" }}>
+          <div style={{ fontSize: 11, color: "var(--ink-35)", marginTop: 4, textAlign: "right" }}>
             {Array.from(title).length}/{TITLE_MAX_LENGTH}
           </div>
         </div>
@@ -217,7 +217,7 @@ export default function SkiDayDetailsForm({
                   style={{
                     position: "absolute", top: -6, right: -6, width: 20, height: 20,
                     borderRadius: "50%", border: "none", background: "var(--color-danger)",
-                    color: "white", fontSize: 11, lineHeight: 1, cursor: "pointer", padding: 0,
+                    color: "var(--color-on-accent)", fontSize: 11, lineHeight: 1, cursor: "pointer", padding: 0,
                   }}
                 >
                   ✕
@@ -239,7 +239,7 @@ export default function SkiDayDetailsForm({
                   style={{
                     position: "absolute", top: -6, right: -6, width: 20, height: 20,
                     borderRadius: "50%", border: "none", background: "var(--color-danger)",
-                    color: "white", fontSize: 11, lineHeight: 1, cursor: "pointer", padding: 0,
+                    color: "var(--color-on-accent)", fontSize: 11, lineHeight: 1, cursor: "pointer", padding: 0,
                   }}
                 >
                   ✕
@@ -252,8 +252,8 @@ export default function SkiDayDetailsForm({
         <label
           style={{
             display: "inline-block", padding: "9px 14px", borderRadius: 10,
-            border: "1px dashed rgba(255,255,255,0.2)", fontSize: 13, fontWeight: 700,
-            color: full ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.75)",
+            border: "1px dashed var(--overlay-20)", fontSize: 13, fontWeight: 700,
+            color: full ? "var(--ink-30)" : "var(--ink-75)",
             cursor: full ? "default" : "pointer",
           }}
         >
@@ -292,8 +292,8 @@ export default function SkiDayDetailsForm({
             disabled={saving}
             style={{
               flex: 1, padding: "12px", borderRadius: 12,
-              border: "1px solid rgba(255,255,255,0.12)", background: "transparent",
-              color: "rgba(255,255,255,0.7)", fontSize: 14, fontWeight: 700,
+              border: "1px solid var(--overlay-12)", background: "transparent",
+              color: "var(--ink-70)", fontSize: 14, fontWeight: 700,
               cursor: saving ? "not-allowed" : "pointer",
             }}
           >
@@ -306,7 +306,7 @@ export default function SkiDayDetailsForm({
           disabled={saving}
           style={{
             flex: 2, padding: "12px", borderRadius: 12, border: "none",
-            background: "var(--gradient-cta)", color: "white", fontSize: 14, fontWeight: 900,
+            background: "var(--gradient-cta)", color: "var(--color-on-accent)", fontSize: 14, fontWeight: 900,
             cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1,
           }}
         >

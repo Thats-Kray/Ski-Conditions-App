@@ -1,13 +1,13 @@
 import { useState } from "react"
 
 const inputStyle = {
-  width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 10, padding: "10px 12px", color: "white", fontSize: 14, boxSizing: "border-box",
+  width: "100%", background: "var(--overlay-06)", border: "1px solid var(--overlay-12)",
+  borderRadius: 10, padding: "10px 12px", color: "var(--color-text-1)", fontSize: 14, boxSizing: "border-box",
   outline: "none",
 }
 
 const labelStyle = {
-  display: "block", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)",
+  display: "block", fontSize: 12, fontWeight: 700, color: "var(--ink-50)",
   marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5,
 }
 
@@ -50,7 +50,7 @@ export default function SessionStatsForm({ initial, onSave, onSkip, saving }) {
           onClick={handleSave}
           disabled={saving}
           style={{
-            background: "var(--gradient-cta)", color: "white", border: "none",
+            background: "var(--gradient-cta)", color: "var(--color-on-accent)", border: "none",
             borderRadius: 12, padding: "12px 20px", fontSize: 14, fontWeight: 900,
             cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, flex: onSkip ? "none" : 1,
           }}
@@ -61,7 +61,7 @@ export default function SessionStatsForm({ initial, onSave, onSkip, saving }) {
           <button
             type="button"
             onClick={onSkip}
-            style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 13, fontWeight: 700 }}
+            style={{ background: "none", border: "none", color: "var(--ink-40)", cursor: "pointer", fontSize: 13, fontWeight: 700 }}
           >
             I'll add stats later
           </button>

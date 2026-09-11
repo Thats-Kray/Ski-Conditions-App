@@ -4,17 +4,17 @@ import SkiDayDetailsForm from "./SkiDayDetailsForm"
 import { clampTitle } from "../lib/skiDayDetails"
 
 const inputStyle = {
-  width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 10, padding: "10px 12px", color: "white", fontSize: 14, boxSizing: "border-box",
+  width: "100%", background: "var(--overlay-06)", border: "1px solid var(--overlay-12)",
+  borderRadius: 10, padding: "10px 12px", color: "var(--color-text-1)", fontSize: 14, boxSizing: "border-box",
   outline: "none",
 }
 
 const lockedInputStyle = {
-  ...inputStyle, background: "rgba(255,255,255,0.02)", color: "rgba(255,255,255,0.35)", cursor: "not-allowed",
+  ...inputStyle, background: "var(--overlay-02)", color: "var(--ink-35)", cursor: "not-allowed",
 }
 
 const labelStyle = {
-  display: "block", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)",
+  display: "block", fontSize: 12, fontWeight: 700, color: "var(--ink-50)",
   marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5,
 }
 
@@ -116,7 +116,7 @@ export default function SessionEditForm({ session, details, detailsLoadFailed, o
       </div>
 
       {statsLocked && (
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px 12px" }}>
+        <div style={{ fontSize: 12, color: "var(--ink-40)", background: "var(--overlay-03)", border: "1px solid var(--overlay-08)", borderRadius: 10, padding: "10px 12px" }}>
           Stats are locked once set (from GPS tracking, Strava, or a prior entry) — only the name and mountain can be changed.
         </div>
       )}
@@ -180,7 +180,7 @@ export default function SessionEditForm({ session, details, detailsLoadFailed, o
           onSave={(diff) => handleSave(diff)}
         />
       ) : (
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>Loading photos and tags…</div>
+        <div style={{ fontSize: 12, color: "var(--ink-35)" }}>Loading photos and tags…</div>
       )}
 
       {error && <div style={{ fontSize: 13, color: "var(--color-danger)" }}>{error}</div>}
@@ -190,7 +190,7 @@ export default function SessionEditForm({ session, details, detailsLoadFailed, o
         onClick={() => handleSave()}
         disabled={saving || detailsLoadFailed}
         style={{
-          background: "var(--gradient-cta)", color: "white", border: "none",
+          background: "var(--gradient-cta)", color: "var(--color-on-accent)", border: "none",
           borderRadius: 12, padding: "12px 20px", fontSize: 14, fontWeight: 900,
           cursor: saving || detailsLoadFailed ? "not-allowed" : "pointer", opacity: saving || detailsLoadFailed ? 0.7 : 1,
         }}

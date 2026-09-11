@@ -33,15 +33,15 @@ function StatTile({ value, label }) {
   return (
     <div
       style={{
-        background: "rgba(255,255,255,0.05)",
-        border: "1px solid rgba(255,255,255,0.1)",
+        background: "var(--overlay-05)",
+        border: "1px solid var(--overlay-10)",
         borderRadius: 16,
         padding: "12px 8px",
         textAlign: "center",
       }}
     >
-      <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>{value}</div>
-      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.5, marginTop: 3 }}>
+      <div style={{ fontSize: 20, fontWeight: 900, color: "var(--color-text-1)" }}>{value}</div>
+      <div style={{ fontSize: 10, color: "var(--ink-50)", textTransform: "uppercase", letterSpacing: 0.5, marginTop: 3 }}>
         {label}
       </div>
     </div>
@@ -184,7 +184,7 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
         position: "fixed",
         inset: 0,
         zIndex: 400,
-        background: "rgba(4,8,15,0.85)",
+        background: "var(--scrim)",
         backdropFilter: "blur(10px)",
         display: "flex",
         alignItems: "center",
@@ -201,7 +201,7 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
           maxHeight: "90vh",
           overflowY: "auto",
           background: "var(--color-bg-deep)",
-          border: "1px solid rgba(255,255,255,0.1)",
+          border: "1px solid var(--overlay-10)",
           borderRadius: 24,
           boxShadow: "0 40px 120px rgba(0,0,0,0.85)",
           padding: 22,
@@ -209,19 +209,19 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
       >
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-          <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>🎿 Day Complete</div>
+          <div style={{ fontSize: 20, fontWeight: 900, color: "var(--color-text-1)" }}>🎿 Day Complete</div>
           <button
             onClick={onClose}
             style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--overlay-08)",
+              border: "1px solid var(--overlay-12)",
               borderRadius: "50%",
               width: 32,
               height: 32,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "white",
+              color: "var(--color-text-1)",
               fontSize: 18,
               cursor: "pointer",
               flexShrink: 0,
@@ -231,7 +231,7 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
           </button>
         </div>
 
-        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginBottom: 20 }}>
+        <div style={{ fontSize: 14, color: "var(--ink-55)", marginBottom: 20 }}>
           {resortName(session.resort_name)} · {formatSessionDate(session.session_date)}
         </div>
 
@@ -252,24 +252,24 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "var(--overlay-04)",
+              border: "1px solid var(--overlay-08)",
               borderRadius: 12,
               padding: "10px 14px",
-              color: "white",
+              color: "var(--color-text-1)",
               fontWeight: 800,
               fontSize: 13,
               cursor: "pointer",
             }}
           >
             <span>Run Breakdown</span>
-            <span style={{ color: "rgba(255,255,255,0.4)" }}>{breakdownOpen ? "▴" : "▾"}</span>
+            <span style={{ color: "var(--ink-40)" }}>{breakdownOpen ? "▴" : "▾"}</span>
           </button>
 
           {breakdownOpen && (
             <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
               {runRows.length === 0 ? (
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", padding: "8px 4px" }}>
+                <div style={{ fontSize: 12, color: "var(--ink-35)", padding: "8px 4px" }}>
                   No individual runs recorded.
                 </div>
               ) : runRows.map((r, i) => (
@@ -279,9 +279,9 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
                     display: "flex",
                     justifyContent: "space-between",
                     fontSize: 13,
-                    color: "rgba(255,255,255,0.75)",
+                    color: "var(--ink-75)",
                     padding: "6px 10px",
-                    background: "rgba(255,255,255,0.02)",
+                    background: "var(--overlay-02)",
                     borderRadius: 8,
                   }}
                 >
@@ -300,8 +300,8 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
         {/* Ski day details — a persistent section with its own Save, not a modal step.
             This modal has no step machine, and adding one for three fields would rewire
             every existing action button. "Done" in the action row below is the skip. */}
-        <div style={{ marginBottom: 20, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: "white", marginBottom: 10 }}>
+        <div style={{ marginBottom: 20, paddingTop: 16, borderTop: "1px solid var(--overlay-08)" }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-text-1)", marginBottom: 10 }}>
             📸 Day Details
           </div>
 
@@ -322,7 +322,7 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
               onSave={handleSaveDetails}
             />
           ) : (
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>Loading details…</div>
+            <div style={{ fontSize: 12, color: "var(--ink-35)" }}>Loading details…</div>
           )}
         </div>
 
@@ -333,11 +333,11 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
             style={{
               flex: 1,
               minWidth: 100,
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.14)",
+              background: "var(--overlay-08)",
+              border: "1px solid var(--overlay-14)",
               borderRadius: 14,
               padding: "12px 14px",
-              color: "white",
+              color: "var(--color-text-1)",
               fontWeight: 800,
               fontSize: 13,
               cursor: "pointer",
@@ -351,11 +351,11 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
             style={{
               flex: 1,
               minWidth: 100,
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.14)",
+              background: "var(--overlay-08)",
+              border: "1px solid var(--overlay-14)",
               borderRadius: 14,
               padding: "12px 14px",
-              color: "white",
+              color: "var(--color-text-1)",
               fontWeight: 800,
               fontSize: 13,
               cursor: "pointer",
@@ -370,11 +370,11 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
               style={{
                 flex: 1,
                 minWidth: 100,
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.14)",
+                background: "var(--overlay-08)",
+                border: "1px solid var(--overlay-14)",
                 borderRadius: 14,
                 padding: "12px 14px",
-                color: "white",
+                color: "var(--color-text-1)",
                 fontWeight: 800,
                 fontSize: 13,
                 cursor: "pointer",
@@ -401,7 +401,7 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
                     border: "none",
                     borderRadius: 14,
                     padding: "12px 14px",
-                    color: "white",
+                    color: "var(--color-on-accent)",
                     fontWeight: 800,
                     fontSize: 13,
                     textDecoration: "none",
@@ -420,7 +420,7 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
                     border: "none",
                     borderRadius: 14,
                     padding: "12px 14px",
-                    color: "white",
+                    color: "var(--color-on-accent)",
                     fontWeight: 800,
                     fontSize: 13,
                     cursor: uploadState === "loading" ? "default" : "pointer",
@@ -445,7 +445,7 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
               border: "none",
               borderRadius: 14,
               padding: "12px 14px",
-              color: "white",
+              color: "var(--color-on-accent)",
               fontWeight: 900,
               fontSize: 13,
               cursor: "pointer",

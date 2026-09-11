@@ -173,7 +173,7 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
           maxHeight: sheetOpen ? 360 : 0,
           overflow: "hidden",
           transition: "max-height 0.28s ease",
-          background: "rgba(4,8,15,0.96)",
+          background: "var(--color-nav-bg)",
           backdropFilter: "blur(16px)",
           borderTop: sheetOpen ? "1px solid rgba(56,189,248,0.2)" : "none",
           borderRadius: "20px 20px 0 0",
@@ -182,17 +182,17 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
         <div style={{ padding: "18px 18px 16px" }}>
           {/* Header */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <div style={{ fontSize: 15, fontWeight: 900, color: "white", display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ fontSize: 15, fontWeight: 900, color: "var(--color-text-1)", display: "flex", alignItems: "center", gap: 6 }}>
               ⛷ Skiing at {activeSession.resortName}
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); setSheetOpen(false) }}
               style={{
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.12)",
+                background: "var(--overlay-08)",
+                border: "1px solid var(--overlay-12)",
                 borderRadius: 999,
                 padding: "5px 12px",
-                color: "rgba(255,255,255,0.7)",
+                color: "var(--ink-70)",
                 fontSize: 12,
                 fontWeight: 700,
                 cursor: "pointer",
@@ -212,15 +212,15 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
               <div
                 key={label}
                 style={{
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "var(--overlay-05)",
+                  border: "1px solid var(--overlay-10)",
                   borderRadius: 14,
                   padding: "10px 8px",
                   textAlign: "center",
                 }}
               >
-                <div style={{ fontSize: 18, fontWeight: 900, color: "white" }}>{value}</div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.5, marginTop: 2 }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "var(--color-text-1)" }}>{value}</div>
+                <div style={{ fontSize: 10, color: "var(--ink-50)", textTransform: "uppercase", letterSpacing: 0.5, marginTop: 2 }}>
                   {label}
                 </div>
               </div>
@@ -228,13 +228,13 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
           </div>
 
           {/* Current segment + speed */}
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginBottom: 4 }}>
+          <div style={{ fontSize: 13, color: "var(--ink-75)", marginBottom: 4 }}>
             Current: {tracker.currentSegmentType || "—"}
             {tracker.currentSpeedMph > 0 && <span> · ↓ {tracker.currentSpeedMph} mph</span>}
           </div>
 
           {/* GPS accuracy */}
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
+          <div style={{ fontSize: 13, color: "var(--ink-55)", display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
             GPS:
             <span
               style={{
@@ -256,16 +256,16 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
               alignItems: "center",
               justifyContent: "space-between",
               gap: 10,
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "var(--overlay-05)",
+              border: "1px solid var(--overlay-10)",
               borderRadius: 14,
               padding: "10px 12px",
               marginBottom: 16,
             }}
           >
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>📍 Share my location</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-text-1)" }}>📍 Share my location</div>
+              <div style={{ fontSize: 11, color: "var(--ink-50)", marginTop: 2 }}>
                 {tracker.status === "error"
                   ? "GPS tracking requires location permission"
                   : "Friends see a live pin on the map while this is on"}
@@ -280,8 +280,8 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
                 width: 44,
                 height: 26,
                 borderRadius: 999,
-                border: "1px solid rgba(255,255,255,0.18)",
-                background: sharingLocation ? "var(--gradient-primary)" : "rgba(255,255,255,0.12)",
+                border: "1px solid var(--overlay-18)",
+                background: sharingLocation ? "var(--gradient-primary)" : "var(--overlay-12)",
                 position: "relative",
                 cursor: tracker.status === "error" ? "not-allowed" : "pointer",
                 opacity: tracker.status === "error" ? 0.5 : 1,
@@ -298,7 +298,7 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
                   width: 20,
                   height: 20,
                   borderRadius: "50%",
-                  background: "white",
+                  background: "var(--color-on-accent)",
                   transition: "left 0.2s",
                 }}
               />
@@ -311,11 +311,11 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
               onClick={handlePauseResume}
               style={{
                 flex: 1,
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.14)",
+                background: "var(--overlay-08)",
+                border: "1px solid var(--overlay-14)",
                 borderRadius: 14,
                 padding: "12px 14px",
-                color: "white",
+                color: "var(--color-text-1)",
                 fontWeight: 800,
                 fontSize: 13,
                 cursor: "pointer",
@@ -336,7 +336,7 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
                 border: "none",
                 borderRadius: 14,
                 padding: "12px 14px",
-                color: "white",
+                color: "var(--color-on-accent)",
                 fontWeight: 900,
                 fontSize: 13,
                 cursor: "pointer",
@@ -353,7 +353,7 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
       <div
         onClick={() => setSheetOpen((v) => !v)}
         style={{
-          background: "rgba(4,8,15,0.92)",
+          background: "var(--color-nav-bg)",
           backdropFilter: "blur(16px)",
           borderTop: "1px solid rgba(56,189,248,0.25)",
           padding: "12px 16px",
@@ -373,13 +373,13 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
             animation: pulsing ? "pd-gps-pulse 1s ease-in-out infinite" : "none",
           }}
         />
-        <span style={{ fontSize: 13, fontWeight: 800, color: "white", flexShrink: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color: "var(--color-text-1)", flexShrink: 0 }}>
           {isPaused ? "Paused" : "Active"}
         </span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.75)", flexShrink: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink-75)", flexShrink: 0 }}>
           {formatElapsed(elapsedMs)}
         </span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.75)", flexShrink: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink-75)", flexShrink: 0 }}>
           ⛷ {tracker.runCount ?? 0} runs
         </span>
         {tracker.currentSpeedMph > 0 && (
@@ -404,7 +404,7 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
         >
           End Day
         </button>
-        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", flexShrink: 0, transition: "transform 0.2s", transform: sheetOpen ? "rotate(180deg)" : "none" }}>
+        <span style={{ fontSize: 12, color: "var(--ink-40)", flexShrink: 0, transition: "transform 0.2s", transform: sheetOpen ? "rotate(180deg)" : "none" }}>
           ▲
         </span>
       </div>

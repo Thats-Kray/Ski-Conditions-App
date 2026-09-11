@@ -53,14 +53,14 @@ function StartMyDayCta({ currentUser, sessionActive, resorts, onStartSession }) 
         rounded={false}
       >
         <div style={{
-          background: "rgba(30,41,59,0.45)",
+          background: "var(--color-modal-bg)",
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
-          border: "1px solid rgba(255,255,255,0.16)",
+          border: "1px solid var(--overlay-16)",
           borderRadius: 20,
           padding: "20px 22px",
         }}>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: "white" }}>Ready to ski?</h2>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: "var(--color-text-1)" }}>Ready to ski?</h2>
           <button
             onClick={() => onStartSession(topResort?.name ?? "Unknown Resort")}
             style={{
@@ -70,7 +70,7 @@ function StartMyDayCta({ currentUser, sessionActive, resorts, onStartSession }) 
               border: "none",
               borderRadius: 999,
               padding: "14px 20px",
-              color: "white",
+              color: "var(--color-on-accent)",
               fontWeight: 900,
               fontSize: 15,
               cursor: "pointer",
@@ -119,8 +119,8 @@ function CheckInTodayCta({ resorts, currentUser, onCheckedIn }) {
         style={{
           display: "block", margin: "0 auto 16px", padding: "10px 22px",
           borderRadius: 999,
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.18)",
+          background: "var(--overlay-06)",
+          border: "1px solid var(--overlay-18)",
           color: "var(--color-text-1)", fontWeight: 700, fontSize: 14, cursor: "pointer",
         }}
       >

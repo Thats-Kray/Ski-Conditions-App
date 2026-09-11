@@ -114,8 +114,8 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
   return (
     <div
       style={{
-        background: "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,255,255,0.1)",
+        background: "var(--overlay-06)",
+        border: "1px solid var(--overlay-10)",
         borderRadius: 18,
         padding: 16,
         display: "grid",
@@ -125,11 +125,11 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
       <div style={{ fontWeight: 900, fontSize: 16 }}>I’m Skiing Today</div>
 
       {!user && !initialLoading ? (
-        <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>
+        <div style={{ color: "var(--ink-72)", fontSize: 14 }}>
           Sign in to tell your crew where you’re skiing today.
         </div>
       ) : initialLoading ? (
-        <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>
+        <div style={{ color: "var(--ink-72)", fontSize: 14 }}>
           Loading today’s plan...
         </div>
       ) : hasPlan && !isEditing ? (
@@ -138,8 +138,8 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
             style={{
               display: "grid",
               gap: 8,
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "var(--overlay-04)",
+              border: "1px solid var(--overlay-08)",
               borderRadius: 14,
               padding: 12,
             }}
@@ -148,11 +148,11 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
               {resortName(resortKey) || "No resort selected"}
             </div>
 
-            <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>
+            <div style={{ color: "var(--ink-72)", fontSize: 14 }}>
               ETA: {(eta && formatEtaShort(new Date(`${today}T${eta}:00`).toISOString())) || "No ETA"}
             </div>
 
-            <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>
+            <div style={{ color: "var(--ink-72)", fontSize: 14 }}>
               Note: {note || "No note added"}
             </div>
           </div>
@@ -165,7 +165,7 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
             }}
             style={{
               background: "var(--gradient-cta)",
-              color: "white",
+              color: "var(--color-on-accent)",
               border: "none",
               padding: "10px 12px",
               borderRadius: 12,
@@ -183,9 +183,9 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
             onChange={(e) => setResortKey(e.target.value)}
             required
             style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              color: "white",
+              background: "var(--overlay-08)",
+              border: "1px solid var(--overlay-12)",
+              color: "var(--color-text-1)",
               padding: "10px 12px",
               borderRadius: 12,
               outline: "none",
@@ -250,9 +250,9 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
                 value={eta}
                 onChange={(e) => setEta(e.target.value)}
                 style={{
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "white",
+                  background: "var(--overlay-08)",
+                  border: "1px solid var(--overlay-12)",
+                  color: "var(--color-text-1)",
                   padding: "10px 12px",
                   borderRadius: 12,
                   outline: "none",
@@ -273,9 +273,9 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
             placeholder="Optional note for the crew"
             rows={3}
             style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              color: "white",
+              background: "var(--overlay-08)",
+              border: "1px solid var(--overlay-12)",
+              color: "var(--color-text-1)",
               padding: "10px 12px",
               borderRadius: 12,
               outline: "none",
@@ -289,9 +289,9 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
               disabled={loading}
               style={{
                 background: loading
-                  ? "rgba(255,255,255,0.12)"
+                  ? "var(--overlay-12)"
                   : "var(--gradient-cta)",
-                color: "white",
+                color: loading ? "var(--color-text-1)" : "var(--color-on-accent)",
                 border: "none",
                 padding: "10px 12px",
                 borderRadius: 12,
@@ -310,9 +310,9 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
                   setMessage("")
                 }}
                 style={{
-                  background: "rgba(255,255,255,0.06)",
-                  color: "white",
-                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "var(--overlay-06)",
+                  color: "var(--color-text-1)",
+                  border: "1px solid var(--overlay-12)",
                   padding: "10px 12px",
                   borderRadius: 12,
                   cursor: "pointer",
@@ -327,7 +327,7 @@ export default function SkiCheckInForm({ resorts, onSaved }) {
       )}
 
       {message && (
-        <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 13 }}>
+        <div style={{ color: "var(--ink-72)", fontSize: 13 }}>
           {message}
         </div>
       )}
