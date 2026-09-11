@@ -65,6 +65,20 @@ function contrast(a, b) {
 const DARKEST_BG = "#020510"   // aurora-peak
 const LIGHTEST_SURFACE = "#1C1208" // base-lodge --color-bg-elevated
 
+// The five LIGHT-mode grounds, from the [data-mode="light"] blocks in
+// src/index.css, plus the white --color-bg-elevated / --color-modal-bg every
+// light palette shares. crewColors.js's own header comment said these would need
+// rechecking the day a light theme landed, and that "the tests below encode the
+// thresholds, so they will tell you" — this list is what makes them tell you.
+const LIGHT_GROUNDS = [
+  "#F2F7FC", // blizzard      --color-bg
+  "#FDF8F0", // alpine-dawn   --color-bg
+  "#F0F6F6", // storm-chaser  --color-bg
+  "#F8F5FE", // aurora-peak   --color-bg
+  "#FDF6EF", // base-lodge    --color-bg
+  "#FFFFFF", // every light palette's --color-bg-elevated / --color-modal-bg
+]
+
 test("there are six crew slots and they are all distinct", () => {
   assert.equal(CREW_COLORS.length, 6)
   assert.equal(new Set(CREW_COLORS).size, 6)
@@ -90,9 +104,9 @@ test("no two crew slots sit within 25 degrees of hue", () => {
   }
 })
 
-test("every crew slot clears 3:1 against the darkest and lightest theme grounds", () => {
+test("every crew slot clears 3:1 against every theme ground, dark and light", () => {
   for (const c of CREW_COLORS) {
-    for (const bg of [DARKEST_BG, LIGHTEST_SURFACE]) {
+    for (const bg of [DARKEST_BG, LIGHTEST_SURFACE, ...LIGHT_GROUNDS]) {
       const ratio = contrast(c, bg)
       assert.ok(ratio >= 3, `${c} on ${bg} is only ${ratio.toFixed(2)}:1`)
     }

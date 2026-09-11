@@ -14,17 +14,26 @@
  * works in two themes out of five is a palette that does not work.
  *
  * Fixed hues are the trade: the calendar no longer reskins with the theme, but it
- * stays readable in all of them. This is affordable because all five themes are
- * dark (backgrounds run #020510 to #0C0704), so one palette clears every ground.
- * If a LIGHT theme is ever added, these need rechecking — the tests below encode
- * the thresholds, so they will tell you.
+ * stays readable in all of them. This was affordable while all five themes were
+ * dark (backgrounds ran #020510 to #0C0704), so one palette cleared every ground.
+ *
+ * ⚠️ LIGHT MODE HAS NOW LANDED, AND IT BREAKS THAT ASSUMPTION.
+ * The light palettes' grounds run #F0F6F6 to #FFFFFF, and ALL SIX hues fail the
+ * 3:1 contract against every one of them — 1.38:1 (#A3E635) to 2.72:1 (#A78BFA).
+ * The contrast test in crewColors.test.js now lists the light grounds and FAILS
+ * on purpose, exactly as this comment promised it would. Redesigning the palette
+ * is a real design decision (six hues, ≥25° apart, ≥3:1 on BOTH a near-black and
+ * a near-white ground — likely a mode-conditional pair of palettes) and is
+ * deliberately deferred rather than patched in a fix wave. The failing test is
+ * the tracker.
  *
  * Do not "restore" the theme tokens. That is the bug, not the feature.
  *
  * The constraints, all asserted in crewColors.test.js with real color math:
  *   - six distinct literal hex values
  *   - no two within 25° of hue (actual minimum: ~40°)
- *   - every one ≥3:1 against the darkest theme bg and the lightest elevated surface
+ *   - every one ≥3:1 against every theme ground — dark (passing) and light
+ *     (currently failing, see above)
  */
 
 export const CREW_COLORS = [
