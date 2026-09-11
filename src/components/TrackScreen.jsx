@@ -52,15 +52,26 @@ function StartMyDayCta({ currentUser, sessionActive, resorts, onStartSession }) 
         scoreSlot={null}
         rounded={false}
       >
+        {/* Frozen dark glass, deliberately NOT tokenised (Rule 3 / E4). This panel
+            is a child of HeroPhotoHeader, whose photo scrim
+            (`rgba(4,8,15,0.88) -> rgba(2,6,23,0.3)` over the photo) is frozen dark
+            in BOTH modes — so this panel's ground is dark in light mode too. The
+            retrofit turned this 0.45 glass into the fully-opaque
+            `var(--color-modal-bg)`, which both destroyed the blur-through effect in
+            dark mode and (in light mode) painted an opaque white card onto a dark
+            hero. Rule 3's panel guidance is for near-solid 0.96+ backgrounds, not a
+            deliberately translucent glass. Because the ground is frozen, the text
+            below is frozen light too rather than using the adaptive ink and text
+            tokens. */}
         <div style={{
-          background: "var(--color-modal-bg)",
+          background: "rgba(30,41,59,0.45)",
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
-          border: "1px solid var(--overlay-16)",
+          border: "1px solid rgba(255,255,255,0.16)",
           borderRadius: 20,
           padding: "20px 22px",
         }}>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: "var(--color-text-1)" }}>Ready to ski?</h2>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: "var(--color-on-accent)" }}>Ready to ski?</h2>
           <button
             onClick={() => onStartSession(topResort?.name ?? "Unknown Resort")}
             style={{
@@ -79,6 +90,8 @@ function StartMyDayCta({ currentUser, sessionActive, resorts, onStartSession }) 
           >
             Start My Day ⛷
           </button>
+          {/* slate-200 @ 75% — frozen for the same reason as the panel above, not
+              switched to --ink-75 (which is near-black under the light palettes). */}
           <div style={{ fontSize: 13, color: "rgba(226,232,240,0.75)", marginTop: 10, textAlign: "center" }}>
             Track your runs, vertical, and speed.
           </div>

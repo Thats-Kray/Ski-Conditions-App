@@ -139,13 +139,20 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
           {r.isOpen === true && (
             <div style={{ background: "rgba(10,30,10,0.75)", border: "1px solid rgba(34,197,94,0.5)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, color: "var(--color-success)", backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>Open</div>
           )}
-          <div style={{ background: "rgba(4,8,15,0.65)", border: "1px solid var(--overlay-12)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>{r.pass}</div>
+          {/* This chip sits on the card hero, which is frozen dark in BOTH modes
+              (photo + dark scrim, or scoreGradient — every branch of which is a
+              dark gradient in the light palettes too). With no explicit color it
+              inherited --color-text-1, which is near-black in light mode. Same
+              treatment as HeroPhotoHeader's own title. */}
+          <div style={{ background: "rgba(4,8,15,0.65)", border: "1px solid var(--overlay-12)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, color: "var(--color-on-accent)", backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>{r.pass}</div>
           <div style={{ background: "rgba(4,8,15,0.65)", border: "1px solid var(--overlay-12)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 900, color: riskColor(r.driveRisk), backdropFilter: "blur(8px)", letterSpacing: 0.3 }}>{r.driveRisk || "Unknown"}</div>
         </div>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 12, paddingTop: 44 }}>
           <ResortLogo resort={r} />
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.05 }}>{r.name}</div>
+            {/* Frozen-dark hero (see the pass chip above) — explicit light ink
+                rather than the near-black --color-text-1 light mode inherits. */}
+            <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.05, color: "var(--color-on-accent)" }}>{r.name}</div>
             <div style={{ marginTop: 5, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
               <Badge label={r.powderTier ?? "Closed"} color={TIER_COLORS[r.powderTier] ?? TIER_COLORS.Closed} />
               {/* A closed resort is quiet by definition — "😶 Quiet" next to
@@ -254,7 +261,11 @@ function ResortCard({ r, skierCounts, skierDetails, activityCount = 0, friendsGo
                 border: isConfirmed ? "1px solid rgba(34,197,94,0.4)" : "none",
                 color: isConfirmed ? "var(--color-success)" : "var(--color-pass-pill-text)",
                 fontWeight: 800, padding: "11px 14px", borderRadius: 14,
-                background: isConfirmed ? "rgba(10,30,10,0.5)" : "var(--gradient-primary)",
+                // Card BODY, not the hero — this was misclassified as a
+                // photo-overlay exception during the retrofit and left frozen
+                // dark, which is a near-black slab under the light palettes.
+                // It's an ordinary success state, so use the success tokens.
+                background: isConfirmed ? "var(--color-success-bg)" : "var(--gradient-primary)",
                 fontSize: 13, cursor: "pointer",
               }}
             >

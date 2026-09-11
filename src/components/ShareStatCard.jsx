@@ -64,9 +64,11 @@ function drawMountains(ctx, W, H, theme) {
   ctx.fill()
 }
 
-function drawSnowflakes(ctx, W, H, seed, theme, themeMode) {
+// `ink`/`inkMode` are passed in rather than read off `theme` so the photo-hero
+// card can freeze them light (see cardInk/cardMode in renderCard).
+function drawSnowflakes(ctx, W, H, seed, ink, inkMode) {
   const rng = (i) => ((seed * 9301 + i * 49297) % 233280) / 233280
-  ctx.fillStyle = rgba(theme.ink, overlayAlpha(0.18, themeMode))
+  ctx.fillStyle = rgba(ink, overlayAlpha(0.18, inkMode))
   for (let i = 0; i < 28; i++) {
     const x = rng(i * 3) * W
     const y = rng(i * 3 + 1) * H * 0.75
@@ -175,6 +177,14 @@ async function renderCard(canvas, { profile, stats, season, session }) {
     }
   }
 
+  // When a hero photo IS present, the whole canvas gets covered by the dark
+  // photo overlay below — so every text/shape drawn after that point must stay
+  // light regardless of the user's light/dark preference, or light mode paints
+  // near-black ink onto a near-black photo scrim. Freeze the ink for the photo
+  // card; the no-photo (season / fallback) card keeps the real adaptive tokens.
+  const cardInk = heroImg ? "#ffffff" : theme.ink
+  const cardMode = heroImg ? "dark" : themeMode
+
   if (heroImg) {
     // Photo background + dark gradient overlay on top for text legibility,
     // matching the resort-card convention used elsewhere in the app (TripCard.jsx):
@@ -204,7 +214,7 @@ async function renderCard(canvas, { profile, stats, season, session }) {
   }
 
   // Snowflakes
-  drawSnowflakes(ctx, W, H, 42, theme, themeMode)
+  drawSnowflakes(ctx, W, H, 42, cardInk, cardMode)
 
   // Mountain silhouettes
   drawMountains(ctx, W, H, theme)
@@ -219,7 +229,7 @@ async function renderCard(canvas, { profile, stats, season, session }) {
   // Season label (top right) — season mode only, `season` isn't passed in session mode.
   if (mode === "season" && season) {
     ctx.font = `600 36px -apple-system, system-ui, sans-serif`
-    ctx.fillStyle = rgba(theme.ink, inkAlpha(0.38, themeMode))
+    ctx.fillStyle = rgba(cardInk, inkAlpha(0.38, cardMode))
     ctx.textAlign = "right"
     ctx.fillText(`${season.label} Season`, W - 76, 108)
   }
@@ -241,14 +251,14 @@ async function renderCard(canvas, { profile, stats, season, session }) {
   // Name + handle
   const name = profile?.full_name || profile?.username || "Skier"
   ctx.font = `900 72px -apple-system, system-ui, sans-serif`
-  ctx.fillStyle = theme.ink
+  ctx.fillStyle = cardInk
   ctx.textAlign = "left"
   ctx.textBaseline = "alphabetic"
   ctx.fillText(name, avatarX + avatarSize + 36, avatarY + 88)
 
   if (profile?.username) {
     ctx.font = `500 36px -apple-system, system-ui, sans-serif`
-    ctx.fillStyle = rgba(theme.ink, inkAlpha(0.38, themeMode))
+    ctx.fillStyle = rgba(cardInk, inkAlpha(0.38, cardMode))
     ctx.fillText(`@${profile.username}`, avatarX + avatarSize + 36, avatarY + 132)
   }
 
@@ -276,14 +286,14 @@ async function renderCard(canvas, { profile, stats, season, session }) {
       // Card background
       drawRoundedRect(ctx, bx, by, bw, bh, 24)
       const cardBg = ctx.createLinearGradient(bx, by, bx + bw, by + bh)
-      cardBg.addColorStop(0, rgba(theme.ink, overlayAlpha(0.065, themeMode)))
-      cardBg.addColorStop(1, rgba(theme.ink, overlayAlpha(0.03, themeMode)))
+      cardBg.addColorStop(0, rgba(cardInk, overlayAlpha(0.065, cardMode)))
+      cardBg.addColorStop(1, rgba(cardInk, overlayAlpha(0.03, cardMode)))
       ctx.fillStyle = cardBg
       ctx.fill()
 
       // Card border
       drawRoundedRect(ctx, bx, by, bw, bh, 24)
-      ctx.strokeStyle = rgba(theme.ink, overlayAlpha(0.1, themeMode))
+      ctx.strokeStyle = rgba(cardInk, overlayAlpha(0.1, cardMode))
       ctx.lineWidth = 1.5
       ctx.stroke()
 
@@ -295,14 +305,14 @@ async function renderCard(canvas, { profile, stats, season, session }) {
 
       // Big number
       ctx.font = `900 88px -apple-system, system-ui, sans-serif`
-      ctx.fillStyle = theme.ink
+      ctx.fillStyle = cardInk
       ctx.textAlign = "left"
       ctx.textBaseline = "alphabetic"
       ctx.fillText(item.value, bx + 28, by + bh - 46)
 
       // Label
       ctx.font = `600 28px -apple-system, system-ui, sans-serif`
-      ctx.fillStyle = rgba(theme.ink, inkAlpha(0.42, themeMode))
+      ctx.fillStyle = rgba(cardInk, inkAlpha(0.42, cardMode))
       ctx.fillText(item.label, bx + 28, by + bh - 14)
     })
 
@@ -326,11 +336,11 @@ async function renderCard(canvas, { profile, stats, season, session }) {
       ctx.fillText("🏔️", 108, trY + 44)
 
       ctx.font = `700 34px -apple-system, system-ui, sans-serif`
-      ctx.fillStyle = rgba(theme.ink, inkAlpha(0.5, themeMode))
+      ctx.fillStyle = rgba(cardInk, inkAlpha(0.5, cardMode))
       ctx.fillText("Top Resort", 168, trY + 36)
 
       ctx.font = `800 38px -apple-system, system-ui, sans-serif`
-      ctx.fillStyle = theme.ink
+      ctx.fillStyle = cardInk
       ctx.fillText(stats.topResort, 168, trY + 70)
     }
   } else {
@@ -338,13 +348,13 @@ async function renderCard(canvas, { profile, stats, season, session }) {
     const headlineY = 430
 
     ctx.font = `900 76px -apple-system, system-ui, sans-serif`
-    ctx.fillStyle = theme.ink
+    ctx.fillStyle = cardInk
     ctx.textAlign = "left"
     ctx.textBaseline = "alphabetic"
     ctx.fillText(resortName(session.resort_name), 76, headlineY)
 
     ctx.font = `600 36px -apple-system, system-ui, sans-serif`
-    ctx.fillStyle = rgba(theme.ink, inkAlpha(0.55, themeMode))
+    ctx.fillStyle = rgba(cardInk, inkAlpha(0.55, cardMode))
     ctx.fillText(formatDateFull(session.session_date), 76, headlineY + 50)
 
     // Stat row (Vertical / Runs / Top Speed)
@@ -367,13 +377,13 @@ async function renderCard(canvas, { profile, stats, season, session }) {
 
       drawRoundedRect(ctx, bx, by, bw, bh, 24)
       const cardBg = ctx.createLinearGradient(bx, by, bx + bw, by + bh)
-      cardBg.addColorStop(0, rgba(theme.ink, overlayAlpha(0.1, themeMode)))
-      cardBg.addColorStop(1, rgba(theme.ink, overlayAlpha(0.04, themeMode)))
+      cardBg.addColorStop(0, rgba(cardInk, overlayAlpha(0.1, cardMode)))
+      cardBg.addColorStop(1, rgba(cardInk, overlayAlpha(0.04, cardMode)))
       ctx.fillStyle = cardBg
       ctx.fill()
 
       drawRoundedRect(ctx, bx, by, bw, bh, 24)
-      ctx.strokeStyle = rgba(theme.ink, overlayAlpha(0.14, themeMode))
+      ctx.strokeStyle = rgba(cardInk, overlayAlpha(0.14, cardMode))
       ctx.lineWidth = 1.5
       ctx.stroke()
 
@@ -385,14 +395,14 @@ async function renderCard(canvas, { profile, stats, season, session }) {
 
       // Value
       ctx.font = `900 56px -apple-system, system-ui, sans-serif`
-      ctx.fillStyle = theme.ink
+      ctx.fillStyle = cardInk
       ctx.textAlign = "left"
       ctx.textBaseline = "alphabetic"
       ctx.fillText(item.value, bx + 24, by + bh - 46)
 
       // Label
       ctx.font = `600 24px -apple-system, system-ui, sans-serif`
-      ctx.fillStyle = rgba(theme.ink, inkAlpha(0.5, themeMode))
+      ctx.fillStyle = rgba(cardInk, inkAlpha(0.5, cardMode))
       ctx.fillText(item.label, bx + 24, by + bh - 16)
     })
 
@@ -416,14 +426,14 @@ async function renderCard(canvas, { profile, stats, season, session }) {
       ctx.fillText("❄️", 108, pbY + 44)
 
       ctx.font = `800 38px -apple-system, system-ui, sans-serif`
-      ctx.fillStyle = theme.ink
+      ctx.fillStyle = cardInk
       ctx.fillText("Powder Day", 168, pbY + 52)
     }
   }
 
   // ── Watermark ──────────────────────────────────────────────────────────────
   ctx.font = `500 28px -apple-system, system-ui, sans-serif`
-  ctx.fillStyle = rgba(theme.ink, inkAlpha(0.2, themeMode))
+  ctx.fillStyle = rgba(cardInk, inkAlpha(0.2, cardMode))
   ctx.textAlign = "center"
   ctx.textBaseline = "alphabetic"
   ctx.fillText("powdays.app", W / 2, H - 44)

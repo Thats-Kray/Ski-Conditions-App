@@ -72,7 +72,10 @@ function Avatar({ plan, currentUser }) {
         placeItems: "center",
         fontSize: 11,
         fontWeight: 900,
-        color: "var(--color-modal-bg)",
+        // Frozen background above => frozen ink. --color-modal-bg happens to be
+        // #0f172a in dark mode but is #FFFFFF in light mode, which would put white
+        // initials on pale blue. Matches PowderMap.jsx's identical avatar pattern.
+        color: "#0f172a",
         flexShrink: 0,
       }}
     >

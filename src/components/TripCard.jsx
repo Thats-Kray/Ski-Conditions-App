@@ -248,7 +248,10 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
               top: 16,
               right: 16,
               background: accent,
-              color: "var(--color-bg)",
+              // `accent` is a THEME_ACCENTS pastel, frozen by design — so its ink
+              // must be frozen too. --color-bg is near-white in light mode, which
+              // erased this label on the pastel fill.
+              color: "#0f172a",
               borderRadius: 999,
               padding: "6px 14px",
               fontSize: 12,
@@ -373,7 +376,9 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
               alignItems: "center",
               gap: 14,
               fontSize: 13,
-              color: "var(--ink-70)",
+              // E3, same as the title above: frozen photo overlay gets
+              // accent-contrast ink, the adaptive fallback keeps --ink-70.
+              color: photo ? "var(--color-on-accent)" : "var(--ink-70)",
               flexWrap: "wrap",
             }}
           >

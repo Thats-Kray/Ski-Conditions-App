@@ -52,7 +52,10 @@ const RESORT_COORDS = {
 }
 
 // decorative per-entity color, independent of theme palette — per-trip color theme picker,
-// not the app's 5-theme palette
+// not the app's 5-theme palette.
+// Because `accent` never adapts, anything filled with it must pair with FROZEN ink
+// (#0f172a — every accent here is a pastel/mid shade that reads dark-on-light), not
+// with --color-bg, which flips to near-white in light mode.
 const THEMES = {
   default:  { label: "Mountain Blue", overlay: "linear-gradient(to bottom,rgba(2,6,23,0.08) 0%,rgba(2,6,23,0.92) 100%)",                                    snow: false, wind: false, accent: "#60a5fa" },
   blizzard: { label: "Blizzard",      overlay: "linear-gradient(to bottom,rgba(200,225,255,0.2) 0%,rgba(2,6,23,0.92) 100%)",                                snow: true,  wind: false, accent: "#bfdbfe" },
@@ -849,7 +852,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
           <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, zIndex: 3, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", border: "1px solid var(--overlay-18)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-on-accent)", cursor: "pointer", fontSize: 20, lineHeight: 1 }}>×</button>
 
           {countdown && (
-            <div style={{ position: "absolute", top: 14, left: 14, zIndex: 3, background: accent, color: "var(--color-bg)", borderRadius: 999, padding: "5px 13px", fontSize: 12, fontWeight: 900, letterSpacing: 0.3, boxShadow: `0 4px 18px ${accent}77` }}>
+            <div style={{ position: "absolute", top: 14, left: 14, zIndex: 3, background: accent, color: "#0f172a", borderRadius: 999, padding: "5px 13px", fontSize: 12, fontWeight: 900, letterSpacing: 0.3, boxShadow: `0 4px 18px ${accent}77` }}>
               {countdown}
             </div>
           )}
@@ -1610,7 +1613,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
               />
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <button onClick={() => setShowAddCarForm(false)} style={{ background: "none", border: "none", color: "var(--ink-35)", cursor: "pointer", fontSize: 13 }}>Cancel</button>
-                <button onClick={handleAddCar} disabled={carpoolActionLoading} style={{ background: accent, border: "none", borderRadius: 10, padding: "8px 18px", color: "var(--color-bg)", fontWeight: 900, cursor: "pointer", fontSize: 13 }}>
+                <button onClick={handleAddCar} disabled={carpoolActionLoading} style={{ background: accent, border: "none", borderRadius: 10, padding: "8px 18px", color: "#0f172a", fontWeight: 900, cursor: "pointer", fontSize: 13 }}>
                   {carpoolActionLoading ? "Adding…" : "Add Car"}
                 </button>
               </div>
@@ -1926,7 +1929,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
                   />
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                     <button type="button" onClick={() => setShowRecapForm(false)} style={{ background: "none", border: "none", color: "var(--ink-35)", cursor: "pointer", fontSize: 13 }}>Cancel</button>
-                    <button type="submit" disabled={recapSaving} style={{ background: accent, border: "none", borderRadius: 10, padding: "8px 18px", color: "var(--color-bg)", fontWeight: 900, cursor: "pointer", fontSize: 13 }}>
+                    <button type="submit" disabled={recapSaving} style={{ background: accent, border: "none", borderRadius: 10, padding: "8px 18px", color: "#0f172a", fontWeight: 900, cursor: "pointer", fontSize: 13 }}>
                       {recapSaving ? "Saving…" : "Save Recap"}
                     </button>
                   </div>
