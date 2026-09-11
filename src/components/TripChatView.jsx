@@ -41,14 +41,14 @@ export default function TripChatView({ trip, currentUser, onBack }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderBottom: "1px solid var(--overlay-07)", flexShrink: 0 }}>
         {onBack && (
-          <button onClick={onBack} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: 22, padding: 0, lineHeight: 1, marginRight: 2 }}>←</button>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: "var(--ink-50)", cursor: "pointer", fontSize: 22, padding: 0, lineHeight: 1, marginRight: 2 }}>←</button>
         )}
         <div style={{ width: 38, height: 38, borderRadius: 10, background: "linear-gradient(135deg,rgba(251,191,36,0.18),rgba(234,88,12,0.12))", border: "1px solid rgba(251,191,36,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🎿</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 14, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: 14, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
+          <div style={{ fontSize: 11, color: "var(--ink-35)", marginTop: 1 }}>
             {new Date(trip.ski_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
           </div>
         </div>
@@ -57,7 +57,7 @@ export default function TripChatView({ trip, currentUser, onBack }) {
       {/* Messages */}
       <div style={{ flex: 1, overflowY: "auto", padding: "14px 14px 6px", display: "flex", flexDirection: "column", gap: 10 }}>
         {messages.length === 0 && (
-          <div style={{ textAlign: "center", padding: "40px 20px", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
+          <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--ink-30)", fontSize: 13 }}>
             No messages yet — kick things off! 🎿
           </div>
         )}
@@ -68,15 +68,15 @@ export default function TripChatView({ trip, currentUser, onBack }) {
               {!isMe && <Avatar profile={msg.profile} size={28} />}
               <div style={{ maxWidth: "72%", minWidth: 0 }}>
                 {!isMe && msg.profile && (
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 3, paddingLeft: 10 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-40)", marginBottom: 3, paddingLeft: 10 }}>
                     {msg.profile.full_name?.split(" ")[0] || msg.profile.username}
                   </div>
                 )}
-                <div style={{ background: isMe ? "var(--gradient-cta)" : "rgba(255,255,255,0.09)", color: isMe ? "var(--color-on-accent)" : "var(--color-text-1)", borderRadius: isMe ? "14px 14px 0 14px" : "0 14px 14px 14px", padding: msg.media_url && !msg.content ? "6px" : "8px 12px", fontSize: 13, lineHeight: 1.45, wordBreak: "break-word", overflow: "hidden" }}>
+                <div style={{ background: isMe ? "var(--gradient-cta)" : "var(--overlay-09)", color: isMe ? "var(--color-on-accent)" : "var(--color-text-1)", borderRadius: isMe ? "14px 14px 0 14px" : "0 14px 14px 14px", padding: msg.media_url && !msg.content ? "6px" : "8px 12px", fontSize: 13, lineHeight: 1.45, wordBreak: "break-word", overflow: "hidden" }}>
                   {msg.media_url && <MessageMedia mediaUrl={msg.media_url} mediaType={msg.media_type} />}
                   {msg.content && <div style={{ marginTop: msg.media_url ? 6 : 0 }}>{msg.content}</div>}
                 </div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 3, textAlign: isMe ? "right" : "left", paddingLeft: isMe ? 0 : 10, paddingRight: isMe ? 10 : 0 }}>
+                <div style={{ fontSize: 10, color: "var(--ink-25)", marginTop: 3, textAlign: isMe ? "right" : "left", paddingLeft: isMe ? 0 : 10, paddingRight: isMe ? 10 : 0 }}>
                   {timeAgo(msg.created_at)}
                 </div>
               </div>

@@ -31,11 +31,11 @@ const THEMES = [
 ]
 
 const inputStyle = {
-  background: "rgba(255,255,255,0.07)",
-  border: "1.5px solid rgba(255,255,255,0.11)",
+  background: "var(--overlay-07)",
+  border: "1.5px solid var(--overlay-11)",
   borderRadius: 14,
   padding: "12px 14px",
-  color: "white",
+  color: "var(--color-text-1)",
   fontSize: 16,
   outline: "none",
   width: "100%",
@@ -46,7 +46,7 @@ const inputStyle = {
 const labelStyle = {
   fontSize: 11,
   fontWeight: 800,
-  color: "rgba(255,255,255,0.5)",
+  color: "var(--ink-50)",
   textTransform: "uppercase",
   letterSpacing: 0.8,
   marginBottom: 7,
@@ -168,7 +168,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
           width: "100%",
           maxWidth: isMobile ? "100%" : step === 1 ? 700 : 560,
           background: "var(--color-modal-bg)",
-          border: isMobile ? "none" : "1px solid rgba(255,255,255,0.1)",
+          border: isMobile ? "none" : "1px solid var(--overlay-10)",
           borderRadius: isMobile ? "24px 24px 0 0" : 28,
           overflow: "hidden",
           boxShadow: "0 40px 100px rgba(0,0,0,0.75)",
@@ -183,7 +183,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
         <div
           style={{
             padding: "22px 26px 18px",
-            borderBottom: "1px solid rgba(255,255,255,0.07)",
+            borderBottom: "1px solid var(--overlay-07)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -191,10 +191,10 @@ export default function CreateTripModal({ onClose, onCreated }) {
           }}
         >
           <div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: "white", letterSpacing: -0.3 }}>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "var(--color-text-1)", letterSpacing: -0.3 }}>
               {step === 1 ? "Pick a mountain" : step === 2 ? "Trip details" : "Rides 🚗"}
             </div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginTop: 3 }}>
+            <div style={{ fontSize: 13, color: "var(--ink-45)", marginTop: 3 }}>
               {step === 1
                 ? "Where are you skiing?"
                 : step === 2
@@ -224,15 +224,15 @@ export default function CreateTripModal({ onClose, onCreated }) {
             <button
               onClick={onClose}
               style={{
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(255,255,255,0.1)",
+                background: "var(--overlay-07)",
+                border: "1px solid var(--overlay-10)",
                 borderRadius: "50%",
                 width: 34,
                 height: 34,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "rgba(255,255,255,0.55)",
+                color: "var(--ink-55)",
                 cursor: "pointer",
                 fontSize: 20,
                 lineHeight: 1,
@@ -264,10 +264,10 @@ export default function CreateTripModal({ onClose, onCreated }) {
                   position: "relative",
                   height: 106,
                   borderRadius: 18,
-                  border: `2px solid ${resortKey === resort.key ? resort.accent : "var(--ink-08)"}`,
+                  border: `2px solid ${resortKey === resort.key ? resort.accent : "var(--overlay-08)"}`,
                   background: resort.photo
                     ? `linear-gradient(to bottom, rgba(2,6,23,0.25) 0%, rgba(2,6,23,0.84) 100%), url(${resort.photo}) center/cover`
-                    : "rgba(255,255,255,0.05)",
+                    : "var(--overlay-05)",
                   cursor: "pointer",
                   display: "flex",
                   flexDirection: "column",
@@ -280,7 +280,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                 }}
                 className="resort-pick-btn"
               >
-                <div style={{ fontSize: 13, fontWeight: 900, color: "white", lineHeight: 1.2 }}>
+                <div style={{ fontSize: 13, fontWeight: 900, color: "var(--color-text-1)", lineHeight: 1.2 }}>
                   {resort.name}
                 </div>
                 <div
@@ -312,7 +312,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                   borderRadius: 16,
                   background: selectedResort.photo
                     ? `linear-gradient(to right, rgba(2,6,23,0.72) 0%, rgba(2,6,23,0.35) 100%), url(${selectedResort.photo}) center/cover`
-                    : "rgba(255,255,255,0.05)",
+                    : "var(--overlay-05)",
                   display: "flex",
                   alignItems: "center",
                   padding: "0 18px",
@@ -322,7 +322,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
               >
                 <span style={{ fontSize: 26 }}>🏔️</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 17, fontWeight: 900, color: "white" }}>
+                  <div style={{ fontSize: 17, fontWeight: 900, color: "var(--color-text-1)" }}>
                     {selectedResort.name}
                   </div>
                   <div
@@ -334,13 +334,13 @@ export default function CreateTripModal({ onClose, onCreated }) {
                 <button
                   onClick={() => setStep(1)}
                   style={{
-                    background: "rgba(255,255,255,0.12)",
-                    border: "1px solid rgba(255,255,255,0.18)",
+                    background: "var(--overlay-12)",
+                    border: "1px solid var(--overlay-18)",
                     borderRadius: 999,
                     padding: "5px 12px",
                     fontSize: 12,
                     fontWeight: 700,
-                    color: "white",
+                    color: "var(--color-text-1)",
                     cursor: "pointer",
                     flexShrink: 0,
                   }}
@@ -353,7 +353,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
             {/* Ski date — required */}
             <div>
               <label style={labelStyle}>
-                Ski Date <span style={{ color: "rgba(255,255,255,0.28)", fontWeight: 600 }}>required</span>
+                Ski Date <span style={{ color: "var(--ink-28)", fontWeight: 600 }}>required</span>
               </label>
               <input
                 type="date"
@@ -362,7 +362,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                 onChange={(e) => setSkiDate(e.target.value)}
                 style={{
                   ...inputStyle,
-                  border: `1.5px solid ${skiDate ? accent + "88" : "var(--ink-11)"}`,
+                  border: `1.5px solid ${skiDate ? accent + "88" : "var(--overlay-11)"}`,
                   colorScheme: "dark",
                 }}
               />
@@ -372,7 +372,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
             <div>
               <label style={labelStyle}>
                 Trip Name{" "}
-                <span style={{ color: "rgba(255,255,255,0.28)", fontWeight: 600 }}>optional</span>
+                <span style={{ color: "var(--ink-28)", fontWeight: 600 }}>optional</span>
               </label>
               <input
                 type="text"
@@ -459,7 +459,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
             <div>
               <label style={labelStyle}>
                 Notes{" "}
-                <span style={{ color: "rgba(255,255,255,0.28)", fontWeight: 600 }}>optional</span>
+                <span style={{ color: "var(--ink-28)", fontWeight: 600 }}>optional</span>
               </label>
               <textarea
                 value={description}
@@ -479,7 +479,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
             <div>
               <label style={labelStyle}>
                 Spotify Playlist{" "}
-                <span style={{ color: "rgba(255,255,255,0.28)", fontWeight: 600 }}>optional</span>
+                <span style={{ color: "var(--ink-28)", fontWeight: 600 }}>optional</span>
               </label>
               <input
                 type="url"
@@ -494,7 +494,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
             <div>
               <label style={labelStyle}>
                 Invite Theme{" "}
-                <span style={{ color: "rgba(255,255,255,0.28)", fontWeight: 600 }}>optional</span>
+                <span style={{ color: "var(--ink-28)", fontWeight: 600 }}>optional</span>
               </label>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(64px, 1fr))", gap: 6 }}>
                 {THEMES.map((t) => (
@@ -504,7 +504,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                     onClick={() => setTheme(t.key)}
                     style={{
                       background: t.bg,
-                      border: `2px solid ${theme === t.key ? t.accent : "var(--ink-10)"}`,
+                      border: `2px solid ${theme === t.key ? t.accent : "var(--overlay-10)"}`,
                       borderRadius: 14,
                       padding: "12px 6px 10px",
                       cursor: "pointer",
@@ -522,7 +522,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                       style={{
                         fontSize: 9,
                         fontWeight: 800,
-                        color: theme === t.key ? t.accent : "rgba(255,255,255,0.55)",
+                        color: theme === t.key ? t.accent : "var(--ink-55)",
                         textTransform: "uppercase",
                         letterSpacing: 0.4,
                         lineHeight: 1.2,
@@ -557,11 +557,11 @@ export default function CreateTripModal({ onClose, onCreated }) {
               <button
                 onClick={() => setStep(1)}
                 style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "var(--overlay-06)",
+                  border: "1px solid var(--overlay-10)",
                   borderRadius: 14,
                   padding: "12px 20px",
-                  color: "rgba(255,255,255,0.65)",
+                  color: "var(--ink-65)",
                   fontWeight: 800,
                   cursor: "pointer",
                   fontSize: 14,
@@ -577,7 +577,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                   background:
                     !loading && skiDate
                       ? `linear-gradient(135deg, ${accent}ee, ${accent}99)`
-                      : "rgba(255,255,255,0.07)",
+                      : "var(--overlay-07)",
                   border: "none",
                   borderRadius: 14,
                   padding: "12px 28px",
@@ -604,7 +604,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
               <span style={{ fontSize: 20 }}>✅</span>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 900, color: "var(--color-success-strong)" }}>Trip created!</div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>Now set up your ride situation (optional)</div>
+                <div style={{ fontSize: 12, color: "var(--ink-50)", marginTop: 2 }}>Now set up your ride situation (optional)</div>
               </div>
             </div>
 
@@ -612,11 +612,11 @@ export default function CreateTripModal({ onClose, onCreated }) {
             {cars.length > 0 && (
               <div style={{ display: "grid", gap: 8 }}>
                 {cars.map((car, i) => (
-                  <div key={i} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+                  <div key={i} style={{ background: "var(--overlay-05)", border: "1px solid var(--overlay-09)", borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ fontSize: 18 }}>🚗</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{car.label || "My Car"}</div>
-                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>{car.seats} open seat{car.seats !== 1 ? "s" : ""}</div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-text-1)" }}>{car.label || "My Car"}</div>
+                      <div style={{ fontSize: 12, color: "var(--ink-45)", marginTop: 2 }}>{car.seats} open seat{car.seats !== 1 ? "s" : ""}</div>
                     </div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: accent, background: `${accent}18`, borderRadius: 999, padding: "3px 10px" }}>Added</div>
                   </div>
@@ -625,9 +625,9 @@ export default function CreateTripModal({ onClose, onCreated }) {
             )}
 
             {/* Add a car form */}
-            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 16, padding: "16px" }}>
+            <div style={{ background: "var(--overlay-04)", border: "1px solid var(--overlay-09)", borderRadius: 16, padding: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.7)" }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: "var(--ink-70)" }}>
                   {cars.length === 0 ? "Are you driving? Add your car:" : "Add another car:"}
                 </span>
                 {profileVehicle && cars.length === 0 && (
@@ -648,17 +648,17 @@ export default function CreateTripModal({ onClose, onCreated }) {
                 <div>
                   <label style={{ ...labelStyle, marginBottom: 10 }}>Open seats in your car</label>
                   <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                    <button type="button" onClick={() => setCarSeats((s) => Math.max(1, s - 1))} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: "white", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                    <span style={{ fontSize: 22, fontWeight: 900, color: "white", minWidth: 30, textAlign: "center" }}>{carSeats}</span>
-                    <button type="button" onClick={() => setCarSeats((s) => Math.min(8, s + 1))} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: "white", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
-                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>seats available</span>
+                    <button type="button" onClick={() => setCarSeats((s) => Math.max(1, s - 1))} style={{ width: 34, height: 34, borderRadius: "50%", background: "var(--overlay-10)", border: "1px solid var(--overlay-15)", color: "var(--color-text-1)", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                    <span style={{ fontSize: 22, fontWeight: 900, color: "var(--color-text-1)", minWidth: 30, textAlign: "center" }}>{carSeats}</span>
+                    <button type="button" onClick={() => setCarSeats((s) => Math.min(8, s + 1))} style={{ width: 34, height: 34, borderRadius: "50%", background: "var(--overlay-10)", border: "1px solid var(--overlay-15)", color: "var(--color-text-1)", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                    <span style={{ fontSize: 12, color: "var(--ink-40)" }}>seats available</span>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={handleAddCar}
                   disabled={carSaving}
-                  style={{ background: carSaving ? "rgba(255,255,255,0.07)" : `linear-gradient(135deg,${accent}ee,${accent}99)`, border: "none", borderRadius: 12, padding: "11px", color: carSaving ? "var(--ink-35)" : "var(--color-bg)", fontWeight: 900, cursor: carSaving ? "wait" : "pointer", fontSize: 13, boxShadow: carSaving ? "none" : `0 6px 20px ${accent}44` }}
+                  style={{ background: carSaving ? "var(--overlay-07)" : `linear-gradient(135deg,${accent}ee,${accent}99)`, border: "none", borderRadius: 12, padding: "11px", color: carSaving ? "var(--ink-35)" : "var(--color-bg)", fontWeight: 900, cursor: carSaving ? "wait" : "pointer", fontSize: 13, boxShadow: carSaving ? "none" : `0 6px 20px ${accent}44` }}
                 >
                   {carSaving ? "Adding…" : "Add Car 🚗"}
                 </button>
@@ -669,7 +669,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button
                 onClick={handleFinish}
-                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "12px 20px", color: "rgba(255,255,255,0.65)", fontWeight: 800, cursor: "pointer", fontSize: 14 }}
+                style={{ background: "var(--overlay-06)", border: "1px solid var(--overlay-10)", borderRadius: 14, padding: "12px 20px", color: "var(--ink-65)", fontWeight: 800, cursor: "pointer", fontSize: 14 }}
               >
                 {cars.length === 0 ? "Skip Rides" : "Done"}
               </button>
@@ -681,7 +681,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
       <style>{`
         .resort-pick-btn:hover {
           transform: scale(1.03);
-          border-color: rgba(255,255,255,0.25) !important;
+          border-color: var(--overlay-25) !important;
         }
       `}</style>
     </div>

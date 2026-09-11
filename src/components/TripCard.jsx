@@ -55,14 +55,14 @@ function CardAvatar({ profile, size = 32 }) {
         width: size,
         height: size,
         borderRadius: "50%",
-        background: "rgba(255,255,255,0.14)",
+        background: "var(--overlay-14)",
         border: "2px solid var(--color-badge-border)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         fontSize: Math.round(size * 0.38),
         fontWeight: 800,
-        color: "white",
+        color: "var(--color-text-1)",
         flexShrink: 0,
       }}
     >
@@ -92,14 +92,14 @@ function AvatarStack({ profiles, max = 6 }) {
             width: 26,
             height: 26,
             borderRadius: "50%",
-            background: "rgba(255,255,255,0.12)",
+            background: "var(--overlay-12)",
             border: "2px solid var(--color-badge-border)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontSize: 9,
             fontWeight: 900,
-            color: "rgba(255,255,255,0.8)",
+            color: "var(--ink-80)",
             position: "relative",
             zIndex: 0,
             flexShrink: 0,
@@ -221,8 +221,8 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
       style={{
         borderRadius: 28,
         overflow: "hidden",
-        background: isInvited ? "rgba(96,165,250,0.05)" : "rgba(255,255,255,0.04)",
-        border: isInvited ? "1.5px solid rgba(96,165,250,0.3)" : "1px solid rgba(255,255,255,0.09)",
+        background: isInvited ? "rgba(96,165,250,0.05)" : "var(--overlay-04)",
+        border: isInvited ? "1.5px solid rgba(96,165,250,0.3)" : "1px solid var(--overlay-09)",
         borderLeft: themeAccent ? `4px solid ${themeAccent}` : undefined,
         boxShadow: isInvited ? "0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(96,165,250,0.1)" : "0 24px 64px rgba(0,0,0,0.5)",
         transition: "transform 0.22s ease, box-shadow 0.22s ease",
@@ -275,7 +275,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
               padding: "5px 12px",
               fontSize: 11,
               fontWeight: 900,
-              color: "white",
+              color: "var(--color-on-accent)",
               letterSpacing: 0.3,
               display: "flex",
               alignItems: "center",
@@ -291,14 +291,14 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
               position: "absolute",
               top: 16,
               left: 16,
-              background: "rgba(255,255,255,0.13)",
+              background: "var(--overlay-13)",
               backdropFilter: "blur(10px)",
-              border: "1px solid rgba(255,255,255,0.2)",
+              border: "1px solid var(--overlay-20)",
               borderRadius: 999,
               padding: "5px 12px",
               fontSize: 11,
               fontWeight: 900,
-              color: "white",
+              color: "var(--color-text-1)",
               letterSpacing: 0.3,
             }}
           >
@@ -311,12 +311,12 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
               position: "absolute",
               top: 16,
               left: 16,
-              background: "rgba(255,255,255,0.08)",
+              background: "var(--overlay-08)",
               borderRadius: 999,
               padding: "5px 12px",
               fontSize: 11,
               fontWeight: 700,
-              color: "rgba(255,255,255,0.5)",
+              color: "var(--ink-50)",
             }}
           >
             Past Trip
@@ -358,8 +358,8 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
               fontSize: 22,
               fontWeight: 900,
               lineHeight: 1.1,
-              // E3: on frozen photo overlay, use accent-contrast text
-              color: "var(--color-on-accent)",
+              // E3: on frozen photo overlay use accent-contrast; on adaptive fallback use standard text
+              color: photo ? "var(--color-on-accent)" : "var(--color-text-1)",
               letterSpacing: -0.4,
             }}
           >
@@ -373,7 +373,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
               alignItems: "center",
               gap: 14,
               fontSize: 13,
-              color: "rgba(255,255,255,0.7)",
+              color: "var(--ink-70)",
               flexWrap: "wrap",
             }}
           >
@@ -390,7 +390,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <CardAvatar profile={trip.host_profile} size={34} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.88)" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink-88)" }}>
               {isHost
                 ? "You're hosting"
                 : `Hosted by ${trip.host_profile?.full_name || trip.host_profile?.username || "Someone"}`}
@@ -399,7 +399,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
               <div
                 style={{
                   fontSize: 12,
-                  color: "rgba(255,255,255,0.48)",
+                  color: "var(--ink-48)",
                   marginTop: 2,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -420,7 +420,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
                 </div>
               )}
               {maybeCount > 0 && (
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>
+                <div style={{ fontSize: 11, color: "var(--ink-45)" }}>
                   {maybeCount} maybe
                 </div>
               )}
@@ -433,10 +433,10 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
           <div
             style={{
               fontSize: 13,
-              color: "rgba(255,255,255,0.7)",
+              color: "var(--ink-70)",
               lineHeight: 1.55,
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.07)",
+              background: "var(--overlay-04)",
+              border: "1px solid var(--overlay-07)",
               borderRadius: 14,
               padding: "10px 14px",
             }}
@@ -449,7 +449,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
         {goingProfiles.length > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <AvatarStack profiles={goingProfiles} max={7} />
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.52)", fontWeight: 600 }}>
+            <span style={{ fontSize: 12, color: "var(--ink-52)", fontWeight: 600 }}>
               {goingCount === 1 ? "1 person going" : `${goingCount} people going`}
             </span>
           </div>
@@ -496,9 +496,9 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
                     borderRadius: 14,
                     border: isActive
                       ? `1.5px solid ${activeColor}`
-                      : "1.5px solid rgba(255,255,255,0.1)",
-                    background: isActive ? activeColor : "rgba(255,255,255,0.05)",
-                    color: isActive ? activeText : "rgba(255,255,255,0.68)",
+                      : "1.5px solid var(--overlay-10)",
+                    background: isActive ? activeColor : "var(--overlay-05)",
+                    color: isActive ? activeText : "var(--ink-68)",
                     fontWeight: 900,
                     fontSize: 13,
                     cursor: rsvpLoading ? "wait" : "pointer",
@@ -560,11 +560,11 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
           <button
             onClick={() => onRequireLogin?.()}
             style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--overlay-06)",
+              border: "1px solid var(--overlay-12)",
               borderRadius: 14,
               padding: "12px",
-              color: "rgba(255,255,255,0.65)",
+              color: "var(--ink-65)",
               fontSize: 13,
               fontWeight: 700,
               cursor: "pointer",
@@ -584,10 +584,10 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
           <button
             onClick={() => setShowDetail(true)}
             style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "var(--overlay-05)",
+              border: "1px solid var(--overlay-10)",
               borderRadius: 999, padding: "5px 12px",
-              fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.55)",
+              fontSize: 12, fontWeight: 700, color: "var(--ink-55)",
               cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
             }}
           >

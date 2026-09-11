@@ -30,7 +30,7 @@ export default function FriendsGoingBadge({ friends, variant = "subtle" }) {
               }
             : {
                 display: "flex", alignItems: "center", gap: 6,
-                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+                background: "var(--overlay-06)", border: "1px solid var(--overlay-10)",
                 borderRadius: 999, padding: "4px 10px 4px 6px", cursor: "pointer",
               }
         }
@@ -59,9 +59,9 @@ export default function FriendsGoingBadge({ friends, variant = "subtle" }) {
         </span>
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "110%", left: 0, background: "var(--color-surface-popover)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: 10, zIndex: 20, minWidth: 160, boxShadow: "0 12px 40px rgba(0,0,0,0.4)" }}>
+        <div style={{ position: "absolute", top: "110%", left: 0, background: "var(--color-surface-popover)", border: "1px solid var(--overlay-12)", borderRadius: 12, padding: 10, zIndex: 20, minWidth: 160, boxShadow: "0 12px 40px rgba(0,0,0,0.4)" }}>
           {friends.map((f) => (
-            <div key={f.id} style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", padding: "4px 0" }}>{f.full_name || f.username}</div>
+            <div key={f.id} style={{ fontSize: 13, color: "var(--ink-90)", padding: "4px 0" }}>{f.full_name || f.username}</div>
           ))}
         </div>
       )}
