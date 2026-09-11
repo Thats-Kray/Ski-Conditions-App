@@ -29,16 +29,16 @@ export function ProfileStatStrip({ stats }) {
   return (
     <div style={{
       display: "flex", gap: 1, overflow: "hidden",
-      background: "rgba(255,255,255,0.06)",
-      border: "1px solid rgba(255,255,255,0.08)",
+      background: "var(--overlay-06)",
+      border: "1px solid var(--overlay-08)",
       borderRadius: 16,
     }}>
       {items.map((item) => (
         <div key={item.label} style={{
           flex: 1, textAlign: "center", padding: "12px 4px",
-          background: "rgba(255,255,255,0.02)",
+          background: "var(--overlay-02)",
         }}>
-          <div style={{ fontSize: 17, fontWeight: 900, color: "white", lineHeight: 1.1 }}>
+          <div style={{ fontSize: 17, fontWeight: 900, color: "var(--color-text-1)", lineHeight: 1.1 }}>
             {item.value}
           </div>
           <div style={{
@@ -65,8 +65,8 @@ export function ProfileStatStrip({ stats }) {
 export function ProfileExtraFacts({ stats, deltaLabel = null }) {
   return (
     <div style={{
-      background: "rgba(255,255,255,0.03)",
-      border: "1px solid rgba(255,255,255,0.08)",
+      background: "var(--overlay-03)",
+      border: "1px solid var(--overlay-08)",
       borderRadius: 16, padding: "14px 16px",
     }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
@@ -84,7 +84,7 @@ export function ProfileExtraFacts({ stats, deltaLabel = null }) {
       {deltaLabel && (
         <div style={{
           marginTop: 12, paddingTop: 10,
-          borderTop: "1px solid rgba(255,255,255,0.07)",
+          borderTop: "1px solid var(--overlay-07)",
           fontSize: 13, color: "var(--color-text-2)",
         }}>
           {deltaLabel}

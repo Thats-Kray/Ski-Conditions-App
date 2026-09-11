@@ -24,7 +24,7 @@ export function StatsViewToggle({ viewMode, onChange }) {
           onClick={() => onChange(mode)}
           style={{
             padding: "6px 14px", borderRadius: "var(--radius-pill)", border: "none", cursor: "pointer",
-            background: viewMode === mode ? "var(--color-accent)" : "rgba(255,255,255,0.06)",
+            background: viewMode === mode ? "var(--color-accent)" : "var(--overlay-06)",
             color: viewMode === mode ? "var(--color-bg)" : "var(--color-text-2)",
             fontWeight: 700, fontSize: 13,
           }}
@@ -98,7 +98,7 @@ export function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fu
 
   if (!sessions.length) {
     return (
-      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "18px 16px", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
+      <div style={{ background: "var(--overlay-03)", border: "1px solid var(--overlay-07)", borderRadius: 16, padding: "18px 16px", textAlign: "center", color: "var(--ink-30)", fontSize: 13 }}>
         No sessions logged yet — check in from the Home tab
       </div>
     )
@@ -108,8 +108,8 @@ export function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fu
   const shown = Number.isFinite(limit) ? sessions.slice(0, limit) : sessions
 
   return (
-    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden" }}>
-      <div style={{ padding: "12px 16px 10px", fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8 }}>
+    <div style={{ background: "var(--overlay-03)", border: "1px solid var(--overlay-07)", borderRadius: 16, overflow: "hidden" }}>
+      <div style={{ padding: "12px 16px 10px", fontSize: 11, fontWeight: 800, color: "var(--ink-40)", textTransform: "uppercase", letterSpacing: 0.8 }}>
         {Number.isFinite(limit) ? "Recent Sessions" : "Session History"}
       </div>
       <div style={{ display: "flex", flexDirection: "column" }}>
@@ -122,15 +122,15 @@ export function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fu
             <div key={s.id || i} style={{
               display: "flex", alignItems: "center", gap: 12,
               padding: "14px 16px",
-              borderTop: i > 0 ? "1px solid rgba(255,255,255,0.05)" : "none",
+              borderTop: i > 0 ? "1px solid var(--overlay-05)" : "none",
             }}>
               <span style={{ fontSize: 18, flexShrink: 0 }}>{emoji}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {resortName(s.resort_name || s.resort_key)}
                   {s.is_powder_day && <span style={{ marginLeft: 6, fontSize: 12 }}>❄️</span>}
                 </div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>{dateLabel}</div>
+                <div style={{ fontSize: 11, color: "var(--ink-40)", marginTop: 1 }}>{dateLabel}</div>
               </div>
               {s.vertical_feet > 0 && (
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--color-accent-soft)", flexShrink: 0 }}>+{fmt(s.vertical_feet)} ft</div>
@@ -139,14 +139,14 @@ export function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fu
                 <button
                   onClick={() => { setEditError(""); setEditingSessionId(s.id) }}
                   title="Edit session"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, width: 28, height: 28, flexShrink: 0, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}
+                  style={{ background: "var(--overlay-06)", border: "1px solid var(--overlay-10)", borderRadius: 8, width: 28, height: 28, flexShrink: 0, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}
                 >✏️</button>
               )}
               <button
                 onClick={() => setShareSession(s)}
                 title="Share this session"
                 aria-label="Share this session"
-                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, width: 28, height: 28, flexShrink: 0, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}
+                style={{ background: "var(--overlay-06)", border: "1px solid var(--overlay-10)", borderRadius: 8, width: 28, height: 28, flexShrink: 0, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}
               >📤</button>
             </div>
           )
@@ -172,14 +172,14 @@ export function RecentSessionsFeed({ sessions, limit = 5, onRefresh, profile, fu
                off the top of the screen with no way back. Capping the sheet at 90vh and
                making it its own scroll container is SessionRecapModal.jsx:201-202's exact
                shape, one modal over. */
-            style={{ background: "var(--color-modal-bg)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto" }}
+            style={{ background: "var(--color-modal-bg)", border: "1px solid var(--overlay-10)", borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: 18, fontWeight: 900, color: "white" }}>✏️ Edit Session</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "var(--color-text-1)" }}>✏️ Edit Session</div>
               <button
                 onClick={() => { setEditError(""); setEditingSessionId(null) }}
-                style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}
+                style={{ background: "var(--overlay-08)", border: "none", color: "var(--ink-60)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}
               >✕</button>
             </div>
             <SessionEditForm

@@ -25,12 +25,12 @@ const ROWS = [
 
 const fieldStyle = {
   width: "100%", padding: "11px 13px", borderRadius: 12,
-  border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.07)",
-  color: "white", fontSize: 15, outline: "none", boxSizing: "border-box",
+  border: "1px solid var(--overlay-12)", background: "var(--overlay-07)",
+  color: "var(--color-text-1)", fontSize: 15, outline: "none", boxSizing: "border-box",
 }
 
 const labelStyle = {
-  fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)",
+  fontSize: 11, fontWeight: 800, color: "var(--ink-45)",
   textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7,
 }
 
@@ -38,7 +38,7 @@ function AccountSheet({ email, onLogOut, onClose }) {
   return (
     <SettingsSheet title="Account" onClose={onClose}>
       <div style={labelStyle}>Signed in as</div>
-      <div style={{ fontSize: 15, fontWeight: 700, color: "white", wordBreak: "break-all" }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text-1)", wordBreak: "break-all" }}>
         {email || "—"}
       </div>
       <button
@@ -81,7 +81,7 @@ function NotificationsSheet({ profile, onSaved, onClose }) {
   return (
     <SettingsSheet title="Notifications" onClose={onClose}>
       <div style={labelStyle}>Powder Alerts</div>
-      <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: "white", cursor: "pointer", minHeight: 44 }}>
+      <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: "var(--color-text-1)", cursor: "pointer", minHeight: 44 }}>
         <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
         📧 Weekly powder forecast every Wednesday
       </label>
@@ -100,8 +100,8 @@ function NotificationsSheet({ profile, onSaved, onClose }) {
         disabled={saving}
         style={{
           marginTop: 20, width: "100%", minHeight: 44, padding: 14, borderRadius: 14, border: "none",
-          background: saving ? "rgba(255,255,255,0.1)" : "var(--gradient-cta)",
-          color: "white", fontWeight: 900, fontSize: 15, cursor: saving ? "default" : "pointer",
+          background: saving ? "var(--overlay-10)" : "var(--gradient-cta)",
+          color: saving ? "var(--color-text-1)" : "var(--color-on-accent)", fontWeight: 900, fontSize: 15, cursor: saving ? "default" : "pointer",
         }}
       >
         {saving ? "Saving…" : "Save Changes"}
@@ -119,7 +119,7 @@ function PrivacySheet({ onClose }) {
     <SettingsSheet title="Privacy & visibility" onClose={onClose}>
       <div style={{ display: "grid", gap: 10, justifyItems: "center", textAlign: "center", padding: "12px 0 8px" }}>
         <div style={{ fontSize: 30 }}>🔒</div>
-        <div style={{ fontSize: 15, fontWeight: 800, color: "white" }}>Coming soon</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: "var(--color-text-1)" }}>Coming soon</div>
         <div style={{ fontSize: 13, color: "var(--color-text-2)", maxWidth: 300, lineHeight: 1.5 }}>
           Account-wide privacy controls aren&apos;t built yet. Today your season stats are
           visible to accepted friends only, and each ski day you add can be set to Friends
@@ -154,12 +154,12 @@ function HelpSheet({ onClose }) {
       <div style={{ display: "grid", gap: 16 }}>
         {FAQ.map(([q, a]) => (
           <div key={q}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: "white" }}>{q}</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "var(--color-text-1)" }}>{q}</div>
             <div style={{ fontSize: 13, color: "var(--color-text-2)", marginTop: 4, lineHeight: 1.5 }}>{a}</div>
           </div>
         ))}
       </div>
-      <div style={{ marginTop: 22, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+      <div style={{ marginTop: 22, paddingTop: 16, borderTop: "1px solid var(--overlay-07)" }}>
         <div style={labelStyle}>Still stuck?</div>
         <a
           href={`mailto:${SUPPORT_EMAIL}`}
@@ -179,14 +179,14 @@ export default function ProfileSettingsList({ profile, email, onLogOut, onProfil
   return (
     <>
       <div style={{
-        fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)",
+        fontSize: 11, fontWeight: 800, color: "var(--ink-40)",
         textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10,
       }}>
         Settings
       </div>
 
       <div style={{
-        background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+        background: "var(--overlay-03)", border: "1px solid var(--overlay-08)",
         borderRadius: 16, overflow: "hidden",
       }}>
         {ROWS.map((row, i) => (
@@ -197,7 +197,7 @@ export default function ProfileSettingsList({ profile, email, onLogOut, onProfil
               width: "100%", minHeight: 44,
               display: "flex", alignItems: "center", justifyContent: "space-between",
               padding: "15px 16px", background: "none", border: "none",
-              borderTop: i > 0 ? "1px solid rgba(255,255,255,0.06)" : "none",
+              borderTop: i > 0 ? "1px solid var(--overlay-06)" : "none",
               color: "var(--color-text-1)", textAlign: "left", cursor: "pointer",
             }}
           >

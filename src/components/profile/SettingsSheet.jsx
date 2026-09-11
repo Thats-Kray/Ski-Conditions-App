@@ -34,21 +34,21 @@ export default function SettingsSheet({ title, onClose, children }) {
         style={{
           width: "100%", maxWidth: 480,
           background: "linear-gradient(160deg, var(--color-modal-bg), var(--color-bg-deep))",
-          border: "1px solid rgba(255,255,255,0.1)",
+          border: "1px solid var(--overlay-10)",
           borderRadius: "22px 22px 0 0",
           maxHeight: "92dvh",
           display: "flex", flexDirection: "column", overflow: "hidden",
         }}
       >
         <div style={{ flexShrink: 0, padding: "16px 20px 0" }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.2)", margin: "0 auto 18px" }} />
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: "var(--overlay-20)", margin: "0 auto 18px" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 17, fontWeight: 900, color: "white" }}>{title}</div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: "var(--color-text-1)" }}>{title}</div>
             <button
               onClick={onClose}
               aria-label="Close"
               style={{
-                background: "none", border: "none", color: "rgba(255,255,255,0.4)",
+                background: "none", border: "none", color: "var(--ink-40)",
                 fontSize: 22, lineHeight: 1, cursor: "pointer",
                 minWidth: 44, minHeight: 44,
               }}

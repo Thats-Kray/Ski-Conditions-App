@@ -125,8 +125,8 @@ function EditProfileModal({ profile, onSaved, onClose }) {
 
   const fieldStyle = {
     width: "100%", padding: "11px 13px", borderRadius: 12,
-    border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.07)",
-    color: "white", fontSize: 15, outline: "none", boxSizing: "border-box",
+    border: "1px solid var(--overlay-12)", background: "var(--overlay-07)",
+    color: "var(--color-text-1)", fontSize: 15, outline: "none", boxSizing: "border-box",
   }
 
   return (
@@ -137,7 +137,7 @@ function EditProfileModal({ profile, onSaved, onClose }) {
       <div style={{
         width: "100%", maxWidth: 480,
         background: "linear-gradient(160deg, var(--color-modal-bg), var(--color-bg-deep))",
-        border: "1px solid rgba(255,255,255,0.1)",
+        border: "1px solid var(--overlay-10)",
         borderRadius: "22px 22px 0 0",
         maxHeight: "92dvh",
         display: "flex", flexDirection: "column",
@@ -145,10 +145,10 @@ function EditProfileModal({ profile, onSaved, onClose }) {
       }}>
         {/* Fixed handle + header */}
         <div style={{ flexShrink: 0, padding: "16px 20px 0" }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.2)", margin: "0 auto 18px" }} />
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: "var(--overlay-20)", margin: "0 auto 18px" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-            <div style={{ fontSize: 17, fontWeight: 900, color: "white" }}>Edit Profile</div>
-            <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
+            <div style={{ fontSize: 17, fontWeight: 900, color: "var(--color-text-1)" }}>Edit Profile</div>
+            <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--ink-40)", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
           </div>
         </div>
 
@@ -157,20 +157,20 @@ function EditProfileModal({ profile, onSaved, onClose }) {
 
           {/* Display name */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Display Name</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "var(--ink-45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Display Name</div>
             <input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Your name" style={fieldStyle} />
           </div>
 
           {/* Sport type */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Sport</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "var(--ink-45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Sport</div>
             <div style={{ display: "flex", gap: 8 }}>
               {[{ key: "ski", label: "⛷️ Ski" }, { key: "snowboard", label: "🏂 Snowboard" }, { key: "both", label: "🤙 Both" }].map(({ key, label }) => (
                 <button key={key} onClick={() => setSportType(key)} style={{
                   flex: 1, padding: "9px 8px", borderRadius: 10,
-                  border: `1.5px solid ${sportType === key ? "var(--color-accent-strong)" : "rgba(255,255,255,0.12)"}`,
-                  background: sportType === key ? "rgba(59,130,246,0.18)" : "rgba(255,255,255,0.05)",
-                  color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                  border: `1.5px solid ${sportType === key ? "var(--color-accent-strong)" : "var(--overlay-12)"}`,
+                  background: sportType === key ? "rgba(59,130,246,0.18)" : "var(--overlay-05)",
+                  color: "var(--color-text-1)", fontWeight: 700, fontSize: 13, cursor: "pointer",
                 }}>{label}</button>
               ))}
             </div>
@@ -178,14 +178,14 @@ function EditProfileModal({ profile, onSaved, onClose }) {
 
           {/* Skill level */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Skill Level</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "var(--ink-45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Skill Level</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {SKILL_OPTIONS.map(opt => (
                 <button key={opt.key} onClick={() => setSkillLevel(opt.key)} style={{
                   padding: "7px 14px", borderRadius: 10,
-                  border: `1.5px solid ${skillLevel === opt.key ? opt.color : "rgba(255,255,255,0.1)"}`,
-                  background: skillLevel === opt.key ? `${opt.color}18` : "rgba(255,255,255,0.04)",
-                  color: skillLevel === opt.key ? opt.color : "rgba(255,255,255,0.6)",
+                  border: `1.5px solid ${skillLevel === opt.key ? opt.color : "var(--overlay-10)"}`,
+                  background: skillLevel === opt.key ? `${opt.color}18` : "var(--overlay-04)",
+                  color: skillLevel === opt.key ? opt.color : "var(--ink-60)",
                   fontWeight: skillLevel === opt.key ? 800 : 500, fontSize: 12, cursor: "pointer",
                 }}>{opt.label}</button>
               ))}
@@ -194,16 +194,16 @@ function EditProfileModal({ profile, onSaved, onClose }) {
 
           {/* Ski passes */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Ski Passes</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "var(--ink-45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Ski Passes</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {PASS_OPTIONS.map(p => {
                 const active = skiPasses.includes(p)
                 return (
                   <button key={p} onClick={() => togglePass(p)} style={{
                     padding: "7px 14px", borderRadius: 10,
-                    border: `1.5px solid ${active ? "var(--color-success-strong)" : "rgba(255,255,255,0.1)"}`,
-                    background: active ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)",
-                    color: active ? "var(--color-success-strong)" : "rgba(255,255,255,0.6)",
+                    border: `1.5px solid ${active ? "var(--color-success-strong)" : "var(--overlay-10)"}`,
+                    background: active ? "rgba(34,197,94,0.15)" : "var(--overlay-04)",
+                    color: active ? "var(--color-success-strong)" : "var(--ink-60)",
                     fontWeight: active ? 800 : 500, fontSize: 12, cursor: "pointer",
                   }}>{p}</button>
                 )
@@ -213,7 +213,7 @@ function EditProfileModal({ profile, onSaved, onClose }) {
 
           {/* Vehicle */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Vehicle (optional)</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "var(--ink-45)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 7 }}>Vehicle (optional)</div>
             <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10 }}>
               <input value={vehicleLabel} onChange={e => setVehicleLabel(e.target.value)} placeholder='e.g. "Blue Subaru"' style={fieldStyle} />
               <input value={vehicleSeats} onChange={e => setVehicleSeats(e.target.value)} placeholder="Seats" type="number" min="1" max="8" style={fieldStyle} />
@@ -222,15 +222,15 @@ function EditProfileModal({ profile, onSaved, onClose }) {
         </div>
 
         {/* Sticky footer */}
-        <div style={{ flexShrink: 0, padding: "12px 20px max(24px, env(safe-area-inset-bottom))", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+        <div style={{ flexShrink: 0, padding: "12px 20px max(24px, env(safe-area-inset-bottom))", borderTop: "1px solid var(--overlay-07)" }}>
           {error && <div style={{ fontSize: 13, color: "var(--color-danger)", marginBottom: 12 }}>{error}</div>}
           <button
             onClick={handleSave}
             disabled={saving}
             style={{
               width: "100%", padding: "14px", borderRadius: 14, border: "none",
-              background: saving ? "rgba(255,255,255,0.1)" : "var(--gradient-cta)",
-              color: "white", fontWeight: 900, fontSize: 15, cursor: saving ? "default" : "pointer",
+              background: saving ? "var(--overlay-10)" : "var(--gradient-cta)",
+              color: saving ? "var(--color-text-1)" : "var(--color-on-accent)", fontWeight: 900, fontSize: 15, cursor: saving ? "default" : "pointer",
             }}
           >
             {saving ? "Saving…" : "Save Changes"}
@@ -469,7 +469,7 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
 
   if (loading) {
     return (
-      <div style={{ padding: 32, textAlign: "center", color: "rgba(255,255,255,0.35)", fontSize: 14 }}>
+      <div style={{ padding: 32, textAlign: "center", color: "var(--ink-35)", fontSize: 14 }}>
         Loading profile…
       </div>
     )
@@ -498,7 +498,7 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
   // Season Passes, Vehicle and Settings read as one list rather than four cards
   // that each invented their own heading.
   const sectionLabelStyle = {
-    fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)",
+    fontSize: 11, fontWeight: 800, color: "var(--ink-40)",
     textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10,
   }
   const activeThemeKey = profile?.theme || "blizzard"
@@ -543,7 +543,7 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
       {!isOwnProfile && (
         <button
           onClick={onBack}
-          style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "8px 14px", color: "white", cursor: "pointer", fontWeight: 700, fontSize: 13, minHeight: 44, justifySelf: "start" }}
+          style={{ background: "var(--overlay-07)", border: "1px solid var(--overlay-10)", borderRadius: 10, padding: "8px 14px", color: "var(--color-text-1)", cursor: "pointer", fontWeight: 700, fontSize: 13, minHeight: 44, justifySelf: "start" }}
         >
           ‹ Back
         </button>
@@ -587,7 +587,7 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
               }}>
                 <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: "var(--color-bg-deep)" }}>
                   {photoUploading ? (
-                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.4)", fontSize: 22 }}>⏳</div>
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-40)", fontSize: 22 }}>⏳</div>
                   ) : profile?.avatar_url ? (
                     <img src={profile.avatar_url} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                   ) : (
@@ -595,7 +595,7 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
                       "var(--color-accent-deep)", "var(--color-accent-teal)",
                       /* decorative-only, independent of the token palette */
                       "#7c3aed", "#16a34a", "#ea580c",
-                    ][fullName.length % 5], fontSize: 32, fontWeight: 900, color: "white" }}>
+                    ][fullName.length % 5], fontSize: 32, fontWeight: 900, color: "var(--color-on-accent)" }}>
                       {fullName.charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -619,19 +619,19 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
               <div
                 style={{
                   position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)",
-                  background: "var(--color-surface-popover)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 14,
+                  background: "var(--color-surface-popover)", border: "1px solid var(--overlay-12)", borderRadius: 14,
                   overflow: "hidden", zIndex: 50, minWidth: 180, boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
                 }}
               >
                 <button
                   onClick={() => { setPhotoMenuOpen(false); fileInputRef.current?.click() }}
-                  style={{ width: "100%", padding: "13px 18px", background: "none", border: "none", color: "white", fontSize: 14, fontWeight: 700, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}
+                  style={{ width: "100%", padding: "13px 18px", background: "none", border: "none", color: "var(--color-text-1)", fontSize: 14, fontWeight: 700, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}
                 >
                   📤 Upload Photo
                 </button>
                 {profile?.avatar_url && (
                   <>
-                    <div style={{ height: 1, background: "rgba(255,255,255,0.07)" }} />
+                    <div style={{ height: 1, background: "var(--overlay-07)" }} />
                     <button
                       onClick={handleRemovePhoto}
                       style={{ width: "100%", padding: "13px 18px", background: "none", border: "none", color: "var(--color-danger)", fontSize: 14, fontWeight: 700, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}
@@ -640,10 +640,10 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
                     </button>
                   </>
                 )}
-                <div style={{ height: 1, background: "rgba(255,255,255,0.07)" }} />
+                <div style={{ height: 1, background: "var(--overlay-07)" }} />
                 <button
                   onClick={() => setPhotoMenuOpen(false)}
-                  style={{ width: "100%", padding: "11px 18px", background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                  style={{ width: "100%", padding: "11px 18px", background: "none", border: "none", color: "var(--ink-40)", fontSize: 13, cursor: "pointer", textAlign: "left" }}
                 >
                   Cancel
                 </button>
@@ -652,11 +652,11 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
           </div>
 
           {/* Name + sport + username */}
-          <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1.15, textAlign: "center" }}>
+          <div style={{ fontSize: 22, fontWeight: 900, color: "var(--color-text-1)", lineHeight: 1.15, textAlign: "center" }}>
             {fullName} <span style={{ fontSize: 18 }}>{sportEmoji}</span>
           </div>
           {profile?.username && (
-            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginTop: 3 }}>@{profile.username}</div>
+            <div style={{ color: "var(--ink-40)", fontSize: 13, marginTop: 3 }}>@{profile.username}</div>
           )}
           {heroSubtitle && (
             <div style={{ color: "var(--color-accent-soft)", fontSize: 12, fontWeight: 700, marginTop: 5 }}>
@@ -671,7 +671,7 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
               onClick={() => setShowEdit(true)}
               style={{
                 marginTop: 12, minHeight: 44, padding: "0 20px", borderRadius: 999,
-                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
+                background: "var(--overlay-05)", border: "1px solid var(--overlay-12)",
                 color: "var(--color-text-1)", fontSize: 12, fontWeight: 800, cursor: "pointer",
               }}
             >
@@ -691,8 +691,8 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
           asked to see. */}
       {!isOwnProfile && (
         <div style={{
-          display: "flex", gap: 4, background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14,
+          display: "flex", gap: 4, background: "var(--overlay-04)",
+          border: "1px solid var(--overlay-08)", borderRadius: 14,
           padding: 4, width: "fit-content",
         }}>
           {[{ key: "stats", label: "📊 Stats" }, { key: "plans", label: "📅 Ski Plans" }].map(({ key, label }) => (
@@ -701,9 +701,9 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
               onClick={() => setProfileTab(key)}
               style={{
                 padding: "8px 16px", borderRadius: 10,
-                background: profileTab === key ? "rgba(255,255,255,0.12)" : "transparent",
-                border: profileTab === key ? "1px solid rgba(255,255,255,0.14)" : "1px solid transparent",
-                color: profileTab === key ? "white" : "rgba(255,255,255,0.5)",
+                background: profileTab === key ? "var(--overlay-12)" : "transparent",
+                border: profileTab === key ? "1px solid var(--overlay-14)" : "1px solid transparent",
+                color: profileTab === key ? "var(--color-text-1)" : "var(--ink-50)",
                 fontWeight: profileTab === key ? 800 : 600,
                 fontSize: 13, cursor: "pointer", minHeight: 44,
               }}
@@ -719,16 +719,16 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
           {/* Not an accepted friend — stats are gated server-side too, this is
               just the honest explanation instead of an empty card. */}
           {statsError && (
-            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "24px 20px", textAlign: "center", color: "var(--color-danger)", fontSize: 13 }}>
+            <div style={{ background: "var(--overlay-03)", border: "1px solid var(--overlay-08)", borderRadius: 16, padding: "24px 20px", textAlign: "center", color: "var(--color-danger)", fontSize: 13 }}>
               Couldn&apos;t load season stats right now. Try again in a bit.
             </div>
           )}
 
           {notFriends && (
-            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "28px 20px", textAlign: "center", display: "grid", gap: 8, justifyItems: "center" }}>
+            <div style={{ background: "var(--overlay-03)", border: "1px solid var(--overlay-08)", borderRadius: 16, padding: "28px 20px", textAlign: "center", display: "grid", gap: 8, justifyItems: "center" }}>
               <div style={{ fontSize: 30 }}>🔒</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "white" }}>Season stats are friends-only</div>
-              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", maxWidth: 280 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "var(--color-text-1)" }}>Season stats are friends-only</div>
+              <div style={{ fontSize: 13, color: "var(--ink-45)", maxWidth: 280 }}>
                 Add {profile?.first_name || profile?.username || "them"} as a friend to see their days, vertical, and top resort.
               </div>
             </div>
@@ -747,14 +747,14 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
               )}
 
               {allTimeSelected && allTimeStats == null ? (
-                <div style={{ textAlign: "center", padding: 24, color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
+                <div style={{ textAlign: "center", padding: 24, color: "var(--ink-35)", fontSize: 13 }}>
                   Loading all-time stats…
                 </div>
               ) : (
                 <>
                   <ProfileStatStrip stats={activeStats} />
                   {activeStats.days === 0 ? (
-                    <div style={{ textAlign: "center", padding: 20, color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
+                    <div style={{ textAlign: "center", padding: 20, color: "var(--ink-30)", fontSize: 13 }}>
                       No days logged yet — get out there! ⛷️
                     </div>
                   ) : (
@@ -777,7 +777,7 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
           {isOwnProfile && (
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <div style={{ fontSize: 14, fontWeight: 900, color: "white" }}>Season grid</div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: "var(--color-text-1)" }}>Season grid</div>
                 <div style={{ fontSize: 11, color: "var(--color-accent-soft)", opacity: 0.7 }}>
                   {season.label} · colored by vertical feet
                 </div>
@@ -795,7 +795,7 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
               style={{
                 width: "100%", minHeight: 44, padding: 13, borderRadius: 14, border: "none",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                background: "var(--gradient-cta)", color: "white",
+                background: "var(--gradient-cta)", color: "var(--color-on-accent)",
                 fontSize: 13, fontWeight: 800, cursor: "pointer",
               }}
             >
@@ -830,7 +830,7 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
         <div>
           <div style={sectionLabelStyle}>Appearance</div>
           <div style={{
-            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+            background: "var(--overlay-03)", border: "1px solid var(--overlay-08)",
             borderRadius: 16, padding: "4px 14px",
           }}>
             <div style={{
@@ -838,7 +838,7 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
               padding: "10px 0",
             }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>Theme</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-text-1)" }}>Theme</div>
                 <div style={{ fontSize: 11, color: "var(--color-accent-soft)", opacity: 0.7, marginTop: 2 }}>
                   {activeThemeLabel}
                 </div>
@@ -869,21 +869,21 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
               </div>
             </div>
 
-            <div style={{ height: 1, background: "rgba(255,255,255,0.08)" }} />
+            <div style={{ height: 1, background: "var(--overlay-08)" }} />
 
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
               padding: "10px 0",
             }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>Appearance</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-text-1)" }}>Appearance</div>
                 <div style={{ fontSize: 11, color: "var(--color-accent-soft)", opacity: 0.7, marginTop: 2 }}>
                   {activeMode === "light" ? "Light" : "Dark"}
                 </div>
               </div>
               <div style={{
                 display: "flex", gap: 2, flexShrink: 0, padding: 2, borderRadius: 999,
-                background: "rgba(255,255,255,0.06)",
+                background: "var(--overlay-06)",
               }}>
                 {MODE_OPTIONS.map((m) => {
                   const active = activeMode === m.key
@@ -898,7 +898,7 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
                         minHeight: 36, padding: "0 14px", borderRadius: 999, border: "none",
                         cursor: "pointer", fontSize: 12, fontWeight: 800,
                         background: active ? "var(--color-accent)" : "transparent",
-                        color: active ? "var(--color-bg)" : "rgba(255,255,255,0.5)",
+                        color: active ? "var(--color-bg)" : "var(--ink-50)",
                         display: "flex", alignItems: "center", gap: 5,
                       }}
                     >
@@ -920,7 +920,7 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
         <div>
           <div style={sectionLabelStyle}>Season Passes</div>
           <div style={{
-            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+            background: "var(--overlay-03)", border: "1px solid var(--overlay-08)",
             borderRadius: 16, padding: 14, display: "flex", flexWrap: "wrap", gap: 8,
           }}>
             {profile.ski_passes.map((p) => (
@@ -940,12 +940,12 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
         <div>
           <div style={sectionLabelStyle}>{isOwnProfile ? "My Vehicle" : "Vehicle"}</div>
           <div style={{
-            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+            background: "var(--overlay-03)", border: "1px solid var(--overlay-08)",
             borderRadius: 16, padding: 14, display: "flex", alignItems: "center", gap: 12,
           }}>
             <div style={{ fontSize: 24 }}>🚗</div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{profile.vehicle_label}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-1)" }}>{profile.vehicle_label}</div>
               {profile.vehicle_seats > 0 && (
                 <div style={{ fontSize: 12, color: "var(--color-accent-soft)", marginTop: 2, fontWeight: 700 }}>
                   {profile.vehicle_seats} open seat{profile.vehicle_seats !== 1 ? "s" : ""} for passengers
