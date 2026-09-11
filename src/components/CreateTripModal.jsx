@@ -280,7 +280,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                 }}
                 className="resort-pick-btn"
               >
-                <div style={{ fontSize: 13, fontWeight: 900, color: "var(--color-text-1)", lineHeight: 1.2 }}>
+                <div style={{ fontSize: 13, fontWeight: 900, color: resort.photo ? "var(--color-on-accent)" : "var(--color-text-1)", lineHeight: 1.2 }}>
                   {resort.name}
                 </div>
                 <div
@@ -322,7 +322,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
               >
                 <span style={{ fontSize: 26 }}>🏔️</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 17, fontWeight: 900, color: "var(--color-text-1)" }}>
+                  <div style={{ fontSize: 17, fontWeight: 900, color: selectedResort.photo ? "var(--color-on-accent)" : "var(--color-text-1)" }}>
                     {selectedResort.name}
                   </div>
                   <div
@@ -340,7 +340,7 @@ export default function CreateTripModal({ onClose, onCreated }) {
                     padding: "5px 12px",
                     fontSize: 12,
                     fontWeight: 700,
-                    color: "var(--color-text-1)",
+                    color: selectedResort.photo ? "var(--color-on-accent)" : "var(--color-text-1)",
                     cursor: "pointer",
                     flexShrink: 0,
                   }}
