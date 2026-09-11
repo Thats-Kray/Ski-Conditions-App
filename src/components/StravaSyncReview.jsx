@@ -55,34 +55,34 @@ export default function StravaSyncReview({ activities, skippedNonSki, onClose, o
       onClick={onClose}
     >
       <div
-        style={{ background: "var(--color-modal-bg)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "24px 20px 32px", width: "100%", maxWidth: 520, maxHeight: "85dvh", display: "flex", flexDirection: "column" }}
+        style={{ background: "var(--color-modal-bg)", border: "1px solid var(--overlay-10)", borderRadius: "20px 20px 0 0", padding: "24px 20px 32px", width: "100%", maxWidth: 520, maxHeight: "85dvh", display: "flex", flexDirection: "column" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexShrink: 0 }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: "white" }}>Review Strava Activities</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: "var(--color-text-1)" }}>Review Strava Activities</div>
           <button
             onClick={onClose}
-            style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}
+            style={{ background: "var(--overlay-08)", border: "none", color: "var(--ink-60)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}
           >
             ✕
           </button>
         </div>
 
         {activities.length === 0 ? (
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", padding: "20px 0" }}>
+          <div style={{ fontSize: 13, color: "var(--ink-40)", padding: "20px 0" }}>
             No new ski activities found from Strava this season
             {skippedNonSki > 0 ? ` (${skippedNonSki} non-ski activities skipped).` : "."}
           </div>
         ) : (
           <>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 12, flexShrink: 0 }}>
+            <div style={{ fontSize: 12, color: "var(--ink-40)", marginBottom: 12, flexShrink: 0 }}>
               Found {activities.length} ski activit{activities.length === 1 ? "y" : "ies"} not yet in your log. Pick a mountain for each one you want to import.
             </div>
             <div style={{ overflowY: "auto", display: "grid", gap: 12, paddingRight: 2 }}>
               {activities.map((a) => {
                 const sel = selections[a.stravaActivityId]
                 return (
-                  <div key={a.stravaActivityId} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: 12 }}>
+                  <div key={a.stravaActivityId} style={{ background: "var(--overlay-04)", border: "1px solid var(--overlay-08)", borderRadius: 12, padding: 12 }}>
                     <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
                       <input
                         type="checkbox"
@@ -94,9 +94,9 @@ export default function StravaSyncReview({ activities, skippedNonSki, onClose, o
                         <input
                           value={sel.notes}
                           onChange={(e) => updateSelection(a.stravaActivityId, { notes: e.target.value })}
-                          style={{ width: "100%", background: "transparent", border: "none", color: "white", fontSize: 14, fontWeight: 700, padding: 0, marginBottom: 2 }}
+                          style={{ width: "100%", background: "transparent", border: "none", color: "var(--color-text-1)", fontSize: 14, fontWeight: 700, padding: 0, marginBottom: 2 }}
                         />
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+                        <div style={{ fontSize: 11, color: "var(--ink-40)" }}>
                           {a.date}
                           {a.verticalFeet != null && ` · ${a.verticalFeet} ft`}
                           {a.milesSkied != null && ` · ${a.milesSkied} mi`}
@@ -125,7 +125,7 @@ export default function StravaSyncReview({ activities, skippedNonSki, onClose, o
               disabled={importing || includedCount === 0 || missingResort}
               style={{
                 marginTop: 16, width: "100%", padding: "13px 0", borderRadius: 12, border: "none",
-                background: "var(--gradient-cta)", color: "white", fontWeight: 900, fontSize: 14,
+                background: "var(--gradient-cta)", color: "var(--color-on-accent)", fontWeight: 900, fontSize: 14,
                 cursor: importing || includedCount === 0 || missingResort ? "not-allowed" : "pointer",
                 opacity: importing || includedCount === 0 || missingResort ? 0.6 : 1,
                 flexShrink: 0,
@@ -134,7 +134,7 @@ export default function StravaSyncReview({ activities, skippedNonSki, onClose, o
               {importing ? "Importing…" : `Import ${includedCount} Selected`}
             </button>
             {missingResort && includedCount > 0 && (
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 8, textAlign: "center", flexShrink: 0 }}>
+              <div style={{ fontSize: 11, color: "var(--ink-40)", marginTop: 8, textAlign: "center", flexShrink: 0 }}>
                 Pick a mountain for every selected activity to continue.
               </div>
             )}

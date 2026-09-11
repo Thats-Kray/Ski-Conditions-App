@@ -135,7 +135,7 @@ export default function StravaConnect({ userId }) {
 
   if (loading) {
     return (
-      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
+      <div style={{ background: "var(--overlay-03)", border: "1px solid var(--overlay-08)", borderRadius: 16, padding: "14px 16px", color: "var(--ink-35)", fontSize: 13 }}>
         Loading…
       </div>
     )
@@ -143,12 +143,12 @@ export default function StravaConnect({ userId }) {
 
   return (
     <>
-      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px" }}>
+      <div style={{ background: "var(--overlay-03)", border: "1px solid var(--overlay-08)", borderRadius: 16, padding: "14px 16px" }}>
         {/* Header row */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <StravaIcon />
-            <div style={{ fontSize: 14, fontWeight: 800, color: "white" }}>Strava</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "var(--color-text-1)" }}>Strava</div>
           </div>
           {isConnected && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800, color: "var(--color-success-strong)" }}>
@@ -172,14 +172,14 @@ export default function StravaConnect({ userId }) {
 
         {!isConnected ? (
           <>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: "var(--ink-50)", marginBottom: 12 }}>
               Import your ski activities automatically
             </div>
             <button
               onClick={handleConnect}
               style={{
                 width: "100%", padding: "11px 0", borderRadius: 12, border: "none",
-                background: "#FC4C02", color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer",
+                background: "#FC4C02", color: "var(--color-on-accent)", fontWeight: 800, fontSize: 14, cursor: "pointer",
               }}
             >
               Connect Strava →
@@ -193,9 +193,9 @@ export default function StravaConnect({ userId }) {
                 disabled={syncing}
                 style={{
                   flex: 1, padding: "10px 0", borderRadius: 12,
-                  border: "1px solid rgba(255,255,255,0.14)",
-                  background: "var(--color-surface, rgba(255,255,255,0.06))",
-                  color: "white", fontWeight: 800, fontSize: 13,
+                  border: "1px solid var(--overlay-14)",
+                  background: "var(--color-surface, var(--overlay-06))",
+                  color: "var(--color-text-1)", fontWeight: 800, fontSize: 13,
                   cursor: syncing ? "default" : "pointer",
                   opacity: syncing ? 0.6 : 1,
                 }}
@@ -223,7 +223,7 @@ export default function StravaConnect({ userId }) {
             {syncResult && (
               <div style={{
                 marginTop: 12, fontSize: 12, fontWeight: 700,
-                color: syncResult.error ? "var(--color-danger)" : "rgba(255,255,255,0.6)",
+                color: syncResult.error ? "var(--color-danger)" : "var(--ink-60)",
               }}>
                 {syncResult.error
                   ? `Import failed: ${syncResult.error}`
@@ -237,7 +237,7 @@ export default function StravaConnect({ userId }) {
             )}
 
             {athleteId && (
-              <div style={{ marginTop: 10, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+              <div style={{ marginTop: 10, fontSize: 11, color: "var(--ink-30)" }}>
                 Strava athlete #{athleteId}
               </div>
             )}

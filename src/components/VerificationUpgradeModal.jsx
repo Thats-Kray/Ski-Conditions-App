@@ -11,9 +11,9 @@ const fieldStyle = {
   width: "100%",
   padding: "11px 13px",
   borderRadius: 12,
-  border: "1px solid rgba(255,255,255,0.12)",
-  background: "rgba(255,255,255,0.07)",
-  color: "white",
+  border: "1px solid var(--overlay-12)",
+  background: "var(--overlay-07)",
+  color: "var(--color-text-1)",
   fontSize: 15,
   outline: "none",
   boxSizing: "border-box",
@@ -22,7 +22,7 @@ const fieldStyle = {
 const fieldLabelStyle = {
   fontSize: 11,
   fontWeight: 800,
-  color: "rgba(255,255,255,0.45)",
+  color: "var(--ink-45)",
   textTransform: "uppercase",
   letterSpacing: 0.8,
   marginBottom: 7,
@@ -31,11 +31,11 @@ const fieldLabelStyle = {
 const secondaryButtonStyle = {
   flex: 1,
   minWidth: 100,
-  background: "rgba(255,255,255,0.08)",
-  border: "1px solid rgba(255,255,255,0.14)",
+  background: "var(--overlay-08)",
+  border: "1px solid var(--overlay-14)",
   borderRadius: 14,
   padding: "12px 14px",
-  color: "white",
+  color: "var(--color-text-1)",
   fontWeight: 800,
   fontSize: 13,
   cursor: "pointer",
@@ -100,7 +100,7 @@ export default function VerificationUpgradeModal({ onClose, onVerified }) {
         position: "fixed",
         inset: 0,
         zIndex: 600,
-        background: "rgba(4,8,15,0.85)",
+        background: "var(--scrim)",
         backdropFilter: "blur(10px)",
         display: "flex",
         alignItems: "center",
@@ -117,7 +117,7 @@ export default function VerificationUpgradeModal({ onClose, onVerified }) {
           maxHeight: "90vh",
           overflowY: "auto",
           background: "var(--color-bg-deep)",
-          border: "1px solid rgba(255,255,255,0.1)",
+          border: "1px solid var(--overlay-10)",
           borderRadius: 24,
           boxShadow: "0 40px 120px rgba(0,0,0,0.85)",
           padding: 22,
@@ -125,19 +125,19 @@ export default function VerificationUpgradeModal({ onClose, onVerified }) {
       >
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-          <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>Verify your account</div>
+          <div style={{ fontSize: 20, fontWeight: 900, color: "var(--color-text-1)" }}>Verify your account</div>
           <button
             onClick={onClose}
             style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--overlay-08)",
+              border: "1px solid var(--overlay-12)",
               borderRadius: "50%",
               width: 32,
               height: 32,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "white",
+              color: "var(--color-text-1)",
               fontSize: 18,
               cursor: "pointer",
               flexShrink: 0,
@@ -147,7 +147,7 @@ export default function VerificationUpgradeModal({ onClose, onVerified }) {
           </button>
         </div>
 
-        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginBottom: 20 }}>
+        <div style={{ fontSize: 14, color: "var(--ink-55)", marginBottom: 20 }}>
           Link one account and confirm your phone number to unlock this action.
         </div>
 
@@ -187,11 +187,11 @@ export default function VerificationUpgradeModal({ onClose, onVerified }) {
 
         {/* Divider */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-          <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
-          <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 0.8 }}>
+          <div style={{ flex: 1, height: 1, background: "var(--overlay-10)" }} />
+          <div style={{ fontSize: 11, fontWeight: 800, color: "var(--ink-35)", textTransform: "uppercase", letterSpacing: 0.8 }}>
             or
           </div>
-          <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
+          <div style={{ flex: 1, height: 1, background: "var(--overlay-10)" }} />
         </div>
 
         {/* Phone verification */}
@@ -213,8 +213,8 @@ export default function VerificationUpgradeModal({ onClose, onVerified }) {
                 padding: "14px",
                 borderRadius: 14,
                 border: "none",
-                background: busy ? "rgba(255,255,255,0.1)" : "var(--gradient-cta)",
-                color: "white",
+                background: busy ? "var(--overlay-10)" : "var(--gradient-cta)",
+                color: busy ? "var(--ink-45)" : "var(--color-on-accent)",
                 fontWeight: 900,
                 fontSize: 15,
                 cursor: busy ? "default" : "pointer",
@@ -241,8 +241,8 @@ export default function VerificationUpgradeModal({ onClose, onVerified }) {
                 padding: "14px",
                 borderRadius: 14,
                 border: "none",
-                background: busy ? "rgba(255,255,255,0.1)" : "var(--gradient-cta)",
-                color: "white",
+                background: busy ? "var(--overlay-10)" : "var(--gradient-cta)",
+                color: busy ? "var(--ink-45)" : "var(--color-on-accent)",
                 fontWeight: 900,
                 fontSize: 15,
                 cursor: busy ? "default" : "pointer",
@@ -260,7 +260,7 @@ export default function VerificationUpgradeModal({ onClose, onVerified }) {
                 padding: "8px",
                 background: "transparent",
                 border: "none",
-                color: "rgba(255,255,255,0.5)",
+                color: "var(--ink-50)",
                 fontSize: 13,
                 fontWeight: 700,
                 cursor: busy ? "default" : "pointer",

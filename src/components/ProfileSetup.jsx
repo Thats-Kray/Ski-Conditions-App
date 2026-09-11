@@ -33,9 +33,9 @@ function initialsFromName(name) {
 }
 
 const inputStyle = {
-  background: "rgba(255,255,255,0.07)",
-  border: "1px solid rgba(255,255,255,0.12)",
-  color: "white",
+  background: "var(--overlay-07)",
+  border: "1px solid var(--overlay-12)",
+  color: "var(--color-text-1)",
   padding: "11px 14px",
   borderRadius: 12,
   outline: "none",
@@ -48,7 +48,7 @@ const inputStyle = {
 const labelStyle = {
   fontSize: 11,
   fontWeight: 800,
-  color: "rgba(255,255,255,0.45)",
+  color: "var(--ink-45)",
   textTransform: "uppercase",
   letterSpacing: 0.8,
   marginBottom: 8,
@@ -56,8 +56,8 @@ const labelStyle = {
 }
 
 const sectionStyle = {
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(255,255,255,0.07)",
+  background: "var(--overlay-03)",
+  border: "1px solid var(--overlay-07)",
   borderRadius: 16,
   padding: "16px",
   display: "grid",
@@ -68,11 +68,11 @@ const sectionStyle = {
 function StatChip({ emoji, label, value, color }) {
   if (!value) return null
   return (
-    <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+    <div style={{ background: "var(--overlay-05)", border: "1px solid var(--overlay-09)", borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
       <span style={{ fontSize: 20 }}>{emoji}</span>
       <div>
-        <div style={{ fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,0.38)", textTransform: "uppercase", letterSpacing: 0.7 }}>{label}</div>
-        <div style={{ fontSize: 14, fontWeight: 800, color: color || "white", marginTop: 2 }}>{value}</div>
+        <div style={{ fontSize: 10, fontWeight: 800, color: "var(--ink-38)", textTransform: "uppercase", letterSpacing: 0.7 }}>{label}</div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: color || "var(--color-text-1)", marginTop: 2 }}>{value}</div>
       </div>
     </div>
   )
@@ -186,7 +186,7 @@ export default function ProfileSetup({ onSaved }) {
 
   if (!user && !initialLoading) {
     return (
-      <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 18, padding: 20, color: "rgba(255,255,255,0.6)", fontSize: 14 }}>
+      <div style={{ background: "var(--overlay-05)", border: "1px solid var(--overlay-10)", borderRadius: 18, padding: 20, color: "var(--ink-60)", fontSize: 14 }}>
         Sign in to create your profile.
       </div>
     )
@@ -194,7 +194,7 @@ export default function ProfileSetup({ onSaved }) {
 
   if (initialLoading) {
     return (
-      <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 18, padding: 20, color: "rgba(255,255,255,0.45)", fontSize: 14 }}>
+      <div style={{ background: "var(--overlay-05)", border: "1px solid var(--overlay-10)", borderRadius: 18, padding: 20, color: "var(--ink-45)", fontSize: 14 }}>
         Loading profile…
       </div>
     )
@@ -206,17 +206,17 @@ export default function ProfileSetup({ onSaved }) {
       <div style={{ display: "grid", gap: 14 }}>
 
         {/* Header card */}
-        <div style={{ background: "linear-gradient(135deg,rgba(30,58,95,0.7),rgba(11,20,36,0.9))", border: "1px solid rgba(96,165,250,0.2)", borderRadius: 20, padding: "20px" }}>
+        <div style={{ background: "var(--gradient-bg)", border: "1px solid rgba(96,165,250,0.2)", borderRadius: 20, padding: "20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ width: 80, height: 80, borderRadius: 999, overflow: "hidden", background: "rgba(255,255,255,0.08)", border: "2px solid rgba(96,165,250,0.35)", display: "grid", placeItems: "center", fontWeight: 900, fontSize: 26, color: "white", flexShrink: 0 }}>
+            <div style={{ width: 80, height: 80, borderRadius: 999, overflow: "hidden", background: "var(--overlay-08)", border: "2px solid rgba(96,165,250,0.35)", display: "grid", placeItems: "center", fontWeight: 900, fontSize: 26, color: "var(--color-text-1)", flexShrink: 0 }}>
               {avatarUrl ? <img src={avatarUrl} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initialsFromName(fullName)}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <div style={{ fontSize: 22, fontWeight: 900, color: "white" }}>{fullName}</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: "var(--color-text-1)" }}>{fullName}</div>
                 {sportObj && <span style={{ fontSize: 18 }}>{sportObj.emoji}</span>}
               </div>
-              {username && <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, marginTop: 2 }}>@{username}</div>}
+              {username && <div style={{ color: "var(--ink-50)", fontSize: 13, marginTop: 2 }}>@{username}</div>}
               {favoriteMountain && <div style={{ color: "var(--color-accent-soft)", fontSize: 12, fontWeight: 700, marginTop: 4 }}>📍 {favoriteMountain}</div>}
             </div>
           </div>
@@ -246,7 +246,7 @@ export default function ProfileSetup({ onSaved }) {
 
         <button
           onClick={() => { setIsEditing(true); setMessage("") }}
-          style={{ background: "var(--gradient-cta)", color: "white", border: "none", padding: "12px", borderRadius: 14, cursor: "pointer", fontWeight: 800, fontSize: 14, boxShadow: "0 6px 24px rgba(37,99,235,0.35)" }}
+          style={{ background: "var(--gradient-cta)", color: "var(--color-on-accent)", border: "none", padding: "12px", borderRadius: 14, cursor: "pointer", fontWeight: 800, fontSize: 14, boxShadow: "0 6px 24px rgba(37,99,235,0.35)" }}
         >
           Edit Profile
         </button>
@@ -261,7 +261,7 @@ export default function ProfileSetup({ onSaved }) {
       {/* Avatar */}
       <div style={{ display: "flex", justifyContent: "center" }}>
         <div style={{ position: "relative" }}>
-          <div style={{ width: 88, height: 88, borderRadius: 999, overflow: "hidden", background: "rgba(255,255,255,0.08)", border: "2px solid rgba(255,255,255,0.15)", display: "grid", placeItems: "center", fontWeight: 900, fontSize: 28, color: "white" }}>
+          <div style={{ width: 88, height: 88, borderRadius: 999, overflow: "hidden", background: "var(--overlay-08)", border: "2px solid var(--overlay-15)", display: "grid", placeItems: "center", fontWeight: 900, fontSize: 28, color: "var(--color-text-1)" }}>
             {avatarUrl ? <img src={avatarUrl} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initialsFromName(fullName)}
           </div>
           <label style={{ position: "absolute", bottom: 0, right: 0, width: 28, height: 28, borderRadius: 999, background: "var(--color-accent-deep)", border: "2px solid var(--color-modal-bg)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>
@@ -270,7 +270,7 @@ export default function ProfileSetup({ onSaved }) {
           </label>
         </div>
       </div>
-      {uploading && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", textAlign: "center" }}>Uploading…</div>}
+      {uploading && <div style={{ fontSize: 12, color: "var(--ink-50)", textAlign: "center" }}>Uploading…</div>}
 
       {/* Name + username */}
       <div style={sectionStyle}>
@@ -290,7 +290,7 @@ export default function ProfileSetup({ onSaved }) {
             const active = sportType === key
             return (
               <button key={key} type="button" onClick={() => setSportType(active ? "" : key)}
-                style={{ padding: "14px 8px", borderRadius: 14, border: active ? "1.5px solid var(--color-accent-soft)" : "1.5px solid rgba(255,255,255,0.1)", background: active ? "rgba(96,165,250,0.14)" : "rgba(255,255,255,0.04)", color: active ? "var(--color-accent-soft)" : "rgba(255,255,255,0.65)", fontWeight: 800, fontSize: 13, cursor: "pointer", display: "grid", gap: 5, justifyItems: "center", transition: "all 0.15s" }}
+                style={{ padding: "14px 8px", borderRadius: 14, border: active ? "1.5px solid var(--color-accent-soft)" : "1.5px solid var(--overlay-10)", background: active ? "rgba(96,165,250,0.14)" : "var(--overlay-04)", color: active ? "var(--color-accent-soft)" : "var(--ink-65)", fontWeight: 800, fontSize: 13, cursor: "pointer", display: "grid", gap: 5, justifyItems: "center", transition: "all 0.15s" }}
               >
                 <span style={{ fontSize: 24 }}>{emoji}</span>
                 <span>{label}</span>
@@ -308,11 +308,11 @@ export default function ProfileSetup({ onSaved }) {
             const active = skillLevel === key
             return (
               <button key={key} type="button" onClick={() => setSkillLevel(active ? "" : key)}
-                style={{ padding: "11px 14px", borderRadius: 12, border: active ? `1.5px solid ${color}55` : "1.5px solid rgba(255,255,255,0.08)", background: active ? `${color}18` : "rgba(255,255,255,0.03)", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, transition: "all 0.15s" }}
+                style={{ padding: "11px 14px", borderRadius: 12, border: active ? `1.5px solid ${color}55` : "1.5px solid var(--overlay-08)", background: active ? `${color}18` : "var(--overlay-03)", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, transition: "all 0.15s" }}
               >
                 <div style={{ width: 14, height: 14, borderRadius: 4, background: color, boxShadow: active ? `0 0 10px ${color}88` : "none", flexShrink: 0 }} />
-                <span style={{ fontWeight: 800, fontSize: 13, color: active ? color : "rgba(255,255,255,0.7)" }}>{label}</span>
-                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginLeft: "auto" }}>{desc}</span>
+                <span style={{ fontWeight: 800, fontSize: 13, color: active ? color : "var(--ink-70)" }}>{label}</span>
+                <span style={{ fontSize: 12, color: "var(--ink-35)", marginLeft: "auto" }}>{desc}</span>
                 {active && <span style={{ fontSize: 14, color }}>✓</span>}
               </button>
             )
@@ -328,7 +328,7 @@ export default function ProfileSetup({ onSaved }) {
             const active = skiPasses.includes(passName)
             return (
               <button key={passName} type="button" onClick={() => togglePass(passName)}
-                style={{ background: active ? "var(--gradient-pass-pill)" : "rgba(255,255,255,0.06)", color: active ? "var(--color-pass-pill-text)" : "rgba(255,255,255,0.75)", border: active ? "none" : "1px solid rgba(255,255,255,0.12)", padding: "8px 14px", borderRadius: 999, fontWeight: 800, fontSize: 13, cursor: "pointer", transition: "all 0.15s" }}
+                style={{ background: active ? "var(--gradient-pass-pill)" : "var(--overlay-06)", color: active ? "var(--color-pass-pill-text)" : "var(--ink-75)", border: active ? "none" : "1px solid var(--overlay-12)", padding: "8px 14px", borderRadius: 999, fontWeight: 800, fontSize: 13, cursor: "pointer", transition: "all 0.15s" }}
               >
                 {passName}
               </button>
@@ -350,7 +350,7 @@ export default function ProfileSetup({ onSaved }) {
 
       {/* Vehicle */}
       <div style={sectionStyle}>
-        <div style={labelStyle}>My Vehicle <span style={{ color: "rgba(255,255,255,0.28)", fontWeight: 600, textTransform: "none" }}>optional — helps with carpooling</span></div>
+        <div style={labelStyle}>My Vehicle <span style={{ color: "var(--ink-28)", fontWeight: 600, textTransform: "none" }}>optional — helps with carpooling</span></div>
         <input
           type="text"
           placeholder="e.g. Blue Subaru Outback, White RAV4"
@@ -360,14 +360,14 @@ export default function ProfileSetup({ onSaved }) {
           style={inputStyle}
         />
         <div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 10, fontWeight: 700 }}>Open seats available for passengers</div>
+          <div style={{ fontSize: 12, color: "var(--ink-45)", marginBottom: 10, fontWeight: 700 }}>Open seats available for passengers</div>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <button type="button" onClick={() => setVehicleSeats((s) => Math.max(0, s - 1))}
-              style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", color: "white", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-            <span style={{ fontSize: 20, fontWeight: 900, color: vehicleSeats === 0 ? "rgba(255,255,255,0.25)" : "white", minWidth: 28, textAlign: "center" }}>{vehicleSeats === 0 ? "—" : vehicleSeats}</span>
+              style={{ width: 34, height: 34, borderRadius: "50%", background: "var(--overlay-08)", border: "1px solid var(--overlay-14)", color: "var(--color-text-1)", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+            <span style={{ fontSize: 20, fontWeight: 900, color: vehicleSeats === 0 ? "var(--ink-25)" : "var(--color-text-1)", minWidth: 28, textAlign: "center" }}>{vehicleSeats === 0 ? "—" : vehicleSeats}</span>
             <button type="button" onClick={() => setVehicleSeats((s) => Math.min(8, s + 1))}
-              style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", color: "white", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>{vehicleSeats > 0 ? "seats" : "not offering rides"}</span>
+              style={{ width: 34, height: 34, borderRadius: "50%", background: "var(--overlay-08)", border: "1px solid var(--overlay-14)", color: "var(--color-text-1)", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+            <span style={{ fontSize: 12, color: "var(--ink-35)" }}>{vehicleSeats > 0 ? "seats" : "not offering rides"}</span>
           </div>
           {vehicleSeats > 0 && (
             <div style={{ display: "flex", gap: 5, marginTop: 10 }}>
@@ -380,20 +380,20 @@ export default function ProfileSetup({ onSaved }) {
       </div>
 
       {message && (
-        <div style={{ fontSize: 13, color: message.includes("saved") || message.includes("uploaded") ? "var(--color-success-strong)" : "var(--color-danger)", padding: "10px 14px", background: message.includes("saved") || message.includes("uploaded") ? "rgba(34,197,94,0.08)" : "rgba(244,63,94,0.08)", borderRadius: 10 }}>
+        <div style={{ fontSize: 13, color: message.includes("saved") || message.includes("uploaded") ? "var(--color-success-strong)" : "var(--color-danger)", padding: "10px 14px", background: message.includes("saved") || message.includes("uploaded") ? "var(--color-success-bg)" : "var(--color-danger-bg)", borderRadius: 10 }}>
           {message}
         </div>
       )}
 
       <div style={{ display: "flex", gap: 10 }}>
         <button type="submit" disabled={loading}
-          style={{ flex: 1, background: loading ? "rgba(255,255,255,0.1)" : "var(--gradient-cta)", color: "white", border: "none", padding: "13px", borderRadius: 14, cursor: loading ? "not-allowed" : "pointer", fontWeight: 900, fontSize: 14, boxShadow: loading ? "none" : "0 6px 24px rgba(37,99,235,0.35)" }}
+          style={{ flex: 1, background: loading ? "var(--overlay-10)" : "var(--gradient-cta)", color: loading ? "var(--ink-45)" : "var(--color-on-accent)", border: "none", padding: "13px", borderRadius: 14, cursor: loading ? "not-allowed" : "pointer", fontWeight: 900, fontSize: 14, boxShadow: loading ? "none" : "0 6px 24px rgba(37,99,235,0.35)" }}
         >
           {loading ? "Saving…" : hasProfile ? "Save Changes" : "Create Profile"}
         </button>
         {hasProfile && (
           <button type="button" onClick={() => { setIsEditing(false); setMessage("") }}
-            style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.65)", border: "1px solid rgba(255,255,255,0.1)", padding: "13px 20px", borderRadius: 14, cursor: "pointer", fontWeight: 800 }}
+            style={{ background: "var(--overlay-06)", color: "var(--ink-65)", border: "1px solid var(--overlay-10)", padding: "13px 20px", borderRadius: 14, cursor: "pointer", fontWeight: 800 }}
           >
             Cancel
           </button>
