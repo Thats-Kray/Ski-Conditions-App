@@ -66,16 +66,25 @@ line to Section B; verified against the shipped code before handoff — see
     toggle knob, the check-in form, end the session and go through the recap including a photo
     upload and its error state, edit a logged session, add day details with a photo and a friend
     tag.
-18. **Auth:** sign out while in light mode. The landing page, sign-in panel and sign-up form render
-    **dark**, because a signed-out visitor has no `data-mode` attribute set on `<html>`. Confirm
-    nothing looks half-light.
+18. **Auth:** sign out while in light mode. The landing page, sign-in panel and sign-up form stay
+    **light**. Nothing clears the `pd_theme_mode` localStorage key on sign-out, and `index.html`'s
+    pre-mount script reads that key unconditionally, so the mode survives sign-out on the same
+    browser. That is fine — the retrofit covers the landing and auth screens too — so what you're
+    checking is that they're fully light, not half-light. (A visitor who has never signed in on
+    this browser has no key and does get dark.)
+
+19. **Today tab > expand a resort row > read the hero.** Is the resort NAME and the pass chip
+    (Ikon/Epic/Indy/Local) readable over the hero photo/gradient? That hero is frozen dark in both
+    modes — including the no-photo `scoreGradient()` fallback, every branch of which is a dark
+    gradient — so both need explicit light ink rather than the page's adaptive text colour. Highest
+    traffic screen in the app; check it in all five themes and on a closed resort (no photo) too.
 
 ## C. The two things most likely to be wrong.
 
-19. **Anything you can barely read.** The `--ink-20` to `--ink-40` steps are deliberately below
+20. **Anything you can barely read.** The `--ink-20` to `--ink-40` steps are deliberately below
     the 4.5:1 contrast line in both modes, matching how dark mode already looks. If a specific
     caption is worse in light than in dark, that is a bug — tell us the screen.
-20. **Anything that stayed dark.** A black panel, a black chip or dark ring on a light page is a
+21. **Anything that stayed dark.** A black panel, a black chip or dark ring on a light page is a
     missed Rule 3 substitution. Screenshot it; the fix is one line.
 
 ## Known, deliberate exceptions (not bugs — do not report these)
@@ -90,5 +99,10 @@ line to Section B; verified against the shipped code before handoff — see
   confirmed exceptions (E3).
 - `ui/StatStrip.jsx`: one frozen white-alpha label paired with an equally-frozen dark background,
   deliberately non-adaptive.
+- `TrackScreen.jsx`'s "Ready to ski?" glass panel: frozen `rgba(30,41,59,0.45)` with frozen light
+  text, because it sits inside `HeroPhotoHeader`, whose photo scrim is dark in both modes (E3/E4).
+- Frozen fill ⇒ frozen ink, everywhere: `TodaysCrew.jsx`'s pale-blue avatar initials (`#0f172a`),
+  and `TripCard.jsx`/`TripDetailModal.jsx`'s countdown badge, "Add car" and "Save recap" on the
+  per-trip `THEME` pastels (also `#0f172a`). Dark text on a pastel chip is correct in light mode.
 - `shareCardTokens.js`: the 5 dark themes' `ink: "#ffffff"` and the 5 light themes' `bgElevated:
   "#ffffff"` are both correct values for their mode, not leftover literals.

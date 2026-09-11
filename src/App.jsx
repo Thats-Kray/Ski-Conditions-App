@@ -754,7 +754,12 @@ export default function App() {
       else document.documentElement.removeAttribute("data-mode")
       const metaTheme = document.querySelector('meta[name="theme-color"]')
       if (metaTheme) metaTheme.setAttribute("content", mode === "light" ? "#F2F7FC" : "#020617")
-      try { localStorage.setItem("pd_theme_mode", mode) } catch {}
+      try {
+        localStorage.setItem("pd_theme_mode", mode)
+      } catch {
+        // private browsing / storage disabled — the mode still applies for this
+        // session, and the server-side profile stays the source of truth.
+      }
 
       // Show onboarding for new users who haven't completed it and have no profile
       if (!profile && !localStorage.getItem("skicrew_onboarded") && !localStorage.getItem("powderdays_onboarded")) {

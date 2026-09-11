@@ -463,6 +463,15 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
       if (previous === "light") document.documentElement.setAttribute("data-mode", "light")
       else document.documentElement.removeAttribute("data-mode")
       if (metaTheme) metaTheme.setAttribute("content", previous === "light" ? "#F2F7FC" : "#020617")
+      // Roll the cached key back too. Without this the DOM says "dark" but
+      // localStorage still says "light", and index.html's pre-mount script reads
+      // localStorage — so a reload before the next successful profile load would
+      // flash (and stick on) the mode the user never managed to save.
+      try {
+        localStorage.setItem("pd_theme_mode", previous)
+      } catch {
+        // private browsing / storage disabled — nothing was cached to roll back.
+      }
       alert(err.message || "Could not save appearance mode.")
     }
   }
