@@ -298,7 +298,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
               padding: "5px 12px",
               fontSize: 11,
               fontWeight: 900,
-              color: "var(--color-text-1)",
+              color: photo ? "var(--color-on-accent)" : "var(--color-text-1)",
               letterSpacing: 0.3,
             }}
           >
@@ -316,7 +316,7 @@ export default function TripCard({ trip, currentUser, onUpdate, onRequireLogin, 
               padding: "5px 12px",
               fontSize: 11,
               fontWeight: 700,
-              color: "var(--ink-50)",
+              color: photo ? "var(--color-on-accent)" : "var(--color-text-1)",
             }}
           >
             Past Trip
