@@ -812,22 +812,6 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
             </button>
           )}
 
-          {/* ── Session History ── own profile only: getMySessions is self-scoped,
-              so a friend view has no session rows to render.
-              List only. The Calendar option was removed in TASK 22.0's Profile
-              slice because the Season grid above now covers it — two near-identical
-              day grids on one screen was the duplication this slice exists to end.
-              Per-session edit (photos/tags/stats) and per-session share are
-              unchanged: neither exists anywhere else in the app. */}
-          {isOwnProfile && (
-            <RecentSessionsFeed
-              sessions={recentSessions}
-              limit={Infinity}
-              onRefresh={load}
-              profile={profile}
-              fullName={fullName}
-            />
-          )}
         </>
       )}
 
@@ -965,19 +949,39 @@ export default function ProfilePage({ onLogOut, userId = null, onBack, resorts =
         </div>
       )}
 
-      {/* ── Settings ── owner-only, last section on the page ──
-          The extra bottom clearance (mobile only) keeps the last row clear of the
-          fixed mobile bottom nav. Every row here acts on the signed-in user —
-          Sign Out, the profile write behind Notifications, Strava's OAuth
-          connect/disconnect — so this must never render on someone else's
-          profile. */}
+      {/* ── Settings ── owner-only ── Every row here acts on the signed-in
+          user — Sign Out, the profile write behind Notifications, Strava's
+          OAuth connect/disconnect — so this must never render on someone
+          else's profile. */}
       {isOwnProfile && (
-        <div className="mobile-bottom-clearance">
+        <div>
           <ProfileSettingsList
             profile={profile}
             email={currentUserEmail}
             onLogOut={onLogOut}
             onProfileSaved={load}
+          />
+        </div>
+      )}
+
+      {/* ── Session History ── own profile only: getMySessions is self-scoped,
+          so a friend view has no session rows to render.
+          List only. The Calendar option was removed in TASK 22.0's Profile
+          slice because the Season grid above now covers it — two near-identical
+          day grids on one screen was the duplication this slice exists to end.
+          Per-session edit (photos/tags/stats) and per-session share are
+          unchanged: neither exists anywhere else in the app.
+          Relocated below Settings (was above Appearance) per Kyle's request,
+          2026-09-11 — now the last section on the page, so it carries the
+          mobile bottom-nav clearance that Settings previously had. */}
+      {isOwnProfile && (
+        <div className="mobile-bottom-clearance">
+          <RecentSessionsFeed
+            sessions={recentSessions}
+            limit={Infinity}
+            onRefresh={load}
+            profile={profile}
+            fullName={fullName}
           />
         </div>
       )}
