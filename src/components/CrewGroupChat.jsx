@@ -81,7 +81,7 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
       onClick={onClose}
       style={{
         position: "fixed", inset: 0, zIndex: 300,
-        background: "rgba(2,6,23,0.82)",
+        background: "var(--scrim)",
         display: "flex", flexDirection: "column", alignItems: "center",
         justifyContent: "flex-start", overflowY: "auto",
         padding: "20px 16px max(20px,env(safe-area-inset-bottom)) 16px",
@@ -91,13 +91,13 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%", maxWidth: 480,
-          background: "rgba(10,14,30,0.98)", border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: 20, padding: 22, color: "white",
+          background: "var(--color-modal-bg)", border: "1px solid var(--overlay-10)",
+          borderRadius: 20, padding: 22, color: "var(--color-text-1)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
           <div style={{ fontSize: 17, fontWeight: 900 }}>New Crew</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 22, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--ink-40)", fontSize: 22, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
         </div>
 
         {error && (
@@ -108,7 +108,7 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
 
         {/* Emoji picker */}
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Crew Emoji</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Crew Emoji</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {EMOJI_OPTIONS.map((e) => (
               <button
@@ -116,7 +116,7 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
                 onClick={() => setEmoji(e)}
                 style={{
                   fontSize: 22, width: 40, height: 40, borderRadius: 10, cursor: "pointer",
-                  background: emoji === e ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.05)",
+                  background: emoji === e ? "rgba(96,165,250,0.2)" : "var(--overlay-05)",
                   border: emoji === e ? "2px solid rgba(96,165,250,0.6)" : "2px solid transparent",
                 }}
               >
@@ -128,37 +128,37 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
 
         {/* Name */}
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 6 }}>Crew Name</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 6 }}>Crew Name</div>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Weekend Shredders"
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 16,
-              border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-              color: "white", outline: "none", boxSizing: "border-box",
+              border: "1px solid var(--overlay-12)", background: "var(--overlay-06)",
+              color: "var(--color-text-1)", outline: "none", boxSizing: "border-box",
             }}
           />
         </div>
 
         {/* Description */}
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 6 }}>Description (optional)</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 6 }}>Description (optional)</div>
           <input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What's this crew about?"
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 16,
-              border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-              color: "white", outline: "none", boxSizing: "border-box",
+              border: "1px solid var(--overlay-12)", background: "var(--overlay-06)",
+              color: "var(--color-text-1)", outline: "none", boxSizing: "border-box",
             }}
           />
         </div>
 
         {/* Permissions */}
         <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Permissions</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Permissions</div>
           <div style={{ display: "flex", gap: 8 }}>
             {[
               { v: true,  label: "🔒 Invite Only" },
@@ -169,9 +169,9 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
                 onClick={() => setInviteOnly(v)}
                 style={{
                   flex: 1, padding: "9px 12px", borderRadius: 10, cursor: "pointer",
-                  background: inviteOnly === v ? "rgba(96,165,250,0.18)" : "rgba(255,255,255,0.05)",
-                  border: inviteOnly === v ? "1px solid rgba(96,165,250,0.5)" : "1px solid rgba(255,255,255,0.1)",
-                  color: inviteOnly === v ? "var(--color-banner-highlight)" : "rgba(255,255,255,0.55)",
+                  background: inviteOnly === v ? "rgba(96,165,250,0.18)" : "var(--overlay-05)",
+                  border: inviteOnly === v ? "1px solid rgba(96,165,250,0.5)" : "1px solid var(--overlay-10)",
+                  color: inviteOnly === v ? "var(--color-banner-highlight)" : "var(--ink-55)",
                   fontWeight: 700, fontSize: 13,
                 }}
               >
@@ -179,7 +179,7 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
               </button>
             ))}
           </div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 6 }}>
+          <div style={{ fontSize: 11, color: "var(--ink-35)", marginTop: 6 }}>
             {inviteOnly ? "Only admins can add new members." : "Any member can invite friends."}
           </div>
         </div>
@@ -187,7 +187,7 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
         {/* Add friends */}
         {friends.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Add Friends ({selectedFriends.length} selected)</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Add Friends ({selectedFriends.length} selected)</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 200, overflowY: "auto" }}>
               {friends.map((f) => {
                 const name = f.full_name || f.username || "?"
@@ -199,15 +199,15 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
                     style={{
                       display: "flex", alignItems: "center", gap: 10,
                       padding: "8px 10px", borderRadius: 10, cursor: "pointer",
-                      background: sel ? "rgba(96,165,250,0.15)" : "rgba(255,255,255,0.04)",
-                      border: sel ? "1px solid rgba(96,165,250,0.4)" : "1px solid rgba(255,255,255,0.07)",
+                      background: sel ? "rgba(96,165,250,0.15)" : "var(--overlay-04)",
+                      border: sel ? "1px solid rgba(96,165,250,0.4)" : "1px solid var(--overlay-07)",
                       textAlign: "left",
                     }}
                   >
                     <Avatar profile={f} size={30} />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{name}</div>
-                      {f.username && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>@{f.username}</div>}
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-1)" }}>{name}</div>
+                      {f.username && <div style={{ fontSize: 11, color: "var(--ink-40)" }}>@{f.username}</div>}
                     </div>
                     {sel && <div style={{ fontSize: 16, color: "var(--color-accent-soft)" }}>✓</div>}
                   </button>
@@ -222,8 +222,8 @@ function CreateCrewModal({ friends, onCreated, onClose }) {
           disabled={saving}
           style={{
             width: "100%", padding: "13px 20px", borderRadius: 12, border: "none",
-            background: saving ? "rgba(37,99,235,0.5)" : "var(--gradient-cta)",
-            color: "white", fontWeight: 800, fontSize: 15, cursor: saving ? "default" : "pointer",
+            background: saving ? "var(--color-accent-dim)" : "var(--gradient-cta)",
+            color: "var(--color-on-accent)", fontWeight: 800, fontSize: 15, cursor: saving ? "default" : "pointer",
           }}
         >
           {saving ? "Creating…" : `Create Crew ${emoji}`}
@@ -276,33 +276,33 @@ function EditCrewModal({ crew, onSaved, onClose }) {
 
   const inputStyle = {
     width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 15,
-    border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)",
-    color: "white", outline: "none", boxSizing: "border-box",
+    border: "1px solid var(--overlay-12)", background: "var(--overlay-06)",
+    color: "var(--color-text-1)", outline: "none", boxSizing: "border-box",
   }
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--color-modal-bg)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "24px 20px 40px", width: "100%", maxWidth: 480 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--color-modal-bg)", border: "1px solid var(--overlay-10)", borderRadius: "20px 20px 0 0", padding: "24px 20px 40px", width: "100%", maxWidth: 480 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div style={{ fontSize: 17, fontWeight: 900, color: "white" }}>Edit Crew</div>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}>✕</button>
+          <div style={{ fontSize: 17, fontWeight: 900, color: "var(--color-text-1)" }}>Edit Crew</div>
+          <button onClick={onClose} style={{ background: "var(--overlay-08)", border: "none", color: "var(--ink-60)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16 }}>✕</button>
         </div>
 
         {error && <div style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 10, background: "rgba(239,68,68,0.14)", border: "1px solid rgba(239,68,68,0.3)", color: "var(--color-danger)" /* rule 7: nearest danger-family token */, fontSize: 13 }}>{error}</div>}
 
         {/* Photo */}
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Crew Photo (optional)</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Crew Photo (optional)</div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 52, height: 52, borderRadius: 14, overflow: "hidden", background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, overflow: "hidden", background: "var(--overlay-08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               {photoUrl ? <img src={photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 22 }}>{emoji}</span>}
             </div>
-            <label style={{ padding: "8px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: 700, cursor: uploadingPhoto ? "default" : "pointer" }}>
+            <label style={{ padding: "8px 14px", borderRadius: 10, border: "1px solid var(--overlay-15)", background: "var(--overlay-06)", color: "var(--ink-70)", fontSize: 12, fontWeight: 700, cursor: uploadingPhoto ? "default" : "pointer" }}>
               {uploadingPhoto ? "Uploading…" : photoUrl ? "Change photo" : "Upload photo"}
               <input type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploadingPhoto} style={{ display: "none" }} />
             </label>
             {photoUrl && (
-              <button onClick={() => setPhotoUrl(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>
+              <button onClick={() => setPhotoUrl(null)} style={{ background: "none", border: "none", color: "var(--ink-40)", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>
                 Remove
               </button>
             )}
@@ -311,34 +311,34 @@ function EditCrewModal({ crew, onSaved, onClose }) {
 
         {/* Emoji */}
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Emoji</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Emoji</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {EMOJI_OPTIONS.map((e) => (
-              <button key={e} onClick={() => setEmoji(e)} style={{ fontSize: 22, width: 40, height: 40, borderRadius: 10, cursor: "pointer", background: emoji === e ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.05)", border: emoji === e ? "2px solid rgba(96,165,250,0.6)" : "2px solid transparent" }}>{e}</button>
+              <button key={e} onClick={() => setEmoji(e)} style={{ fontSize: 22, width: 40, height: 40, borderRadius: 10, cursor: "pointer", background: emoji === e ? "rgba(96,165,250,0.2)" : "var(--overlay-05)", border: emoji === e ? "2px solid rgba(96,165,250,0.6)" : "2px solid transparent" }}>{e}</button>
             ))}
           </div>
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 6 }}>Name</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 6 }}>Name</div>
           <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} />
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 6 }}>Description</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 6 }}>Description</div>
           <input style={inputStyle} value={description} onChange={(e) => setDesc(e.target.value)} placeholder="Optional" />
         </div>
 
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Permissions</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-45)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>Permissions</div>
           <div style={{ display: "flex", gap: 8 }}>
             {[{ v: true, label: "🔒 Invite Only" }, { v: false, label: "🌐 Open" }].map(({ v, label }) => (
-              <button key={String(v)} onClick={() => setInviteOnly(v)} style={{ flex: 1, padding: "9px 12px", borderRadius: 10, cursor: "pointer", background: inviteOnly === v ? "rgba(96,165,250,0.18)" : "rgba(255,255,255,0.05)", border: inviteOnly === v ? "1px solid rgba(96,165,250,0.5)" : "1px solid rgba(255,255,255,0.1)", color: inviteOnly === v ? "var(--color-banner-highlight)" : "rgba(255,255,255,0.55)", fontWeight: 700, fontSize: 13 }}>{label}</button>
+              <button key={String(v)} onClick={() => setInviteOnly(v)} style={{ flex: 1, padding: "9px 12px", borderRadius: 10, cursor: "pointer", background: inviteOnly === v ? "rgba(96,165,250,0.18)" : "var(--overlay-05)", border: inviteOnly === v ? "1px solid rgba(96,165,250,0.5)" : "1px solid var(--overlay-10)", color: inviteOnly === v ? "var(--color-banner-highlight)" : "var(--ink-55)", fontWeight: 700, fontSize: 13 }}>{label}</button>
             ))}
           </div>
         </div>
 
-        <button onClick={handleSave} disabled={saving} style={{ width: "100%", padding: "13px", borderRadius: 12, border: "none", background: saving ? "rgba(37,99,235,0.5)" : "var(--gradient-cta)", color: "white", fontWeight: 800, fontSize: 15, cursor: saving ? "default" : "pointer" }}>
+        <button onClick={handleSave} disabled={saving} style={{ width: "100%", padding: "13px", borderRadius: 12, border: "none", background: saving ? "var(--color-accent-dim)" : "var(--gradient-cta)", color: "var(--color-on-accent)", fontWeight: 800, fontSize: 15, cursor: saving ? "default" : "pointer" }}>
           {saving ? "Saving…" : "Save Changes"}
         </button>
       </div>
@@ -468,23 +468,23 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
       {/* ── Header ── */}
       <div style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.08)",
-        background: "rgba(10,14,30,0.6)", borderRadius: "16px 16px 0 0", flexShrink: 0,
+        padding: "12px 16px", borderBottom: "1px solid var(--overlay-08)",
+        background: "var(--overlay-06)", borderRadius: "16px 16px 0 0", flexShrink: 0,
       }}>
         {onBack && (
           <button
             onClick={onBack}
-            style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 20, cursor: "pointer", padding: "0 4px 0 0", lineHeight: 1 }}
+            style={{ background: "none", border: "none", color: "var(--ink-50)", fontSize: 20, cursor: "pointer", padding: "0 4px 0 0", lineHeight: 1 }}
           >
             ←
           </button>
         )}
         <div style={{ fontSize: 26 }}>{crew.emoji}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 900, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div style={{ fontSize: 15, fontWeight: 900, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {crew.name}
           </div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+          <div style={{ fontSize: 11, color: "var(--ink-40)" }}>
             {members.length} member{members.length !== 1 ? "s" : ""} · {crew.invite_only ? "🔒 Invite Only" : "🌐 Open"}
           </div>
         </div>
@@ -492,8 +492,8 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
           onClick={() => setShowMembers((v) => !v)}
           style={{
             padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-            background: showMembers ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.08)",
-            color: showMembers ? "var(--color-accent-soft)" : "rgba(255,255,255,0.6)",
+            background: showMembers ? "rgba(96,165,250,0.2)" : "var(--overlay-08)",
+            color: showMembers ? "var(--color-accent-soft)" : "var(--ink-60)",
             fontWeight: 700, fontSize: 12,
           }}
         >
@@ -504,21 +504,21 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
       {/* ── Members panel ── */}
       {showMembers && (
         <div style={{
-          background: "rgba(8,12,26,0.98)", borderBottom: "1px solid rgba(255,255,255,0.08)",
+          background: "var(--color-modal-bg)", borderBottom: "1px solid var(--overlay-08)",
           padding: "12px 16px", flexShrink: 0,
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "var(--ink-40)", textTransform: "uppercase", letterSpacing: 0.7 }}>
               Members
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               {invitableFriends.length > 0 && (
-                <button onClick={() => setShowInvite((v) => !v)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "white", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                <button onClick={() => setShowInvite((v) => !v)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "var(--color-accent-deep)", color: "var(--color-on-accent)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                   + Add
                 </button>
               )}
               {isAdmin && (
-                <button onClick={() => setShowEdit(true)} style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.7)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                <button onClick={() => setShowEdit(true)} style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid var(--overlay-12)", background: "var(--overlay-07)", color: "var(--ink-70)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                   Edit
                 </button>
               )}
@@ -566,15 +566,15 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
                     <Avatar profile={p} size={28} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0, cursor: isMe ? "default" : "pointer" }} onClick={() => !isMe && setViewingUserId(p?.id)}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{name}</span>
-                    {isMe && <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>you</span>}
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-1)" }}>{name}</span>
+                    {isMe && <span style={{ fontSize: 11, color: "var(--ink-35)", marginLeft: 4 }}>you</span>}
                     {m.role === "admin" && <span style={{ fontSize: 10, color: "var(--color-warning)", fontWeight: 800, marginLeft: 6, background: "rgba(251,191,36,0.15)", borderRadius: 4, padding: "1px 5px" }}>Admin</span>}
-                    {isPending && <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 800, marginLeft: 6, background: "rgba(255,255,255,0.08)", borderRadius: 4, padding: "1px 5px" }}>Invited</span>}
+                    {isPending && <span style={{ fontSize: 10, color: "var(--ink-50)", fontWeight: 800, marginLeft: 6, background: "var(--overlay-08)", borderRadius: 4, padding: "1px 5px" }}>Invited</span>}
                   </div>
                   {isAdmin && !isMe && (
                     <button
                       onClick={() => handleRemoveMember(m.id, p?.id)}
-                      style={{ background: "none", border: "none", color: "rgba(255,255,255,0.25)", fontSize: 14, cursor: "pointer", padding: 2 }}
+                      style={{ background: "none", border: "none", color: "var(--ink-25)", fontSize: 14, cursor: "pointer", padding: 2 }}
                       title="Remove member"
                     >
                       ×
@@ -590,19 +590,19 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
       {/* ── Messages ── */}
       <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
         {loadingMsgs && (
-          <div style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 13, paddingTop: 20 }}>Loading…</div>
+          <div style={{ textAlign: "center", color: "var(--ink-30)", fontSize: 13, paddingTop: 20 }}>Loading…</div>
         )}
         {!loadingMsgs && messages.length === 0 && (
           <div style={{ textAlign: "center", padding: "32px 20px" }}>
             <div style={{ fontSize: 36, marginBottom: 10 }}>{crew.emoji}</div>
-            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>No messages yet. Say something!</div>
+            <div style={{ color: "var(--ink-40)", fontSize: 14 }}>No messages yet. Say something!</div>
           </div>
         )}
         {messages.map((msg) => {
           if (msg.is_system) {
             return (
               <div key={msg.id} style={{ textAlign: "center", padding: "4px 0" }}>
-                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", fontStyle: "italic" }}>
+                <span style={{ fontSize: 12, color: "var(--ink-35)", fontStyle: "italic" }}>
                   {msg.content}
                 </span>
               </div>
@@ -619,20 +619,20 @@ export function CrewChatView({ crew: initialCrew, currentUserId, friends, onBack
               )}
               <div style={{ maxWidth: "72%", display: "flex", flexDirection: "column", gap: 2, alignItems: isMe ? "flex-end" : "flex-start" }}>
                 {!isMe && (
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", paddingLeft: 4 }}>{name}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-40)", paddingLeft: 4 }}>{name}</div>
                 )}
                 <div style={{
                   padding: msg.media_url && !msg.content ? "6px" : "9px 13px",
                   borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                  background: isMe ? "var(--gradient-cta)" : "rgba(255,255,255,0.1)",
-                  color: "white", fontSize: 14, lineHeight: 1.45,
+                  background: isMe ? "var(--gradient-cta)" : "var(--overlay-10)",
+                  color: isMe ? "var(--color-on-accent)" : "var(--color-text-1)", fontSize: 14, lineHeight: 1.45,
                   boxShadow: isMe ? "0 2px 8px rgba(37,99,235,0.3)" : "none",
                   overflow: "hidden",
                 }}>
                   {msg.media_url && <MessageMedia mediaUrl={msg.media_url} mediaType={msg.media_type} />}
                   {msg.content && <div style={{ marginTop: msg.media_url ? 6 : 0 }}>{msg.content}</div>}
                 </div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", paddingLeft: 4, paddingRight: 4 }}>
+                <div style={{ fontSize: 10, color: "var(--ink-25)", paddingLeft: 4, paddingRight: 4 }}>
                   {timeLabel(msg.created_at)}
                 </div>
               </div>
@@ -798,10 +798,10 @@ export default function CrewGroupChat({ friends = [], onCrewChatOpenChange }) {
     return (
       <div style={{
         height: containerHeight,
-        background: "rgba(4,8,20,0.85)",
+        background: "var(--scrim)",
         borderRadius: isMobile ? 0 : 18,
         overflow: "hidden",
-        border: isMobile ? "none" : "1px solid rgba(255,255,255,0.07)",
+        border: isMobile ? "none" : "1px solid var(--overlay-07)",
       }}>
         <CrewChatView
           crew={selectedCrew}
@@ -819,8 +819,8 @@ export default function CrewGroupChat({ friends = [], onCrewChatOpenChange }) {
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: 17, fontWeight: 900, color: "white" }}>Your Crews</div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
+          <div style={{ fontSize: 17, fontWeight: 900, color: "var(--color-text-1)" }}>Your Crews</div>
+          <div style={{ fontSize: 12, color: "var(--ink-40)", marginTop: 2 }}>
             Group chats to coordinate with your ski circle
           </div>
         </div>
@@ -829,7 +829,7 @@ export default function CrewGroupChat({ friends = [], onCrewChatOpenChange }) {
           style={{
             padding: "9px 16px", borderRadius: 12, border: "none",
             background: "var(--gradient-cta)",
-            color: "white", fontWeight: 800, fontSize: 13, cursor: "pointer",
+            color: "var(--color-on-accent)", fontWeight: 800, fontSize: 13, cursor: "pointer",
             boxShadow: "0 2px 12px rgba(37,99,235,0.35)",
           }}
         >
@@ -838,7 +838,7 @@ export default function CrewGroupChat({ friends = [], onCrewChatOpenChange }) {
       </div>
 
       {loading && (
-        <div style={{ textAlign: "center", padding: "32px 20px", color: "rgba(255,255,255,0.3)", fontSize: 14 }}>
+        <div style={{ textAlign: "center", padding: "32px 20px", color: "var(--ink-30)", fontSize: 14 }}>
           Loading crews…
         </div>
       )}
@@ -846,7 +846,7 @@ export default function CrewGroupChat({ friends = [], onCrewChatOpenChange }) {
       {/* ── Pending invites ── */}
       {!loading && pendingInvites.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "var(--ink-40)", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 10 }}>
             Crew Invites · {pendingInvites.length}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -858,16 +858,16 @@ export default function CrewGroupChat({ friends = [], onCrewChatOpenChange }) {
                     {crew.emoji}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{crew.name}</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{crew.name}</div>
                     {inviterName && (
-                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>Invited by {inviterName}</div>
+                      <div style={{ fontSize: 12, color: "var(--ink-45)", marginTop: 2 }}>Invited by {inviterName}</div>
                     )}
                   </div>
                   <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                    <button onClick={() => handleAcceptInvite(crew.id)} style={{ padding: "7px 14px", borderRadius: 10, border: "none", background: "var(--gradient-cta)", color: "white", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+                    <button onClick={() => handleAcceptInvite(crew.id)} style={{ padding: "7px 14px", borderRadius: 10, border: "none", background: "var(--gradient-cta)", color: "var(--color-on-accent)", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
                       Accept
                     </button>
-                    <button onClick={() => handleDeclineInvite(crew.id)} style={{ padding: "7px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                    <button onClick={() => handleDeclineInvite(crew.id)} style={{ padding: "7px 14px", borderRadius: 10, border: "1px solid var(--overlay-12)", background: "var(--overlay-06)", color: "var(--ink-55)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                       Decline
                     </button>
                   </div>
@@ -881,12 +881,12 @@ export default function CrewGroupChat({ friends = [], onCrewChatOpenChange }) {
       {!loading && crews.length === 0 && pendingInvites.length === 0 && (
         <div style={{
           textAlign: "center", padding: "40px 20px",
-          background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
+          background: "var(--overlay-03)", border: "1px solid var(--overlay-07)",
           borderRadius: 18,
         }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>🤙</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "white", marginBottom: 8 }}>No crews yet</div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 20, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "var(--color-text-1)", marginBottom: 8 }}>No crews yet</div>
+          <div style={{ fontSize: 13, color: "var(--ink-45)", marginBottom: 20, lineHeight: 1.5 }}>
             Create a crew with your closest ski friends to coordinate plans and chat all season.
           </div>
           <button
@@ -894,7 +894,7 @@ export default function CrewGroupChat({ friends = [], onCrewChatOpenChange }) {
             style={{
               padding: "11px 24px", borderRadius: 12, border: "none",
               background: "var(--gradient-cta)",
-              color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer",
+              color: "var(--color-on-accent)", fontWeight: 800, fontSize: 14, cursor: "pointer",
             }}
           >
             Create Your First Crew
@@ -914,7 +914,7 @@ export default function CrewGroupChat({ friends = [], onCrewChatOpenChange }) {
               style={{
                 position: "relative", display: "flex", alignItems: "center", gap: 14,
                 padding: "14px 16px", borderRadius: 16, cursor: "pointer",
-                background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+                background: "var(--overlay-04)", border: "1px solid var(--overlay-08)",
                 textAlign: "left", width: "100%",
               }}
             >
@@ -931,7 +931,7 @@ export default function CrewGroupChat({ friends = [], onCrewChatOpenChange }) {
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {crew.name}
                   </div>
                   {crew.myRole === "admin" && (
@@ -940,7 +940,7 @@ export default function CrewGroupChat({ friends = [], onCrewChatOpenChange }) {
                     </span>
                   )}
                 </div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: "var(--ink-45)", marginTop: 2 }}>
                   {crew.members.length} member{crew.members.length !== 1 ? "s" : ""}
                 </div>
                 {crew.nextOut && (
@@ -952,12 +952,12 @@ export default function CrewGroupChat({ friends = [], onCrewChatOpenChange }) {
 
               <div style={{ display: "flex", flexShrink: 0 }}>
                 {visibleMembers.map((m, idx) => (
-                  <div key={m.id} style={{ marginLeft: idx === 0 ? 0 : -8, border: "2px solid rgba(10,14,26,1)", borderRadius: "50%" }}>
+                  <div key={m.id} style={{ marginLeft: idx === 0 ? 0 : -8, border: "2px solid var(--color-badge-border)", borderRadius: "50%" }}>
                     <Avatar profile={m.profile} size={26} />
                   </div>
                 ))}
                 {overflowCount > 0 && (
-                  <div style={{ marginLeft: -8, width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "2px solid rgba(10,14,26,1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,0.6)" }}>
+                  <div style={{ marginLeft: -8, width: 26, height: 26, borderRadius: "50%", background: "var(--overlay-10)", border: "2px solid var(--color-badge-border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "var(--ink-60)" }}>
                     +{overflowCount}
                   </div>
                 )}
