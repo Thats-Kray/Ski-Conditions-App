@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, Fragment } from "react"
 import { MapContainer, TileLayer, CircleMarker, Marker, Popup } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
@@ -66,6 +66,10 @@ const FRIEND_PIN_RING = "#0F172A"
 // radius 5 + weight 2 = 12px outer diameter, down from radius 10 + weight 2 = 22px.
 const FRIEND_PIN_RADIUS = 5
 const FRIEND_PIN_WEIGHT = 2
+// Invisible hit-target radius: the visible pin is 12px, well under this app's 44px
+// tap-target floor (see ROADMAP.md and PingCta's precedent — keep the small visual,
+// widen only the hit area). radius 22 = 44px diameter.
+const FRIEND_PIN_HIT_RADIUS = 22
 
 // Mockup's friend-initials badge has no existing design token to match (not a tier/risk/status
 // color) — literal hex chosen to match the mockup exactly, same convention as this file's other
@@ -338,63 +342,77 @@ export default function PowderMap({
 
           {/* Live friend location pins (S28-T3) — a small teal dot with a dark ring,
               deliberately quiet next to the glowing resort powder-score bubbles above
-              (see FRIEND_PIN_* at the top of this file). Disappear within ~90s of a
-              friend stopping sharing (staleness cleanup in the hook), or immediately
-              on an explicit "stopped" broadcast. */}
+              (see FRIEND_PIN_* at the top of this file). Rendered as TWO layered
+              CircleMarkers per friend: a non-interactive 12px visible dot, and an
+              invisible FRIEND_PIN_HIT_RADIUS (44px) CircleMarker underneath that owns
+              the actual tap/click handling and the Popup — the visible dot alone was
+              too small a hit target (this app's tap-target floor is 44px; see
+              ROADMAP.md and PingCta's precedent of keeping a small visual with a wider
+              hit area). Both disappear within ~90s of a friend stopping sharing
+              (staleness cleanup in the hook), or immediately on an explicit "stopped"
+              broadcast — they render from the same `liveLocations` entry, so they
+              always appear and disappear together. */}
           {Object.entries(liveLocations).map(([friendId, loc]) => (
-            <CircleMarker
-              key={`friend-${friendId}`}
-              center={[loc.lat, loc.lng]}
-              radius={FRIEND_PIN_RADIUS}
-              pathOptions={{
-                color: FRIEND_PIN_RING,
-                fillColor: FRIEND_PIN_FILL,
-                fillOpacity: 1,
-                weight: FRIEND_PIN_WEIGHT,
-              }}
-            >
-              {/* Popup interior renders on Leaflet's fixed white chrome (see SkierRow
-                  comment above) — avatar/text colors below stay literal, not app-theme
-                  tokens. */}
-              <Popup maxWidth={220}>
-                {/* Tapping the avatar/name opens the full profile — the same pattern
-                    SkierRow uses inside the resort popups above. The marker itself
-                    deliberately carries NO click handler: Leaflet already opens this
-                    popup on marker click, and a marker-level handler opened
-                    UserProfileModal on that very same click, instantly covering the
-                    popup it had just opened. */}
-                <div
-                  onClick={() => setViewingUserId(friendId)}
-                  style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
-                >
+            <Fragment key={`friend-${friendId}`}>
+              <CircleMarker
+                center={[loc.lat, loc.lng]}
+                radius={FRIEND_PIN_RADIUS}
+                pathOptions={{
+                  color: FRIEND_PIN_RING,
+                  fillColor: FRIEND_PIN_FILL,
+                  fillOpacity: 1,
+                  weight: FRIEND_PIN_WEIGHT,
+                  interactive: false,
+                }}
+              />
+              <CircleMarker
+                center={[loc.lat, loc.lng]}
+                radius={FRIEND_PIN_HIT_RADIUS}
+                pathOptions={{ stroke: false, fillOpacity: 0 }}
+              >
+                {/* Popup interior renders on Leaflet's fixed white chrome (see SkierRow
+                    comment above) — avatar/text colors below stay literal, not app-theme
+                    tokens. */}
+                <Popup maxWidth={220}>
+                  {/* Tapping the avatar/name opens the full profile — the same pattern
+                      SkierRow uses inside the resort popups above. The marker itself
+                      deliberately carries NO click handler: Leaflet already opens this
+                      popup on marker click, and a marker-level handler opened
+                      UserProfileModal on that very same click, instantly covering the
+                      popup it had just opened. */}
                   <div
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 999,
-                      overflow: "hidden",
-                      background: "#fef3c7",
-                      display: "grid",
-                      placeItems: "center",
-                      fontSize: 11,
-                      fontWeight: 900,
-                      color: "#92400e",
-                      flexShrink: 0,
-                    }}
+                    onClick={() => setViewingUserId(friendId)}
+                    style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
                   >
-                    {loc.avatar_url ? (
-                      <img src={loc.avatar_url} alt={loc.name || "Friend"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                      avatarFallback(loc.name)
-                    )}
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 999,
+                        overflow: "hidden",
+                        background: "#fef3c7",
+                        display: "grid",
+                        placeItems: "center",
+                        fontSize: 11,
+                        fontWeight: 900,
+                        color: "#92400e",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {loc.avatar_url ? (
+                        <img src={loc.avatar_url} alt={loc.name || "Friend"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        avatarFallback(loc.name)
+                      )}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: 13 }}>{loc.name || "Friend"}</div>
+                      <div style={{ fontSize: 11, color: "#92400e" }}>📍 On the mountain now</div>
+                    </div>
                   </div>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: 13 }}>{loc.name || "Friend"}</div>
-                    <div style={{ fontSize: 11, color: "#92400e" }}>📍 On the mountain now</div>
-                  </div>
-                </div>
-              </Popup>
-            </CircleMarker>
+                </Popup>
+              </CircleMarker>
+            </Fragment>
           ))}
         </MapContainer>
 
