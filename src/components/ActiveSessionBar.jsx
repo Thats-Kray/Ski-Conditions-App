@@ -101,7 +101,7 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
       if (cancelled) return
       console.warn("Live location position error:", err)
       setShareError(
-        err?.code === err?.PERMISSION_DENIED
+        err && err.code === err.PERMISSION_DENIED
           ? "Location permission denied — sharing turned off."
           : "Couldn't get your location — sharing turned off."
       )
@@ -142,6 +142,7 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
   // stale position — auto-disable sharing along with the tracker itself.
   useEffect(() => {
     if (tracker.status === "error" && sharingLocation) setSharingLocation(false)
+    if (tracker.status !== "error") setShareError(null)
   }, [tracker.status, sharingLocation])
 
   if (!activeSession) return null
