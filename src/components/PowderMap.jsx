@@ -45,6 +45,28 @@ const BUBBLE_SIZE = 56
 const ICON_WIDTH = 110
 const ICON_HEIGHT = 92
 
+// Friend live-location pin. Fixed hex, not var(--color-*) tokens, for the reason
+// src/lib/crewColors.js spells out at length: a marker whose entire job is to stay
+// identifiable has to hold one hue across all five themes x light/dark, and a theme
+// token reskins into whatever that theme's warning/accent happens to be. #06B6D4
+// (cyan) collides with no CREW_COLORS hue and no TIER_COLORS/TIER_BORDER_COLORS
+// value, so a live friend pin can never be misread as a crew-membership badge or a
+// resort-tier bubble.
+//
+// The ring, not the fill, is what carries the shape: #06B6D4 is only ~2.1:1 against
+// OpenStreetMap's #F2EFE9 tile ground, while #0F172A is ~15.6:1 against that ground
+// and ~7.3:1 against the fill. #0F172A is already used literally elsewhere in this
+// file (the resort bubble's score text).
+//
+// (This also retires a value that never rendered: the old pathOptions passed the
+// string "var(--color-warning)", which Leaflet writes into an SVG presentation
+// attribute, where var() does not resolve.)
+const FRIEND_PIN_FILL = "#06B6D4"
+const FRIEND_PIN_RING = "#0F172A"
+// radius 5 + weight 2 = 12px outer diameter, down from radius 10 + weight 2 = 22px.
+const FRIEND_PIN_RADIUS = 5
+const FRIEND_PIN_WEIGHT = 2
+
 // Mockup's friend-initials badge has no existing design token to match (not a tier/risk/status
 // color) — literal hex chosen to match the mockup exactly, same convention as this file's other
 // one-off literal colors (see the Popup-chrome comment below).
@@ -314,16 +336,22 @@ export default function PowderMap({
             )
           })}
 
-          {/* Live friend location pins (S28-T3) — visually distinct (amber ring)
-              from the resort powder-score markers above. Disappear within ~90s
-              of a friend stopping sharing (staleness cleanup in the hook), or
-              immediately on an explicit "stopped" broadcast. */}
+          {/* Live friend location pins (S28-T3) — a small teal dot with a dark ring,
+              deliberately quiet next to the glowing resort powder-score bubbles above
+              (see FRIEND_PIN_* at the top of this file). Disappear within ~90s of a
+              friend stopping sharing (staleness cleanup in the hook), or immediately
+              on an explicit "stopped" broadcast. */}
           {Object.entries(liveLocations).map(([friendId, loc]) => (
             <CircleMarker
               key={`friend-${friendId}`}
               center={[loc.lat, loc.lng]}
-              radius={10}
-              pathOptions={{ color: "var(--color-warning)", fillColor: "var(--color-warning)", fillOpacity: 0.9, weight: 2 }}
+              radius={FRIEND_PIN_RADIUS}
+              pathOptions={{
+                color: FRIEND_PIN_RING,
+                fillColor: FRIEND_PIN_FILL,
+                fillOpacity: 1,
+                weight: FRIEND_PIN_WEIGHT,
+              }}
             >
               {/* Popup interior renders on Leaflet's fixed white chrome (see SkierRow
                   comment above) — avatar/text colors below stay literal, not app-theme
