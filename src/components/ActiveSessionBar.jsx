@@ -44,6 +44,7 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
   // topic — broadcast channels are open by default otherwise, which would
   // let anyone holding the anon key impersonate a user's position.
   const [sharingLocation, setSharingLocation] = useState(false)
+  const [shareError, setShareError] = useState(null)
   const channelRef = useRef(null)
   const intervalRef = useRef(null)
 
@@ -54,6 +55,8 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
   }, [])
 
   useEffect(() => {
+    let cancelled = false
+
     function stopSharing() {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
@@ -87,6 +90,24 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
       })
     }
 
+    // This error callback used to be an empty arrow function, so a denied or
+    // unavailable GPS left the toggle reading "on" while nothing was ever
+    // broadcast. Revert the toggle and say why. Setting sharingLocation to false
+    // re-runs this effect, and its cleanup clears the 30s interval — so this fires
+    // once per toggle-on attempt rather than on every failed tick. `cancelled`
+    // additionally drops any callback that lands after teardown (an in-flight
+    // position request can resolve after the user has already toggled off).
+    function handlePositionError(err) {
+      if (cancelled) return
+      console.warn("Live location position error:", err)
+      setShareError(
+        err?.code === err?.PERMISSION_DENIED
+          ? "Location permission denied — sharing turned off."
+          : "Couldn't get your location — sharing turned off."
+      )
+      setSharingLocation(false)
+    }
+
     // Wait for the private channel's RLS-authorized join to be confirmed
     // before broadcasting anything — sending on a not-yet-SUBSCRIBED private
     // channel can be dropped, and unlike a public channel, a private channel
@@ -98,9 +119,9 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
         // avoid over-broadcasting — GPS tracking itself already runs continuously
         // via sprint-3's useGpsTracker watchPosition, this is a separate, coarser
         // cadence just for the shared pin.
-        navigator.geolocation.getCurrentPosition(broadcastPosition, () => {}, { enableHighAccuracy: false })
+        navigator.geolocation.getCurrentPosition(broadcastPosition, handlePositionError, { enableHighAccuracy: false })
         intervalRef.current = setInterval(() => {
-          navigator.geolocation.getCurrentPosition(broadcastPosition, () => {}, { enableHighAccuracy: false })
+          navigator.geolocation.getCurrentPosition(broadcastPosition, handlePositionError, { enableHighAccuracy: false })
         }, 30000)
       } else if (status === "CHANNEL_ERROR") {
         console.warn("Live location channel error:", err)
@@ -111,7 +132,10 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
     // only rendered while `activeSession` is truthy (see App.jsx), ending the
     // session unmounts this component and this same cleanup sends "stopped"
     // and tears down the channel, even if the user forgot to toggle it off.
-    return stopSharing
+    return () => {
+      cancelled = true
+      stopSharing()
+    }
   }, [sharingLocation, currentProfile?.id])
 
   // If GPS permission is lost/denied mid-session, don't keep broadcasting a
@@ -126,6 +150,14 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
   const dotColor = gpsDotColor(tracker.status, tracker.gpsAccuracy)
   const pulsing = isGpsPulsing(tracker.status, tracker.gpsAccuracy)
   const isPaused = tracker.status === "paused"
+
+  // Toggle sub-label copy, most specific first: a live sharing error beats the
+  // static "GPS needs permission" hint, which beats the default explainer.
+  const shareSubLabel =
+    shareError ||
+    (tracker.status === "error"
+      ? "GPS tracking requires location permission"
+      : "Friends see a live pin on the map while this is on")
 
   // Live running estimate of vertical descended this session (see S4-T2 spec) —
   // only closed "run" segments have full point data; the in-progress segment
@@ -265,14 +297,15 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
           >
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-text-1)" }}>📍 Share my location</div>
-              <div style={{ fontSize: 11, color: "var(--ink-50)", marginTop: 2 }}>
-                {tracker.status === "error"
-                  ? "GPS tracking requires location permission"
-                  : "Friends see a live pin on the map while this is on"}
+              <div
+                role="status"
+                style={{ fontSize: 11, color: shareError ? "var(--color-danger)" : "var(--ink-50)", marginTop: 2 }}
+              >
+                {shareSubLabel}
               </div>
             </div>
             <button
-              onClick={(e) => { e.stopPropagation(); setSharingLocation((v) => !v) }}
+              onClick={(e) => { e.stopPropagation(); setShareError(null); setSharingLocation((v) => !v) }}
               disabled={tracker.status === "error"}
               aria-pressed={sharingLocation}
               aria-label="Share my location toggle"
