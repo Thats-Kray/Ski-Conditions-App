@@ -324,13 +324,21 @@ export default function PowderMap({
               center={[loc.lat, loc.lng]}
               radius={10}
               pathOptions={{ color: "var(--color-warning)", fillColor: "var(--color-warning)", fillOpacity: 0.9, weight: 2 }}
-              eventHandlers={{ click: () => setViewingUserId(friendId) }}
             >
               {/* Popup interior renders on Leaflet's fixed white chrome (see SkierRow
                   comment above) — avatar/text colors below stay literal, not app-theme
                   tokens. */}
               <Popup maxWidth={220}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {/* Tapping the avatar/name opens the full profile — the same pattern
+                    SkierRow uses inside the resort popups above. The marker itself
+                    deliberately carries NO click handler: Leaflet already opens this
+                    popup on marker click, and a marker-level handler opened
+                    UserProfileModal on that very same click, instantly covering the
+                    popup it had just opened. */}
+                <div
+                  onClick={() => setViewingUserId(friendId)}
+                  style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+                >
                   <div
                     style={{
                       width: 28,
