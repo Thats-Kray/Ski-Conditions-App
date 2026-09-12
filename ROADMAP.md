@@ -2359,6 +2359,96 @@ both fixed. 294 tests (was 265). Full detail in `/Users/kyleray/.claude/context/
 under Colorado Ski Dashboard. Not yet visually confirmed on real conditions (off-season,
 no live snow data) — will need a real ski day once the season opens.
 
+### TASK 22.6 — Light/Dark Mode (app-wide) — ✅ SHIPPED 2026-09-11
+
+Not part of TASK 22.0's mockup-fidelity sequence — a separate, Kyle-requested feature, and by a
+wide margin the largest single initiative this app has shipped: bigger than the whole TASK 22.0
+sequence combined. Spec at `docs/superpowers/specs/2026-09-10-light-dark-mode-design.md`, plan
+at `docs/superpowers/plans/2026-09-10-light-dark-mode.md` (3,138 lines, 22 tasks), click-test
+list at `docs/superpowers/plans/2026-09-10-light-dark-mode-click-test-list.md`. Merged
+`5bba6a1..36044b5` (37 commits), migration 048 applied to production, deploy confirmed live and
+**Kyle confirmed on his own phone the toggle works** (Profile > Appearance).
+
+**Scope exploded mid-brainstorm, and Kyle made the call on how to handle it.** The original ask
+looked like a 3-file change (flip the CSS variables, add a toggle) — a live grep during
+brainstorming found **1,023 hardcoded `rgba(255,255,255,...)` occurrences across 52 files**
+(later found to be 1,093 across 67 once the plan-writing pass re-audited it), plus 250+ literal
+`color: "white"` usages: white text and white-alpha "glass" surfaces hardcoded on the assumption
+the page is always dark. Kyle's own prior ruling on this app had called that pattern "deliberate,
+not a defect" — true only under the dark-only assumption light mode breaks. **Kyle's call:
+one big plan, full app-wide retrofit — not decomposed into page-by-page slices** (the TASK 22.0
+pattern was offered as an alternative and declined). Worth remembering if a similarly large
+redesign comes up again: he does not always want the incremental-slice treatment.
+
+**What shipped:** a manual light/dark toggle (no OS `prefers-color-scheme` auto-detect) in
+Profile > Appearance, alongside the existing 5-theme cosmetic picker — light variants of all 5
+themes (10 total palettes), a new `profiles.theme_mode` column (`'dark'`|`'light'`, defaults to
+`'dark'` for every existing user and new signup — zero visual change until the toggle is used),
+two new adaptive CSS token scales (`--overlay-*` for surfaces/borders, `--ink-*` for text,
+computed so each light alpha lands at the same contrast ratio its dark counterpart already has —
+not a naive alpha mirror), and the mechanical retrofit of all ~1,200 literals onto those tokens
+via three fixed substitution rules.
+
+**Built via subagent-driven-development in worktree `light-dark-mode`** (merged + deleted after
+shipping): 22 tasks (1 data-model task, 6 CSS/infra tasks, 14 file-retrofit tasks, 1 whole-app
+verification gate), several needing 1-3 rounds of task-scoped review fixes — Task 14
+(`CreateTripModal`/`TripCard`) needed **3 rounds**, the most of any task in this app's history:
+first pass was only ~15-20% complete despite self-reporting DONE, the first fix introduced a
+fresh dark-on-dark regression, and the implementer's own "this is safe" judgment call on a badge
+was overturned by re-review. Switching the implementer model from Haiku to Sonnet partway
+through the retrofit tasks (after Task 14) ended that pattern — every task from 15 onward passed
+with 0-1 fix rounds.
+
+**The final whole-branch review (Opus) earned its cost decisively — this is the standout
+process lesson from this task.** Every one of the 22 tasks had already passed its own review.
+The final review still found:
+1. **(Critical)** `migrations/048_theme_mode.sql` was missing a required column-level
+   `GRANT SELECT (theme_mode)`. `profiles` has had no table-level SELECT grant since migration
+   031 (explicit column list only) — applying 048 as originally written would have broken
+   profile reads, profile writes, and new-user signup for every user the moment the frontend
+   deployed. Verified against **live production** via `has_column_privilege`, not just the SQL
+   file. Fixed to match 031's exact convention; **the deploy-order rule for this class of bug
+   flips** — see the addendum on `[[column_grant_migrations_break_stale_tabs]]` in
+   `~/.claude/context memory` — a migration adding a column to an already column-scoped table
+   needs migration-first (not frontend-first) plus its own grant.
+2. **(Important, recurring)** A "frozen background stays dark on purpose, paired with text that
+   adapts and goes dark-on-dark" bug was found and fixed **5 times during individual task
+   reviews, then 8 MORE times by the final review** — including the session share card's canvas
+   rendering and the Today tab's resort hero (the app's own default landing screen). This
+   recurred often enough that it should be treated as a **4th standing substitution rule** if
+   this app ever touches theming again: "a frozen surface implies frozen text, in both
+   directions" was missing from the plan's three rules.
+3. **(Important)** `src/lib/crewColors.js`'s crew-identifier hues (avatar rings, the Plans-tab
+   day-card accent bar) were tuned only for dark backgrounds — the file's own header comment had
+   predicted this exact day and said its test would catch it. `src/lib` was declared out of
+   scope for the color retrofit, so nobody opened the file until the final review. **Deliberately
+   NOT fixed** (a real palette redesign, not a mechanical substitution) — the existing contrast
+   test was extended with the 5 new light-mode grounds and the failing assertion converted to
+   `test.todo(...)` rather than either silently dropped or left as a shipped-red test, so
+   `npm test` stays at 304 pass / 0 fail / 1 documented todo. **Open follow-up:** the crew-color
+   palette needs a real light-mode redesign — not scheduled.
+
+One fix-wave finding was contested and adjudicated by Kyle directly: a reviewer flagged a
+pure-black `rgba(0,0,0,0.7)` backdrop in `CrewGroupChat.jsx` as inconsistent with the adaptive
+`--scrim` token — this conflicts with the plan's own E4 exception (pure-black scrims are
+deliberately mode-invariant by design, already applied to ~55 sibling occurrences app-wide).
+Kyle confirmed: keep E4 as-is, finding withdrawn, no code change — a good example of a
+per-task reviewer being wrong in a way the implementer correctly pushed back on before
+complying.
+
+**NOT yet click-tested by Kyle beyond confirming the toggle itself renders and switches** — the
+full 19-item click-test list (screen by screen, both modes) has not been walked through. Two
+small, low-severity items were deliberately deferred past the fix wave, both logged not urgent:
+`ShareStatCard`'s accent-colored brand row/mountain silhouettes stay unfrozen on the dark photo
+card (low exposure, bright scrim region); the Today tab's Open/Closed hero chips sit at ~3.8:1
+contrast in light mode (below 4.5:1 AA, above informal legibility).
+
+**Small unrelated follow-up in the same session:** Kyle asked to relocate the Profile page's
+Session History section to below Settings (was above Appearance) — done as a direct fix, no
+brainstorm ceremony (a one-line, unambiguous reorder with the answer already given), commit
+`9a1c07b`, pushed and live. The `mobile-bottom-clearance` CSS class moved with it, since Session
+History is now the last section on the page instead of Settings.
+
 ### TASK 22.3 — Weather/conditions API quality pass — **Size: M**
 
 **Scheduled Sprint 45.** Too vague as currently written to size tightly. Needs one specific
