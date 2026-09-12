@@ -138,11 +138,24 @@ export default function ActiveSessionBar({ activeSession, tracker, onSessionEnd,
     }
   }, [sharingLocation, currentProfile?.id])
 
+  const prevTrackerStatusRef = useRef(tracker.status)
+
   // If GPS permission is lost/denied mid-session, don't keep broadcasting a
   // stale position — auto-disable sharing along with the tracker itself.
   useEffect(() => {
     if (tracker.status === "error" && sharingLocation) setSharingLocation(false)
-    if (tracker.status !== "error") setShareError(null)
+    // Only clear a stale shareError on an actual recovery TRANSITION (was
+    // "error", now isn't) — not on every render where tracker.status merely
+    // happens to already be healthy. handlePositionError sets shareError and
+    // setSharingLocation(false) together whenever a getCurrentPosition call
+    // fails with a healthy tracker; since sharingLocation is a dependency of
+    // this same effect, that setSharingLocation re-triggers it immediately,
+    // and a bare "tracker.status !== 'error'" check would wipe the message
+    // this effect exists to preserve, in exactly that (the primary) scenario.
+    if (prevTrackerStatusRef.current === "error" && tracker.status !== "error") {
+      setShareError(null)
+    }
+    prevTrackerStatusRef.current = tracker.status
   }, [tracker.status, sharingLocation])
 
   if (!activeSession) return null
