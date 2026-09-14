@@ -2455,14 +2455,79 @@ History is now the last section on the page instead of Settings.
 complaint (a resort/day where the data was wrong, stale, or missing) to become actionable —
 surface that before the sprint starts rather than during it.
 
-### TASK 22.4 — Map View + friends' locations per mountain — **Size: S**
+### TASK 22.4 — Map View + friends' locations per mountain — **Size: S** — ✅ **SHIPPED 2026-09-12**
 
-**Scheduled Sprint 46.** `PowderMap.jsx` (337 lines) already exists — this is mostly a
-test-and-fix pass on live friend-location pins (`useLiveFriendLocations.js`), not new build.
-**Note:** TASK 22.0's Today-page audit above already found the map's *visual* styling (glowing
-score bubbles, bottom sheet) needs real redesign work to match the new mockup — that work now
-also lives under TASK 22.0, so this task should re-scope to functional correctness once 22.0's
-map redesign lands, to avoid duplicating the same file twice in two sprints.
+Re-scoped to functional correctness per this section's own earlier note, since TASK 22.0 already
+shipped the map's visual redesign (glowing score bubbles, bottom sheet). Blind audit (no specific
+Kyle complaint going in) of `useLiveFriendLocations.js`, `PowderMap.jsx`, and
+`ActiveSessionBar.jsx` found two real, independent bugs: (1) the friend live-location
+`CircleMarker` had both a bound Popup (Leaflet auto-opens on click) **and** a marker-level click
+handler that opened `UserProfileModal` on the same tap — both fired together, so the modal
+instantly covered the popup it had just opened; (2) toggling "share my location" on, then hitting
+a `getCurrentPosition` failure (timeout/unavailable/permission-revoked mid-session — as opposed
+to permission already denied before the session started, which was already handled elsewhere),
+left the toggle showing "on" with nothing ever broadcast and no indication anything was wrong.
+Mid-brainstorm, Kyle also asked for the pin's look changed — "condensed" (a more minimal marker
+style) and recolored (his choice: teal/cyan, picked from options grounded in the app's existing
+palette so nothing collided with `crewColors.js`'s six hues or the resort tier colors).
+
+Fix 1: removed the marker-level handler, moved profile-opening onto the popup's own avatar/name
+row (mirroring the resort marker's existing `SkierRow` pattern in the same file). Fix 2: shrank
+the pin from a 22px amber `CircleMarker` (`radius:10, weight:2` — worth noting the *spec's*
+"20px" estimate and even the code's own intent were both off: `pathOptions` had been passing the
+literal string `"var(--color-warning)"` into a Leaflet SVG presentation attribute via
+`setAttribute`, where `var()` does not resolve in Chrome/Safari, so the pin almost certainly never
+actually rendered amber) to a 12px fixed-hex `#06B6D4` dot with a `#0F172A` ring — fixed hex, not
+a theme token, same reasoning `crewColors.js` already documents at length (a marker whose whole
+job is staying identifiable can't reskin per theme). Fix 3: added a real `getCurrentPosition`
+error callback that reverts the toggle and surfaces the reason in the toggle's existing sub-label
+(no new UI component), guarding the pre-existing "denied before session start" path so it stays
+untouched.
+
+**Built via subagent-driven-development in worktree `map-view-friends-location-fix`** (merged +
+deleted after shipping), OpusPlan-written plan at
+`docs/superpowers/plans/2026-09-11-map-view-friends-location-fix.md`, spec at
+`docs/superpowers/specs/2026-09-11-map-view-friends-location-fix-design.md`. 3 tasks, implementer
+on Haiku (plan handed over complete verbatim code), all 3 passed task review clean. **No
+automated test coverage for this pass** — `npm test` only covers `src/lib`, both touched files
+are `.jsx`, and every "manual verification" step in the plan and every implementer report was
+static code reasoning, not an actual browser click-test (no implementer subagent in this
+environment has one) — flagged honestly rather than fabricated at every stage.
+
+**The whole-branch final review (Opus) caught 2 Important findings, both real and both fixed:**
+(1) the 12px pin was ALSO its entire hit area (confirmed via `leaflet.css`'s
+`pointer-events: visiblePainted` and the marker's lack of any `.resort-bubble-hit`-style CSS
+rule) — well under this app's established 44px tap-target floor and the exact shape of problem
+`PingCta` already hit and solved the same way (keep the small visual, widen only the hit area).
+Fixed by splitting the single marker into a non-interactive 12px visible dot plus a separate,
+invisible 44px `CircleMarker` underneath that owns the actual click/Popup. (2) the implementation
+plan document was never committed — the same recurring OpusPlan worktree-boundary gap this
+project has hit before (`[[opusplan_worktree_boundary]]`), caught this time by the final review
+rather than earlier. Fixed with a one-line `git add`.
+
+**The fix wave then introduced its own regression, caught by the scoped re-review — worth
+remembering as its own lesson.** The fix for finding (2)'s sibling minor (clear a stale
+`shareError` message once GPS recovers) added `if (tracker.status !== "error") setShareError(null)`
+to an effect that also depends on `sharingLocation`. Since `handlePositionError` sets
+`shareError` and `sharingLocation` together in the same batch, and `sharingLocation` is a
+dependency of that same effect, the new line unconditionally wiped the just-set error message on
+the very next render — in the PRIMARY scenario (healthy tracker, GPS fetch fails), not just the
+tracker-recovery case it was meant for. Undid the actual point of the original toggle-revert fix.
+Fixed with a `useRef` tracking the previous `tracker.status`, clearing `shareError` only on a
+real `"error"` → healthy *transition*, not on every render where status merely happens to already
+be healthy — verified by hand-tracing both scenarios' render sequences in the re-review rather
+than re-asserting the same reasoning that got it wrong the first time.
+
+Merged fast-forward `26870600..e6a2d2f` (7 commits) to `main`, pushed `004e3b7..e6a2d2f`. 304
+pass / 0 fail / 1 pre-existing todo throughout (no `src/lib` file touched), lint 85 in a fresh
+worktree (main checkout showed 92 — confirmed to be the same pre-existing main-checkout-vs-
+fresh-worktree drift this project has seen before, not a regression; `ActiveSessionBar.jsx`'s one
+flagged issue there is the pre-existing `Date.now()` purity lint, confirmed against the base blob
+before this branch existed). **Kyle confirmed live on his own phone he saw the teal dot for a
+friend's location** — the pin/visual half of this slice is genuinely click-tested, not just
+source-reviewed. **Not yet confirmed by Kyle: the GPS-denial toggle-revert fix** (solo-testable —
+deny location permission mid-session and confirm the toggle snaps back with a red explanation) —
+worth a quick check next time he's in the app.
 
 ---
 
@@ -2488,7 +2553,7 @@ prioritized open ideas, then the throughput → features → security/debt queue
 | **43** | ~~TASK 22.1 — Friends-calendar flagship placement~~ — closed, subsumed by TASK 22.0's Plans slice | — |
 | **44** | ~~TASK 22.2 — Powder Score algorithm tuning~~ — **shipped 2026-09-10** | S-M |
 | **45** | TASK 22.3 — Weather/conditions API quality pass | M |
-| **46** | TASK 22.4 — Map View + friends'-location test-and-fix | S |
+| **46** | ~~TASK 22.4 — Map View + friends'-location test-and-fix~~ — **shipped 2026-09-12** | S |
 | **47** | **TASK 20.6 routing + code splitting** (Tasks 1-5; 6 cuttable) | M |
 | **47.5** | TASK 20.6 Tasks 7-8 — code splitting + lazy Leaflet | S |
 | **48** | TASK 1.1-T component test harness + first 3 suites | M |
