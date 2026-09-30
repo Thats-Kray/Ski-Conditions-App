@@ -169,7 +169,7 @@ The morning ritual app for Colorado skiers. Open it, see where the powder is, se
 
 **Formula (v3 — absolute 0–100 scale):**
 
-*Implemented in `src/lib/powderScore.js` (client) and hand-mirrored in `server/powderScore.js` (Render backend — a separate npm package that cannot import from `src/lib`). Both files and this section must be changed together. v3 (2026-09-09, TASK 22.2): base depth is now `/20`, and terrain is excluded-and-rescaled rather than defaulted when its data is missing.*
+*Implemented in `src/lib/powderScore.js` (client) and hand-mirrored in `server/powderScore.js` (Render backend — a separate npm package that cannot import from `src/lib`). Both files and this section must be changed together. v3 (2026-09-09, TASK 22.2): base depth is now `/20`, and terrain is excluded-and-rescaled rather than defaulted when its data is missing. v4 (2026-09-30): a 0" base now gates the score to 0 with a new "Not Skiable" tier, and a thin base (<12") caps the score at 20 — missing base-depth data remains exempt from this gate, same as it always has been for the underlying component contribution.*
 
 ```
 freshSnow     = (snowPrev24in × 5.0, max 32) + (snowPrev48in × 1.5, max 8)   → max 40 pts
@@ -186,6 +186,11 @@ rawScore = freshSnow + incomingSnow + tempScore + terrainScore +
            baseScore + snowHint − windPenalty − drivePenalty
 
 powderScore = clamp(rawScore, 0, 100)  ← no normalization
+
+Base-depth gate, applied last, after the clamp above:
+  baseDepth === 0        → powderScore = 0, tier = "Not Skiable" (overrides everything above)
+  0 < baseDepth < 12      → powderScore = min(powderScore, 20)   (stays in the "Poor" tier)
+  baseDepth == null       → no gate — scores exactly as computed above
 ```
 
 **Missing terrain data (exclude and rescale):**
@@ -222,6 +227,7 @@ A count is treated as present only when both halves of the pair are non-null and
 | 50–64 | Good | Yellow |
 | 35–49 | Okay | Orange |
 | 0–34 | Poor | Red |
+| 0 (0" base) | Not Skiable | Gray — same as Closed |
 | — | Closed | Gray |
 
 **Calibration examples** — the exact inputs and expected scores below are locked in as regression fixtures in `src/lib/powderScore.test.js`; change one and the other must change with it:
@@ -232,6 +238,7 @@ A count is treated as present only when both halves of the pair are non-null and
 - **Late-season end-of-day slush** — 45°F, 4 mph, 30" base, 60% terrain, "Sunny and warm" → **11.5, Poor**
 - **Cold, snowless, no terrain data** — 22°F, 3 mph, 70" base, lift and run counts unavailable → **25.4, Poor** (under the pre-v3 formula this scored 30.3, because the missing terrain was scored as though half the mountain was open)
 - **Closed resort** — no score displayed
+- **Zero base, everything else elite** — 12" last 24h, 10" last 48h, 6"+6" incoming, 25°F, 0 mph, **0" base**, 100% terrain, "Clear" → **0.0, Not Skiable** (would otherwise score 95+ — this is the whole point of the gate)
 
 The v3 base-depth change moved every example down slightly and crossed no tier boundary: epic 97.3 → 96.3, mid-winter 58.1 → 57.0, warm bluebird 22.9 → 22.0, late-season slush 12.1 → 11.5.
 
@@ -239,6 +246,7 @@ The v3 base-depth change moved every example down slightly and crossed no tier b
 - F-REQ-001: Powder Score must be recalculated every time live data is refreshed
 - F-REQ-002: Missing data for an individual component must never break the score. Fresh snow, incoming snow, temperature and base depth default to 0/neutral contribution when absent — they are weather facts, and no evidence of snow reasonably means no snow.
 - F-REQ-002a: **Terrain is the exception.** Missing lift/run counts are an operational fact the app failed to fetch, not an observation, and must be *excluded and rescaled* (see "Missing terrain data" above) — never scored as 0 contribution, and never assumed to be partially open.
+- F-REQ-002b: **Base depth has a floor, not just a bonus.** A confirmed `0"` base forces the whole score to 0 and assigns a distinct "Not Skiable" tier, regardless of any other component. A confirmed base under 12" caps the score at 20 (stays "Poor"). Missing base-depth data (not a confirmed reading) is exempt from both — it keeps its existing 0/neutral component contribution per F-REQ-002, with no gate applied, same distinction F-REQ-002a already draws for terrain.
 - F-REQ-003: Tier labels must use the absolute thresholds above — no percentile-based normalization
 - F-REQ-004: The score must be displayed alongside a color-coded tier badge on every resort card
 - F-REQ-004a: Closed resorts must display no powder score — a "Closed" badge replaces the score tier
