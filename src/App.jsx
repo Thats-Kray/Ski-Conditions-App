@@ -644,6 +644,14 @@ export default function App() {
 
           // Resort-reported depth/lifts/runs take priority over satellite estimates
           const baseDepth   = cond.baseDepth    ?? resortSnow.baseDepth   ?? null
+          // CONFIRMED depth only — no modeled/satellite fallback. This is what
+          // feeds the Powder Score / base-depth gate: a resort's own scraped
+          // report can be trusted as a real zero, but Open-Meteo's modeled
+          // snow-depth grid cannot — a low-snowpack grid cell can legitimately
+          // round to 0 with nobody having confirmed the mountain is bare. The
+          // merged `baseDepth` above (display-only) keeps the modeled fallback
+          // exactly as before.
+          const confirmedBaseDepth = cond.baseDepth ?? null
           const summitDepth = cond.summitDepth  ?? resortSnow.summitDepth ?? null
           const liftsOpen   = cond.liftsOpen    ?? resortSnow.liftsOpen   ?? null
           const liftsTotal  = cond.liftsTotal   ?? resortSnow.liftsTotal  ?? null
@@ -663,7 +671,7 @@ export default function App() {
             snowPrev48in,
             snow24in: nwsSnow.snow24in,
             snow48in: nwsSnow.snow48in,
-            baseDepth,
+            baseDepth: confirmedBaseDepth,
             liftsOpen,
             liftsTotal,
             runsOpen,
@@ -683,6 +691,7 @@ export default function App() {
               snow48in: nwsSnow.snow48in,
               dailySnow: nwsSnow.dailySnow ?? [],
               baseDepth,
+              confirmedBaseDepth,
               summitDepth,
               liftsOpen,
               liftsTotal,

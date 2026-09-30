@@ -167,7 +167,7 @@ The morning ritual app for Colorado skiers. Open it, see where the powder is, se
 
 **Closed resorts receive no score** (`null`) and display a "Closed" badge. They are excluded from all rankings.
 
-**Formula (v3 — absolute 0–100 scale):**
+**Formula (v4 — absolute 0–100 scale):**
 
 *Implemented in `src/lib/powderScore.js` (client) and hand-mirrored in `server/powderScore.js` (Render backend — a separate npm package that cannot import from `src/lib`). Both files and this section must be changed together. v3 (2026-09-09, TASK 22.2): base depth is now `/20`, and terrain is excluded-and-rescaled rather than defaulted when its data is missing. v4 (2026-09-30): a 0" base now gates the score to 0 with a new "Not Skiable" tier, and a thin base (<12") caps the score at 20 — missing base-depth data remains exempt from this gate, same as it always has been for the underlying component contribution.*
 

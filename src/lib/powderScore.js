@@ -134,8 +134,8 @@ export function normalizePowderScores(rows) {
       return { ...r, powderScore: null, powderTier: "Unknown" }
     }
     const powderScore = Math.round(r.rawPowderScore)
-    if (r.baseDepth === 0) {
-      return { ...r, powderScore, powderTier: "Not Skiable" }
+    if (r.confirmedBaseDepth === 0) {
+      return { ...r, powderScore: 0, powderTier: "Not Skiable" }
     }
     return { ...r, powderScore, powderTier: powderTierForScore(powderScore) }
   })

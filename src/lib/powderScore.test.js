@@ -157,9 +157,9 @@ test("a 100-inch base maxes the base component and deeper adds nothing", () => {
 // to terrain.
 
 test("a zero base depth forces the score to 0, regardless of otherwise-elite inputs", () => {
-  // Without the gate this would score 100 (see "a perfect snow/temp/base
-  // day..." above, same shape of inputs) — 0" base means not skiable, full
-  // stop, overriding everything else in the formula.
+  // Without the gate this would score 95 (fresh 40 + incoming 20 + temp 20 +
+  // terrain 15) — 0" base means not skiable, full stop, overriding
+  // everything else in the formula.
   assert.equal(
     computeRawPowderScore({
       tempF: 25, windMph: 0, forecastText: "Clear",
@@ -218,17 +218,32 @@ test("a missing base depth does not trigger the gate", () => {
   )
 })
 
-test("normalizePowderScores marks a zero-base row Not Skiable", () => {
+test("normalizePowderScores marks a zero-base row Not Skiable and zeroes the score", () => {
   const [row] = normalizePowderScores([
-    { name: "a", isOpen: true, rawPowderScore: 92, baseDepth: 0 },
+    { name: "a", isOpen: true, rawPowderScore: 92, confirmedBaseDepth: 0 },
   ])
-  assert.equal(row.powderScore, 92)
+  assert.equal(row.powderScore, 0)
   assert.equal(row.powderTier, "Not Skiable")
 })
 
-test("normalizePowderScores does not gate a row with missing base depth", () => {
+test("normalizePowderScores does not gate a row with missing confirmed base depth", () => {
   const [row] = normalizePowderScores([
     { name: "a", isOpen: true, rawPowderScore: 71.4 },
+  ])
+  assert.equal(row.powderScore, 71)
+  assert.equal(row.powderTier, "Very Good")
+})
+
+test("normalizePowderScores does not gate on a modeled/display baseDepth of 0 — only a CONFIRMED zero gates", () => {
+  // A resort's scraper fails and the display-only `baseDepth` field falls
+  // back to Open-Meteo's modeled snow-depth grid, which can legitimately
+  // round to 0 for a low-snowpack cell. `confirmedBaseDepth` is absent here
+  // (nobody actually confirmed a bare mountain), so this must score and
+  // tier normally — exactly the bug the whole-branch review caught at
+  // src/App.jsx, where the merged display field was wrongly fed into the
+  // gate as if it were a confirmed report.
+  const [row] = normalizePowderScores([
+    { name: "a", isOpen: true, rawPowderScore: 71.4, baseDepth: 0 },
   ])
   assert.equal(row.powderScore, 71)
   assert.equal(row.powderTier, "Very Good")
