@@ -48,7 +48,7 @@ export function computePowderScore({
   snowPrev24in = 0, snowPrev48in = 0, snow24in = 0, snow48in = 0,
   tempF, windMph = 0,
   runsOpen = null, runsTotal = null, liftsOpen = null, liftsTotal = null,
-  baseDepth = 0, forecastText = "", driveRisk = "Low",
+  baseDepth = null, forecastText = "", driveRisk = "Low",
 }) {
   if (!isOpen) return { powderScore: null, powderTier: "Closed" }
 
@@ -69,7 +69,7 @@ export function computePowderScore({
     liftsPct != null                    ? Math.max(0, Math.min(15, liftsPct * 15)) :
                                           0
 
-  const baseScore = Math.min(baseDepth / 20, 5)
+  const baseScore = Math.min((baseDepth ?? 0) / 20, 5)
   const snowHint = /snow|powder|flurr|wintry/i.test(forecastText || "") ? 2 : 0
   const windPenalty = Math.min(windMph * 0.75, 15)
   const drivePenalty = driveRisk === "Moderate" ? 5 : driveRisk === "High" || driveRisk === "Severe" ? 10 : 0
@@ -82,7 +82,20 @@ export function computePowderScore({
     : positive * (100 / POSITIVE_MAX_WITHOUT_TERRAIN)
 
   const raw = weighted + snowHint - windPenalty - drivePenalty
-  const powderScore = Math.max(0, Math.min(100, raw))
+  let powderScore = Math.max(0, Math.min(100, raw))
+  let powderTier = tierForScore(powderScore)
 
-  return { powderScore, powderTier: tierForScore(powderScore) }
+  // ── Base-depth gate ────────────────────────────────────────────────
+  // Mirrors src/lib/powderScore.js exactly — see that file's comment for
+  // the full reasoning. A known-zero base overrides everything above;
+  // missing data (baseDepth == null) is exempt and scores normally.
+  if (baseDepth === 0) {
+    powderScore = 0
+    powderTier = "Not Skiable"
+  } else if (baseDepth != null && baseDepth < 12) {
+    powderScore = Math.min(powderScore, 20)
+    powderTier = tierForScore(powderScore)
+  }
+
+  return { powderScore, powderTier }
 }

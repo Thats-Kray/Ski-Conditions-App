@@ -941,7 +941,7 @@ export async function getAllResortConditions() {
             runsTotal: conditions.runsTotal ?? null,
             liftsOpen: conditions.liftsOpen ?? null,
             liftsTotal: conditions.liftsTotal ?? null,
-            baseDepth: conditions.baseDepth ?? 0,
+            baseDepth: conditions.baseDepth ?? null,
             forecastText: nowish?.shortForecast || nowish?.detailedForecast || "",
             driveRisk: driveRisk?.risk ?? "Low",
           })
