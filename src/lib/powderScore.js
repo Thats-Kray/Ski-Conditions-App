@@ -97,8 +97,21 @@ export function computeRawPowderScore({
     : positive * (100 / POSITIVE_MAX_WITHOUT_TERRAIN)
 
   const raw = weighted + snowHint - windPenalty - driveAdj
+  let score = clamp(raw, 0, 100)
 
-  return Math.round(clamp(raw, 0, 100) * 10) / 10
+  // ── Base-depth gate ────────────────────────────────────────────────
+  // A known-zero base means the mountain isn't skiable — overrides
+  // everything above. A thin-but-nonzero base (<12") caps the score at 20
+  // rather than letting great snow/temp/terrain paper over no real
+  // coverage. Missing data (baseDepth == null) is exempt: "we don't know"
+  // must never be scored the same as "we know it's zero".
+  if (baseDepth === 0) {
+    score = 0
+  } else if (baseDepth != null && baseDepth < 12) {
+    score = Math.min(score, 20)
+  }
+
+  return Math.round(score * 10) / 10
 }
 
 // Absolute tiers — no relative normalization, no percentile curve.
@@ -121,6 +134,9 @@ export function normalizePowderScores(rows) {
       return { ...r, powderScore: null, powderTier: "Unknown" }
     }
     const powderScore = Math.round(r.rawPowderScore)
+    if (r.baseDepth === 0) {
+      return { ...r, powderScore, powderTier: "Not Skiable" }
+    }
     return { ...r, powderScore, powderTier: powderTierForScore(powderScore) }
   })
 }

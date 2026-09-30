@@ -144,6 +144,96 @@ test("a 100-inch base maxes the base component and deeper adds nothing", () => {
   assert.equal(at180, 32.5)
 })
 
+// ── Base-depth gate: 0" is not skiable ──────────────────────────────────────
+//
+// Base depth used to be a pure positive bonus (max 5 of 100 points) with no
+// floor effect. A 0" base means there's no snow on the ground to ski on,
+// regardless of how good the forecast/temp/terrain look — so it now gates
+// the whole score instead of just nudging it. A thin-but-nonzero base is
+// still mostly-not-skiable, so it gets a low hard ceiling rather than a 0.
+// Missing data (baseDepth null/undefined) is explicitly exempt — the app
+// not knowing the base depth must never be scored the same as a confirmed
+// zero. Same "known bad" vs "unknown" distinction TASK 22.2 already applied
+// to terrain.
+
+test("a zero base depth forces the score to 0, regardless of otherwise-elite inputs", () => {
+  // Without the gate this would score 100 (see "a perfect snow/temp/base
+  // day..." above, same shape of inputs) — 0" base means not skiable, full
+  // stop, overriding everything else in the formula.
+  assert.equal(
+    computeRawPowderScore({
+      tempF: 25, windMph: 0, forecastText: "Clear",
+      snowPrev24in: 12, snowPrev48in: 10, snow24in: 6, snow48in: 6,
+      baseDepth: 0,
+      runsOpen: 100, runsTotal: 100, liftsOpen: 10, liftsTotal: 10,
+    }),
+    0
+  )
+})
+
+test("a thin base under 12 inches caps the score at 20, even with otherwise-elite inputs", () => {
+  assert.equal(
+    computeRawPowderScore({
+      tempF: 25, windMph: 0, forecastText: "Clear",
+      snowPrev24in: 12, snowPrev48in: 10, snow24in: 6, snow48in: 6,
+      baseDepth: 6,
+      runsOpen: 100, runsTotal: 100, liftsOpen: 10, liftsTotal: 10,
+    }),
+    20
+  )
+  // Still resolves to the existing "Poor" tier — 20 is below the 35 "Okay"
+  // threshold, so no new tier is needed for this band, only for exact 0.
+  assert.equal(powderTierForScore(20), "Poor")
+})
+
+test("the thin-base cap boundary is exclusive at 12 inches", () => {
+  const justUnder = computeRawPowderScore({
+    tempF: 25, windMph: 0, forecastText: "Clear",
+    snowPrev24in: 12, snowPrev48in: 10, snow24in: 6, snow48in: 6,
+    baseDepth: 11.9,
+    runsOpen: 100, runsTotal: 100, liftsOpen: 10, liftsTotal: 10,
+  })
+  const at12 = computeRawPowderScore({
+    tempF: 25, windMph: 0, forecastText: "Clear",
+    snowPrev24in: 12, snowPrev48in: 10, snow24in: 6, snow48in: 6,
+    baseDepth: 12,
+    runsOpen: 100, runsTotal: 100, liftsOpen: 10, liftsTotal: 10,
+  })
+  assert.equal(justUnder, 20, "11.9\" base should still be capped at 20")
+  assert.ok(at12 > 20, "12\" base should NOT be capped — got " + at12)
+})
+
+test("a missing base depth does not trigger the gate", () => {
+  // baseDepth: null means "we don't know", not "we know it's zero" — must
+  // score normally. fresh 40 | incoming 20 | temp 25F->20 | base null->0 |
+  // terrain 100%/100% -> 15 | no hint, no wind, no drive = 95 exactly.
+  assert.equal(
+    computeRawPowderScore({
+      tempF: 25, windMph: 0, forecastText: "Clear",
+      snowPrev24in: 12, snowPrev48in: 10, snow24in: 6, snow48in: 6,
+      baseDepth: null,
+      runsOpen: 100, runsTotal: 100, liftsOpen: 10, liftsTotal: 10,
+    }),
+    95
+  )
+})
+
+test("normalizePowderScores marks a zero-base row Not Skiable", () => {
+  const [row] = normalizePowderScores([
+    { name: "a", isOpen: true, rawPowderScore: 92, baseDepth: 0 },
+  ])
+  assert.equal(row.powderScore, 92)
+  assert.equal(row.powderTier, "Not Skiable")
+})
+
+test("normalizePowderScores does not gate a row with missing base depth", () => {
+  const [row] = normalizePowderScores([
+    { name: "a", isOpen: true, rawPowderScore: 71.4 },
+  ])
+  assert.equal(row.powderScore, 71)
+  assert.equal(row.powderTier, "Very Good")
+})
+
 // ── PRD 7.1 calibration examples, as permanent regression fixtures ──────────
 //
 // These four scenarios are the PRD's own statement of intent for the formula.
