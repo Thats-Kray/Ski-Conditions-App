@@ -5,6 +5,7 @@ export const TIER_COLORS = {
   "Okay": "var(--rating-peach)",
   "Poor": "var(--rating-coral)",
   "Closed": "var(--rating-slate)",
+  "Not Skiable": "var(--rating-slate)",
 }
 
 export const TIER_BORDER_COLORS = {
@@ -14,6 +15,7 @@ export const TIER_BORDER_COLORS = {
   "Okay": "var(--rating-peach-border)",
   "Poor": "var(--rating-coral-border)",
   "Closed": "var(--rating-slate-border)",
+  "Not Skiable": "var(--rating-slate-border)",
 }
 
 export const RISK_COLORS = {
