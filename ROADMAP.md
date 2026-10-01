@@ -2436,9 +2436,12 @@ Kyle confirmed: keep E4 as-is, finding withdrawn, no code change — a good exam
 per-task reviewer being wrong in a way the implementer correctly pushed back on before
 complying.
 
-**NOT yet click-tested by Kyle beyond confirming the toggle itself renders and switches** — the
-full 19-item click-test list (screen by screen, both modes) has not been walked through. Two
-small, low-severity items were deliberately deferred past the fix wave, both logged not urgent:
+**Full 19-item click-test list: WALKED THROUGH AND PASSED, 2026-10-01.** Kyle went
+screen-by-screen through `docs/superpowers/plans/2026-09-10-light-dark-mode-click-test-list.md`
+(Section A dark-mode checks, Section B's full light-mode screen pass, Section C's two general
+checks) and reported no issues — this closes the last open verification gap from the light/dark
+mode branch. Two small, low-severity items were deliberately deferred past the fix wave, both
+logged not urgent (still open, not part of the click-test scope):
 `ShareStatCard`'s accent-colored brand row/mountain silhouettes stay unfrozen on the dark photo
 card (low exposure, bright scrim region); the Today tab's Open/Closed hero chips sit at ~3.8:1
 contrast in light mode (below 4.5:1 AA, above informal legibility).
