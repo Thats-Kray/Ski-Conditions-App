@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react"
-import PowderMap from "./PowderMap"
+import { lazy, Suspense, useEffect, useState } from "react"
+const PowderMap = lazy(() => import("./PowderMap"))
+import ChunkErrorBoundary from "./ChunkErrorBoundary"
 import Badge, { TIER_COLORS } from "./ui/Badge"
 import ScoreRing from "./ui/ScoreRing"
 import FriendsGoingBadge from "./FriendsGoingBadge"
@@ -518,7 +519,7 @@ export default function TodayScreen({
   refresh,
   currentUser,
   topResort,
-  setMountainPageResortKey,
+  onOpenMountainPage,
   onSubTabChange,
   sessionActive = false,
   myTodayPlan,
@@ -595,12 +596,16 @@ export default function TodayScreen({
       </div>
 
       {conditionsSubTab === "map" && (
-        <PowderMap
-          resorts={rows}
-          skierCounts={skierCounts}
-          skierDetails={skierDetails}
-          friendIds={friendIds}
-        />
+        <ChunkErrorBoundary>
+          <Suspense fallback={<div style={{ height: 320, display: "grid", placeItems: "center", opacity: 0.6 }}>Loading map…</div>}>
+            <PowderMap
+              resorts={rows}
+              skierCounts={skierCounts}
+              skierDetails={skierDetails}
+              friendIds={friendIds}
+            />
+          </Suspense>
+        </ChunkErrorBoundary>
       )}
 
       {conditionsSubTab === "conditions" && topResort && (
@@ -619,7 +624,7 @@ export default function TodayScreen({
               activityCount={resortActivityCounts[topResort.resortKey] || 0}
               friendsGoing={friendTripsByResort[topResort.resortKey] || []}
               vibeData={vibeData}
-              onOpenMountainPage={setMountainPageResortKey}
+              onOpenMountainPage={onOpenMountainPage}
               myTodayPlan={myTodayPlan}
               onSkiHereToday={setSkiHereModalResortKey}
             />
@@ -631,7 +636,7 @@ export default function TodayScreen({
         <>
           {currentUser?.email === OWNER_EMAIL && (
             <button
-              onClick={() => setMountainPageResortKey(KRAMES_BUTTE_KEY)}
+              onClick={() => onOpenMountainPage(KRAMES_BUTTE_KEY)}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                 width: "100%", padding: "12px 16px", marginBottom: 16, borderRadius: 14,
@@ -758,7 +763,7 @@ export default function TodayScreen({
                           activityCount={resortActivityCounts[r.resortKey] || 0}
                           friendsGoing={friendTripsByResort[r.resortKey] || []}
                           vibeData={vibeData}
-                          onOpenMountainPage={setMountainPageResortKey}
+                          onOpenMountainPage={onOpenMountainPage}
                           myTodayPlan={myTodayPlan}
                           onSkiHereToday={setSkiHereModalResortKey}
                         />

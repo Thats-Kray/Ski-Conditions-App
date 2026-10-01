@@ -1,20 +1,23 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom"
+import { legacyTripPath, pathForTab, tabForPath } from "./lib/routes"
 import SnowfallBackground from "./components/SnowfallBackground"
+import ChunkErrorBoundary from "./components/ChunkErrorBoundary"
 import { useMobile } from "./lib/useMobile"
 import { localDateKey } from "./lib/calendarDates"
 import { formatDate } from "./lib/format"
 import AuthForm from "./components/AuthForm"
 import OnboardingFlow from "./components/OnboardingFlow"
-import MessagingCenter from "./components/MessagingCenter"
-import ProfilePage from "./components/ProfilePage"
-import { ProfileNavContext } from "./lib/profileNav"
-import SkiPlansPage from "./components/SkiPlansPage"
-import TripDetailModal from "./components/TripDetailModal"
+const MessagingCenter = lazy(() => import("./components/MessagingCenter"))
+const ProfilePage = lazy(() => import("./components/ProfilePage"))
+const SkiPlansPage = lazy(() => import("./components/SkiPlansPage"))
+const TripDetailModal = lazy(() => import("./components/TripDetailModal"))
+const MountainPage = lazy(() => import("./components/MountainPage"))
+
 import NotificationBell, { useNotificationCount } from "./components/NotificationBell"
 import LandingPage from "./components/LandingPage"
 import ActiveSessionBar from "./components/ActiveSessionBar"
 import SessionRecapModal from "./components/SessionRecapModal"
-import MountainPage from "./components/MountainPage"
 import TodayScreen from "./components/TodayScreen"
 import TrackScreen from "./components/TrackScreen"
 import {
@@ -444,7 +447,6 @@ function TopNav({ activeTab, onTabChange, currentProfile, notifCount, currentUse
                 currentUser={currentUser}
                 onOpenTrip={onOpenTrip}
                 onOpenPlan={onOpenPlan}
-                onTabChange={onTabChange}
                 variant="icon"
               />
             </div>
@@ -466,6 +468,56 @@ function MobileTopBar() {
         style={{ height: 36, width: "auto", display: "block" }}
       />
     </div>
+  )
+}
+
+// Feeds the /trip/:tripId route param into the existing pendingInviteId +
+// sessionStorage invite machinery (see the "Once we know the auth state"
+// effect below) instead of fetching immediately — a user who isn't logged in
+// yet still needs that effect to wait for authReady && currentUser before
+// hitting the network. See `openTripRoute` in App for the actual write.
+function TripRoute({ onTripId, children }) {
+  const { tripId } = useParams()
+  useEffect(() => {
+    onTripId(tripId)
+  }, [tripId, onTripId])
+  return children
+}
+
+// Replaces the old `viewingProfileId` takeover (Task 6). `useNavigate`
+// natively does what ProfileNavContext used to prop-drill for.
+function ProfileRoute({ resorts }) {
+  const { userId } = useParams()
+  const navigate = useNavigate()
+  return <ProfilePage userId={userId} onBack={() => navigate(-1)} resorts={resorts} />
+}
+
+// Replaces the old `mountainPageResortKey` takeover (Task 6). `resort`
+// resolution mirrors the exact logic the deleted `mountainPageResort`
+// derived const used to compute in App, just keyed off the route's own
+// :resortKey param instead of state. `rows` depends on the initial `live`
+// fetch, so a hard refresh on this route before `rows` populates would
+// otherwise hand MountainPage a null resort — show a loading placeholder
+// instead (MountainPage itself already tolerates a null resort via `?.`
+// fallbacks everywhere, so this is a UX nicety, not a crash guard).
+function MountainRoute({ rows, currentUserEmail, loading }) {
+  const { resortKey } = useParams()
+  const navigate = useNavigate()
+  const resort = resortKey === KRAMES_BUTTE_KEY
+    ? KRAMES_BUTTE_RESORT
+    : rows.find((r) => r.resortKey === resortKey) || null
+
+  if (loading && !resort && resortKey !== KRAMES_BUTTE_KEY) {
+    return <div style={{ padding: 48, textAlign: "center", opacity: 0.6 }}>Loading…</div>
+  }
+
+  return (
+    <MountainPage
+      resortKey={resortKey}
+      resort={resort}
+      currentUserEmail={currentUserEmail}
+      onBack={() => navigate(-1)}
+    />
   )
 }
 
@@ -493,17 +545,22 @@ function TabButton({ active, onClick, children }) {
 
 export default function App() {
   const isMobile = useMobile()
-  const [activeTab, setActiveTab] = useState("today")
+  const location = useLocation()
+  const navigate = useNavigate()
+  const activeTab = tabForPath(location.pathname)
+  // /u/:userId and /mountain/:resortKey are real detail routes with their own
+  // back-button + header (ProfilePage, MountainPage) — the shared hero strip
+  // and tab header above <Routes> were never gated off them when Task 6
+  // turned them from a full-page takeover into routes, so both rendered
+  // stacked on top of the page's own header (e.g. the Today header's
+  // "Refresh" button on top of a mountain page).
+  const isDetailRoute = location.pathname.startsWith("/u/") || location.pathname.startsWith("/mountain/")
   // Read-only mirror of TodayScreen's own conditionsSubTab state (reported up via
   // onSubTabChange). TodayScreen owns the real state; App.jsx only needs to know its
   // current value so the header's Refresh button + description can stay inline with
   // the title, exactly where they rendered before Task 2 moved the sub-tab switcher
   // into TodayScreen.
   const [todaySubTab, setTodaySubTab] = useState("conditions")
-  const [mountainPageResortKey, setMountainPageResortKey] = useState(null)
-  // Full-page read-only view of another user's profile (Sprint 34). Same
-  // takeover pattern as mountainPageResortKey; cleared in handleTabChange.
-  const [viewingProfileId, setViewingProfileId] = useState(null)
   const [passFilters, setPassFilters] = useState(() => new Set())
   // Guards the one-time default below so a later profile refetch (e.g. the
   // user edits their passes in Profile mid-session) never silently
@@ -553,13 +610,25 @@ export default function App() {
       // Most likely cause after migrations 040/042: you can no longer see that trip. Say so
       // rather than opening an empty modal.
       console.error("[App] couldn't open trip from notification:", e)
-      setActiveTab("plans")
+      navigate(pathForTab("plans"))
     }
   }
 
+  // Feeds /trip/:tripId into the same pendingInviteId + sessionStorage path the
+  // legacy ?trip= deep-link used — NOT handleOpenTripById, which fetches
+  // immediately and fails closed for a user who isn't authenticated yet. Safe
+  // with an empty dependency array: setPendingInviteId is a stable useState
+  // setter and sessionStorage is a global, so this identity never changes,
+  // and TripRoute's effect (which depends on it) only re-fires when tripId
+  // itself changes.
+  const openTripRoute = useCallback((tripId) => {
+    setPendingInviteId(tripId)
+    sessionStorage.setItem("pending_invite_trip", tripId)
+  }, [])
+
   /** A plan-party notification carries a date key, not a trip — open the Plans calendar. */
   function handleOpenPlanDate(dateKey) {
-    setActiveTab("plans")
+    navigate(pathForTab("plans"))
     if (dateKey) setPlanFocusDate(dateKey)
   }
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -805,7 +874,9 @@ export default function App() {
       try {
         const trip = await getTripDetail(storedId)
         setDeepLinkTrip(trip)
-        setActiveTab("plans")
+        // The real shareable trip URL, not /plans — replace (not push) so this
+        // doesn't add a spurious history entry on top of wherever auth happened.
+        navigate(`/trip/${storedId}`, { replace: true })
       } catch {
         // trip may not exist or user isn't invited — silently ignore
       }
@@ -815,7 +886,7 @@ export default function App() {
   function handleOnboardingComplete() {
     setShowOnboarding(false)
     loadHeaderUser()
-    setActiveTab("plans")
+    navigate(pathForTab("plans"))
   }
 
   async function handlePasswordResetSuccess() {
@@ -827,10 +898,10 @@ export default function App() {
   async function handleLogOut() {
     try {
       await logOut()
-  
+
       setCurrentUser(null)
       setCurrentProfile(null)
-      setActiveTab("today")
+      navigate(pathForTab("today"))
     } catch (err) {
       console.error("Logout failed:", err)
       alert(err.message || "Failed to log out.")
@@ -944,29 +1015,41 @@ export default function App() {
     return () => { cancelled = true }
   }, [currentUser])
 
-  // Deep-link: ?trip=<id> → capture invite ID; resolve after auth check completes
+  // Deep-link: upgrade the legacy `?trip=<id>` share-link format to the real
+  // /trip/:tripId route (which then calls openTripRoute via TripRoute's own
+  // effect). Falls back to a stale sessionStorage invite — e.g. mid-way
+  // through an OAuth redirect round-trip — when there's no query param at
+  // all. Deliberately does NOT call a blanket `replaceState` on the whole
+  // query string: that destroyed Strava's `?strava_connected=`/`?strava_error=`
+  // params (and any future router param) every time, which is the bug this
+  // route exists to fix.
   useEffect(() => {
-    const tripId =
-      new URLSearchParams(window.location.search).get("trip") ||
-      sessionStorage.getItem("pending_invite_trip")
-    if (!tripId) return
-    window.history.replaceState({}, "", window.location.pathname)
-    setPendingInviteId(tripId)
-    sessionStorage.setItem("pending_invite_trip", tripId)
+    const upgraded = legacyTripPath(window.location.search)
+    if (upgraded) {
+      navigate(upgraded, { replace: true })
+      return
+    }
+    const stored = sessionStorage.getItem("pending_invite_trip")
+    if (stored) setPendingInviteId(stored)
+    // navigate's identity is stable (react-router guarantees it); this must
+    // still only run once, on mount, not on every navigation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Deep-link: Strava OAuth redirects back to `/?strava_connected=true` or
   // `?strava_error=...` (this app has no client-side router, so the backend
   // redirects to root). Jump straight to Me — where StravaConnect renders —
   // so the params are visible and StravaConnect's own effect can read/clear
-  // them and show the toast. This effect only switches tabs, it doesn't touch
-  // the query string itself.
+  // them and show the toast. Must carry the search string along explicitly:
+  // navigate(pathForTab("me")) alone drops it (a bare path has no query), which
+  // silently killed StravaConnect's own read of these exact params. `replace`
+  // keeps the OAuth round-trip out of browser history.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get("strava_connected") || params.get("strava_error")) {
-      setActiveTab("me")
+      navigate({ pathname: pathForTab("me"), search: window.location.search }, { replace: true })
     }
-  }, [])
+  }, [navigate])
 
   // Once we know the auth state, handle the pending invite
   useEffect(() => {
@@ -976,7 +1059,11 @@ export default function App() {
     getTripDetail(pendingInviteId)
       .then((trip) => {
         setDeepLinkTrip(trip)
-        setActiveTab("plans")
+        // The real shareable trip URL, not /plans — replace (not push). If the
+        // user arrived via /trip/:tripId directly, this replaces the path with
+        // itself: useParams().tripId doesn't change, so TripRoute's effect
+        // (which feeds pendingInviteId) doesn't re-fire and this can't loop.
+        navigate(`/trip/${pendingInviteId}`, { replace: true })
         setPendingInviteId(null)
         sessionStorage.removeItem("pending_invite_trip")
       })
@@ -984,7 +1071,7 @@ export default function App() {
         setPendingInviteId(null)
         sessionStorage.removeItem("pending_invite_trip")
       })
-  }, [authReady, currentUser, pendingInviteId])
+  }, [authReady, currentUser, pendingInviteId, navigate])
 
   const visibleResorts = useMemo(() => {
     return RESORTS.filter((r) => {
@@ -1016,17 +1103,7 @@ export default function App() {
     return merged
   }, [visibleResorts, sortBy])
 
-  const mountainPageResort = mountainPageResortKey === KRAMES_BUTTE_KEY
-    ? KRAMES_BUTTE_RESORT
-    : rows.find((r) => r.resortKey === mountainPageResortKey) || null
-
-  const handleTabChange = (tab) => {
-    setMountainPageResortKey(null)
-    // Clear the friend-profile takeover too, or bottom-nav navigation would
-    // leave a stale profile mounted over the tab the user just picked.
-    setViewingProfileId(null)
-    setActiveTab(tab)
-  }
+  const handleTabChange = (tab) => navigate(pathForTab(tab))
 
   async function handleSaveTodayPlan({ resortKey, eta, visibility }) {
     setSavingTodayPlan(true); setTodayPlanError(null)
@@ -1096,11 +1173,25 @@ export default function App() {
     )
   }
 
+  // Task 5 reuses this exact element for /trip/:tripId — kept as a named const
+  // (rather than inlined inside its <Route>) so that reuse can't drift from this
+  // one into two copies that diverge later, this codebase's single most recurring
+  // bug class (see ROADMAP's "THE RECURRING LESSON").
+  const plansElement = (
+    currentUser ? (
+      <SkiPlansPage
+        onRequireLogin={requireLogin}
+        resorts={RESORTS}
+        focusDate={planFocusDate}
+        onFocusHandled={() => setPlanFocusDate(null)}
+      />
+    ) : (
+      <AuthGate onSignIn={() => openAuthModal("login")} onSignUp={() => openAuthModal("signup")}
+        icon="🎿" title="Plan trips with your crew" desc="Sign in to create trips, invite friends, share rides, and track your whole season." />
+    )
+  )
+
   return (
-    // Provider is deliberately not indented over the tree below — wrapping it
-    // this way keeps the Sprint 34 diff to two lines instead of re-indenting
-    // ~500 lines of JSX.
-    <ProfileNavContext.Provider value={setViewingProfileId}>
     <div
       style={{
         minHeight: "100vh",
@@ -1208,12 +1299,16 @@ export default function App() {
 
       {/* Deep-link trip modal (opened via ?trip= URL param or notification click) */}
       {deepLinkTrip && (
-        <TripDetailModal
-          trip={deepLinkTrip}
-          currentUser={currentUser}
-          onClose={() => setDeepLinkTrip(null)}
-          onUpdate={() => {}}
-        />
+        <ChunkErrorBoundary>
+          <Suspense fallback={null}>
+            <TripDetailModal
+              trip={deepLinkTrip}
+              currentUser={currentUser}
+              onClose={() => setDeepLinkTrip(null)}
+              onUpdate={() => {}}
+            />
+          </Suspense>
+        </ChunkErrorBoundary>
       )}
 
       {/* Invite landing — shown when an unauthenticated user opens a ?trip= link */}
@@ -1328,29 +1423,18 @@ export default function App() {
         paddingRight: isMobile ? 14 : 20,
         paddingBottom: isMobile ? undefined : 48,
       }}>
-        {viewingProfileId ? (
-          /* Takes precedence over MountainPage so a profile opened from inside
-             a mountain page (e.g. its board) actually renders. */
-          <ProfilePage
-            userId={viewingProfileId}
-            onBack={() => setViewingProfileId(null)}
-            resorts={RESORTS}
-          />
-        ) : mountainPageResortKey ? (
-          <MountainPage
-            resortKey={mountainPageResortKey}
-            resort={mountainPageResort}
-            currentUserEmail={currentUser?.email}
-            onBack={() => setMountainPageResortKey(null)}
-          />
-        ) : (
-          <>
         {/* Suppressed on Track, which inherited HomeDashboard's own full-bleed
             "Ready to ski?" hero (same /hero-mountain.jpg) — the old `home` tab
-            hid this strip for exactly that reason. */}
-        {activeTab !== "track" && (
+            hid this strip for exactly that reason. Also suppressed on /u and
+            /mountain detail routes — see isDetailRoute above. */}
+        {!isDetailRoute && activeTab !== "track" && (
           <HeroBannerStrip photoPath="/hero-mountain.jpg" />
         )}
+        {/* Suppressed entirely on /u and /mountain detail routes — ProfilePage
+            and MountainPage each render their own back-button + header, so this
+            shared chrome (branding, the mobile bell, the Today Refresh button)
+            was stacking on top of theirs. See isDetailRoute above. */}
+        {!isDetailRoute && (
         <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: activeTab === "today" ? 20 : 16 }}>
           {/* Left: branding */}
           <div>
@@ -1380,7 +1464,6 @@ export default function App() {
                 currentUser={currentUser}
                 onOpenTrip={handleOpenTripById}
                 onOpenPlan={handleOpenPlanDate}
-                onTabChange={handleTabChange}
                 variant="icon"
               />
             )}
@@ -1403,6 +1486,7 @@ export default function App() {
             )}
           </div>
         </header>
+        )}
 
         {error && (
           <div style={{ background: "var(--color-danger-bg)", border: "1px solid var(--color-danger)", padding: 12, borderRadius: 14, color: "var(--color-danger)", marginBottom: 16 }}>
@@ -1410,94 +1494,98 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === "today" && (
-          <TodayScreen
-            rows={rows}
-            passFilters={passFilters}
-            setPassFilters={setPassFilters}
-            query={query}
-            setQuery={setQuery}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-            skierCounts={skierCounts}
-            skierDetails={skierDetails}
-            friendIds={friendIds}
-            resortActivityCounts={resortActivityCounts}
-            friendTripsByResort={friendTripsByResort}
-            myTodayPlan={myTodayPlan}
-            savingTodayPlan={savingTodayPlan}
-            todayPlanError={todayPlanError}
-            onSaveTodayPlan={handleSaveTodayPlan}
-            onClearTodayPlanError={() => setTodayPlanError(null)}
-            vibeData={vibeData}
-            loading={loading}
-            refresh={refresh}
-            currentUser={currentUser}
-            topResort={topResort}
-            setMountainPageResortKey={setMountainPageResortKey}
-            onSubTabChange={setTodaySubTab}
-            sessionActive={!!activeSession}
-          />
-        )}
-
-        {activeTab === "track" && (
-          <TrackScreen
-            resorts={rows}
-            currentUser={currentUser}
-            sessionActive={!!activeSession}
-            onStartSession={handleSessionStart}
-          />
-        )}
-
-        {activeTab === "crew" && (
-          <div style={{ marginTop: 8 }}>
-            {currentUser ? (
-              <MessagingCenter />
-            ) : (
-              <AuthGate onSignIn={() => openAuthModal("login")} onSignUp={() => openAuthModal("signup")}
-                icon="💬" title="Your Crew is waiting" desc="Sign in to chat with your crew, add friends, and coordinate the season." />
-            )}
-          </div>
-        )}
-
-        {activeTab === "me" && (
-          <div style={{ marginTop: 8 }}>
-            {currentUser ? (
-              <ProfilePage onLogOut={handleLogOut} resorts={RESORTS} />
-            ) : (
-              <div
-                style={{
-                  display: "grid",
-                  placeItems: "center",
-                  minHeight: 320,
-                }}
-              >
-                <AuthForm
-                  mode="login"
-                  onSuccess={handleAuthSuccess}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === "plans" && (
-          currentUser ? (
-            <SkiPlansPage
-              onRequireLogin={requireLogin}
-              resorts={RESORTS}
-              focusDate={planFocusDate}
-              onFocusHandled={() => setPlanFocusDate(null)}
+        <ChunkErrorBoundary>
+        <Suspense fallback={<div style={{ padding: 24, textAlign: "center", opacity: 0.6 }}>Loading…</div>}>
+          <Routes>
+            <Route path="/" element={(
+              <TodayScreen
+              rows={rows}
+              passFilters={passFilters}
+              setPassFilters={setPassFilters}
+              query={query}
+              setQuery={setQuery}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              skierCounts={skierCounts}
+              skierDetails={skierDetails}
+              friendIds={friendIds}
+              resortActivityCounts={resortActivityCounts}
+              friendTripsByResort={friendTripsByResort}
+              myTodayPlan={myTodayPlan}
+              savingTodayPlan={savingTodayPlan}
+              todayPlanError={todayPlanError}
+              onSaveTodayPlan={handleSaveTodayPlan}
+              onClearTodayPlanError={() => setTodayPlanError(null)}
+              vibeData={vibeData}
+              loading={loading}
+              refresh={refresh}
+              currentUser={currentUser}
+              topResort={topResort}
+              onOpenMountainPage={(resortKey) => navigate(`/mountain/${resortKey}`)}
+              onSubTabChange={setTodaySubTab}
+              sessionActive={!!activeSession}
             />
-          ) : (
-            <AuthGate onSignIn={() => openAuthModal("login")} onSignUp={() => openAuthModal("signup")}
-              icon="🎿" title="Plan trips with your crew" desc="Sign in to create trips, invite friends, share rides, and track your whole season." />
-          )
-        )}
-          </>
-        )}
+          )} />
+
+          <Route path="/track" element={(
+            <TrackScreen
+              resorts={rows}
+              currentUser={currentUser}
+              sessionActive={!!activeSession}
+              onStartSession={handleSessionStart}
+            />
+          )} />
+
+          <Route path="/crew" element={(
+            <div style={{ marginTop: 8 }}>
+              {currentUser ? (
+                <MessagingCenter />
+              ) : (
+                <AuthGate onSignIn={() => openAuthModal("login")} onSignUp={() => openAuthModal("signup")}
+                  icon="💬" title="Your Crew is waiting" desc="Sign in to chat with your crew, add friends, and coordinate the season." />
+              )}
+            </div>
+          )} />
+
+          <Route path="/me" element={(
+            <div style={{ marginTop: 8 }}>
+              {currentUser ? (
+                <ProfilePage onLogOut={handleLogOut} resorts={RESORTS} />
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    placeItems: "center",
+                    minHeight: 320,
+                  }}
+                >
+                  <AuthForm
+                    mode="login"
+                    onSuccess={handleAuthSuccess}
+                  />
+                </div>
+              )}
+            </div>
+          )} />
+
+          <Route path="/plans" element={plansElement} />
+
+          <Route
+            path="/trip/:tripId"
+            element={<TripRoute onTripId={openTripRoute}>{plansElement}</TripRoute>}
+          />
+
+          <Route path="/u/:userId" element={<ProfileRoute resorts={RESORTS} />} />
+          <Route
+            path="/mountain/:resortKey"
+            element={<MountainRoute rows={rows} currentUserEmail={currentUser?.email} loading={loading} />}
+          />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+        </ChunkErrorBoundary>
       </div>
     </div>
-    </ProfileNavContext.Provider>
   )
 }
