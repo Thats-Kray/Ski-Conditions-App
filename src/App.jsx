@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom"
 import { legacyTripPath, pathForTab, tabForPath } from "./lib/routes"
 import SnowfallBackground from "./components/SnowfallBackground"
+import ChunkErrorBoundary from "./components/ChunkErrorBoundary"
 import { useMobile } from "./lib/useMobile"
 import { localDateKey } from "./lib/calendarDates"
 import { formatDate } from "./lib/format"
@@ -547,6 +548,13 @@ export default function App() {
   const location = useLocation()
   const navigate = useNavigate()
   const activeTab = tabForPath(location.pathname)
+  // /u/:userId and /mountain/:resortKey are real detail routes with their own
+  // back-button + header (ProfilePage, MountainPage) — the shared hero strip
+  // and tab header above <Routes> were never gated off them when Task 6
+  // turned them from a full-page takeover into routes, so both rendered
+  // stacked on top of the page's own header (e.g. the Today header's
+  // "Refresh" button on top of a mountain page).
+  const isDetailRoute = location.pathname.startsWith("/u/") || location.pathname.startsWith("/mountain/")
   // Read-only mirror of TodayScreen's own conditionsSubTab state (reported up via
   // onSubTabChange). TodayScreen owns the real state; App.jsx only needs to know its
   // current value so the header's Refresh button + description can stay inline with
@@ -866,7 +874,9 @@ export default function App() {
       try {
         const trip = await getTripDetail(storedId)
         setDeepLinkTrip(trip)
-        navigate(pathForTab("plans"))
+        // The real shareable trip URL, not /plans — replace (not push) so this
+        // doesn't add a spurious history entry on top of wherever auth happened.
+        navigate(`/trip/${storedId}`, { replace: true })
       } catch {
         // trip may not exist or user isn't invited — silently ignore
       }
@@ -1030,12 +1040,14 @@ export default function App() {
   // `?strava_error=...` (this app has no client-side router, so the backend
   // redirects to root). Jump straight to Me — where StravaConnect renders —
   // so the params are visible and StravaConnect's own effect can read/clear
-  // them and show the toast. This effect only switches tabs, it doesn't touch
-  // the query string itself.
+  // them and show the toast. Must carry the search string along explicitly:
+  // navigate(pathForTab("me")) alone drops it (a bare path has no query), which
+  // silently killed StravaConnect's own read of these exact params. `replace`
+  // keeps the OAuth round-trip out of browser history.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get("strava_connected") || params.get("strava_error")) {
-      navigate(pathForTab("me"))
+      navigate({ pathname: pathForTab("me"), search: window.location.search }, { replace: true })
     }
   }, [navigate])
 
@@ -1047,7 +1059,11 @@ export default function App() {
     getTripDetail(pendingInviteId)
       .then((trip) => {
         setDeepLinkTrip(trip)
-        navigate(pathForTab("plans"))
+        // The real shareable trip URL, not /plans — replace (not push). If the
+        // user arrived via /trip/:tripId directly, this replaces the path with
+        // itself: useParams().tripId doesn't change, so TripRoute's effect
+        // (which feeds pendingInviteId) doesn't re-fire and this can't loop.
+        navigate(`/trip/${pendingInviteId}`, { replace: true })
         setPendingInviteId(null)
         sessionStorage.removeItem("pending_invite_trip")
       })
@@ -1283,14 +1299,16 @@ export default function App() {
 
       {/* Deep-link trip modal (opened via ?trip= URL param or notification click) */}
       {deepLinkTrip && (
-        <Suspense fallback={null}>
-          <TripDetailModal
-            trip={deepLinkTrip}
-            currentUser={currentUser}
-            onClose={() => setDeepLinkTrip(null)}
-            onUpdate={() => {}}
-          />
-        </Suspense>
+        <ChunkErrorBoundary>
+          <Suspense fallback={null}>
+            <TripDetailModal
+              trip={deepLinkTrip}
+              currentUser={currentUser}
+              onClose={() => setDeepLinkTrip(null)}
+              onUpdate={() => {}}
+            />
+          </Suspense>
+        </ChunkErrorBoundary>
       )}
 
       {/* Invite landing — shown when an unauthenticated user opens a ?trip= link */}
@@ -1407,10 +1425,16 @@ export default function App() {
       }}>
         {/* Suppressed on Track, which inherited HomeDashboard's own full-bleed
             "Ready to ski?" hero (same /hero-mountain.jpg) — the old `home` tab
-            hid this strip for exactly that reason. */}
-        {activeTab !== "track" && (
+            hid this strip for exactly that reason. Also suppressed on /u and
+            /mountain detail routes — see isDetailRoute above. */}
+        {!isDetailRoute && activeTab !== "track" && (
           <HeroBannerStrip photoPath="/hero-mountain.jpg" />
         )}
+        {/* Suppressed entirely on /u and /mountain detail routes — ProfilePage
+            and MountainPage each render their own back-button + header, so this
+            shared chrome (branding, the mobile bell, the Today Refresh button)
+            was stacking on top of theirs. See isDetailRoute above. */}
+        {!isDetailRoute && (
         <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: activeTab === "today" ? 20 : 16 }}>
           {/* Left: branding */}
           <div>
@@ -1462,6 +1486,7 @@ export default function App() {
             )}
           </div>
         </header>
+        )}
 
         {error && (
           <div style={{ background: "var(--color-danger-bg)", border: "1px solid var(--color-danger)", padding: 12, borderRadius: 14, color: "var(--color-danger)", marginBottom: 16 }}>
@@ -1469,6 +1494,7 @@ export default function App() {
           </div>
         )}
 
+        <ChunkErrorBoundary>
         <Suspense fallback={<div style={{ padding: 24, textAlign: "center", opacity: 0.6 }}>Loading…</div>}>
           <Routes>
             <Route path="/" element={(
@@ -1558,6 +1584,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        </ChunkErrorBoundary>
       </div>
     </div>
   )
