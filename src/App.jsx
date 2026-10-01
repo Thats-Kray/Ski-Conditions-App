@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom"
+import { pathForTab, tabForPath } from "./lib/routes"
 import SnowfallBackground from "./components/SnowfallBackground"
 import { useMobile } from "./lib/useMobile"
 import { localDateKey } from "./lib/calendarDates"
@@ -493,7 +495,9 @@ function TabButton({ active, onClick, children }) {
 
 export default function App() {
   const isMobile = useMobile()
-  const [activeTab, setActiveTab] = useState("today")
+  const location = useLocation()
+  const navigate = useNavigate()
+  const activeTab = tabForPath(location.pathname)
   // Read-only mirror of TodayScreen's own conditionsSubTab state (reported up via
   // onSubTabChange). TodayScreen owns the real state; App.jsx only needs to know its
   // current value so the header's Refresh button + description can stay inline with
@@ -553,13 +557,13 @@ export default function App() {
       // Most likely cause after migrations 040/042: you can no longer see that trip. Say so
       // rather than opening an empty modal.
       console.error("[App] couldn't open trip from notification:", e)
-      setActiveTab("plans")
+      navigate(pathForTab("plans"))
     }
   }
 
   /** A plan-party notification carries a date key, not a trip — open the Plans calendar. */
   function handleOpenPlanDate(dateKey) {
-    setActiveTab("plans")
+    navigate(pathForTab("plans"))
     if (dateKey) setPlanFocusDate(dateKey)
   }
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -805,7 +809,7 @@ export default function App() {
       try {
         const trip = await getTripDetail(storedId)
         setDeepLinkTrip(trip)
-        setActiveTab("plans")
+        navigate(pathForTab("plans"))
       } catch {
         // trip may not exist or user isn't invited — silently ignore
       }
@@ -815,7 +819,7 @@ export default function App() {
   function handleOnboardingComplete() {
     setShowOnboarding(false)
     loadHeaderUser()
-    setActiveTab("plans")
+    navigate(pathForTab("plans"))
   }
 
   async function handlePasswordResetSuccess() {
@@ -827,10 +831,10 @@ export default function App() {
   async function handleLogOut() {
     try {
       await logOut()
-  
+
       setCurrentUser(null)
       setCurrentProfile(null)
-      setActiveTab("today")
+      navigate(pathForTab("today"))
     } catch (err) {
       console.error("Logout failed:", err)
       alert(err.message || "Failed to log out.")
@@ -964,9 +968,9 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get("strava_connected") || params.get("strava_error")) {
-      setActiveTab("me")
+      navigate(pathForTab("me"))
     }
-  }, [])
+  }, [navigate])
 
   // Once we know the auth state, handle the pending invite
   useEffect(() => {
@@ -976,7 +980,7 @@ export default function App() {
     getTripDetail(pendingInviteId)
       .then((trip) => {
         setDeepLinkTrip(trip)
-        setActiveTab("plans")
+        navigate(pathForTab("plans"))
         setPendingInviteId(null)
         sessionStorage.removeItem("pending_invite_trip")
       })
@@ -984,7 +988,7 @@ export default function App() {
         setPendingInviteId(null)
         sessionStorage.removeItem("pending_invite_trip")
       })
-  }, [authReady, currentUser, pendingInviteId])
+  }, [authReady, currentUser, pendingInviteId, navigate])
 
   const visibleResorts = useMemo(() => {
     return RESORTS.filter((r) => {
@@ -1025,7 +1029,7 @@ export default function App() {
     // Clear the friend-profile takeover too, or bottom-nav navigation would
     // leave a stale profile mounted over the tab the user just picked.
     setViewingProfileId(null)
-    setActiveTab(tab)
+    navigate(pathForTab(tab))
   }
 
   async function handleSaveTodayPlan({ resortKey, eta, visibility }) {
@@ -1410,90 +1414,94 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === "today" && (
-          <TodayScreen
-            rows={rows}
-            passFilters={passFilters}
-            setPassFilters={setPassFilters}
-            query={query}
-            setQuery={setQuery}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-            skierCounts={skierCounts}
-            skierDetails={skierDetails}
-            friendIds={friendIds}
-            resortActivityCounts={resortActivityCounts}
-            friendTripsByResort={friendTripsByResort}
-            myTodayPlan={myTodayPlan}
-            savingTodayPlan={savingTodayPlan}
-            todayPlanError={todayPlanError}
-            onSaveTodayPlan={handleSaveTodayPlan}
-            onClearTodayPlanError={() => setTodayPlanError(null)}
-            vibeData={vibeData}
-            loading={loading}
-            refresh={refresh}
-            currentUser={currentUser}
-            topResort={topResort}
-            setMountainPageResortKey={setMountainPageResortKey}
-            onSubTabChange={setTodaySubTab}
-            sessionActive={!!activeSession}
-          />
-        )}
+        <Routes>
+          <Route path="/" element={(
+            <TodayScreen
+              rows={rows}
+              passFilters={passFilters}
+              setPassFilters={setPassFilters}
+              query={query}
+              setQuery={setQuery}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              skierCounts={skierCounts}
+              skierDetails={skierDetails}
+              friendIds={friendIds}
+              resortActivityCounts={resortActivityCounts}
+              friendTripsByResort={friendTripsByResort}
+              myTodayPlan={myTodayPlan}
+              savingTodayPlan={savingTodayPlan}
+              todayPlanError={todayPlanError}
+              onSaveTodayPlan={handleSaveTodayPlan}
+              onClearTodayPlanError={() => setTodayPlanError(null)}
+              vibeData={vibeData}
+              loading={loading}
+              refresh={refresh}
+              currentUser={currentUser}
+              topResort={topResort}
+              setMountainPageResortKey={setMountainPageResortKey}
+              onSubTabChange={setTodaySubTab}
+              sessionActive={!!activeSession}
+            />
+          )} />
 
-        {activeTab === "track" && (
-          <TrackScreen
-            resorts={rows}
-            currentUser={currentUser}
-            sessionActive={!!activeSession}
-            onStartSession={handleSessionStart}
-          />
-        )}
+          <Route path="/track" element={(
+            <TrackScreen
+              resorts={rows}
+              currentUser={currentUser}
+              sessionActive={!!activeSession}
+              onStartSession={handleSessionStart}
+            />
+          )} />
 
-        {activeTab === "crew" && (
-          <div style={{ marginTop: 8 }}>
-            {currentUser ? (
-              <MessagingCenter />
+          <Route path="/crew" element={(
+            <div style={{ marginTop: 8 }}>
+              {currentUser ? (
+                <MessagingCenter />
+              ) : (
+                <AuthGate onSignIn={() => openAuthModal("login")} onSignUp={() => openAuthModal("signup")}
+                  icon="💬" title="Your Crew is waiting" desc="Sign in to chat with your crew, add friends, and coordinate the season." />
+              )}
+            </div>
+          )} />
+
+          <Route path="/me" element={(
+            <div style={{ marginTop: 8 }}>
+              {currentUser ? (
+                <ProfilePage onLogOut={handleLogOut} resorts={RESORTS} />
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    placeItems: "center",
+                    minHeight: 320,
+                  }}
+                >
+                  <AuthForm
+                    mode="login"
+                    onSuccess={handleAuthSuccess}
+                  />
+                </div>
+              )}
+            </div>
+          )} />
+
+          <Route path="/plans" element={(
+            currentUser ? (
+              <SkiPlansPage
+                onRequireLogin={requireLogin}
+                resorts={RESORTS}
+                focusDate={planFocusDate}
+                onFocusHandled={() => setPlanFocusDate(null)}
+              />
             ) : (
               <AuthGate onSignIn={() => openAuthModal("login")} onSignUp={() => openAuthModal("signup")}
-                icon="💬" title="Your Crew is waiting" desc="Sign in to chat with your crew, add friends, and coordinate the season." />
-            )}
-          </div>
-        )}
+                icon="🎿" title="Plan trips with your crew" desc="Sign in to create trips, invite friends, share rides, and track your whole season." />
+            )
+          )} />
 
-        {activeTab === "me" && (
-          <div style={{ marginTop: 8 }}>
-            {currentUser ? (
-              <ProfilePage onLogOut={handleLogOut} resorts={RESORTS} />
-            ) : (
-              <div
-                style={{
-                  display: "grid",
-                  placeItems: "center",
-                  minHeight: 320,
-                }}
-              >
-                <AuthForm
-                  mode="login"
-                  onSuccess={handleAuthSuccess}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === "plans" && (
-          currentUser ? (
-            <SkiPlansPage
-              onRequireLogin={requireLogin}
-              resorts={RESORTS}
-              focusDate={planFocusDate}
-              onFocusHandled={() => setPlanFocusDate(null)}
-            />
-          ) : (
-            <AuthGate onSignIn={() => openAuthModal("login")} onSignUp={() => openAuthModal("signup")}
-              icon="🎿" title="Plan trips with your crew" desc="Sign in to create trips, invite friends, share rides, and track your whole season." />
-          )
-        )}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
           </>
         )}
       </div>
