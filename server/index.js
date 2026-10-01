@@ -555,15 +555,19 @@ const VAIL_RESORT_DOMAINS = {
 }
 
 // Ikon resorts + Telluride (Epic but independently operated) — scrape HTML
-// NOTE: verify these URLs when 2026/27 season opens in November 2026
+// Verified Oct 2026 pre-season check; confirm again at 2027/28 season open.
+// Vail Resorts JSON API (fetchVailResortsConditions) was unreachable from the
+// remote CI environment during this check — verify Lifts/Terrain/SnowReport
+// field names manually against breckenridge.com/api/resort-data/mountain/v2/conditions/
+// before opening day.
 const IKON_RESORT_REPORT_URLS = {
-  steamboat:      "https://www.steamboat.com/the-mountain/mountain-report",
-  winterpark:     "https://www.winterparkresort.com/the-mountain/mountain-report",
-  coppermountain: "https://www.coppercolorado.com/the-mountain/mountain-report",
-  arapahoebasin:  "https://www.arapahoebasin.com/snow-report/",
-  eldora:         "https://www.eldora.com/the-mountain/mountain-report",
-  aspensnowmass:  "https://www.aspensnowmass.com/our-mountains/mountain-report",
-  telluride:      "https://www.tellurideskiresort.com/mountain-information/snow-conditions/",
+  steamboat:      "https://www.steamboat.com/the-mountain/mountain-report",         // confirmed OK Oct 2026
+  winterpark:     "https://www.winterparkresort.com/the-mountain/mountain-report",  // confirmed OK Oct 2026
+  coppermountain: "https://www.coppercolorado.com/the-mountain/trail-lift-info/winter-trail-report/", // updated Oct 2026 (/mountain-report no longer found)
+  arapahoebasin:  "https://www.arapahoebasin.com/snow-report/",                     // confirmed OK Oct 2026
+  eldora:         "https://www.eldora.com/the-mountain/current-conditions/",        // updated Oct 2026 (/mountain-report no longer found)
+  aspensnowmass:  "https://www.aspensnowmass.com/four-mountains/snow-report",       // updated Oct 2026 (was /our-mountains/mountain-report)
+  telluride:      "https://tellurideskiresort.com/snow-report-scrape/",             // updated Oct 2026 (dedicated scrape endpoint; was /mountain-information/snow-conditions/)
 }
 
 const BROWSER_HEADERS = {
