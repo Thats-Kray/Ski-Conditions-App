@@ -1493,9 +1493,11 @@ Tests 329 pass / 0 fail / 1 pre-existing todo on the merged result; lint showed 
 checkout vs. 85 throughout the branch's own worktree — fully explained by 7 problems in an
 untracked mockup file (`mockups/PowDays.app mockup design/support.js`) that predates this branch
 and that no worktree ever had, not a regression (same documented main-checkout lint-drift pattern
-as previous sessions). **Not yet pushed to `origin/main` or deployed** — needs Kyle's go-ahead,
-per this project's standing rule that a push to `main` ships straight to production with no
-staging step.
+as previous sessions). **Pushed to `origin/main` and live on `powdays.app` 2026-10-01** (Kyle's
+go-ahead given first). Deploy verified both ways: bundle-hash check + all 4 new route shapes
+(`/plans`, `/trip/:id`, `/u/:id`, `/mountain/:key`) returning 200 not 404 against production, AND
+**Kyle click-tested it himself and confirmed each tab now has its own URL.** TASK 20.6 is fully
+closed — implemented, reviewed, merged, deployed, and human-confirmed.
 
 **A true multi-page app (separate HTML entries, full reloads) was considered and rejected**
 during planning. Every navigation would restart `navigator.geolocation.watchPosition`,
@@ -2616,7 +2618,7 @@ prioritized open ideas, then the throughput → features → security/debt queue
 | **44** | ~~TASK 22.2 — Powder Score algorithm tuning~~ — **shipped 2026-09-10** | S-M |
 | **45** | TASK 22.3 — Weather/conditions API quality pass | M |
 | **46** | ~~TASK 22.4 — Map View + friends'-location test-and-fix~~ — **shipped 2026-09-12** | S |
-| **47** | ~~TASK 20.6 routing + code splitting~~ — **shipped 2026-10-01, merged to local main, not yet pushed** | M |
+| **47** | ~~TASK 20.6 routing + code splitting~~ — **shipped, pushed, and live 2026-10-01, Kyle click-tested** | M |
 | **47.5** | ~~TASK 20.6 Tasks 7-8 — code splitting + lazy Leaflet~~ — shipped with the rest, see above | S |
 | **48** | TASK 1.1-T component test harness + first 3 suites | M |
 | **49** | TASK 19.1 per-crew visibility (migration 044, **alone**) | M |
