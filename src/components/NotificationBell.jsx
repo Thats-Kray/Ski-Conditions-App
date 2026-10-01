@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 import {
   getNotifications,
@@ -9,6 +10,7 @@ import {
   declineCrewInvite,
 } from "../lib/socialApi"
 import { timeAgo } from "../lib/format"
+import { pathForTab } from "../lib/routes"
 
 // TYPE_META.color feeds `${meta.color}1a`/`${meta.color}33` hex-alpha-suffix template
 // literals below (notification-icon badge tinting), which requires literal hex — a
@@ -60,7 +62,8 @@ export function useNotificationCount(currentUser) {
 const POPUP_WIDTH = 340
 const POPUP_MARGIN = 16
 
-export default function NotificationBell({ currentUser, onOpenTrip, onTabChange, onOpenPlan, dropUp = false, variant = "icon" }) {
+export default function NotificationBell({ currentUser, onOpenTrip, onOpenPlan, dropUp = false, variant = "icon" }) {
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const panelRef = useRef(null)
@@ -154,15 +157,15 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
       // A ski-plan day, not a trip — opens the Plans calendar on that date, where the
       // approve/decline strip for that day lives.
       onOpenPlan(targetId)
-    } else if (targetType === "messages" && onTabChange) {
+    } else if (targetType === "messages") {
       // Where the host's note is. Used by "the trip is full" — see notifyRequestDecision.
-      onTabChange("crew")
-    } else if (notif.type === "friend_request" && onTabChange) {
-      onTabChange("crew")
-    } else if (onTabChange) {
+      navigate(pathForTab("crew"))
+    } else if (notif.type === "friend_request") {
+      navigate(pathForTab("crew"))
+    } else {
       // Anything without a specific destination still lands somewhere sensible rather than
       // doing nothing, which reads as a broken tap.
-      onTabChange("crew")
+      navigate(pathForTab("crew"))
     }
     setOpen(false)
   }
@@ -175,7 +178,7 @@ export default function NotificationBell({ currentUser, onOpenTrip, onTabChange,
       await acceptCrewInvite(crewId)
       await markNotificationRead(notif.id)
       setNotifications((prev) => prev.filter((n) => n.id !== notif.id))
-      if (onTabChange) onTabChange("crew")
+      navigate(pathForTab("crew"))
       setOpen(false)
     } catch (err) {
       console.warn("Accept crew invite failed:", err)

@@ -446,7 +446,6 @@ function TopNav({ activeTab, onTabChange, currentProfile, notifCount, currentUse
                 currentUser={currentUser}
                 onOpenTrip={onOpenTrip}
                 onOpenPlan={onOpenPlan}
-                onTabChange={onTabChange}
                 variant="icon"
               />
             </div>
@@ -1402,7 +1401,6 @@ export default function App() {
                 currentUser={currentUser}
                 onOpenTrip={handleOpenTripById}
                 onOpenPlan={handleOpenPlanDate}
-                onTabChange={handleTabChange}
                 variant="icon"
               />
             )}
