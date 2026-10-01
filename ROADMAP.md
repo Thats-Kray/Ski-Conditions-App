@@ -1415,47 +1415,73 @@ alongside Sprint 42 — but that ordering call is Kyle's, not decided here.
 
 ---
 
-### TASK 20.6 — Client-side routing + code splitting — **Size: M**
+### TASK 20.6 — Client-side routing + code splitting — **Size: M** — ✅ **ALL 9 TASKS COMPLETE 2026-10-01, on branch `worktree-routing-code-splitting` — reviewed, committed, NOT YET MERGED to `main`**
 
-Every screen gets a real URL; Leaflet stops shipping to people who never open the map.
+Every screen now has a real URL; Leaflet no longer ships to people who never open the map.
 
-Navigation today is `const [activeTab, setActiveTab] = useState("today")` (`App.jsx:562`, 17
-refs, **no router installed at all**). You cannot link anyone to a trip, the back button does
-nothing, and a refresh dumps you on Today. `App.jsx:971-979` reads `?trip=` then calls
-`history.replaceState` and **destroys the entire query string** — so the one shareable link in
-the app (built at `TripDetailModal.jsx:973`) dismantles itself on arrival. The bundle is a
-single **1,184 KB** chunk with nothing lazy-loaded.
+Navigation had been `const [activeTab, setActiveTab] = useState("today")` (`App.jsx:562`, 17
+refs, no router installed at all) — you couldn't link anyone to a trip, the back button did
+nothing, and a refresh dumped you on Today. `App.jsx:971-979` read `?trip=` then called
+`history.replaceState` and destroyed the entire query string — so the one shareable link in the
+app (built at `TripDetailModal.jsx:973`) dismantled itself on arrival. The bundle was a single
+**1,248 KB** chunk (measured at this branch's start — the plan's original estimate of 1,184 KB
+had drifted in the 5 weeks since it was written) with nothing lazy-loaded.
 
-- [ ] **Full task-by-task plan:** `docs/superpowers/plans/2026-08-27-routing-and-code-splitting.md`
-- [ ] 9 tasks. **Tasks 1-5 = routing** and ship a complete improvement alone. **Task 6**
-      (profile + mountain pages as real routes) is explicitly cuttable. **Tasks 7-8 = code
-      splitting.**
-- [ ] **Task 8 (lazy-load Leaflet) is the biggest measurable win and depends on nothing else in
-      the plan** — it can be pulled forward and shipped on its own in under an hour.
-      `PowderMap.jsx` is the only Leaflet importer, it is statically imported at
-      `TodayScreen.jsx:2`, and it renders only behind the non-default 🗺️ Map sub-tab. Every
-      visitor downloads a mapping library to look at snow totals.
-- [ ] Adds `react-router-dom` — the **second** deliberate "no new deps" exception (first is the
-      Vitest harness in TASK 1.1-T). Justified: hand-rolled history handling is precisely what
-      produced the query-string bug above.
-- [ ] ⚠️ **Needs a `vercel.json` rewrite or every deep link 404s on hard refresh.** There is no
-      `vercel.json` in the repo today. This is the one failure mode that passes every local test
-      and still breaks the feature in production — verify with
-      `curl -o /dev/null -w "%{http_code}" https://powdays.app/plans`.
-- [ ] `BrowserRouter`, **never** `HashRouter` — Supabase password recovery arrives in the URL
-      hash (`AuthForm.jsx:91`).
-- [ ] Routing logic goes in a pure `src/lib/routes.js` with 13 tests, so **the navigation layer
-      gets real coverage under the existing `node --test` runner** with no new harness.
-- [ ] **Do this BEFORE TASK 1.1-T.** Routing is far easier to test than state-driven tabs, so
-      this makes the Vitest harness cheaper rather than redundant.
-- [ ] **A true multi-page app (separate HTML entries, full reloads) was considered and
-      rejected.** Every navigation would restart `navigator.geolocation.watchPosition`, lose the
-      in-progress GPS segment and up to 30s of tracking data, re-authenticate against Supabase,
-      and re-run the 12-resort polling fan-out. Note `useGpsTracker` *does* persist
-      segments/runs/lifts to `sessionStorage` every 30s and restore on mount
-      (`useGpsTracker.js:55-77`), so a reload does not lose a whole run — the objection is
-      death-by-a-thousand-reloads, not total data loss. **Recorded so this stops being
-      re-proposed.**
+**Shipped, task by task:** `react-router-dom@7.18.4` installed and a `vercel.json` SPA rewrite
+added (previously didn't exist — this is what fixes deep-link 404s on hard refresh), alongside
+the pure `src/lib/routes.js` route table (13 tests). `activeTab` converted from `useState` to a
+value derived from `location.pathname` via `tabForPath()`; every `setActiveTab` call site now
+calls `navigate(pathForTab(...))`; the 5 tabs (today/plans/track/crew/me) render as real
+`<Route>` elements. `NotificationBell` converted from an `onTabChange` prop to `useNavigate()`
+directly. A real `/trip/:tripId` route replaced the destructive `replaceState` call — a legacy
+`/?trip=<id>` link now redirects to `/trip/<id>` via `legacyTripPath()` instead of being
+destroyed, and `TripDetailModal`'s generated share links use the real `/trip/<id>` format.
+`/u/:userId` and `/mountain/:resortKey` routes were added — profiles and mountain pages are now
+real, shareable, bookmarkable URLs (previously local `useState` takeovers with no URL at all);
+`ProfileNavContext`/`useProfileNav()` was fully retired (`src/lib/profileNav.js` deleted), its
+two consumers now call `useNavigate()` directly. 5 components converted to `React.lazy()`
+(`MessagingCenter`, `ProfilePage`, `SkiPlansPage`, `MountainPage`, `TripDetailModal`), taking the
+entry bundle from 1,248 KB to **912 KB** (a 26.9% reduction); service worker cache bumped
+`powderdays-v2` → `powderdays-v3`. Finally, `PowderMap.jsx` — the app's only Leaflet importer,
+and the single heaviest dependency in the app at ~4.1 MB unminified — was converted to a lazy
+boundary inside `TodayScreen.jsx`'s Map sub-tab, taking the entry bundle from 912 KB down to
+**770.76 KB**.
+
+**Total result: entry bundle 1,248 KB → 770.76 KB, a 38% reduction** — while also giving every
+screen a real, shareable, bookmarkable URL and fixing the one shareable link in the app (trip
+links) that previously destroyed itself on arrival.
+
+`react-router-dom` is this project's **second** deliberate exception to its "avoid new
+dependencies" convention (the first is the still-queued Vitest harness in TASK 1.1-T).
+Justification held up: hand-rolled history/query-string handling is exactly what produced the
+destructive `replaceState` bug this plan fixes. `BrowserRouter` was used, never `HashRouter` —
+Supabase password recovery arrives in the URL hash (`AuthForm.jsx:91`), which a hash router would
+collide with.
+
+**Deliberate trade-off, worth recording so it isn't mistaken for a regression:** with code
+splitting, a user who goes offline without ever having visited a given route will not have that
+chunk cached, and it will fail to load — the old single-bundle approach worked offline
+everywhere once loaded. This is the accepted price of the smaller first load and was **not**
+"fixed" by pre-caching every chunk, which would just recreate the original ~1.2 MB download.
+
+**A true multi-page app (separate HTML entries, full reloads) was considered and rejected**
+during planning. Every navigation would restart `navigator.geolocation.watchPosition`,
+re-authenticate against Supabase, and re-run the 12-resort polling fan-out. Note `useGpsTracker`
+*does* persist segments/runs/lifts to `sessionStorage` every 30s and restore on mount
+(`useGpsTracker.js:55-77`), so a reload does not lose a whole run — the real objection is
+**death-by-a-thousand-reloads** (losing the live watch handle, the in-progress segment, and up
+to 30s of data, per navigation), not total data loss. Recorded accurately here so this stops
+being re-proposed with the wrong (total-loss) reasoning.
+
+**State:** 329 passing / 0 failing / 1 pre-existing documented `test.todo` throughout all 8
+implementation tasks (only Task 1 added tests — 13 new ones, for the pure `routes.js` module;
+nothing after that added or removed tests, since routing/splitting work added no new `src/lib`
+pure-function logic). Lint held at **85 problems (78 errors, 7 warnings)** throughout, exactly at
+the baseline measured at this branch's start (not the plan's original stated 87 — that had
+already drifted by the time this branch started). **Not yet merged, pushed, or deployed** — a
+final whole-branch review is still pending, and per this project's standing rule, merging to
+`main` ships straight to production with no staging step and needs Kyle's explicit go-ahead
+first.
 
 ---
 
@@ -2554,8 +2580,8 @@ prioritized open ideas, then the throughput → features → security/debt queue
 | **44** | ~~TASK 22.2 — Powder Score algorithm tuning~~ — **shipped 2026-09-10** | S-M |
 | **45** | TASK 22.3 — Weather/conditions API quality pass | M |
 | **46** | ~~TASK 22.4 — Map View + friends'-location test-and-fix~~ — **shipped 2026-09-12** | S |
-| **47** | **TASK 20.6 routing + code splitting** (Tasks 1-5; 6 cuttable) | M |
-| **47.5** | TASK 20.6 Tasks 7-8 — code splitting + lazy Leaflet | S |
+| **47** | ~~TASK 20.6 routing + code splitting~~ — **all 9 tasks complete 2026-10-01, pending merge** | M |
+| **47.5** | ~~TASK 20.6 Tasks 7-8 — code splitting + lazy Leaflet~~ — shipped with the rest, see above | S |
 | **48** | TASK 1.1-T component test harness + first 3 suites | M |
 | **49** | TASK 19.1 per-crew visibility (migration 044, **alone**) | M |
 | **50** | Social tab IA — **design session first**, then implementation | L |
@@ -2566,13 +2592,14 @@ prioritized open ideas, then the throughput → features → security/debt queue
 old queue's own content and order are unchanged, only shifted down five slots. Check this table
 before citing a sprint number from an earlier session.
 
-Quick wins droppable into any sprint: TASK 19.5b (XS), TASK 20.1 (S), TASK 20.2 (XS), and
-**TASK 20.6's Task 8 alone** (lazy Leaflet — biggest measured win in the backlog for the least
-work, and it needs none of the routing).
+Quick wins droppable into any sprint: TASK 19.5b (XS), TASK 20.1 (S), TASK 20.2 (XS).
+**TASK 20.6 (all 9 tasks, including the lazy-Leaflet win) is now fully shipped on its branch** —
+see its section above — and is no longer part of this quick-wins list.
 
-**Why 20.6 moved ahead of the test harness (Kyle, 2026-08-27):** routing is far easier to test
-than state-driven tabs, and `src/lib/routes.js` gives the navigation layer real coverage under
-the runner that already exists. Doing it first makes Sprint 48 cheaper.
+**Why 20.6 was moved ahead of the test harness (Kyle, 2026-08-27):** routing is far easier to
+test than state-driven tabs, and `src/lib/routes.js` gives the navigation layer real coverage
+under the runner that already exists — which paid off, making Sprint 48 (the test harness)
+cheaper now that it's done.
 
 **TASK 21.2 (PowDays rename + logo assets) shipped 2026-08-27** — see its section above. It
 also carried a 5-theme contrast audit, a persistent mobile logo bar, a mobile composer fix, and
