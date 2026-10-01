@@ -1415,7 +1415,7 @@ alongside Sprint 42 — but that ordering call is Kyle's, not decided here.
 
 ---
 
-### TASK 20.6 — Client-side routing + code splitting — **Size: M** — ✅ **ALL 9 TASKS COMPLETE 2026-10-01, on branch `worktree-routing-code-splitting` — reviewed, committed, NOT YET MERGED to `main`**
+### TASK 20.6 — Client-side routing + code splitting — **Size: M** — ✅ **SHIPPED 2026-10-01, merged to local `main` (not yet pushed/deployed)**
 
 Every screen now has a real URL; Leaflet no longer ships to people who never open the map.
 
@@ -1463,6 +1463,39 @@ splitting, a user who goes offline without ever having visited a given route wil
 chunk cached, and it will fail to load — the old single-bundle approach worked offline
 everywhere once loaded. This is the accepted price of the smaller first load and was **not**
 "fixed" by pre-caching every chunk, which would just recreate the original ~1.2 MB download.
+
+**The final whole-branch review (Opus) caught 4 real cross-task bugs no single task's diff could
+see — the same "individually-correct code whose combination is wrong" pattern this app's history
+keeps hitting.** Most consequential: splitting 6 components into lazy chunks (Tasks 7-8) combined
+with zero error boundaries anywhere in `src/` meant a user with the app already open across a
+future deploy would hit a chunk-load failure on their next navigation and get a silent, total,
+unrecoverable **white screen** — not a graceful degradation, the whole app. Fixed with a new
+reusable `src/components/ChunkErrorBoundary.jsx` (one guarded auto-reload via a sessionStorage
+flag, then a manual-reload prompt) wrapping all 3 lazy-boundary `<Suspense>`s, plus narrowing
+`vercel.json`'s rewrite to exclude `/assets/*` so a missing chunk 404s honestly instead of being
+served `index.html` as a 200 (which is what turned a 404 into an unparseable-module error in the
+first place). Also fixed: the Strava OAuth-redirect `navigate()` call was dropping the query
+string, silently killing the connect/error toast forever (same bug class this whole branch exists
+to fix, reintroduced in a new form — and the one plan verification step that would have caught it
+live, "confirm the Strava toast still fires," was never actually runnable without live OAuth);
+two places that open a deep-linked trip were pushing to `/plans` instead of the real `/trip/:id`
+URL, which both hid the shareable link this branch's headline feature promised AND trapped the
+Back button in a bounce loop on a direct trip-link visit; and `/u/:userId`/`/mountain/:resortKey`
+inherited the Today tab's hero banner, header, and Refresh button on top of their own headers,
+since `tabForPath` mapping them to an existing tab (for nav-highlighting) was never also used to
+hide the shared chrome. All 4 fixed in one consolidated fix-wave commit, re-reviewed clean. 9
+further Minor items were parked, not blocking (e.g. no auth gate on `/u/:userId` — confirmed
+against production RLS policies to leak zero data, just a missing sign-in prompt; a guessable
+`/mountain/kramesbutte` dev URL that used to be owner-gated by a button).
+**Merged to local `main` 2026-10-01** (`git merge worktree-routing-code-splitting`, clean —
+`ROADMAP.md` auto-merged against an unrelated same-day scraper-fix commit from another session).
+Tests 329 pass / 0 fail / 1 pre-existing todo on the merged result; lint showed 92 in the main
+checkout vs. 85 throughout the branch's own worktree — fully explained by 7 problems in an
+untracked mockup file (`mockups/PowDays.app mockup design/support.js`) that predates this branch
+and that no worktree ever had, not a regression (same documented main-checkout lint-drift pattern
+as previous sessions). **Not yet pushed to `origin/main` or deployed** — needs Kyle's go-ahead,
+per this project's standing rule that a push to `main` ships straight to production with no
+staging step.
 
 **A true multi-page app (separate HTML entries, full reloads) was considered and rejected**
 during planning. Every navigation would restart `navigator.geolocation.watchPosition`,
@@ -2583,7 +2616,7 @@ prioritized open ideas, then the throughput → features → security/debt queue
 | **44** | ~~TASK 22.2 — Powder Score algorithm tuning~~ — **shipped 2026-09-10** | S-M |
 | **45** | TASK 22.3 — Weather/conditions API quality pass | M |
 | **46** | ~~TASK 22.4 — Map View + friends'-location test-and-fix~~ — **shipped 2026-09-12** | S |
-| **47** | ~~TASK 20.6 routing + code splitting~~ — **all 9 tasks complete 2026-10-01, pending merge** | M |
+| **47** | ~~TASK 20.6 routing + code splitting~~ — **shipped 2026-10-01, merged to local main, not yet pushed** | M |
 | **47.5** | ~~TASK 20.6 Tasks 7-8 — code splitting + lazy Leaflet~~ — shipped with the rest, see above | S |
 | **48** | TASK 1.1-T component test harness + first 3 suites | M |
 | **49** | TASK 19.1 per-crew visibility (migration 044, **alone**) | M |
