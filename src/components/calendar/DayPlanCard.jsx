@@ -1,8 +1,8 @@
+import { useNavigate } from "react-router-dom"
 import { resortName, resortEmoji, OPEN_RESORT_KEY } from "../../lib/resorts"
 import { ringColorFor, crewBadgesFor } from "../../lib/crewColors"
 import { earliestEta } from "../../lib/calendarGrouping"
 import { formatEtaShort } from "../../lib/format"
-import { useProfileNav } from "../../lib/profileNav"
 import Avatar from "../ui/Avatar"
 
 // Room for 5 overlapped avatars in a party card before the +N overflow badge takes over.
@@ -55,7 +55,7 @@ export default function DayPlanCard({
   myPlanHasEta = false, onAskToJoin, askingPartyId = null, askedPartyIds,
   onLeave, leaving = false,
 }) {
-  const openProfile = useProfileNav()
+  const navigate = useNavigate()
   const { resortKey, attendees, trip, parties = [], solo = [] } = group
   const alreadyIn = attendees.some((a) => a.userId === currentUserId)
   const isOpenGroup = resortKey === OPEN_RESORT_KEY
@@ -94,7 +94,7 @@ export default function DayPlanCard({
     return (
       <button
         key={a.userId}
-        onClick={() => a.userId !== currentUserId && openProfile(a.userId)}
+        onClick={() => a.userId !== currentUserId && navigate(`/u/${a.userId}`)}
         title={displayTitle}
         style={{
           background: "none", border: "none", padding: 0, lineHeight: 0,

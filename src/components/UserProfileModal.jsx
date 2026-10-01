@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { createPortal } from "react-dom"
+import { useNavigate } from "react-router-dom"
 import { getProfileById } from "../lib/socialApi"
-import { useProfileNav } from "../lib/profileNav"
 
 // SKILL_OPTIONS feeds `${skillObj.color}18`/`${skillObj.color}44` hex-alpha-suffix template
 // literals below (skill-badge tinting), which requires literal hex — a var(--token)
@@ -24,7 +24,7 @@ function initials(name) {
 export default function UserProfileModal({ userId, onClose }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const openFullProfile = useProfileNav()
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (!userId) return
@@ -173,7 +173,7 @@ export default function UserProfileModal({ userId, onClose }) {
             {/* Close first, then swap the page underneath — otherwise the sheet
                 is still mounted over the profile it just navigated to. */}
             <button
-              onClick={() => { onClose?.(); openFullProfile(userId) }}
+              onClick={() => { onClose?.(); navigate(`/u/${userId}`) }}
               style={{
                 width: "100%", padding: "12px 0", borderRadius: 12, border: "none",
                 background: "var(--gradient-cta)", color: "var(--color-on-accent)",

@@ -9,7 +9,6 @@ import AuthForm from "./components/AuthForm"
 import OnboardingFlow from "./components/OnboardingFlow"
 import MessagingCenter from "./components/MessagingCenter"
 import ProfilePage from "./components/ProfilePage"
-import { ProfileNavContext } from "./lib/profileNav"
 import SkiPlansPage from "./components/SkiPlansPage"
 import TripDetailModal from "./components/TripDetailModal"
 import NotificationBell, { useNotificationCount } from "./components/NotificationBell"
@@ -483,6 +482,43 @@ function TripRoute({ onTripId, children }) {
   return children
 }
 
+// Replaces the old `viewingProfileId` takeover (Task 6). `useNavigate`
+// natively does what ProfileNavContext used to prop-drill for.
+function ProfileRoute({ resorts }) {
+  const { userId } = useParams()
+  const navigate = useNavigate()
+  return <ProfilePage userId={userId} onBack={() => navigate(-1)} resorts={resorts} />
+}
+
+// Replaces the old `mountainPageResortKey` takeover (Task 6). `resort`
+// resolution mirrors the exact logic the deleted `mountainPageResort`
+// derived const used to compute in App, just keyed off the route's own
+// :resortKey param instead of state. `rows` depends on the initial `live`
+// fetch, so a hard refresh on this route before `rows` populates would
+// otherwise hand MountainPage a null resort — show a loading placeholder
+// instead (MountainPage itself already tolerates a null resort via `?.`
+// fallbacks everywhere, so this is a UX nicety, not a crash guard).
+function MountainRoute({ rows, currentUserEmail, loading }) {
+  const { resortKey } = useParams()
+  const navigate = useNavigate()
+  const resort = resortKey === KRAMES_BUTTE_KEY
+    ? KRAMES_BUTTE_RESORT
+    : rows.find((r) => r.resortKey === resortKey) || null
+
+  if (loading && !resort && resortKey !== KRAMES_BUTTE_KEY) {
+    return <div style={{ padding: 48, textAlign: "center", opacity: 0.6 }}>Loading…</div>
+  }
+
+  return (
+    <MountainPage
+      resortKey={resortKey}
+      resort={resort}
+      currentUserEmail={currentUserEmail}
+      onBack={() => navigate(-1)}
+    />
+  )
+}
+
 function TabButton({ active, onClick, children }) {
   return (
     <button
@@ -516,10 +552,6 @@ export default function App() {
   // the title, exactly where they rendered before Task 2 moved the sub-tab switcher
   // into TodayScreen.
   const [todaySubTab, setTodaySubTab] = useState("conditions")
-  const [mountainPageResortKey, setMountainPageResortKey] = useState(null)
-  // Full-page read-only view of another user's profile (Sprint 34). Same
-  // takeover pattern as mountainPageResortKey; cleared in handleTabChange.
-  const [viewingProfileId, setViewingProfileId] = useState(null)
   const [passFilters, setPassFilters] = useState(() => new Set())
   // Guards the one-time default below so a later profile refetch (e.g. the
   // user edits their passes in Profile mid-session) never silently
@@ -1054,17 +1086,7 @@ export default function App() {
     return merged
   }, [visibleResorts, sortBy])
 
-  const mountainPageResort = mountainPageResortKey === KRAMES_BUTTE_KEY
-    ? KRAMES_BUTTE_RESORT
-    : rows.find((r) => r.resortKey === mountainPageResortKey) || null
-
-  const handleTabChange = (tab) => {
-    setMountainPageResortKey(null)
-    // Clear the friend-profile takeover too, or bottom-nav navigation would
-    // leave a stale profile mounted over the tab the user just picked.
-    setViewingProfileId(null)
-    navigate(pathForTab(tab))
-  }
+  const handleTabChange = (tab) => navigate(pathForTab(tab))
 
   async function handleSaveTodayPlan({ resortKey, eta, visibility }) {
     setSavingTodayPlan(true); setTodayPlanError(null)
@@ -1153,10 +1175,6 @@ export default function App() {
   )
 
   return (
-    // Provider is deliberately not indented over the tree below — wrapping it
-    // this way keeps the Sprint 34 diff to two lines instead of re-indenting
-    // ~500 lines of JSX.
-    <ProfileNavContext.Provider value={setViewingProfileId}>
     <div
       style={{
         minHeight: "100vh",
@@ -1384,23 +1402,6 @@ export default function App() {
         paddingRight: isMobile ? 14 : 20,
         paddingBottom: isMobile ? undefined : 48,
       }}>
-        {viewingProfileId ? (
-          /* Takes precedence over MountainPage so a profile opened from inside
-             a mountain page (e.g. its board) actually renders. */
-          <ProfilePage
-            userId={viewingProfileId}
-            onBack={() => setViewingProfileId(null)}
-            resorts={RESORTS}
-          />
-        ) : mountainPageResortKey ? (
-          <MountainPage
-            resortKey={mountainPageResortKey}
-            resort={mountainPageResort}
-            currentUserEmail={currentUser?.email}
-            onBack={() => setMountainPageResortKey(null)}
-          />
-        ) : (
-          <>
         {/* Suppressed on Track, which inherited HomeDashboard's own full-bleed
             "Ready to ski?" hero (same /hero-mountain.jpg) — the old `home` tab
             hid this strip for exactly that reason. */}
@@ -1490,7 +1491,7 @@ export default function App() {
               refresh={refresh}
               currentUser={currentUser}
               topResort={topResort}
-              setMountainPageResortKey={setMountainPageResortKey}
+              onOpenMountainPage={(resortKey) => navigate(`/mountain/${resortKey}`)}
               onSubTabChange={setTodaySubTab}
               sessionActive={!!activeSession}
             />
@@ -1544,12 +1545,15 @@ export default function App() {
             element={<TripRoute onTripId={openTripRoute}>{plansElement}</TripRoute>}
           />
 
+          <Route path="/u/:userId" element={<ProfileRoute resorts={RESORTS} />} />
+          <Route
+            path="/mountain/:resortKey"
+            element={<MountainRoute rows={rows} currentUserEmail={currentUser?.email} loading={loading} />}
+          />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-          </>
-        )}
       </div>
     </div>
-    </ProfileNavContext.Provider>
   )
 }
