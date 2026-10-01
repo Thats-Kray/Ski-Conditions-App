@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom"
 import { legacyTripPath, pathForTab, tabForPath } from "./lib/routes"
 import SnowfallBackground from "./components/SnowfallBackground"
@@ -7,15 +7,16 @@ import { localDateKey } from "./lib/calendarDates"
 import { formatDate } from "./lib/format"
 import AuthForm from "./components/AuthForm"
 import OnboardingFlow from "./components/OnboardingFlow"
-import MessagingCenter from "./components/MessagingCenter"
-import ProfilePage from "./components/ProfilePage"
-import SkiPlansPage from "./components/SkiPlansPage"
-import TripDetailModal from "./components/TripDetailModal"
+const MessagingCenter = lazy(() => import("./components/MessagingCenter"))
+const ProfilePage = lazy(() => import("./components/ProfilePage"))
+const SkiPlansPage = lazy(() => import("./components/SkiPlansPage"))
+const TripDetailModal = lazy(() => import("./components/TripDetailModal"))
+const MountainPage = lazy(() => import("./components/MountainPage"))
+
 import NotificationBell, { useNotificationCount } from "./components/NotificationBell"
 import LandingPage from "./components/LandingPage"
 import ActiveSessionBar from "./components/ActiveSessionBar"
 import SessionRecapModal from "./components/SessionRecapModal"
-import MountainPage from "./components/MountainPage"
 import TodayScreen from "./components/TodayScreen"
 import TrackScreen from "./components/TrackScreen"
 import {
@@ -1282,12 +1283,14 @@ export default function App() {
 
       {/* Deep-link trip modal (opened via ?trip= URL param or notification click) */}
       {deepLinkTrip && (
-        <TripDetailModal
-          trip={deepLinkTrip}
-          currentUser={currentUser}
-          onClose={() => setDeepLinkTrip(null)}
-          onUpdate={() => {}}
-        />
+        <Suspense fallback={null}>
+          <TripDetailModal
+            trip={deepLinkTrip}
+            currentUser={currentUser}
+            onClose={() => setDeepLinkTrip(null)}
+            onUpdate={() => {}}
+          />
+        </Suspense>
       )}
 
       {/* Invite landing — shown when an unauthenticated user opens a ?trip= link */}
@@ -1466,9 +1469,10 @@ export default function App() {
           </div>
         )}
 
-        <Routes>
-          <Route path="/" element={(
-            <TodayScreen
+        <Suspense fallback={<div style={{ padding: 24, textAlign: "center", opacity: 0.6 }}>Loading…</div>}>
+          <Routes>
+            <Route path="/" element={(
+              <TodayScreen
               rows={rows}
               passFilters={passFilters}
               setPassFilters={setPassFilters}
@@ -1552,7 +1556,8 @@ export default function App() {
           />
 
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+          </Routes>
+        </Suspense>
       </div>
     </div>
   )

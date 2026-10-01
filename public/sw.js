@@ -1,4 +1,4 @@
-const CACHE_NAME = "powderdays-v2"
+const CACHE_NAME = "powderdays-v3"
 
 // Core shell assets — these are the Vite-built files that make the app work offline
 // Note: Vite generates hashed filenames like /assets/index-abc123.js
