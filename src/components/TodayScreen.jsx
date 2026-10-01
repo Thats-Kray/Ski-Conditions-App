@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import PowderMap from "./PowderMap"
+import { lazy, Suspense, useEffect, useState } from "react"
+const PowderMap = lazy(() => import("./PowderMap"))
 import Badge, { TIER_COLORS } from "./ui/Badge"
 import ScoreRing from "./ui/ScoreRing"
 import FriendsGoingBadge from "./FriendsGoingBadge"
@@ -595,12 +595,14 @@ export default function TodayScreen({
       </div>
 
       {conditionsSubTab === "map" && (
-        <PowderMap
-          resorts={rows}
-          skierCounts={skierCounts}
-          skierDetails={skierDetails}
-          friendIds={friendIds}
-        />
+        <Suspense fallback={<div style={{ height: 320, display: "grid", placeItems: "center", opacity: 0.6 }}>Loading map…</div>}>
+          <PowderMap
+            resorts={rows}
+            skierCounts={skierCounts}
+            skierDetails={skierDetails}
+            friendIds={friendIds}
+          />
+        </Suspense>
       )}
 
       {conditionsSubTab === "conditions" && topResort && (
