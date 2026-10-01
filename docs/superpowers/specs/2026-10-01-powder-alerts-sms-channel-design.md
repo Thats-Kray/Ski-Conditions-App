@@ -1,4 +1,4 @@
-# Powder Alerts — SMS Delivery Channel — Design Spec
+# Powder Alerts — SMS Delivery Channel + Scheduling — Design Spec
 
 **Date:** 2026-10-01
 **Author:** Claude (brainstorming session with Kyle)
@@ -15,10 +15,12 @@ Bet" briefing and emails it via Resend to every profile with `powder_alerts_enab
 PRD (§Phase 5) always named Twilio as the intended SMS provider; no Twilio account or credentials
 exist yet — this was a documented plan, not a partial build.
 
-Kyle's ask: let users choose SMS instead of email for the same weekly briefing. A real-time,
-threshold-triggered alert (e.g., a text the moment a resort crosses some condition) was discussed
-and **explicitly deferred to a future sprint** — this spec is channel choice on the existing
-Wednesday schedule only.
+Kyle's ask: let users choose SMS instead of email for the same weekly briefing, **and** let each
+user pick which day and time they receive it (Wednesday stays the default), instead of everyone
+getting it at one fixed global time. A real-time, threshold-triggered alert (e.g., a text the
+moment a resort crosses some condition) was discussed and **explicitly deferred to a future
+sprint** — this spec is channel choice + delivery scheduling on top of the existing weekly
+briefing content only.
 
 **Cost constraint, confirmed with Kyle:** the current email path is free (Resend's free tier
 comfortably covers current/expected subscriber volume). No SMS provider is free — Twilio's
@@ -37,6 +39,12 @@ needed at that point.
   zero migration risk.
 - `profiles.alert_phone_verified_at TIMESTAMPTZ` — null until the number is confirmed via the new
   OTP flow below. `alert_phone` itself already exists (migration 015) and is unchanged.
+- `profiles.alert_day_of_week TEXT NOT NULL DEFAULT 'wed' CHECK (alert_day_of_week IN ('mon',
+  'tue', 'wed', 'thu', 'fri'))` — default matches today's only option, zero behavior change for
+  existing subscribers.
+- `profiles.alert_time_slot TEXT NOT NULL DEFAULT 'morning' CHECK (alert_time_slot IN ('morning',
+  'midday', 'evening'))` — three preset Mountain Time slots (approximately 7am / 12pm / 6pm MT,
+  exact minute left to the implementation plan). Default matches today's 7am send time.
 - New table `alert_phone_otps` (`user_id UUID PRIMARY KEY REFERENCES profiles(id)`, `phone TEXT`,
   `code_hash TEXT`, `expires_at TIMESTAMPTZ`, `attempts INT DEFAULT 0`). RLS: no direct client
   read/write — all access goes through the two backend routes in §3, which use the service-role
@@ -52,10 +60,15 @@ either feature is for. This stays a narrow, independent verification tied only t
 
 ### 2. Profile UI
 
-- The existing "📧 Weekly powder forecast every Wednesday" toggle gains a channel choice —
-  **but the SMS option does not render at all** (not shown-disabled, not "Coming soon" — fully
+- The existing "📧 Weekly powder forecast every Wednesday" toggle becomes "📧 Weekly powder
+  forecast" plus three controls: a day selector (Mon–Fri, default Wed), a time-slot selector
+  (Early morning / Midday / Evening, default Early morning), and a channel choice (Email / Text
+  message). Scheduling and channel are independent of each other, and existing subscribers see no
+  change until they touch a control — every new column defaults to today's only option.
+- **The SMS channel option does not render at all** (not shown-disabled, not "Coming soon" — fully
   absent from the DOM) until a capability check says it's available. Only "Email" is shown
-  otherwise, matching current behavior exactly.
+  otherwise, matching current behavior exactly. The day/time selectors are unaffected by this gate
+  — they're available immediately, since they work the same way regardless of channel.
 - Capability check: a new `GET /api/config` endpoint returns `{ smsAlertsAvailable: boolean }`,
   computed as `Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)` — no
   Supabase round-trip needed, no secret exposed. The Profile page fetches this once on mount.
@@ -91,10 +104,27 @@ either feature is for. This stays a narrow, independent verification tied only t
   again. Not a compliance requirement in itself (Twilio enforces the block with or without this),
   but closes a real "keep retrying into a wall forever" gap.
 
-### 4. Cron job (`server/cron.js`)
+### 4. Cron job (`server/cron.js`) — per-slot firing + per-channel branching
 
-`composeBriefing()` and the Wednesday schedule are unchanged. The subscriber query additionally
-selects `alert_channel`, `alert_phone`, `alert_phone_verified_at`. At send time, branch per
+**Scheduling mechanic:** `composeBriefing()` itself is unchanged — it reflects live conditions at
+send time regardless of which day/time slot triggered it, so no date-specific content is needed.
+What changes is *when the job runs and who it sends to*. Today there's one weekly cron tick
+(Wednesday 7am MT) that sends to every subscriber. That becomes **15 weekly ticks** — one for each
+of the 5 weekdays × 3 time slots — registered as node-cron schedules at the approximate MT times
+for morning/midday/evening, Monday through Friday. Each tick:
+
+1. Queries subscribers where `alert_day_of_week` and `alert_time_slot` match the slot that just
+   fired (plus `powder_alerts_enabled = true`, as today).
+2. Runs the same `composeBriefing()` + F-REQ-ALERT-003 guard (skip entirely if nothing's open) —
+   evaluated independently per tick, same as today's single tick.
+3. Sends to that tick's subscriber set only, branching per channel below.
+
+This keeps every tick's logic identical to today's single cron, just parameterized by which
+day/time slot it represents and filtered to that slot's subscribers — no change to the one-timezone
+(Mountain Time) assumption the app already makes everywhere else.
+
+The subscriber query additionally selects `alert_channel`, `alert_phone`, `alert_phone_verified_at`
+alongside the existing `alert_day_of_week`/`alert_time_slot` filter. At send time, branch per
 subscriber:
 
 - `alert_channel === 'email'` (or null, pre-migration default): existing Resend/HTML path,
@@ -125,6 +155,11 @@ subscriber:
   not a multi-select.
 - Actually creating/funding the Twilio account — that's Kyle's own step, outside this codebase
   change, whenever he's ready to activate.
+- Arbitrary/exact-time scheduling (any HH:MM) — three preset slots only, per Kyle's choice.
+- Weekend days (Sat/Sun) as a schedule option — Mon–Fri only, per Kyle's choice.
+- Per-user timezone support — every slot is Mountain Time for everyone, matching every other
+  time-of-day assumption already baked into this Colorado-focused app (e.g. the existing cron's
+  fixed MT send time, with no per-user override anywhere today).
 
 ## Testing
 
@@ -138,6 +173,10 @@ subscriber:
   skip-unconfigured) has no existing test coverage today (`cron.js` has no test file) — the
   implementation plan should decide whether to add one, following the same "recommended, not
   required" posture the base-depth-gate spec took for `server/powderScore.js`.
+- The slot-matching logic (which subscribers belong to a given day/time tick) should also be a
+  pure, testable function — given a slot identifier and a list of profiles, return the matching
+  subset — independent of the actual node-cron registration, so it can be unit tested without
+  waiting for a real cron tick.
 - No live Twilio send can be verified in this environment (no credentials). Verification before
   shipping is: code review + unit tests on pure logic + confirming the capability-gate hides the
   UI correctly with no env vars set. Live SMS delivery itself can only be confirmed by Kyle once
@@ -145,11 +184,29 @@ subscriber:
   this project's established pattern for anything needing live credentials it doesn't have
   (OAuth creds, TASK 14.1).
 
+## PRD.md updates required
+
+PRD §Phase 5 (`Powder Alert Subscription Service`) currently hardcodes the schedule as a
+requirement, not a default — this needs correcting alongside the code change:
+
+- F-REQ-ALERT-001 ("Briefings must be sent by 7 AM MT on Wednesdays") becomes: briefings are sent
+  at the subscriber's chosen day (Mon–Fri) and time slot (morning/midday/evening MT), defaulting
+  to Wednesday morning.
+- The signup-flow opt-in copy ("Send me a weekly powder forecast every Wednesday") should drop the
+  hardcoded day — e.g. "Send me a weekly powder forecast" — since the real day/time choice now
+  lives on the Profile page, matching its new copy there.
+- F-REQ-ALERT-002 already names "STOP reply for SMS" as a requirement — this spec's §3 inbound
+  webhook is what actually fulfills that line for the first time (previously aspirational, since
+  no SMS sending existed to need it).
+- F-REQ-ALERT-003 (skip send if zero resorts open) is unchanged in substance, just now evaluated
+  per tick instead of once a week — note this explicitly so a future reader doesn't assume it
+  still means "once, globally."
+
 ## Non-goals (explicitly out of scope)
 
 - Real-time/threshold-triggered alerts (future sprint).
 - Multi-channel delivery (both email and SMS for one user).
-- Any change to the Wednesday schedule, briefing content/ranking logic, or the existing email
-  template.
+- Any change to the briefing content/ranking logic itself, or the existing email template.
 - Standard 10DLC registration (toll-free only).
 - Actually setting up the Twilio account itself.
+- Arbitrary time-of-day or weekend scheduling, or per-user timezones.
