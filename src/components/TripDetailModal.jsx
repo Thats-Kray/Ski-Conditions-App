@@ -1001,7 +1001,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
             {/* Share — opens native share sheet on mobile (Messages, AirDrop, etc.), copies on desktop */}
             <button
               onClick={async () => {
-                const inviteUrl = `${window.location.origin}/?trip=${initialTrip.id}`
+                const inviteUrl = `${window.location.origin}/trip/${initialTrip.id}`
                 const shareData = {
                   title: tripTitle,
                   text: `Join me for a ski day at ${resortName}! 🎿`,
@@ -1021,7 +1021,7 @@ export default function TripDetailModal({ trip: initialTrip, currentUser, onClos
             </button>
             {/* Text — opens native SMS app with pre-filled message */}
             <a
-              href={`sms:?body=${encodeURIComponent(`Join me for a ski trip to ${resortName}! 🎿\n\nRSVP here: ${window.location.origin}/?trip=${initialTrip.id}`)}`}
+              href={`sms:?body=${encodeURIComponent(`Join me for a ski trip to ${resortName}! 🎿\n\nRSVP here: ${window.location.origin}/trip/${initialTrip.id}`)}`}
               style={{ ...chipBtn(false), textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}
             >
               💬 Text

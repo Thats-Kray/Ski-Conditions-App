@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom"
-import { pathForTab, tabForPath } from "./lib/routes"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom"
+import { legacyTripPath, pathForTab, tabForPath } from "./lib/routes"
 import SnowfallBackground from "./components/SnowfallBackground"
 import { useMobile } from "./lib/useMobile"
 import { localDateKey } from "./lib/calendarDates"
@@ -470,6 +470,19 @@ function MobileTopBar() {
   )
 }
 
+// Feeds the /trip/:tripId route param into the existing pendingInviteId +
+// sessionStorage invite machinery (see the "Once we know the auth state"
+// effect below) instead of fetching immediately — a user who isn't logged in
+// yet still needs that effect to wait for authReady && currentUser before
+// hitting the network. See `openTripRoute` in App for the actual write.
+function TripRoute({ onTripId, children }) {
+  const { tripId } = useParams()
+  useEffect(() => {
+    onTripId(tripId)
+  }, [tripId, onTripId])
+  return children
+}
+
 function TabButton({ active, onClick, children }) {
   return (
     <button
@@ -559,6 +572,18 @@ export default function App() {
       navigate(pathForTab("plans"))
     }
   }
+
+  // Feeds /trip/:tripId into the same pendingInviteId + sessionStorage path the
+  // legacy ?trip= deep-link used — NOT handleOpenTripById, which fetches
+  // immediately and fails closed for a user who isn't authenticated yet. Safe
+  // with an empty dependency array: setPendingInviteId is a stable useState
+  // setter and sessionStorage is a global, so this identity never changes,
+  // and TripRoute's effect (which depends on it) only re-fires when tripId
+  // itself changes.
+  const openTripRoute = useCallback((tripId) => {
+    setPendingInviteId(tripId)
+    sessionStorage.setItem("pending_invite_trip", tripId)
+  }, [])
 
   /** A plan-party notification carries a date key, not a trip — open the Plans calendar. */
   function handleOpenPlanDate(dateKey) {
@@ -947,15 +972,25 @@ export default function App() {
     return () => { cancelled = true }
   }, [currentUser])
 
-  // Deep-link: ?trip=<id> → capture invite ID; resolve after auth check completes
+  // Deep-link: upgrade the legacy `?trip=<id>` share-link format to the real
+  // /trip/:tripId route (which then calls openTripRoute via TripRoute's own
+  // effect). Falls back to a stale sessionStorage invite — e.g. mid-way
+  // through an OAuth redirect round-trip — when there's no query param at
+  // all. Deliberately does NOT call a blanket `replaceState` on the whole
+  // query string: that destroyed Strava's `?strava_connected=`/`?strava_error=`
+  // params (and any future router param) every time, which is the bug this
+  // route exists to fix.
   useEffect(() => {
-    const tripId =
-      new URLSearchParams(window.location.search).get("trip") ||
-      sessionStorage.getItem("pending_invite_trip")
-    if (!tripId) return
-    window.history.replaceState({}, "", window.location.pathname)
-    setPendingInviteId(tripId)
-    sessionStorage.setItem("pending_invite_trip", tripId)
+    const upgraded = legacyTripPath(window.location.search)
+    if (upgraded) {
+      navigate(upgraded, { replace: true })
+      return
+    }
+    const stored = sessionStorage.getItem("pending_invite_trip")
+    if (stored) setPendingInviteId(stored)
+    // navigate's identity is stable (react-router guarantees it); this must
+    // still only run once, on mount, not on every navigation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Deep-link: Strava OAuth redirects back to `/?strava_connected=true` or
@@ -1503,6 +1538,11 @@ export default function App() {
           )} />
 
           <Route path="/plans" element={plansElement} />
+
+          <Route
+            path="/trip/:tripId"
+            element={<TripRoute onTripId={openTripRoute}>{plansElement}</TripRoute>}
+          />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
