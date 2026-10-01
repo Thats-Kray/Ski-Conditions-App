@@ -1100,6 +1100,24 @@ export default function App() {
     )
   }
 
+  // Task 5 reuses this exact element for /trip/:tripId — kept as a named const
+  // (rather than inlined inside its <Route>) so that reuse can't drift from this
+  // one into two copies that diverge later, this codebase's single most recurring
+  // bug class (see ROADMAP's "THE RECURRING LESSON").
+  const plansElement = (
+    currentUser ? (
+      <SkiPlansPage
+        onRequireLogin={requireLogin}
+        resorts={RESORTS}
+        focusDate={planFocusDate}
+        onFocusHandled={() => setPlanFocusDate(null)}
+      />
+    ) : (
+      <AuthGate onSignIn={() => openAuthModal("login")} onSignUp={() => openAuthModal("signup")}
+        icon="🎿" title="Plan trips with your crew" desc="Sign in to create trips, invite friends, share rides, and track your whole season." />
+    )
+  )
+
   return (
     // Provider is deliberately not indented over the tree below — wrapping it
     // this way keeps the Sprint 34 diff to two lines instead of re-indenting
@@ -1486,19 +1504,7 @@ export default function App() {
             </div>
           )} />
 
-          <Route path="/plans" element={(
-            currentUser ? (
-              <SkiPlansPage
-                onRequireLogin={requireLogin}
-                resorts={RESORTS}
-                focusDate={planFocusDate}
-                onFocusHandled={() => setPlanFocusDate(null)}
-              />
-            ) : (
-              <AuthGate onSignIn={() => openAuthModal("login")} onSignUp={() => openAuthModal("signup")}
-                icon="🎿" title="Plan trips with your crew" desc="Sign in to create trips, invite friends, share rides, and track your whole season." />
-            )
-          )} />
+          <Route path="/plans" element={plansElement} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
