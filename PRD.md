@@ -900,7 +900,8 @@ CREATE POLICY "Users manage own comments" ON trip_comments FOR ALL USING (auth.u
 - "Who's going" social proof if friends have created weekend trips
 
 **Subscription model:**
-- Opt-in during signup flow (checkbox: "Send me a weekly powder forecast every Wednesday")
+- Opt-in during signup flow (checkbox: "Send me a weekly powder forecast") — the real day/time
+choice lives on the Profile page, not at signup.
 - Manageable from Profile page (toggle on/off)
 - Stored as `powder_alerts_enabled` boolean on the `profiles` table
 
@@ -922,9 +923,15 @@ CREATE POLICY "Users manage own comments" ON trip_comments FOR ALL USING (auth.u
   2. Fetches current powder scores for all open resorts
   3. Composes a briefing (top 3, best bet, weekend outlook)
   4. Sends via Resend (email) and/or Twilio (SMS)
-- F-REQ-ALERT-001: Briefings must be sent by 7 AM MT on Wednesdays
+- F-REQ-ALERT-001: Briefings are sent at the subscriber's chosen day (Mon-Fri) and time slot
+(morning/midday/evening, all Mountain Time), defaulting to Wednesday morning for any subscriber
+who hasn't changed it.
 - F-REQ-ALERT-002: Users must be able to unsubscribe in one tap (standard unsubscribe link in email, STOP reply for SMS)
+  (The SMS half of this requirement is fulfilled by the inbound Twilio webhook added alongside SMS
+  delivery itself — previously aspirational, since no SMS sending existed to need it.)
 - F-REQ-ALERT-003: No briefing should be sent if zero resorts are open (off-season cutoff)
+  (Evaluated independently per day/time slot now that briefings fire 15 times a week instead of
+  once — not "once, globally" anymore.)
 
 ### Phase 6 — Platform Expansion
 - **Mobile app (React Native):** Native iOS/Android with push notifications
