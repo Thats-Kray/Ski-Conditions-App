@@ -55,9 +55,25 @@ function AccountSheet({ email, onLogOut, onClose }) {
   )
 }
 
+const DAY_OPTIONS = [
+  { value: "mon", label: "Monday" },
+  { value: "tue", label: "Tuesday" },
+  { value: "wed", label: "Wednesday" },
+  { value: "thu", label: "Thursday" },
+  { value: "fri", label: "Friday" },
+]
+
+const TIME_SLOT_OPTIONS = [
+  { value: "morning", label: "Early morning" },
+  { value: "midday", label: "Midday" },
+  { value: "evening", label: "Evening" },
+]
+
 function NotificationsSheet({ profile, onSaved, onClose }) {
   const [enabled, setEnabled] = useState(profile?.powder_alerts_enabled ?? false)
   const [phone, setPhone]     = useState(profile?.alert_phone ?? "")
+  const [dayOfWeek, setDayOfWeek] = useState(profile?.alert_day_of_week ?? "wed")
+  const [timeSlot, setTimeSlot]   = useState(profile?.alert_time_slot ?? "morning")
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState("")
 
@@ -70,6 +86,8 @@ function NotificationsSheet({ profile, onSaved, onClose }) {
       await upsertMyProfile(buildProfileUpdate(profile, {
         powder_alerts_enabled: enabled,
         alert_phone: phone.trim() || null,
+        alert_day_of_week: dayOfWeek,
+        alert_time_slot: timeSlot,
       }))
       await onSaved()
     } catch (e) {
@@ -83,16 +101,32 @@ function NotificationsSheet({ profile, onSaved, onClose }) {
       <div style={labelStyle}>Powder Alerts</div>
       <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: "var(--color-text-1)", cursor: "pointer", minHeight: 44 }}>
         <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-        📧 Weekly powder forecast every Wednesday
+        📧 Weekly powder forecast
       </label>
       {enabled && (
-        <input
-          type="tel"
-          placeholder="Phone number (for future SMS alerts)"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          style={{ ...fieldStyle, marginTop: 12 }}
-        />
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
+            <div>
+              <div style={labelStyle}>Day</div>
+              <select value={dayOfWeek} onChange={(e) => setDayOfWeek(e.target.value)} style={fieldStyle}>
+                {DAY_OPTIONS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={labelStyle}>Time</div>
+              <select value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)} style={fieldStyle}>
+                {TIME_SLOT_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <input
+            type="tel"
+            placeholder="Phone number (for future SMS alerts)"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            style={{ ...fieldStyle, marginTop: 12 }}
+          />
+        </>
       )}
       {error && <div style={{ fontSize: 13, color: "var(--color-danger)", marginTop: 12 }}>{error}</div>}
       <button
