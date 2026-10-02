@@ -9,6 +9,12 @@ import {
   MAX_PHOTOS_PER_SESSION,
   MAX_PHOTO_BYTES,
   TITLE_MAX_LENGTH,
+  SNOW_QUALITY_OPTIONS,
+  CROWD_LEVEL_OPTIONS,
+  CONDITIONS_COMMENT_MAX_LENGTH,
+  normalizeSnowQuality,
+  normalizeCrowdLevel,
+  clampConditionsComment,
 } from "./skiDayDetails.js"
 
 const photo = (id, session_id, created_at) => ({
@@ -266,4 +272,65 @@ test("clampTitle counts codepoints, not UTF-16 units, and never splits a surroga
   assert.equal(clampTitle(null), "")
   assert.equal(clampTitle(undefined), "")
   assert.equal(clampTitle(42), "")
+})
+
+test("exports the conditions-report vocabulary and comment cap", () => {
+  assert.deepEqual(SNOW_QUALITY_OPTIONS, ["powder", "groomed", "icy", "slushy"])
+  assert.deepEqual(CROWD_LEVEL_OPTIONS, ["empty", "light", "moderate", "packed"])
+  assert.equal(CONDITIONS_COMMENT_MAX_LENGTH, 140)
+})
+
+/* ── normalizeSnowQuality ───────────────────────────────────────────────────── */
+
+test("normalizeSnowQuality accepts an allowed value", () => {
+  assert.equal(normalizeSnowQuality("icy"), "icy")
+})
+
+test("normalizeSnowQuality rejects a value outside the vocabulary", () => {
+  // Guards against a stray value reaching the DB and tripping the CHECK constraint with a
+  // raw 400 instead of a clean null — same defense-in-depth reasoning as clampTitle.
+  assert.equal(normalizeSnowQuality("bluebird"), null)
+})
+
+test("normalizeSnowQuality rejects undefined, null, and empty string", () => {
+  assert.equal(normalizeSnowQuality(undefined), null)
+  assert.equal(normalizeSnowQuality(null), null)
+  assert.equal(normalizeSnowQuality(""), null)
+})
+
+/* ── normalizeCrowdLevel ────────────────────────────────────────────────────── */
+
+test("normalizeCrowdLevel accepts an allowed value", () => {
+  assert.equal(normalizeCrowdLevel("packed"), "packed")
+})
+
+test("normalizeCrowdLevel rejects a value outside the vocabulary", () => {
+  assert.equal(normalizeCrowdLevel("insane"), null)
+})
+
+/* ── clampConditionsComment ─────────────────────────────────────────────────── */
+
+test("clampConditionsComment trims surrounding whitespace", () => {
+  assert.equal(clampConditionsComment("  icy on the back side  "), "icy on the back side")
+})
+
+test("clampConditionsComment caps at 140 codepoints, not UTF-16 code units", () => {
+  // Mirrors clampTitle's own emoji test: Array.from() counts codepoints, so a
+  // 141-emoji string must clamp to 140 emoji, not to 70 (half, if code units were
+  // mistakenly counted) or 141 (uncapped).
+  const emojiComment = "❄️".repeat(141)
+  const clamped = clampConditionsComment(emojiComment)
+  assert.equal(Array.from(clamped).length, 140)
+})
+
+test("clampConditionsComment trims a trailing space left by truncation", () => {
+  const longWithTrailingSpace = "a".repeat(139) + " " + "b".repeat(10)
+  const clamped = clampConditionsComment(longWithTrailingSpace)
+  assert.equal(clamped, "a".repeat(139))
+})
+
+test("clampConditionsComment returns '' for non-strings", () => {
+  assert.equal(clampConditionsComment(undefined), "")
+  assert.equal(clampConditionsComment(null), "")
+  assert.equal(clampConditionsComment(42), "")
 })

@@ -191,3 +191,52 @@ export function clampTitle(value) {
 
   return chars.slice(0, TITLE_MAX_LENGTH).join("").trimEnd()
 }
+
+/** Allowed snow_quality chip values, in display order. */
+export const SNOW_QUALITY_OPTIONS = ["powder", "groomed", "icy", "slushy"]
+
+/** Allowed crowd_level chip values, in display order. */
+export const CROWD_LEVEL_OPTIONS = ["empty", "light", "moderate", "packed"]
+
+/**
+ * Max conditions-report comment length, in CODEPOINTS — the same unit as the
+ * ski_sessions_conditions_comment_length CHECK constraint's char_length().
+ */
+export const CONDITIONS_COMMENT_MAX_LENGTH = 140
+
+/**
+ * `value` if it is one of SNOW_QUALITY_OPTIONS, otherwise null.
+ *
+ * Applied both in the form (so a stray value can never be typed, only picked from the chip
+ * row) and in updateSessionConditions() (socialApi.js), mirroring clampTitle's defense-in-
+ * depth reasoning: a caller that skips the form cannot trip the
+ * ski_sessions_snow_quality_check CHECK and get a 400 instead of a clean null.
+ */
+export function normalizeSnowQuality(value) {
+  return SNOW_QUALITY_OPTIONS.includes(value) ? value : null
+}
+
+/** `value` if it is one of CROWD_LEVEL_OPTIONS, otherwise null. Same reasoning as above. */
+export function normalizeCrowdLevel(value) {
+  return CROWD_LEVEL_OPTIONS.includes(value) ? value : null
+}
+
+/**
+ * Trim a typed conditions comment and cap it at CONDITIONS_COMMENT_MAX_LENGTH codepoints.
+ *
+ * Array.from(), not String.prototype.slice — same reasoning as clampTitle: the DB CHECK is
+ * char_length(conditions_comment) <= 140, which counts codepoints, and slice() counts UTF-16
+ * code units, which would both under-allow an emoji-heavy comment and risk storing a lone
+ * surrogate.
+ *
+ * Non-strings return "" rather than being coerced, matching clampTitle.
+ */
+export function clampConditionsComment(value) {
+  if (typeof value !== "string") return ""
+
+  const trimmed = value.trim()
+  const chars = Array.from(trimmed)
+  if (chars.length <= CONDITIONS_COMMENT_MAX_LENGTH) return trimmed
+
+  return chars.slice(0, CONDITIONS_COMMENT_MAX_LENGTH).join("").trimEnd()
+}
