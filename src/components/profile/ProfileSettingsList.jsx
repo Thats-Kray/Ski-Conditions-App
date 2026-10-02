@@ -1,8 +1,12 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { upsertMyProfile } from "../../lib/socialApi"
 import { buildProfileUpdate } from "../../lib/profileForm"
+import { authHeaders } from "../../lib/supabase"
 import StravaConnect from "../StravaConnect"
 import SettingsSheet from "./SettingsSheet"
+
+// Matches the API_BASE fallback pattern used elsewhere (StravaConnect.jsx, App.jsx).
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8787"
 
 /**
  * The mockup's five-row Settings list (PowDays Reorg Mockup.dc.html:480-484) and
@@ -55,13 +59,107 @@ function AccountSheet({ email, onLogOut, onClose }) {
   )
 }
 
+const DAY_OPTIONS = [
+  { value: "mon", label: "Monday" },
+  { value: "tue", label: "Tuesday" },
+  { value: "wed", label: "Wednesday" },
+  { value: "thu", label: "Thursday" },
+  { value: "fri", label: "Friday" },
+]
+
+const TIME_SLOT_OPTIONS = [
+  { value: "morning", label: "Early morning" },
+  { value: "midday", label: "Midday" },
+  { value: "evening", label: "Evening" },
+]
+
 function NotificationsSheet({ profile, onSaved, onClose }) {
   const [enabled, setEnabled] = useState(profile?.powder_alerts_enabled ?? false)
   const [phone, setPhone]     = useState(profile?.alert_phone ?? "")
+  const [dayOfWeek, setDayOfWeek] = useState(profile?.alert_day_of_week ?? "wed")
+  const [timeSlot, setTimeSlot]   = useState(profile?.alert_time_slot ?? "morning")
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState("")
 
+  const [channel, setChannel] = useState(profile?.alert_channel === "sms" ? "sms" : "email")
+  // Tri-state: null = not yet checked, true = Twilio on, false = confirmed off.
+  // Must NOT default to false — handleSave below needs to tell "unknown" apart
+  // from "confirmed unavailable" so it never silently downgrades an existing
+  // SMS subscriber to email while this fetch is still in flight or has failed.
+  const [smsAvailable, setSmsAvailable] = useState(null)
+  const [verifiedPhone, setVerifiedPhone] = useState(
+    profile?.alert_phone_verified_at ? profile?.alert_phone : null
+  )
+  const [verifiedAt, setVerifiedAt] = useState(profile?.alert_phone_verified_at ?? null)
+  const [otpStage, setOtpStage] = useState("idle") // 'idle' | 'sent'
+  const [otpCode, setOtpCode] = useState("")
+  const [otpError, setOtpError] = useState("")
+  const [otpSending, setOtpSending] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch(`${API_BASE}/api/config`)
+      .then((res) => (res.ok ? res.json() : { smsAlertsAvailable: false }))
+      .then((data) => { if (!cancelled) setSmsAvailable(!!data.smsAlertsAvailable) })
+      .catch(() => { if (!cancelled) setSmsAvailable(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  const phoneIsVerified = verifiedPhone !== null && verifiedPhone === phone.trim()
+
+  async function handleSendCode() {
+    setOtpError(""); setOtpSending(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/alerts/send-phone-code`, {
+        method: "POST",
+        headers: await authHeaders(),
+        body: JSON.stringify({ phone: phone.trim() }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || "Could not send a verification code.")
+      setOtpStage("sent")
+    } catch (e) {
+      setOtpError(e.message)
+    } finally {
+      setOtpSending(false)
+    }
+  }
+
+  async function handleVerifyCode() {
+    setOtpError(""); setOtpSending(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/alerts/verify-phone-code`, {
+        method: "POST",
+        headers: await authHeaders(),
+        body: JSON.stringify({ code: otpCode.trim() }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || "That code didn't work.")
+      setVerifiedPhone(body.phone)
+      setVerifiedAt(body.verifiedAt)
+      setPhone(body.phone)
+      setOtpStage("idle")
+      setOtpCode("")
+    } catch (e) {
+      setOtpError(e.message)
+    } finally {
+      setOtpSending(false)
+    }
+  }
+
   async function handleSave() {
+    // Mirrors the alert_channel line below: smsAvailable === null (unknown,
+    // e.g. the /api/config fetch hasn't resolved) must not bypass this guard
+    // the way a plain truthy check would. Without this, an existing SMS
+    // subscriber hitting Save during that window with an edited, unverified
+    // phone would save through with alert_channel still "sms" and no
+    // verified_at — silently dropping them from BOTH channels (cron skips
+    // unverified "sms" subscribers), which is worse than the email-downgrade
+    // this whole tri-state fix exists to prevent.
+    if (smsAvailable !== false && channel === "sms" && !phoneIsVerified) {
+      setError("Verify your phone number before saving Text message delivery.")
+      return
+    }
     setSaving(true); setError("")
     try {
       // buildProfileUpdate, never a bare object: upsertMyProfile writes a WHOLE
@@ -70,6 +168,14 @@ function NotificationsSheet({ profile, onSaved, onClose }) {
       await upsertMyProfile(buildProfileUpdate(profile, {
         powder_alerts_enabled: enabled,
         alert_phone: phone.trim() || null,
+        alert_phone_verified_at: phoneIsVerified ? verifiedAt : null,
+        // Only a CONFIRMED "SMS is off" (false) downgrades to email. While
+        // smsAvailable is still null (the /api/config fetch hasn't resolved
+        // yet, e.g. a Render cold start), this must not treat "unknown" the
+        // same as "off" — that silently downgraded existing SMS subscribers.
+        alert_channel: smsAvailable === false ? "email" : channel,
+        alert_day_of_week: dayOfWeek,
+        alert_time_slot: timeSlot,
       }))
       await onSaved()
     } catch (e) {
@@ -83,16 +189,94 @@ function NotificationsSheet({ profile, onSaved, onClose }) {
       <div style={labelStyle}>Powder Alerts</div>
       <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: "var(--color-text-1)", cursor: "pointer", minHeight: 44 }}>
         <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-        📧 Weekly powder forecast every Wednesday
+        📧 Weekly powder forecast
       </label>
       {enabled && (
-        <input
-          type="tel"
-          placeholder="Phone number (for future SMS alerts)"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          style={{ ...fieldStyle, marginTop: 12 }}
-        />
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
+            <div>
+              <div style={labelStyle}>Day</div>
+              <select value={dayOfWeek} onChange={(e) => setDayOfWeek(e.target.value)} style={fieldStyle}>
+                {DAY_OPTIONS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={labelStyle}>Time</div>
+              <select value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)} style={fieldStyle}>
+                {TIME_SLOT_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+          </div>
+          {smsAvailable === true && (
+            <div style={{ marginTop: 14 }}>
+              <div style={labelStyle}>Delivery</div>
+              <div style={{ display: "flex", gap: 16 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: "var(--color-text-1)", cursor: "pointer" }}>
+                  <input type="radio" name="alert-channel" checked={channel === "email"} onChange={() => setChannel("email")} />
+                  📧 Email
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: "var(--color-text-1)", cursor: "pointer" }}>
+                  <input type="radio" name="alert-channel" checked={channel === "sms"} onChange={() => setChannel("sms")} />
+                  📱 Text message
+                </label>
+              </div>
+            </div>
+          )}
+
+          {smsAvailable === true && channel === "sms" && (
+            <div style={{ marginTop: 12 }}>
+              <input
+                type="tel"
+                placeholder="Phone number"
+                value={phone}
+                onChange={(e) => { setPhone(e.target.value); setOtpStage("idle") }}
+                style={fieldStyle}
+              />
+              {phoneIsVerified ? (
+                <div style={{ fontSize: 13, color: "var(--color-success)", marginTop: 8 }}>✓ Verified</div>
+              ) : otpStage === "idle" ? (
+                <button
+                  type="button"
+                  onClick={handleSendCode}
+                  disabled={otpSending || !phone.trim()}
+                  style={{ marginTop: 8, minHeight: 36, padding: "8px 14px", borderRadius: 10, border: "1px solid var(--overlay-12)", background: "var(--overlay-07)", color: "var(--color-text-1)", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+                >
+                  {otpSending ? "Sending…" : "Send code"}
+                </button>
+              ) : (
+                <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="6-digit code"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    style={{ ...fieldStyle, flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleVerifyCode}
+                    disabled={otpSending || otpCode.trim().length < 4}
+                    style={{ minHeight: 44, padding: "0 16px", borderRadius: 10, border: "none", background: "var(--gradient-cta)", color: "var(--color-on-accent)", fontWeight: 800, fontSize: 13, cursor: "pointer" }}
+                  >
+                    Verify
+                  </button>
+                </div>
+              )}
+              {otpError && <div style={{ fontSize: 13, color: "var(--color-danger)", marginTop: 8 }}>{otpError}</div>}
+            </div>
+          )}
+
+          {(smsAvailable !== true || channel === "email") && (
+            <input
+              type="tel"
+              placeholder="Phone number (optional, for future SMS alerts)"
+              value={phone}
+              onChange={(e) => { setPhone(e.target.value); setOtpStage("idle") }}
+              style={{ ...fieldStyle, marginTop: 12 }}
+            />
+          )}
+        </>
       )}
       {error && <div style={{ fontSize: 13, color: "var(--color-danger)", marginTop: 12 }}>{error}</div>}
       <button

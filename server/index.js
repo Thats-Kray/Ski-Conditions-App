@@ -5,8 +5,10 @@ import * as cheerio from "cheerio"
 import { fileURLToPath } from "url"
 import { createClient } from "@supabase/supabase-js"
 import stravaRouter from "./routes/strava.js"
+import smsAlertsRouter from "./smsAlerts.js"
+import { smsAlertsAvailable } from "./smsAlerts.js"
 import { computePowderScore } from "./powderScore.js"
-import { registerWeeklyBriefingCron } from "./cron.js"
+import { registerPowderAlertCrons } from "./cron.js"
 import { signAlertToken, verifyAlertToken } from "./alertTokens.js"
 
 function getSupabase() {
@@ -19,6 +21,7 @@ app.use(cors({
 }))
 app.use(express.json())
 app.use(stravaRouter)
+app.use(smsAlertsRouter)
 
 const PORT = process.env.PORT || 8787
 const cache = new Map()
@@ -796,6 +799,13 @@ app.get("/api/resort-conditions", async (req, res) => {
   }
 })
 
+// ── Capability check: does the UI get to offer SMS alerts at all? ──
+// Public/unauthenticated is fine — this reveals nothing beyond "is SMS turned
+// on," no different from information already visible by trying to select it.
+app.get("/api/config", (_req, res) => {
+  res.json({ smsAlertsAvailable: smsAlertsAvailable() })
+})
+
 // ── Signed, no-login-required unsubscribe/resubscribe links (weekly briefing emails) ──
 
 app.get("/api/unsubscribe", async (req, res) => {
@@ -999,9 +1009,9 @@ export async function getAllResortConditions() {
 // starts a stray Express server and registers a real cron job as a side
 // effect, hanging the importing process (e.g. `node -e "import('./cron.js')..."`,
 // which is exactly the sprint's own manual-verification command for
-// sendWeeklyBriefing()).
+// sendBriefingForSlot()).
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  registerWeeklyBriefingCron()
+  registerPowderAlertCrons()
 
   app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`)
