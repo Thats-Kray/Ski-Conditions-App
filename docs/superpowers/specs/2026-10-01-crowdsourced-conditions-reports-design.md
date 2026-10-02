@@ -155,9 +155,17 @@ row — a report doesn't need to "expire" in the database, it just stops being q
   place — there is no separate "report" entity with its own lifecycle independent of the session
   it describes. If a user changes their snow-quality selection a week later, the widget reflects
   the new value immediately (subject to the 14-day window still including that session).
-- **No moderation/reporting UI in this first pass** — consistent with the app's existing stance on
-  Board posts and Feed comments (both shipped without moderation tooling). Logged as a backlog
-  item, not a blocker.
+- **No moderation/reporting UI in this first pass.** Correction from an earlier draft of this
+  spec, which claimed this is "consistent with the app's existing stance on Board posts and Feed
+  comments (both shipped without moderation tooling)" — both of those actually DO have
+  moderation: `reportBoardPost()` + a `ModerationQueue` for Board, and `activity_comment` is one
+  of the 5 allowed values in `content_reports.target_type`'s CHECK constraint (migration 045) for
+  Feed comments. There is no value in that CHECK for a `ski_sessions` conditions report, so this
+  feature ships as the app's first piece of resort-wide user-generated free text that cannot even
+  be reported by this app's existing mechanism — found by the final whole-branch review, not
+  caught at design time. Shipping anyway for this first pass; logged as a backlog item (add
+  `ski_session_condition` or similar to the migration-045 CHECK, or a session-level report path)
+  rather than a blocker for this plan.
 - **A resort with zero recent reports** shows a plain empty-state line (e.g. "No conditions
   reports in the last two weeks."), matching `MountainBoard.jsx`'s own empty state ("No posts yet
   at Vail. Be the first.") — not a blank widget. Correction from an earlier draft of this spec,
