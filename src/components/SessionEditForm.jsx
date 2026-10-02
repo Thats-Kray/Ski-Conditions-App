@@ -174,6 +174,9 @@ export default function SessionEditForm({ session, details, detailsLoadFailed, o
         </div>
       ) : details ? (
         <SkiDayDetailsForm
+          initialSnowQuality={session?.snow_quality ?? null}
+          initialCrowdLevel={session?.crowd_level ?? null}
+          initialComment={session?.conditions_comment ?? ""}
           initialPhotos={details.photos}
           initialTags={details.tags}
           saving={saving}

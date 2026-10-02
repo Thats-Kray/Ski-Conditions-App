@@ -74,6 +74,10 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
   // save (via detailsKey bump), initialTitle reads this instead of the stale session.title,
   // so the user sees the title they just saved, not a blank revert.
   const [savedTitle, setSavedTitle] = useState(null)
+  // Mirrors savedTitle immediately above: after a successful conditions save, the form
+  // remounts (via the same detailsKey bump) and must show what was just saved, not the
+  // stale `session.snow_quality`/`crowd_level`/`conditions_comment` props.
+  const [savedConditions, setSavedConditions] = useState(null)
 
   // A GPS session is usually brand new here, but flushSessionToSupabase can land on an
   // EXISTING ski_sessions row when a user tracks twice in one day — so photos and tags are
@@ -112,6 +116,9 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
       setDetails(saved)
       setDetailsKey((k) => k + 1)
       if (diff.title !== undefined) setSavedTitle(diff.title)
+      if (diff.snowQuality !== undefined || diff.crowdLevel !== undefined || diff.comment !== undefined) {
+        setSavedConditions({ snowQuality: diff.snowQuality, crowdLevel: diff.crowdLevel, comment: diff.comment })
+      }
       setDetailsSaved(true)
     } catch (err) {
       // The modal stays open with the reason showing. The session and its stats are
@@ -316,6 +323,9 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
             <SkiDayDetailsForm
               key={detailsKey}
               initialTitle={savedTitle ?? session.title ?? ""}
+              initialSnowQuality={savedConditions?.snowQuality ?? session.snow_quality ?? null}
+              initialCrowdLevel={savedConditions?.crowdLevel ?? session.crowd_level ?? null}
+              initialComment={savedConditions?.comment ?? session.conditions_comment ?? ""}
               initialPhotos={details.photos}
               initialTags={details.tags}
               saving={detailsSaving}

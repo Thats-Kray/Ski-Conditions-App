@@ -137,6 +137,9 @@ function LogDayModal({ onClose, onLogged }) {
                 initialTitle="" (not omitted) is what makes the title input appear. */}
             <SkiDayDetailsForm
               initialTitle=""
+              initialSnowQuality={null}
+              initialCrowdLevel={null}
+              initialComment=""
               initialPhotos={[]}
               initialTags={[]}
               saving={detailsSaving}

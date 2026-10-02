@@ -6,6 +6,10 @@ import {
   MAX_PHOTOS_PER_SESSION,
   MAX_PHOTO_BYTES,
   TITLE_MAX_LENGTH,
+  SNOW_QUALITY_OPTIONS,
+  CROWD_LEVEL_OPTIONS,
+  CONDITIONS_COMMENT_MAX_LENGTH,
+  clampConditionsComment,
 } from "../lib/skiDayDetails"
 
 const labelStyle = {
@@ -19,6 +23,13 @@ const inputStyle = {
   outline: "none",
 }
 
+const chipStyle = (active) => ({
+  padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer",
+  border: active ? "1.5px solid var(--color-accent)" : "1.5px solid var(--overlay-12)",
+  background: active ? "var(--color-accent-glow)" : "var(--overlay-05)",
+  color: active ? "var(--color-accent)" : "var(--ink-65)",
+})
+
 const REJECT_COPY = {
   "not-an-image": "isn't an image",
   "too-large": `is over ${Math.round(MAX_PHOTO_BYTES / (1024 * 1024))}MB`,
@@ -31,15 +42,21 @@ const REJECT_COPY = {
  * third step, SessionRecapModal's details section, and SessionEditForm.
  *
  * This component makes NO API calls. onSave receives a diff —
- * { title, addedPhotoFiles, removedPhotoIds, tagUserIds } — and the consumer hands that to
- * saveSkiDayDetails(). Keeping the translation in one place (socialApi.js) is why all
- * three consumers stay this small.
+ * { title, snowQuality, crowdLevel, comment, addedPhotoFiles, removedPhotoIds, tagUserIds }
+ * — and the consumer hands that to saveSkiDayDetails(). Keeping the translation in one
+ * place (socialApi.js) is why all three consumers stay this small.
  *
- * Contract notes, all three load-bearing:
+ * Contract notes, all load-bearing:
  *
  *  - initialTitle === undefined hides the title section and emits title: undefined. That
  *    is how SessionEditForm avoids two title fields — it owns its own Title input and
  *    saves it through updateSessionStats (Corrections 4 and 5).
+ *  - initialSnowQuality === undefined hides the conditions section (snow quality, crowd
+ *    level, comment) and emits snowQuality/crowdLevel/comment: undefined — same convention
+ *    as initialTitle/showTitle above. The three are ALWAYS emitted together, gated on the
+ *    single showConditions flag, never independently — saveSkiDayDetails() writes null for
+ *    any of the three it receives as undefined, so splitting them would let one overwrite
+ *    while another silently reverts to null.
  *  - tagUserIds is emitted only when the picker was actually touched. An untouched picker
  *    emits undefined, so saving an edit that only changed the resort cannot wipe existing
  *    tags.
@@ -49,6 +66,9 @@ const REJECT_COPY = {
  *
  * @param {{
  *   initialTitle?: string|null,
+ *   initialSnowQuality?: string|null,
+ *   initialCrowdLevel?: string|null,
+ *   initialComment?: string,
  *   initialPhotos?: Array<{id: string, url: string|null}>,
  *   initialTags?: Array<{tagged_user_id: string}>,
  *   saving?: boolean,
@@ -58,6 +78,9 @@ const REJECT_COPY = {
  */
 export default function SkiDayDetailsForm({
   initialTitle,
+  initialSnowQuality,
+  initialCrowdLevel,
+  initialComment,
   initialPhotos,
   initialTags,
   saving = false,
@@ -65,8 +88,12 @@ export default function SkiDayDetailsForm({
   onSkip,
 }) {
   const showTitle = initialTitle !== undefined
+  const showConditions = initialSnowQuality !== undefined
 
   const [title, setTitle] = useState(() => clampTitle(initialTitle ?? ""))
+  const [snowQuality, setSnowQuality] = useState(() => initialSnowQuality ?? null)
+  const [crowdLevel, setCrowdLevel] = useState(() => initialCrowdLevel ?? null)
+  const [comment, setComment] = useState(() => clampConditionsComment(initialComment ?? ""))
   const [existingPhotos] = useState(() => initialPhotos || [])
   const [removedIds, setRemovedIds] = useState(() => new Set())
   // { key, file, previewUrl } — newly picked files that have not been uploaded yet.
@@ -159,6 +186,9 @@ export default function SkiDayDetailsForm({
   function handleSave() {
     onSave({
       title: showTitle ? clampTitle(title) : undefined,
+      snowQuality: showConditions ? snowQuality : undefined,
+      crowdLevel: showConditions ? crowdLevel : undefined,
+      comment: showConditions ? clampConditionsComment(comment) : undefined,
       addedPhotoFiles: pending.map((p) => p.file),
       removedPhotoIds: [...removedIds],
       tagUserIds: tagsTouched ? [...tagIds] : undefined,
@@ -272,6 +302,63 @@ export default function SkiDayDetailsForm({
           <div style={{ fontSize: 12, color: "var(--color-warning)", marginTop: 6 }}>{notice}</div>
         )}
       </div>
+
+      {showConditions && (
+        <>
+          <div>
+            <div style={labelStyle}>
+              Snow quality <span style={{ opacity: 0.5 }}>(optional)</span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+              {SNOW_QUALITY_OPTIONS.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setSnowQuality(snowQuality === opt ? null : opt)}
+                  style={chipStyle(snowQuality === opt)}
+                >
+                  {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div style={labelStyle}>
+              Crowd level <span style={{ opacity: 0.5 }}>(optional)</span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+              {CROWD_LEVEL_OPTIONS.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setCrowdLevel(crowdLevel === opt ? null : opt)}
+                  style={chipStyle(crowdLevel === opt)}
+                >
+                  {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div style={labelStyle}>
+              Comment <span style={{ opacity: 0.5 }}>(optional)</span>
+            </div>
+            <input
+              style={inputStyle}
+              value={comment}
+              placeholder="Icy on the back side, fine up top…"
+              onChange={(e) =>
+                setComment(Array.from(e.target.value).slice(0, CONDITIONS_COMMENT_MAX_LENGTH).join(""))
+              }
+            />
+            <div style={{ fontSize: 11, color: "var(--ink-35)", marginTop: 4, textAlign: "right" }}>
+              {Array.from(comment).length}/{CONDITIONS_COMMENT_MAX_LENGTH}
+            </div>
+          </div>
+        </>
+      )}
 
       <div>
         <div style={labelStyle}>Who did you ski with?</div>
