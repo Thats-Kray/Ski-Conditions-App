@@ -13,6 +13,7 @@ import {
 } from "./skiDayDetails";
 import { nudgeCutoffDateKey, isSessionUntouched } from "./skiDayNudge";
 import { normalizeMutualCount } from "./friendSubtitle";
+import { conditionsReportCutoffDateKey } from "./conditionsReportWindow";
 
 /* -----------------------------
    Constants
@@ -4565,6 +4566,43 @@ export async function getRecentIncompleteSession() {
   if (!isSessionUntouched({ title: session.title, photos, tags })) return null
 
   return session
+}
+
+/**
+ * Up to `limit` recent conditions reports for one resort — the crowdsourced "how was it"
+ * signal shown on the resort's own page (2026-10-01 design spec). Resort-wide, not friends-
+ * only: ski_sessions' own SELECT policy already lets any authenticated user read any row
+ * (migration 046's header comment documents this, deliberately left open), so these three
+ * columns inherit that same visibility — no new RLS exists for them.
+ *
+ * A session with all three fields null never matches the .or(...) filter below, so a day
+ * logged with no report simply never appears here.
+ *
+ * Same no-FK-embed pattern as getBoardPosts just below: there is no FK from
+ * ski_sessions.user_id straight to profiles, so a `profiles:user_id(...)` embed would 400.
+ * Resolve with a second batched query instead.
+ */
+export async function getConditionsReports(resortKey, limit = 20) {
+  const { data, error } = await supabase
+    .from("ski_sessions")
+    .select("id, user_id, session_date, snow_quality, crowd_level, conditions_comment")
+    .eq("resort_name", resortKey)
+    .or("snow_quality.not.is.null,crowd_level.not.is.null,conditions_comment.not.is.null")
+    .gte("session_date", conditionsReportCutoffDateKey())
+    .order("session_date", { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  const reports = data || []
+  if (!reports.length) return reports
+
+  const userIds = [...new Set(reports.map((r) => r.user_id))]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .in("id", userIds)
+
+  const pm = new Map((profiles || []).map((p) => [p.id, p]))
+  return reports.map((r) => ({ ...r, profiles: pm.get(r.user_id) || null }))
 }
 
 // ─── Mountain Board (sprint-29) ─────────────────────────────────────────────
