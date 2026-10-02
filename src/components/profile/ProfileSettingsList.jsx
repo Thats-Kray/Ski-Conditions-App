@@ -148,7 +148,15 @@ function NotificationsSheet({ profile, onSaved, onClose }) {
   }
 
   async function handleSave() {
-    if (smsAvailable && channel === "sms" && !phoneIsVerified) {
+    // Mirrors the alert_channel line below: smsAvailable === null (unknown,
+    // e.g. the /api/config fetch hasn't resolved) must not bypass this guard
+    // the way a plain truthy check would. Without this, an existing SMS
+    // subscriber hitting Save during that window with an edited, unverified
+    // phone would save through with alert_channel still "sms" and no
+    // verified_at — silently dropping them from BOTH channels (cron skips
+    // unverified "sms" subscribers), which is worse than the email-downgrade
+    // this whole tri-state fix exists to prevent.
+    if (smsAvailable !== false && channel === "sms" && !phoneIsVerified) {
       setError("Verify your phone number before saving Text message delivery.")
       return
     }
