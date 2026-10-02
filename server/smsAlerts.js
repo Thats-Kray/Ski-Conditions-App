@@ -107,15 +107,20 @@ router.post("/api/alerts/send-phone-code", requireAuth, async (req, res) => {
   }
 
   const code = generateOtpCode()
-  const { error } = await supabase.from("alert_phone_otps").upsert({
-    user_id: req.userId,
-    phone,
-    code_hash: hashOtpCode(code),
-    expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString(),
-    attempts: 0,
-    created_at: new Date().toISOString(),
-  })
-  if (error) throw error
+  try {
+    const { error } = await supabase.from("alert_phone_otps").upsert({
+      user_id: req.userId,
+      phone,
+      code_hash: hashOtpCode(code),
+      expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString(),
+      attempts: 0,
+      created_at: new Date().toISOString(),
+    })
+    if (error) throw error
+  } catch (e) {
+    console.error("[smsAlerts] Failed to store OTP:", e.message)
+    return res.status(500).json({ error: "Could not send the verification text. Try again." })
+  }
 
   try {
     await getTwilioClient().messages.create({
@@ -137,12 +142,19 @@ router.post("/api/alerts/verify-phone-code", requireAuth, async (req, res) => {
   }
   const code = String(req.body?.code || "").trim()
   const supabase = getSupabase()
-  const { data: row, error } = await supabase
-    .from("alert_phone_otps")
-    .select("*")
-    .eq("user_id", req.userId)
-    .maybeSingle()
-  if (error) throw error
+  let row
+  try {
+    const result = await supabase
+      .from("alert_phone_otps")
+      .select("*")
+      .eq("user_id", req.userId)
+      .maybeSingle()
+    if (result.error) throw result.error
+    row = result.data
+  } catch (e) {
+    console.error("[smsAlerts] Failed to look up OTP:", e.message)
+    return res.status(500).json({ error: "Could not verify the code right now. Try again." })
+  }
   if (!row) {
     return res.status(400).json({ error: "No verification code pending. Request a new one." })
   }
@@ -160,11 +172,16 @@ router.post("/api/alerts/verify-phone-code", requireAuth, async (req, res) => {
   }
 
   const verifiedAt = new Date().toISOString()
-  const { error: updateErr } = await supabase
-    .from("profiles")
-    .update({ alert_phone: row.phone, alert_phone_verified_at: verifiedAt })
-    .eq("id", req.userId)
-  if (updateErr) throw updateErr
+  try {
+    const { error: updateErr } = await supabase
+      .from("profiles")
+      .update({ alert_phone: row.phone, alert_phone_verified_at: verifiedAt })
+      .eq("id", req.userId)
+    if (updateErr) throw updateErr
+  } catch (e) {
+    console.error("[smsAlerts] Failed to save verified phone:", e.message)
+    return res.status(500).json({ error: "Could not verify the code right now. Try again." })
+  }
 
   await supabase.from("alert_phone_otps").delete().eq("user_id", req.userId)
 
