@@ -11,7 +11,9 @@ const LOADED = {
   skill_level: "black", sport_type: "ski", ski_passes: ["Ikon"],
   favorite_mountain: "Winter Park",
   vehicle_label: "Blue Subaru", vehicle_seats: 3,
-  powder_alerts_enabled: true, alert_phone: "555-0100",
+  powder_alerts_enabled: true, alert_phone: "5550100",
+  alert_channel: "sms", alert_phone_verified_at: "2026-09-01T00:00:00.000Z",
+  alert_day_of_week: "wed", alert_time_slot: "morning",
   theme: "storm-chaser",
   theme_mode: "light",
   is_admin: false, strava_athlete_id: 12345,
@@ -40,7 +42,7 @@ test("buildProfileUpdate preserves the powder-alert fields when another screen s
   // Edit Profile no longer renders these; the Notifications sheet owns them.
   const out = buildProfileUpdate(LOADED, { vehicle_seats: 4 })
   assert.equal(out.powder_alerts_enabled, true)
-  assert.equal(out.alert_phone, "555-0100")
+  assert.equal(out.alert_phone, "5550100")
 })
 
 test("buildProfileUpdate preserves everything else when the Notifications sheet saves", () => {
@@ -94,4 +96,34 @@ test("buildProfileUpdate lets the Appearance toggle set theme_mode without distu
   assert.equal(out.theme_mode, "dark")
   assert.equal(out.theme, "storm-chaser")
   assert.equal(out.username, "kray")
+})
+
+test("buildProfileUpdate preserves alert_channel/day/time when another screen saves", () => {
+  const out = buildProfileUpdate(LOADED, { vehicle_seats: 4 })
+  assert.equal(out.alert_channel, "sms")
+  assert.equal(out.alert_day_of_week, "wed")
+  assert.equal(out.alert_time_slot, "morning")
+  assert.equal(out.alert_phone_verified_at, "2026-09-01T00:00:00.000Z")
+})
+
+test("buildProfileUpdate clears alert_phone_verified_at when alert_phone changes with no explicit override", () => {
+  const out = buildProfileUpdate(LOADED, { alert_phone: "5559999" })
+  assert.equal(out.alert_phone, "5559999")
+  assert.equal(out.alert_phone_verified_at, null)
+})
+
+test("buildProfileUpdate respects an explicitly-provided alert_phone_verified_at even when alert_phone also changes", () => {
+  // This is the just-verified-then-save race Task 8's UI hits: it passes both
+  // fields together from its own live state, not from the stale profile prop.
+  const out = buildProfileUpdate(LOADED, {
+    alert_phone: "5559999",
+    alert_phone_verified_at: "2026-10-01T12:00:00.000Z",
+  })
+  assert.equal(out.alert_phone, "5559999")
+  assert.equal(out.alert_phone_verified_at, "2026-10-01T12:00:00.000Z")
+})
+
+test("buildProfileUpdate does not clear alert_phone_verified_at when alert_phone is resaved unchanged", () => {
+  const out = buildProfileUpdate(LOADED, { alert_phone: "5550100" })
+  assert.equal(out.alert_phone_verified_at, "2026-09-01T00:00:00.000Z")
 })

@@ -36,6 +36,10 @@ export const PROFILE_WRITE_FIELDS = [
   "vehicle_seats",
   "powder_alerts_enabled",
   "alert_phone",
+  "alert_channel",
+  "alert_phone_verified_at",
+  "alert_day_of_week",
+  "alert_time_slot",
   "theme",
   "theme_mode",
 ]
@@ -62,6 +66,25 @@ export function buildProfileUpdate(profile, changes = {}) {
   const renamed = changes.first_name !== undefined || changes.last_name !== undefined
   if (renamed && changes.full_name === undefined) {
     payload.full_name = [payload.first_name, payload.last_name].filter(Boolean).join(" ") || null
+  }
+
+  // Changing the phone number invalidates any prior verification — the
+  // number saved in alert_phone_verified_at must always match the number
+  // actually stored in alert_phone. The explicit-override escape hatch exists
+  // for a real race: the Notifications sheet calls a dedicated OTP-verify
+  // endpoint that writes both fields directly to the DB, then the user hits
+  // "Save Changes" here using the sheet's now-stale `profile` prop (captured
+  // before verification happened). Without this escape hatch, the generic
+  // "phone changed -> clear verification" rule below would immediately undo
+  // the verification that had just succeeded. The sheet avoids this by always
+  // passing alert_phone_verified_at explicitly from its own live state rather
+  // than relying on this function's default carry-forward behavior.
+  if (
+    changes.alert_phone !== undefined &&
+    changes.alert_phone !== (profile?.alert_phone ?? null) &&
+    changes.alert_phone_verified_at === undefined
+  ) {
+    payload.alert_phone_verified_at = null
   }
 
   // "" is not a value any of these columns should hold; upsertMyProfile would
