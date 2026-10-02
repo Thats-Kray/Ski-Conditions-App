@@ -3,7 +3,14 @@ import { localDateKey } from "./calendarDates";
 import { OPEN_RESORT_KEY, resortName } from "./resorts";
 import { formatDate } from "./format";
 import { buildPlanUpsert } from "./planUpsert";
-import { clampTitle, groupPhotosBySession, groupTagsBySession } from "./skiDayDetails";
+import {
+  clampTitle,
+  groupPhotosBySession,
+  groupTagsBySession,
+  normalizeSnowQuality,
+  normalizeCrowdLevel,
+  clampConditionsComment,
+} from "./skiDayDetails";
 import { nudgeCutoffDateKey, isSessionUntouched } from "./skiDayNudge";
 import { normalizeMutualCount } from "./friendSubtitle";
 
@@ -4181,6 +4188,36 @@ export async function updateSessionTitle(sessionId, title) {
 }
 
 /**
+ * Set (or clear) a ski day's snow quality, crowd level, and optional comment — the
+ * crowdsourced conditions report (2026-10-01 design spec).
+ *
+ * Same shape as updateSessionTitle just above: one UPDATE, all three values normalized/
+ * clamped server-bound exactly as the form does in its own onChange, so a caller that skips
+ * the form cannot trip one of the three new CHECK constraints and get a 400 instead of a
+ * clean null/clamp. .select(...).single() for the same reason updateSessionTitle uses it —
+ * ski_sessions' UPDATE policy is owner-only, and without the select a refused update returns
+ * success while saving nothing.
+ */
+export async function updateSessionConditions(sessionId, { snowQuality, crowdLevel, comment } = {}) {
+  const { data, error } = await supabase
+    .from("ski_sessions")
+    .update({
+      snow_quality: normalizeSnowQuality(snowQuality),
+      crowd_level: normalizeCrowdLevel(crowdLevel),
+      conditions_comment: clampConditionsComment(comment) || null,
+    })
+    .eq("id", sessionId)
+    .select("id, snow_quality, crowd_level, conditions_comment")
+    .single()
+  if (error) throw error
+  return {
+    snowQuality: data?.snow_quality ?? null,
+    crowdLevel: data?.crowd_level ?? null,
+    comment: data?.conditions_comment ?? null,
+  }
+}
+
+/**
  * Every photo on a batch of sessions, in one query, with its public URL resolved at read
  * time — the batched shape of getActivityReactions/getActivityComments, not a per-card
  * lazy fetch. Single-session callers pass [sessionId].
@@ -4398,7 +4435,7 @@ export async function reconcileSessionTags(sessionId, wantedUserIds) {
  * SessionEditForm) call, so the diff→API translation exists exactly once.
  *
  * `diff` is what SkiDayDetailsForm's onSave emits:
- *   { title, addedPhotoFiles, removedPhotoIds, tagUserIds }
+ *   { title, snowQuality, crowdLevel, comment, addedPhotoFiles, removedPhotoIds, tagUserIds }
  *
  * Two properties of that shape are load-bearing:
  *
@@ -4424,10 +4461,18 @@ export async function reconcileSessionTags(sessionId, wantedUserIds) {
 export async function saveSkiDayDetails(sessionId, diff) {
   if (!sessionId) throw new Error("saveSkiDayDetails needs a session id.")
 
-  const { title, addedPhotoFiles, removedPhotoIds, tagUserIds } = diff || {}
+  const { title, snowQuality, crowdLevel, comment, addedPhotoFiles, removedPhotoIds, tagUserIds } = diff || {}
 
   if (title !== undefined) {
     await updateSessionTitle(sessionId, title)
+  }
+
+  // Same absent-key convention as `title` just above: SkiDayDetailsForm only emits these
+  // three keys when its conditions section is shown at all (initialSnowQuality !== undefined),
+  // so a future consumer that hides the section cannot accidentally null out an existing
+  // report just by omitting it.
+  if (snowQuality !== undefined || crowdLevel !== undefined || comment !== undefined) {
+    await updateSessionConditions(sessionId, { snowQuality, crowdLevel, comment })
   }
 
   if (removedPhotoIds?.length) {
