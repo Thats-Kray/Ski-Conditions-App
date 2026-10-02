@@ -35,9 +35,14 @@ answer from real reports instead of only from scraped resort data.
 3. **Entry point: tied to logging a ski day**, not a standalone "report conditions" button open to
    anyone. A report is only collectible from someone who has an actual `ski_sessions` row for that
    resort and date — harder to spam than an unauthenticated-of-visit quick-report button would be.
-4. **Snow quality vocabulary: reuse `trip_recaps.conditions`'s existing 4 values exactly** — Powder
-   / Groomed / Icy / Slushy. One consistent word-set for "how was the snow" app-wide, not a second
-   vocabulary.
+4. **Snow quality vocabulary: a deliberate 4-value set — Powder / Groomed / Icy / Slushy.**
+   Correction from an earlier draft of this spec: the live `TripDetailModal.jsx` recap chips
+   (`recapConditions`, line ~1902) actually offer 6 values — `powder, groomed, icy, slushy,
+   packed, variable` — not 4; there is no DB CHECK on `trip_recaps.conditions` constraining it,
+   so the UI's chip list is the only real definition. Kyle's call once shown the correct list:
+   trim to 4 for *this* feature rather than matching all 6. This deliberately leaves two
+   overlapping-but-different snow-quality vocabularies in the app (`trip_recaps`'s 6 untouched,
+   this feature's 4) — not a bug, a conscious trade for a simpler chip row here.
 5. **Crowd level: 4 tiers** — Empty / Light / Moderate / Packed. A new axis; nothing in the app
    captures this today.
 6. **Optional short comment** — free text, capped short (not a journal entry), for color the chips
@@ -153,9 +158,11 @@ row — a report doesn't need to "expire" in the database, it just stops being q
 - **No moderation/reporting UI in this first pass** — consistent with the app's existing stance on
   Board posts and Feed comments (both shipped without moderation tooling). Logged as a backlog
   item, not a blocker.
-- **A resort with zero recent reports** shows no widget content at all — no "no reports yet"
-  placeholder is in scope for this pass (matches how the Board/Events widgets behave when empty,
-  per the existing widget-registry pattern).
+- **A resort with zero recent reports** shows a plain empty-state line (e.g. "No conditions
+  reports in the last two weeks."), matching `MountainBoard.jsx`'s own empty state ("No posts yet
+  at Vail. Be the first.") — not a blank widget. Correction from an earlier draft of this spec,
+  which claimed Board/Events render nothing when empty; `MountainBoard.jsx:307-310` actually does
+  show a message, and this widget follows that same precedent.
 
 ## Non-Goals (explicitly out of scope)
 
