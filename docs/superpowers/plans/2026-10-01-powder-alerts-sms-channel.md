@@ -1421,5 +1421,6 @@ Once all 10 tasks are merged and deployed, SMS alerts stay invisible until Kyle:
 1. Creates a Twilio account and completes toll-free number verification (takes a few days).
 2. Sets `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` on Render.
 3. Configures the Twilio number's inbound-message webhook to point at `${BACKEND_URL}/api/sms/inbound` (needed for the STOP-sync handler in Task 3 to ever receive anything).
+4. Sets a spend alert and a daily message cap in the Twilio console before considering this feature live to real users. The code in this branch enforces only a 60-second per-user cooldown on OTP sends — there is no total daily cap, so one authenticated account could in theory trigger on the order of 1,400 billed OTP messages/day. An account-level Twilio limit is the mitigation for this release; a database-backed per-user daily counter (a schema change to `alert_phone_otps`) would be a stronger follow-up if real usage patterns ever warrant it.
 
 No code change or redeploy is needed at that point — `smsAlertsAvailable()` flips to `true` the moment the env vars exist, and the UI picks it up on the next page load.

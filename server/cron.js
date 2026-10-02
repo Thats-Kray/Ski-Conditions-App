@@ -25,12 +25,11 @@ async function composeBriefing() {
 }
 
 export async function sendBriefingForSlot(day, timeSlot) {
-  const briefing = await composeBriefing()
-  if (!briefing) {
-    console.log(`[cron] No open/scoreable resorts — skipping ${day}/${timeSlot} send (F-REQ-ALERT-003).`)
-    return
-  }
-
+  // Subscriber check runs BEFORE composeBriefing(): composeBriefing fans out
+  // to every resort's conditions via getAllResortConditions() (dozens of
+  // outbound requests including fragile HTML scrapers), and with 15 slots/week
+  // now instead of one, most ticks have zero subscribers — no reason to pay
+  // for that sweep before knowing anyone's listening.
   const supabase = getSupabase()
   const { data: subscribers, error } = await supabase
     .from("profiles")
@@ -42,6 +41,12 @@ export async function sendBriefingForSlot(day, timeSlot) {
 
   if (!subscribers || !subscribers.length) {
     console.log(`[cron] No subscribers for ${day}/${timeSlot} — skipping send.`)
+    return
+  }
+
+  const briefing = await composeBriefing()
+  if (!briefing) {
+    console.log(`[cron] No open/scoreable resorts — skipping ${day}/${timeSlot} send (F-REQ-ALERT-003).`)
     return
   }
 

@@ -67,6 +67,9 @@ test("composeSmsBriefing stays plain-ASCII (no emoji) to avoid forcing UCS-2 enc
   const text = composeSmsBriefing({
     bestBet: { name: "Vail", powderScore: 82.4, powderTier: "Elite" },
   })
+  // Intentional control-character range: checking the message is GSM-7/ASCII-safe
+  // for SMS billing, not sanitizing untrusted input.
+  // eslint-disable-next-line no-control-regex
   assert.match(text, /^[\x00-\x7F]*$/)
 })
 

@@ -194,7 +194,11 @@ router.post("/api/alerts/verify-phone-code", requireAuth, async (req, res) => {
 router.post("/api/sms/inbound", express.urlencoded({ extended: false }), async (req, res) => {
   try {
     const signature = req.get("X-Twilio-Signature")
-    const url = `${process.env.BACKEND_URL}/api/sms/inbound`
+    // Strip a trailing slash on BACKEND_URL before concatenating — a double
+    // slash here would never match Twilio's signed URL, so validateRequest
+    // would always return false and the STOP-keyword handler would silently
+    // never fire (no crash, no log, just permanently broken).
+    const url = `${(process.env.BACKEND_URL || "").replace(/\/$/, "")}/api/sms/inbound`
     const valid =
       smsAlertsAvailable() &&
       twilio.validateRequest(process.env.TWILIO_AUTH_TOKEN, signature, url, req.body)

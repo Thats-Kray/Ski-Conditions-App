@@ -82,7 +82,11 @@ function NotificationsSheet({ profile, onSaved, onClose }) {
   const [error, setError]     = useState("")
 
   const [channel, setChannel] = useState(profile?.alert_channel === "sms" ? "sms" : "email")
-  const [smsAvailable, setSmsAvailable] = useState(false)
+  // Tri-state: null = not yet checked, true = Twilio on, false = confirmed off.
+  // Must NOT default to false — handleSave below needs to tell "unknown" apart
+  // from "confirmed unavailable" so it never silently downgrades an existing
+  // SMS subscriber to email while this fetch is still in flight or has failed.
+  const [smsAvailable, setSmsAvailable] = useState(null)
   const [verifiedPhone, setVerifiedPhone] = useState(
     profile?.alert_phone_verified_at ? profile?.alert_phone : null
   )
@@ -157,7 +161,11 @@ function NotificationsSheet({ profile, onSaved, onClose }) {
         powder_alerts_enabled: enabled,
         alert_phone: phone.trim() || null,
         alert_phone_verified_at: phoneIsVerified ? verifiedAt : null,
-        alert_channel: smsAvailable ? channel : "email",
+        // Only a CONFIRMED "SMS is off" (false) downgrades to email. While
+        // smsAvailable is still null (the /api/config fetch hasn't resolved
+        // yet, e.g. a Render cold start), this must not treat "unknown" the
+        // same as "off" — that silently downgraded existing SMS subscribers.
+        alert_channel: smsAvailable === false ? "email" : channel,
         alert_day_of_week: dayOfWeek,
         alert_time_slot: timeSlot,
       }))
@@ -191,7 +199,7 @@ function NotificationsSheet({ profile, onSaved, onClose }) {
               </select>
             </div>
           </div>
-          {smsAvailable && (
+          {smsAvailable === true && (
             <div style={{ marginTop: 14 }}>
               <div style={labelStyle}>Delivery</div>
               <div style={{ display: "flex", gap: 16 }}>
@@ -207,7 +215,7 @@ function NotificationsSheet({ profile, onSaved, onClose }) {
             </div>
           )}
 
-          {smsAvailable && channel === "sms" && (
+          {smsAvailable === true && channel === "sms" && (
             <div style={{ marginTop: 12 }}>
               <input
                 type="tel"
@@ -251,12 +259,12 @@ function NotificationsSheet({ profile, onSaved, onClose }) {
             </div>
           )}
 
-          {(!smsAvailable || channel === "email") && (
+          {(smsAvailable !== true || channel === "email") && (
             <input
               type="tel"
               placeholder="Phone number (optional, for future SMS alerts)"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => { setPhone(e.target.value); setOtpStage("idle") }}
               style={{ ...fieldStyle, marginTop: 12 }}
             />
           )}
