@@ -8,7 +8,7 @@ import stravaRouter from "./routes/strava.js"
 import smsAlertsRouter from "./smsAlerts.js"
 import { smsAlertsAvailable } from "./smsAlerts.js"
 import { computePowderScore } from "./powderScore.js"
-import { registerWeeklyBriefingCron } from "./cron.js"
+import { registerPowderAlertCrons } from "./cron.js"
 import { signAlertToken, verifyAlertToken } from "./alertTokens.js"
 
 function getSupabase() {
@@ -1009,9 +1009,9 @@ export async function getAllResortConditions() {
 // starts a stray Express server and registers a real cron job as a side
 // effect, hanging the importing process (e.g. `node -e "import('./cron.js')..."`,
 // which is exactly the sprint's own manual-verification command for
-// sendWeeklyBriefing()).
+// sendBriefingForSlot()).
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  registerWeeklyBriefingCron()
+  registerPowderAlertCrons()
 
   app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`)
