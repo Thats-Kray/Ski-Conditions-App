@@ -4590,6 +4590,7 @@ export async function getConditionsReports(resortKey, limit = 20) {
     .or("snow_quality.not.is.null,crowd_level.not.is.null,conditions_comment.not.is.null")
     .gte("session_date", conditionsReportCutoffDateKey())
     .order("session_date", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(limit)
   if (error) throw error
   const reports = data || []

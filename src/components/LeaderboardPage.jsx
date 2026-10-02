@@ -117,7 +117,7 @@ function LogDayModal({ onClose, onLogged }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
-      <div style={{ background: "var(--color-modal-bg)", border: "1px solid var(--overlay-10)", borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: "var(--color-modal-bg)", border: "1px solid var(--overlay-10)", borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
           <div style={{ fontSize: 18, fontWeight: 900, color: "var(--color-text-1)" }}>
             {step === "basic" ? "🎿 Log a Ski Day" : step === "stats" ? "📊 Add Your Stats" : "📸 Add Details"}

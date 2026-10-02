@@ -76,7 +76,14 @@ export default function NudgeDetailsModal({ session, onClose, onSaved }) {
       // declined to fill in, and it is irreversible: logActivityOnce dedupes forever and
       // the banner is dismissed on the same path. "Skip" is the intended decline; this
       // makes an empty Save behave the same way.
-      if (!isSessionUntouched({ title: diff?.title, photos: diff?.addedPhotoFiles, tags: diff?.tagUserIds })) {
+      if (!isSessionUntouched({
+        title: diff?.title,
+        photos: diff?.addedPhotoFiles,
+        tags: diff?.tagUserIds,
+        snowQuality: diff?.snowQuality,
+        crowdLevel: diff?.crowdLevel,
+        comment: diff?.comment,
+      })) {
         await logActivityOnce("ski_session", {
           subjectId:   session.id,
           subjectType: "ski_sessions",
@@ -176,6 +183,9 @@ export default function NudgeDetailsModal({ session, onClose, onSaved }) {
         <div style={{ marginTop: 16 }}>
           <SkiDayDetailsForm
             initialTitle=""
+            initialSnowQuality={null}
+            initialCrowdLevel={null}
+            initialComment=""
             initialPhotos={[]}
             initialTags={[]}
             saving={saving}

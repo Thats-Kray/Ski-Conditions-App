@@ -41,7 +41,7 @@ client), `node --test` for pure-function unit tests (this repo's only automated 
 ### Task 1: Migration — add conditions columns to `ski_sessions`
 
 **Files:**
-- Create: `migrations/049_conditions_reports.sql`
+- Create: `migrations/050_conditions_reports.sql`
 
 **Interfaces:**
 - Consumes: nothing (first task).
@@ -55,7 +55,7 @@ client), `node --test` for pure-function unit tests (this repo's only automated 
 - [ ] **Step 1: Write the migration file**
 
 ```sql
--- Migration 049: crowdsourced conditions reports — snow quality, crowd level, comment
+-- Migration 050: crowdsourced conditions reports — snow quality, crowd level, comment
 -- Run in Supabase SQL Editor, then: NOTIFY pgrst, 'reload schema';
 --
 -- WHY THESE ARE PLAIN COLUMNS, NOT A NEW TABLE
@@ -114,7 +114,7 @@ may have already applied a version of this migration.
 
 - [ ] **Step 3: Apply the migration**
 
-Apply `migrations/049_conditions_reports.sql` to the live Supabase project (Supabase MCP
+Apply `migrations/050_conditions_reports.sql` to the live Supabase project (Supabase MCP
 `apply_migration` tool, or paste into the SQL Editor), then run `NOTIFY pgrst, 'reload schema';`
 so PostgREST picks up the new columns immediately rather than waiting for its next cache cycle.
 
@@ -138,8 +138,8 @@ moving to Task 2.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add migrations/049_conditions_reports.sql
-git commit -m "feat: add conditions-report columns to ski_sessions (migration 049)"
+git add migrations/050_conditions_reports.sql
+git commit -m "feat: add conditions-report columns to ski_sessions (migration 050)"
 ```
 
 ---

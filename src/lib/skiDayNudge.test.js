@@ -111,6 +111,27 @@ test("isSessionUntouched treats a whitespace-only title as empty", () => {
   assert.equal(isSessionUntouched({ title: "", photos: [], tags: [] }), true)
 })
 
+test("isSessionUntouched is false when only snowQuality is present", () => {
+  assert.equal(isSessionUntouched({ title: null, photos: [], tags: [], snowQuality: "icy" }), false)
+})
+
+test("isSessionUntouched is false when only crowdLevel is present", () => {
+  assert.equal(isSessionUntouched({ title: null, photos: [], tags: [], crowdLevel: "packed" }), false)
+})
+
+test("isSessionUntouched is false when only comment is present", () => {
+  assert.equal(isSessionUntouched({ title: null, photos: [], tags: [], comment: "Icy up top" }), false)
+})
+
+test("isSessionUntouched treats a whitespace-only comment as empty", () => {
+  assert.equal(isSessionUntouched({ title: null, photos: [], tags: [], comment: "   " }), true)
+})
+
+test("isSessionUntouched is still true when snowQuality/crowdLevel/comment are all null or undefined", () => {
+  assert.equal(isSessionUntouched({ title: null, photos: [], tags: [], snowQuality: null, crowdLevel: null, comment: null }), true)
+  assert.equal(isSessionUntouched({ title: null, photos: [], tags: [] }), true)
+})
+
 // ── nudgeDismissKey ─────────────────────────────────────────────────────────
 
 test("nudgeDismissKey is per-session and refuses a falsy id", () => {

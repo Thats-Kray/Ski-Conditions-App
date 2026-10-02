@@ -1,4 +1,4 @@
--- Migration 049: crowdsourced conditions reports — snow quality, crowd level, comment
+-- Migration 050: crowdsourced conditions reports — snow quality, crowd level, comment
 -- Run in Supabase SQL Editor, then: NOTIFY pgrst, 'reload schema';
 --
 -- WHY THESE ARE PLAIN COLUMNS, NOT A NEW TABLE

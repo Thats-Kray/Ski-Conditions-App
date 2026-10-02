@@ -3,6 +3,7 @@ import { getConditionsReports } from "../lib/socialApi"
 import { timeAgo } from "../lib/format"
 import { RESORT_NAMES } from "../lib/resorts"
 import AccentCard from "./ui/AccentCard"
+import Avatar from "./ui/Avatar"
 
 const SNOW_QUALITY_LABEL = {
   powder: "❄️ Powder",
@@ -71,7 +72,10 @@ export default function ConditionsReportsWidget({ resortKey }) {
         return (
           <AccentCard key={r.id}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-              <span style={{ fontSize: 12, fontWeight: 800, color: "var(--color-text-1)" }}>{reporter}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Avatar profile={r.profiles} size={24} />
+                <span style={{ fontSize: 12, fontWeight: 800, color: "var(--color-text-1)" }}>{reporter}</span>
+              </div>
               {/* "T12:00:00" anchors the bare DATE string to local noon before parsing — the
                   same reasoning src/lib/format.js's formatDate()/formatDateFull() already
                   document: parsing "YYYY-MM-DD" bare is UTC midnight, which can read as the

@@ -323,9 +323,9 @@ export default function SessionRecapModal({ session, runs, profile, onClose, str
             <SkiDayDetailsForm
               key={detailsKey}
               initialTitle={savedTitle ?? session.title ?? ""}
-              initialSnowQuality={savedConditions?.snowQuality ?? session.snow_quality ?? null}
-              initialCrowdLevel={savedConditions?.crowdLevel ?? session.crowd_level ?? null}
-              initialComment={savedConditions?.comment ?? session.conditions_comment ?? ""}
+              initialSnowQuality={savedConditions ? savedConditions.snowQuality : (session.snow_quality ?? null)}
+              initialCrowdLevel={savedConditions ? savedConditions.crowdLevel : (session.crowd_level ?? null)}
+              initialComment={savedConditions ? savedConditions.comment : (session.conditions_comment ?? "")}
               initialPhotos={details.photos}
               initialTags={details.tags}
               saving={detailsSaving}

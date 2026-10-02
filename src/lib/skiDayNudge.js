@@ -78,10 +78,18 @@ export function isWithinNudgeWindow(sessionDateKey, now = new Date()) {
  * and `tags` from getSessionTags(), both flat arrays — and only .length is read, so no
  * field of either row shape is depended on here.
  */
-export function isSessionUntouched({ title, photos, tags } = {}) {
+export function isSessionUntouched({ title, photos, tags, snowQuality, crowdLevel, comment } = {}) {
   if (typeof title === "string" && title.trim() !== "") return false
   if (photos?.length) return false
   if (tags?.length) return false
+
+  // Answering ONLY the snow/crowd/comment questions (no title, no photos, no tags) is a
+  // real, deliberate use of the form and must count as "touched" — otherwise the Feed
+  // backfill in NudgeDetailsModal.jsx would silently never fire for a user who only
+  // answered the conditions questions.
+  if (snowQuality) return false
+  if (crowdLevel) return false
+  if (typeof comment === "string" && comment.trim() !== "") return false
   return true
 }
 
